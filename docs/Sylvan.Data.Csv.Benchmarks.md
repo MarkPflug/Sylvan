@@ -1,4 +1,4 @@
-# Benchmarks
+# CSV Benchmarks
 
 The benchmark project uses [BenchmarkDotNet](https://github.com/dotnet/BenchmarkDotNet) to compare the performance of some common CSV libraries.
 The API for each library is slightly different, but I think the benchmark setup is fair.

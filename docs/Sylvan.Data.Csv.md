@@ -1,9 +1,9 @@
-# <img src="Sylvan.png" height="48" alt="Sylvan Logo"/> Sylvan.Data.Csv
+# <img src="../Sylvan.png" height="48" alt="Sylvan Logo"/> Sylvan.Data.Csv
 
 A high-performance, .NET library for reading CSV data files. My goal in creating this library was to make the fastest possible CSV parser 
 without compromising reliability or usability. While there are a number of excellent CSV parsers in the ecosystem, I had an idea
 for a potential optimization that sent me down the rabbit hole of rolling my own. The result is Sylvan.Data.Csv, which I believe is [currently
-the fastest](benchmarks.md), and most memory efficient CSV parser available as a Nuget package. I'll be the first to acknowledge that performance 
+the fastest](Sylvan.Data.Csv.Benchmarks.md), and most memory efficient CSV parser available as a Nuget package. I'll be the first to acknowledge that performance 
 in CSV parsers isn't the most important feature, correctness of implementation, and ease of use are paramount.
 Sylvan CSV has achieved high performance without sacrificing robustness or ease of use.
 
