@@ -1,7 +1,7 @@
 # Benchmarks
 
 The benchmark project uses [BenchmarkDotNet](https://github.com/dotnet/BenchmarkDotNet) to compare the performance of some common CSV libraries.
-These benchmarks use a large-ish, 3254 rows by 85 columns, CSV file. The API for each library is slightly different, but I think the benchmark setup is fair.
+The API for each library is slightly different, but I think the benchmark setup is fair.
 
 These benchmarks were run with the following configuration:
 ```
@@ -16,34 +16,47 @@ Runtime=.NET Core 3.1
 
 ## CSV Reading
 
-|       Method |       Mean | Ratio |   Allocated |
-|------------- |-----------:|------:|------------:|
-|    CsvHelper |  22.926 ms |  1.00 |  27257.7 KB |
-|  NaiveBroken |   4.682 ms |  0.20 |  11266.9 KB |
-|    NLightCsv |  13.757 ms |  0.60 |   7323.8 KB |
-|  VisualBasic | 106.880 ms |  4.66 | 187061.4 KB |
-|     OleDbCsv | 166.456 ms |  7.27 |   7812.2 KB |
-|        NReco |   6.834 ms |  0.30 |   7310.7 KB |
-|       Sylvan |   5.900 ms |  0.26 |   7302.7 KB |
-|  NRecoSelect |   2.831 ms |  0.12 |    567.1 KB |
-| SylvanSelect |   2.743 ms |  0.12 |   355.71 KB |
+These benchmarks use a large-ish, 3254 rows by 85 columns, CSV file.
+
+|       Method |       Mean | Ratio |    Allocated |
+|------------- |-----------:|------:|-------------:|
+|    CsvHelper |  23.693 ms |  1.00 |  27257.70 KB |
+|  NaiveBroken |   4.673 ms |  0.19 |  11266.88 KB |
+|    NLightCsv |  13.910 ms |  0.58 |   7323.29 KB |
+|  VisualBasic | 105.455 ms |  4.38 | 187061.38 KB |
+|     OleDbCsv | 167.427 ms |  6.96 |   7811.07 KB |
+|        NReco |   6.491 ms |  0.27 |   7310.72 KB |
+|       Sylvan |   6.033 ms |  0.25 |   7319.43 KB |
+|  NRecoSelect |   2.732 ms |  0.11 |    567.14 KB |
+| SylvanSelect |   2.796 ms |  0.12 |    372.31 KB |
 
 
 ## CSV Writing
-|          Method |      Mean | Ratio | Allocated |
-|---------------- |----------:|------:|----------:|
-| CsvHelperWriter | 21.507 ms |  1.00 |   9.71 MB |
-|     NaiveBroken |  6.174 ms |  0.29 |   7.13 MB |
-|       NLightCsv | 20.615 ms |  0.96 |   9.69 MB |
-|           NReco | 11.702 ms |  0.54 |   7.35 MB |
-|          Sylvan |  9.463 ms |  0.44 |   7.41 MB |
+
+These benchmarks test writing a 100k sequence of object data several typed columns as well as a "grid" of 20 doubles, to a `TextWriter.Null`.
+
+|          Method |     Mean | Ratio |    Allocated |
+|---------------- |---------:|------:|-------------:|
+|   CsvHelperSync | 796.9 ms |  1.00 | 199647.18 KB |
+|  CsvHelperAsync |      ??? |     - |            - |
+|     NaiveBroken | 402.8 ms |  0.51 | 126982.99 KB |
+|       NLightCsv | 577.4 ms |  0.72 | 178710.45 KB |
+|           NReco | 528.5 ms |  0.66 | 124637.99 KB |
+|     SylvanAsync | 485.1 ms |  0.61 |    506.45 KB |
+|      SylvanSync | 423.4 ms |  0.53 |     66.13 KB |
+| SylvanDataAsync | 506.5 ms |  0.64 |    518.13 KB |
+|  SylvanDataSync | 470.6 ms |  0.59 |     77.77 KB |
 
 
 ### CsvHelper
 Josh Close's [CsvHelper](https://github.com/joshclose/CsvHelper) appears to be the go-to CSV parser for dotNET in 2020. It is a full feature library that does a lot more than just parsing CSV. I've used it as the baseline for benchmarks, since it is the most used CSV library on nuget.
 
+The performance of using the CSV writer's async APIs was slow enough that I assume I was using it incorrectly, so I've removed this from the results grid.
+
 ### Naive Broken
 This measures the naive approach of using `TextReader.ReadLine` and `string.Split` to process CSV data. It is fast, but doesn't handle the edge cases of quoted fields, embedded commas, etc; and so isn't [RFC 4180](https://tools.ietf.org/html/rfc4180) compliant.
+
+Likewise, the writing test is performed by writing commas and newlines, but ignoring escaping.
 
 ### NLightCsv
 Sébastian Lorion's [NLight](https://github.com/slorion/nlight) library contains a high-performance CSV parser. Sébastian is also the author of the [Lumenworks CSV](https://www.codeproject.com/Articles/9258/A-Fast-CSV-Reader) parser, which has been around for 15 years now. Lumenworks has been my go-to for CSV parsing for many years.
@@ -67,6 +80,8 @@ Vitaliy Fedorchenko's [NReco.Csv](https://github.com/nreco/csv) was the first CS
 
 ### Sylvan
 The Sylvan.Data.Csv library, is currently the fastest available CSV parser for dotNET that I'm aware of.
+
+Sylvan offers two CSV writing APIs: `CsvWriter` which offers raw writing capabilities similar to other libraries, and `CsvDataWriter` which writes the a `DbDataReader` data to a `CsvWriter`.
 
 ### *Select
 The approach that Sylvan and NReco use for processing CSV make them even more efficient when reading only a subset of the columns in a file. These benchmarks measures reading only 3 of the 85 columns.
