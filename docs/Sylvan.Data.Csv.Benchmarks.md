@@ -33,7 +33,7 @@ These benchmarks use a large-ish, 3254 rows by 85 columns, CSV file.
 
 ## CSV Writing
 
-These benchmarks test writing a 100k sequence of object data several typed columns as well as a "grid" of 20 doubles, to a `TextWriter.Null`.
+These benchmarks write a 100k sequence of object data containing several typed columns as well as a "grid" of 20 doubles, to a `TextWriter.Null`.
 
 |          Method |     Mean | Ratio |    Allocated |
 |---------------- |---------:|------:|-------------:|
@@ -81,7 +81,7 @@ Vitaliy Fedorchenko's [NReco.Csv](https://github.com/nreco/csv) was the first CS
 ### Sylvan
 The Sylvan.Data.Csv library, is currently the fastest available CSV parser for dotNET that I'm aware of.
 
-Sylvan offers two CSV writing APIs: `CsvWriter` which offers raw writing capabilities similar to other libraries, and `CsvDataWriter` which writes the a `DbDataReader` data to a `CsvWriter`.
+Sylvan offers two CSV writing APIs: `CsvWriter` which offers raw writing capabilities similar to other libraries, and `CsvDataWriter` which writes `DbDataReader` data to a `CsvWriter`.
 
 ### *Select
 The approach that Sylvan and NReco use for processing CSV make them even more efficient when reading only a subset of the columns in a file. These benchmarks measures reading only 3 of the 85 columns.
