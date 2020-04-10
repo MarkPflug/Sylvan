@@ -1,0 +1,27 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Sylvan.Data.Csv.Tests\TestData.cs" Link="TestData.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" Version="0.12.0" />
+    <PackageReference Include="CsvHelper" Version="15.0.4" />
+    <PackageReference Include="LumenWorksCsvReader" Version="4.0.0" />
+    <PackageReference Include="Microsoft.VisualBasic" Version="10.3.0" />
+    <PackageReference Include="NLight" Version="2.1.1" />
+    <PackageReference Include="NReco.Csv" Version="1.0.0" />
+    <PackageReference Include="System.Data.OleDb" Version="4.7.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Sylvan.Common\Sylvan.Common.csproj" />
+    <ProjectReference Include="..\Sylvan.Data.Csv\Sylvan.Data.Csv.csproj" />
+    <ProjectReference Include="..\Sylvan.Data\Sylvan.Data.csproj" />
+  </ItemGroup>
+
+</Project>

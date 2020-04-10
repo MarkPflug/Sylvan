@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;netstandard2.1</TargetFrameworks>
+    <Nullable>enable</Nullable>    
+    <Version>0.2.1</Version>
+    <Description>An extremely fast, lightweight library for reading and writing delimited CSV data.</Description>
+    <PackageTags>csv;delimited;datareader;async;.NET</PackageTags>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Condition="$(TargetFramework) == 'netstandard2.0'" Include="System.Memory" Version="4.5.0" />
+  </ItemGroup>
+
+</Project>
