@@ -1,4 +1,4 @@
-# <img src="Sylvan.png" height="48" alt="Sylvan Logo"/> Sylvan.Data.Csv
+# <img src="../Sylvan.png" height="48" alt="Sylvan Logo"/> Sylvan.Data.Csv
 
 A high-performance, .NET library for reading CSV data files. My goal in creating this library was to make the fastest possible CSV parser 
 without compromising reliability or usability. While there are a number of excellent CSV parsers in the ecosystem, I had an idea
