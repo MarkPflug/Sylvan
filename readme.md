@@ -3,10 +3,10 @@
 Sylvan is a collection of .NET libraries authored by [@MarkPflug](https://github.com/MarkPflug).
 
 ### Sylvan.Common
-A Library containing a variety of common utility types.
+A collection of common utility types
 
 ### Sylvan.Data
 A library containing some types for working with ADO.net data objects.
 
 ### [Sylvan.Data.Csv](docs/Sylvan.Data.Csv.md)
-A library for reading and writing CSV data files.
+An extremely fast, lightweight library for reading and writing delimited CSV data.

@@ -4,9 +4,8 @@
     <TargetFrameworks>netstandard2.0;netstandard2.1</TargetFrameworks>
     <RootNamespace>Sylvan</RootNamespace>
     <Description>A collection of common utility types.</Description>
-    <LangVersion>8.0</LangVersion>
+    <Version>0.1.3</Version>    
     <Nullable>enable</Nullable>
-    <Version>0.1.3</Version>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(TargetFramework)' == 'netstandard2.1'">
