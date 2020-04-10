@@ -9,7 +9,7 @@ Sylvan CSV has achieved high performance without sacrificing robustness or ease 
 
 This library offers a complete CSV implementation: it supports headers, custom delimiters, quoted fields, quoted fields containing new lines, escapes, etc. 
 Other libraries may offer more in the way of data binding, malformed field handling, and error recovery, so they may be better options
-for some applications. The primary class, `CsvDataReader` dervies from `System.Data.Common.DbDataReader`, so it should be familiar API 
+for some applications. The primary class, `CsvDataReader` derives from `System.Data.Common.DbDataReader`, so it should be familiar API 
 for anyone who's worked with ADO.NET. Sylvan CSV is also one of the only CSV parsers I'm aware of that supports `async`.
 
 Release 0.2.0 includes a CSV writer via the `CsvDataWriter` class.
