@@ -49,7 +49,7 @@ namespace Sylvan.Data.Csv
 			this.pos = 0;
 		}
 
-		(int o, int l) PrepareValue(ReadOnlySpan<char> str)
+		(int o, int l) PrepareValue(string str)
 		{
 			var worstCaseLenth = str.Length * 2 + 2;
 			// at worst, we'll have to escape every character and put quotes around it
@@ -110,7 +110,7 @@ namespace Sylvan.Data.Csv
 
 		WriteResult WriteValue(string str)
 		{
-			var (o, l) = PrepareValue(str.AsSpan());
+			var (o, l) = PrepareValue(str);
 			return WriteValue(this.prepareBuffer, o, l);
 		}
 
