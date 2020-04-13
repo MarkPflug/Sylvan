@@ -11,6 +11,7 @@
   <ItemGroup>
     <PackageReference Include="BenchmarkDotNet" Version="0.12.0" />
     <PackageReference Include="CsvHelper" Version="15.0.4" />
+    <PackageReference Include="FlatFiles" Version="4.7.0" />
     <PackageReference Include="LumenWorksCsvReader" Version="4.0.0" />
     <PackageReference Include="Microsoft.VisualBasic" Version="10.3.0" />
     <PackageReference Include="NLight" Version="2.1.1" />
