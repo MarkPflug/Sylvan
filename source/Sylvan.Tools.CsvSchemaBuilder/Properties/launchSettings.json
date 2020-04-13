@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Sylvan.Tools.CsvSchemaBuilder": {
+      "commandName": "Project",
+      "commandLineArgs": "c:\\users\\mark\\desktop\\demo.bin"
+    }
+  }
+}
