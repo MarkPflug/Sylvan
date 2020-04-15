@@ -55,8 +55,7 @@ namespace Sylvan.Data.Csv
 			}
 		}
 
-		//[Fact(Skip = "Usage example.")]
-		[Fact]
+		[Fact(Skip = "Usage example.")]
 		public void SqlBulkLoadSample()
 		{
 			using var csvText = GetData(); // Gets a TextReader over a large-ish CSV dataset
@@ -77,7 +76,7 @@ namespace Sylvan.Data.Csv
 			var tableSchema = reader.GetColumnSchema();
 			reader.Close();
 			var csvSchema = new Schema(tableSchema);
-			csvSchema = null;
+			
 			var options = new CsvDataReaderOptions
 			{
 				Delimiter = '|',
@@ -93,151 +92,6 @@ namespace Sylvan.Data.Csv
 			bcp.DestinationTableName = "Feature";
 			bcp.BatchSize = 50000;
 			bcp.WriteToServer(dataReader);
-		}
-	}
-
-	class EmptyAsNullDataReader : DbDataReader
-	{
-		DbDataReader dr;
-
-		public EmptyAsNullDataReader(DbDataReader dr)
-		{
-			this.dr = dr;
-		}
-
-		public override object this[int ordinal] => dr[ordinal];
-
-		public override object this[string name] => dr[name];
-
-		public override int Depth => dr.Depth;
-
-		public override int FieldCount => dr.FieldCount;
-
-		public override bool HasRows => dr.HasRows;
-
-		public override bool IsClosed => dr.IsClosed;
-
-		public override int RecordsAffected => dr.RecordsAffected;
-
-		public override bool GetBoolean(int ordinal)
-		{
-			throw new NotImplementedException();
-		}
-
-		public override byte GetByte(int ordinal)
-		{
-			throw new NotImplementedException();
-		}
-
-		public override long GetBytes(int ordinal, long dataOffset, byte[] buffer, int bufferOffset, int length)
-		{
-			throw new NotImplementedException();
-		}
-
-		public override char GetChar(int ordinal)
-		{
-			throw new NotImplementedException();
-		}
-
-		public override long GetChars(int ordinal, long dataOffset, char[] buffer, int bufferOffset, int length)
-		{
-			throw new NotImplementedException();
-		}
-
-		public override string GetDataTypeName(int ordinal)
-		{
-			return dr.GetDataTypeName(ordinal);
-		}
-
-		public override DateTime GetDateTime(int ordinal)
-		{
-			throw new NotImplementedException();
-		}
-
-		public override decimal GetDecimal(int ordinal)
-		{
-			throw new NotImplementedException();
-		}
-
-		public override double GetDouble(int ordinal)
-		{
-			throw new NotImplementedException();
-		}
-
-		public override IEnumerator GetEnumerator()
-		{
-			throw new NotImplementedException();
-		}
-
-		public override Type GetFieldType(int ordinal)
-		{
-			return dr.GetFieldType(ordinal);
-		}
-
-		public override float GetFloat(int ordinal)
-		{
-			throw new NotImplementedException();
-		}
-
-		public override Guid GetGuid(int ordinal)
-		{
-			throw new NotImplementedException();
-		}
-
-		public override short GetInt16(int ordinal)
-		{
-			throw new NotImplementedException();
-		}
-
-		public override int GetInt32(int ordinal)
-		{
-			throw new NotImplementedException();
-		}
-
-		public override long GetInt64(int ordinal)
-		{
-			throw new NotImplementedException();
-		}
-
-		public override string GetName(int ordinal)
-		{
-			return dr.GetName(ordinal);
-		}
-
-		public override int GetOrdinal(string name)
-		{
-			return dr.GetOrdinal(name);
-		}
-
-		public override string GetString(int ordinal)
-		{
-			var str = dr.GetString(ordinal);
-			return str?.Length == 0 ? null : str;
-		}
-
-		public override object GetValue(int ordinal)
-		{
-			return this.GetString(ordinal);
-		}
-
-		public override int GetValues(object[] values)
-		{
-			return dr.GetValues(values);
-		}
-
-		public override bool IsDBNull(int ordinal)
-		{
-			return dr.IsDBNull(ordinal);
-		}
-
-		public override bool NextResult()
-		{
-			return dr.NextResult();
-		}
-
-		public override bool Read()
-		{
-			return dr.Read();
 		}
 	}
 }
