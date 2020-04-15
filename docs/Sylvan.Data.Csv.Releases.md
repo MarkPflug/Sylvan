@@ -1,3 +1,11 @@
+_0.3.2_
+GetValue now uses a provided schema to return strongly typed, boxed objects instead of only strings.
+
+_0.3.1_
+Remove System.Memory dependency.
+
+_0.3.0_
+Adds CsvWriter for, separate from CsvDataWriter.
 
 _0.2.1_ Performance
 - Fixes a performance regression introduced with bug fix in 0.2.0.
