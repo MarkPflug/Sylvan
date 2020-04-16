@@ -1,3 +1,6 @@
+_0.3.3_
+Default column schema defines a column size (int.MaxValue).
+
 _0.3.2_
 GetValue now uses a provided schema to return strongly typed, boxed objects instead of only strings.
 
