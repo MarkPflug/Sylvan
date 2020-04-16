@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Data;
 using System.Data.Common;
 using System.Globalization;
 using System.IO;
@@ -433,9 +434,9 @@ namespace Sylvan.Data.Csv
 			return c;
 		}
 
-		public override object this[int ordinal] => this.GetValue(ordinal);
+		public override object? this[int ordinal] => this.GetValue(ordinal);
 
-		public override object this[string name] => this[this.GetOrdinal(name)];
+		public override object? this[string name] => this[this.GetOrdinal(name)];
 
 		public override int Depth => 0;
 
@@ -780,9 +781,9 @@ namespace Sylvan.Data.Csv
 			return new ReadOnlyCollection<DbColumn>(columns);
 		}
 
-		public override System.Data.DataTable GetSchemaTable()
+		public override DataTable GetSchemaTable()
 		{
-			return base.GetSchemaTable();
+			return SchemaTable.GetSchemaTable(this.GetColumnSchema());
 		}
 
 		class CsvColumn : DbColumn
@@ -799,10 +800,9 @@ namespace Sylvan.Data.Csv
 
 				// by default, we don't consider string types to be nullable,
 				// an empty field for a string means "" not null.
-#warning revisit this decision
 				this.AllowDBNull = schema?.AllowDBNull ?? this.DataType.IsValueType;
 
-				this.ColumnSize = schema?.ColumnSize; // ?? bufferSize?
+				this.ColumnSize = schema?.ColumnSize ?? int.MaxValue;
 
 				this.IsUnique = schema?.IsUnique ?? false;
 				this.IsLong = schema?.IsLong ?? false;
