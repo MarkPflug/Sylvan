@@ -1,33 +1,34 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.ObjectModel;
 using System.Data;
 using System.Data.Common;
 
 namespace Sylvan.Data
 {
-	public abstract class DataReaderAdapter : DbDataReader, IDbColumnSchemaGenerator
+	// Adapts an IDataReader into a DbDataReader.
+	sealed class IDataReaderAdpater : DbDataReader
 	{
-		protected DbDataReader dr;
+		readonly IDataReader dr;
 
-		public DataReaderAdapter(DbDataReader dr)
+		public IDataReaderAdpater(IDataReader dr)
 		{
+			if (dr == null) throw new ArgumentNullException(nameof(dr));
 			this.dr = dr;
 		}
 
-		public override object this[int ordinal] => dr[ordinal];
+		public override object this[int ordinal] => this.dr[ordinal];
 
-		public override object this[string name] => dr[name];
+		public override object this[string name] => this.dr[name];
 
-		public override int Depth => dr.Depth;
+		public override int Depth => this.dr.Depth;
 
-		public override int FieldCount => dr.FieldCount;
+		public override int FieldCount => this.dr.FieldCount;
 
-		public override bool HasRows => dr.HasRows;
+		public override bool HasRows => true;
 
-		public override bool IsClosed => dr.IsClosed;
+		public override bool IsClosed => this.dr.IsClosed;
 
-		public override int RecordsAffected => dr.RecordsAffected;
+		public override int RecordsAffected => this.dr.RecordsAffected;
 
 		public override bool GetBoolean(int ordinal)
 		{
@@ -76,7 +77,7 @@ namespace Sylvan.Data
 
 		public override IEnumerator GetEnumerator()
 		{
-			return ((IEnumerable)dr).GetEnumerator();
+			throw new NotSupportedException();
 		}
 
 		public override Type GetFieldType(int ordinal)
@@ -121,42 +122,32 @@ namespace Sylvan.Data
 
 		public override string GetString(int ordinal)
 		{
-			return dr.GetString(ordinal);
+			return this.dr.GetString(ordinal);
 		}
 
 		public override object GetValue(int ordinal)
 		{
-			return dr.GetValue(ordinal);
+			return this.dr.GetValue(ordinal);
 		}
 
 		public override int GetValues(object[] values)
 		{
-			return dr.GetValues(values);
+			return this.dr.GetValues(values);
 		}
 
 		public override bool IsDBNull(int ordinal)
 		{
-			return dr.IsDBNull(ordinal);
+			return this.dr.IsDBNull(ordinal);
 		}
 
 		public override bool NextResult()
 		{
-			return dr.NextResult();
+			return this.dr.NextResult();
 		}
 
 		public override bool Read()
 		{
-			return dr.Read();
-		}
-
-		public override DataTable GetSchemaTable()
-		{
-			return dr.GetSchemaTable();
-		}
-
-		public ReadOnlyCollection<DbColumn> GetColumnSchema()
-		{
-			return dr.GetColumnSchema();
+			return this.dr.Read();
 		}
 	}
 }

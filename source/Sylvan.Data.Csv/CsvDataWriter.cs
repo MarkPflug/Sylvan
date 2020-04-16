@@ -8,7 +8,6 @@ namespace Sylvan.Data.Csv
 {
 	public sealed class CsvDataWriter
 	{
-		readonly TextWriter tw;
 		readonly CsvWriter writer;		
 		
 		public CsvDataWriter(TextWriter writer, CsvWriterOptions? options = null)

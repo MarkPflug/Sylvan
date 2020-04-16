@@ -151,8 +151,8 @@ namespace Sylvan.Data.Csv
 		[Benchmark]
 		public async Task Sylvan()
 		{
-			var tr = TestData.GetTextReader();
-			var dr = await CsvDataReader.CreateAsync(tr);
+			using var tr = TestData.GetTextReader();
+			using var dr = await CsvDataReader.CreateAsync(tr);
 			while (await dr.ReadAsync())
 			{
 				for (int i = 0; i < dr.FieldCount; i++)
@@ -161,6 +161,7 @@ namespace Sylvan.Data.Csv
 				}
 			}
 		}
+			
 
 		[Benchmark]
 		public void NRecoSelect()
