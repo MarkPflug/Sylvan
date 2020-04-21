@@ -1,3 +1,8 @@
+# Sylvan.Data.Csv Release Notes
+
+_0.3.4_
+Fix a bug with CsvDataReader.GetChars(), which would misbehave when the data reader was used as a table value parameter in a sql query.
+
 _0.3.3_
 Default column schema defines a column size (int.MaxValue).
 

@@ -485,9 +485,11 @@ namespace Sylvan.Data.Csv
 
 		public override long GetChars(int ordinal, long dataOffset, char[] buffer, int bufferOffset, int length)
 		{
-			var (b, o, l) = GetField(ordinal);
+			if (dataOffset > int.MaxValue) throw new ArgumentOutOfRangeException(nameof(dataOffset));
 
-			var len = Math.Min(l, length);
+			var (b, o, l) = GetField(ordinal);
+			var len = Math.Min(l - dataOffset, length);
+			
 			Array.Copy(b, o, buffer, bufferOffset, len);
 			return len;
 		}

@@ -3,7 +3,7 @@ using System.Collections.ObjectModel;
 using System.Data;
 using System.Data.Common;
 
-namespace Sylvan.Data.Csv
+namespace Sylvan.Data
 {
 	static class SchemaTable
 	{
@@ -55,9 +55,9 @@ namespace Sylvan.Data.Csv
 			foreach (var col in schema)
 			{
 				var row = table.NewRow();
-				row[nameCol] = col.ColumnName;
-				row[ordinalCol] = col.ColumnOrdinal;
-				row[sizeCol] = col.ColumnSize;
+				row[nameCol] = col.ColumnName ?? (object)DBNull.Value;
+				row[ordinalCol] = col.ColumnOrdinal ?? (object)DBNull.Value;
+				row[sizeCol] = col.ColumnSize ?? (object) DBNull.Value;
 
 				if (col.DataType == typeof(int))
 				{
@@ -78,17 +78,17 @@ namespace Sylvan.Data.Csv
 
 
 				row[typeCol] = col.DataType;
-				row[allowNullCol] = col.AllowDBNull;
-				row[baseNameCol] = col.BaseColumnName;
-				row[baseSchemaCol] = col.BaseSchemaName;
-				row[baseTableCol] = col.BaseTableName;
+				row[allowNullCol] = col.AllowDBNull ?? (object)DBNull.Value;
+				row[baseNameCol] = col.BaseColumnName ?? (object)DBNull.Value;
+				row[baseSchemaCol] = col.BaseSchemaName ?? (object)DBNull.Value;
+				row[baseTableCol] = col.BaseTableName ?? (object)DBNull.Value;
 
-				row[isAliasedCol] = col.IsAliased;
-				row[isExpressionCol] = col.IsExpression;
+				row[isAliasedCol] = col.IsAliased ?? (object)DBNull.Value;
+				row[isExpressionCol] = col.IsExpression ?? (object)DBNull.Value;
 
-				row[isKeyCol] = col.IsKey;
-				row[isLongCol] = col.IsLong;
-				row[isUniqueCol] = col.IsUnique;
+				row[isKeyCol] = col.IsKey ?? (object)DBNull.Value;
+				row[isLongCol] = col.IsLong ?? (object) DBNull.Value;
+				row[isUniqueCol] = col.IsUnique ?? (object)DBNull.Value;
 
 				var code = (int)Type.GetTypeCode(col.DataType);
 				row[providerTypeCol] = code;
