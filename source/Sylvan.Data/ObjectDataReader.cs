@@ -22,7 +22,7 @@ namespace Sylvan.Data
 			public Func<T, object> valueSelector;
 			public TypeCode typeCode;
 
-			public ColumnInfo(int ordinal, string name, Type type, object selector, Func<T, Object> valueSelector)
+			public ColumnInfo(int ordinal, string name, Type type, object selector, Func<T, object> valueSelector)
 			{
 				this.selector = selector;
 				this.valueSelector = valueSelector;
@@ -117,22 +117,36 @@ namespace Sylvan.Data
 
 		public override byte GetByte(int ordinal)
 		{
-			throw new NotImplementedException();
+			return GetFieldValue<byte>(ordinal);
 		}
 
 		public override long GetBytes(int ordinal, long dataOffset, byte[] buffer, int bufferOffset, int length)
 		{
-			throw new NotImplementedException();
+			if (dataOffset > int.MaxValue) throw new ArgumentOutOfRangeException(nameof(dataOffset));
+			var offset = (int)dataOffset;
+			// TODO: consider caching the result of GetFieldValue between calls to GetBytes.
+			// If the selector allocates, this could cause very bad performance.
+			// Or, maybe 
+			var data = GetFieldValue<byte[]>(ordinal);
+
+			var len = Math.Min(data.Length - offset, length);
+			Array.Copy(data, offset, buffer, bufferOffset, len);
+			return len;
 		}
 
 		public override char GetChar(int ordinal)
 		{
-			throw new NotImplementedException();
+			return GetFieldValue<char>(ordinal);
 		}
 
 		public override long GetChars(int ordinal, long dataOffset, char[] buffer, int bufferOffset, int length)
 		{
-			throw new NotImplementedException();
+			if (dataOffset > int.MaxValue) throw new ArgumentOutOfRangeException(nameof(dataOffset));
+			var off = (int)dataOffset;
+			var str = this.GetString(ordinal);
+			var len = Math.Min(str.Length - off, length);
+			str.CopyTo((int)dataOffset, buffer, bufferOffset, len);
+			return len;
 		}
 
 		public override string GetDataTypeName(int ordinal)
@@ -204,17 +218,26 @@ namespace Sylvan.Data
 
 		public override int GetValues(object[] values)
 		{
-			throw new NotImplementedException();
+			var c = Math.Min(this.FieldCount, values.Length);
+			for (int i = 0; i < c; i++) {
+				values[i] = GetValue(i);
+			}
+			return c;
 		}
 
 		public override bool IsDBNull(int ordinal)
 		{
-			return false;
+			return GetValue(ordinal) == null;
 		}
 
 		public ReadOnlyCollection<DbColumn> GetColumnSchema()
 		{
 			return new ReadOnlyCollection<DbColumn>(this.columns.ToArray());
+		}
+
+		public override System.Data.DataTable GetSchemaTable()
+		{
+			return SchemaTable.GetSchemaTable(GetColumnSchema());
 		}
 
 		public override int FieldCount

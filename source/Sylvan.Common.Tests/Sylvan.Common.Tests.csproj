@@ -2,8 +2,8 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
-    <RootNamespace>Sylvan</RootNamespace>
     <IsPackable>false</IsPackable>
+    <RootNamespace>Sylvan</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

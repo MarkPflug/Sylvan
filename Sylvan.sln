@@ -26,6 +26,14 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sylvan.Common", "source\Syl
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sylvan.Common.Tests", "source\Sylvan.Common.Tests\Sylvan.Common.Tests.csproj", "{7C6433C4-CE77-43D9-B888-A0A7C5B17C4D}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Docs", "Docs", "{DB5F930F-87AC-49F8-82E0-88FD8BA8F8D7}"
+	ProjectSection(SolutionItems) = preProject
+		docs\Sylvan.Data.Csv.Benchmarks.md = docs\Sylvan.Data.Csv.Benchmarks.md
+		docs\Sylvan.Data.Csv.Design.md = docs\Sylvan.Data.Csv.Design.md
+		docs\Sylvan.Data.Csv.md = docs\Sylvan.Data.Csv.md
+		docs\Sylvan.Data.Csv.Releases.md = docs\Sylvan.Data.Csv.Releases.md
+	EndProjectSection
+EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tools", "Tools", "{F23AAAFE-14E5-4C14-AA08-C856E9E98D89}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sylvan.Tools.CsvSchemaBuilder", "source\Sylvan.Tools.CsvSchemaBuilder\Sylvan.Tools.CsvSchemaBuilder.csproj", "{30404D9F-0DBC-404D-8771-DCEE16717BC3}"
@@ -145,6 +153,7 @@ Global
 		{9550B025-23E5-47EC-99F5-5D3676357C5A} = {395AEB56-67B5-4510-A19C-9E8811062C87}
 		{50FBCD70-BE18-49FF-8D65-9E0F8ABDC580} = {395AEB56-67B5-4510-A19C-9E8811062C87}
 		{7C6433C4-CE77-43D9-B888-A0A7C5B17C4D} = {395AEB56-67B5-4510-A19C-9E8811062C87}
+		{DB5F930F-87AC-49F8-82E0-88FD8BA8F8D7} = {83241918-5061-4D82-897B-B0BE78A0ACBC}
 		{30404D9F-0DBC-404D-8771-DCEE16717BC3} = {F23AAAFE-14E5-4C14-AA08-C856E9E98D89}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
