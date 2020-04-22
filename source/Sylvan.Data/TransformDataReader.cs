@@ -4,14 +4,13 @@ using System.Data.Common;
 
 namespace Sylvan.Data
 {
-
 	public class TransformBuilder
 	{
 		public TransformBuilder Map(int sourceIdx, int targetIdx) {
 			return this;
 		}
-
 	}
+
 	class TransformDataReader : DbDataReader
 	{
 		readonly DbDataReader reader;
