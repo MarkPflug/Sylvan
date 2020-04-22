@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.Runtime.InteropServices;
 
 namespace Sylvan.Primitives
@@ -195,7 +196,6 @@ namespace Sylvan.Primitives
 
 		#endregion
 
-
 		#region equality and hashing
 
 		public override int GetHashCode()
@@ -215,7 +215,12 @@ namespace Sylvan.Primitives
 
 		public override string ToString()
 		{
-			return value.ToString(type) + ":" + type.ToString();
+			return this.ToString(CultureInfo.CurrentCulture);
+		}
+
+		public string ToString(CultureInfo culture)
+		{
+			return value.ToString(type, culture) + ":" + type.ToString();
 		}
 
 		public static bool operator ==(TypedPrimitive p1, TypedPrimitive p2)
@@ -235,8 +240,6 @@ namespace Sylvan.Primitives
 		public static TypedPrimitive Unbox(object obj)
 		{
 			var t = obj.GetType();
-			var h = t.TypeHandle;
-
 			var code = System.Type.GetTypeCode(t);
 
 			switch (code)

@@ -7,8 +7,6 @@ namespace Sylvan.Data
 {
 	public class ObjectDataReaderTests
     {
-		
-
 		[Fact]
         public void Test1()
         {

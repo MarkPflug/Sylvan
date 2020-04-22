@@ -1,6 +1,4 @@
-﻿//using Microsoft.Data.SqlClient;
-//using Microsoft.Data.SqlClient.Server;
-using Sylvan.IO;
+﻿using Sylvan.IO;
 using System;
 using System.Buffers;
 using System.Collections.ObjectModel;
@@ -91,7 +89,6 @@ namespace Sylvan.Data.Csv
 					IntegratedSecurity = true
 				};
 			return new SqlConnection(csb.ConnectionString);
-
 		}
 
 		[Fact]//(Skip = "Usage example.")]
@@ -101,7 +98,6 @@ namespace Sylvan.Data.Csv
 			using var conn = GetConnection();
 			await conn.OpenAsync();
 			await LoadData(conn, tr, "InsertFeatures");
-
 		}
 
 		static async Task LoadData(SqlConnection conn, TextReader tr, string procName)
@@ -315,8 +311,6 @@ order by ORDINAL_POSITION";
 			bcp.WriteToServer(dataReader);
 		}
 
-
-
 		[Fact]//(Skip = "Usage example.")]
 		public void SqlTVPRawSample()
 		{
@@ -397,20 +391,19 @@ order by ORDINAL_POSITION";
 			cmd.ExecuteNonQuery();
 
 			cmd.CommandText = "InsertFeatures";
-			cmd.CommandType = System.Data.CommandType.StoredProcedure;
+			cmd.CommandType = CommandType.StoredProcedure;
 			var param = new SqlParameter()
 			{
 				ParameterName = "data",
-				SqlDbType = System.Data.SqlDbType.Structured
+				SqlDbType = SqlDbType.Structured
 			};
 			dataReader = new BoundedDataReader(dataReader, 100);
-			//var paramData = GetDataRecords(dataReader);
 			var paramData = dataReader;
 			param.Value = paramData;
 			cmd.Parameters.Add(param);
 			cmd.ExecuteNonQuery();
 			cmd.CommandText = "commit tran";
-			cmd.CommandType = System.Data.CommandType.Text;
+			cmd.CommandType = CommandType.Text;
 			cmd.Parameters.Clear();
 			cmd.ExecuteNonQuery();
 		}
@@ -434,39 +427,6 @@ order by ORDINAL_POSITION";
 			}
 		}
 
-		//static SqlMetaData GetMetaData(DbColumn c)
-		//{
-		//	if (c.DataType == typeof(string))
-		//	{
-		//		return new SqlMetaData(c.ColumnName, GetType(c.DataType), c.ColumnSize ?? 255);
-		//	} else
-		//	{
-		//		return new SqlMetaData(c.ColumnName, GetType(c.DataType));
-		//	}
-		//}
-
-		//static IEnumerable<SqlDataRecord> GetDataRecords(DbDataReader dr)
-		//{
-		//	var schema = dr.GetColumnSchema();
-
-
-		//	var cols =
-		//	schema
-		//		.Select(c => GetMetaData(c))
-		//		.ToArray();
-		//	var record = new SqlDataRecord(cols);
-
-		//	while(dr.Read())
-		//	{
-		//		for(int i = 0; i < dr.FieldCount; i++)
-		//		{
-		//			var val = dr.GetValue(i);
-		//			record.SetValue(i, val);
-		//		}
-		//		yield return record;
-		//	}
-		//}
-
 		static Schema GetSchema(SqlConnection conn, string table)
 		{
 			using var cmd = conn.CreateCommand();
@@ -484,7 +444,7 @@ order by ORDINAL_POSITION";
 			var conn = GetConnection();
 			conn.Open();
 
-			var data = 
+			var data =
 				Enumerable
 				.Range(0, 10)
 				.Select(i => new { Id = i, Name = "name " + i, Code = (i % 2 == 1) ? "" : "OR" });
@@ -502,11 +462,11 @@ order by ORDINAL_POSITION";
 				ParameterName = "data",
 				SqlDbType = SqlDbType.Structured
 			};
-			
+
 			var paramData = dataReader;
 			param.Value = paramData;
 			cmd.Parameters.Add(param);
-			cmd.ExecuteNonQuery();	
+			cmd.ExecuteNonQuery();
 		}
 
 		[Fact]
@@ -535,7 +495,6 @@ order by ORDINAL_POSITION";
 			cmd.Parameters.Add(param);
 			cmd.ExecuteNonQuery();
 		}
-
 
 		[Fact]
 		public void SqlTVPSimple1()
