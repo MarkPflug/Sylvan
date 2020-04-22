@@ -24,16 +24,16 @@ Here is a [brief description](Sylvan.Data.Csv.Design.md) of the strategies used 
 
 ```C#
 using var tr = File.OpenText("demo.csv");
-var csv = await Sylvan.Data.Csv.CsvReader.CreateAsync(tr);
+var csv = await Sylvan.Data.Csv.CsvDataReader.CreateAsync(tr);
 
 // It is possible to inspect whether any data is available before calling Read for
 // the first time. HasRows, Headers and FieldCount are all available at this point.
 
 while(await csv.ReadAsync()) 
 {
-    var id = csv.GetInt32("Id");
-    var name = csv.GetString("Name");
-    var date = csv.GetDateTime("Date");
+    var id = csv.GetInt32(0);
+    var name = csv.GetString(1);
+    var date = csv.GetDateTime(2);
 }
 
 ```
