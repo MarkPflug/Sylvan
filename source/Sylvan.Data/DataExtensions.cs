@@ -10,7 +10,7 @@ namespace Sylvan.Data
 		public static DbDataReader AsDbDataReader(this IDataReader r)
 		{
 			if (r is DbDataReader dr) return dr;
-			return new DataReaderAdpater(r);
+			return new IDataReaderAdpater(r);
 		}
 
 		/// <example>

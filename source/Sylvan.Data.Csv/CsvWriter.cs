@@ -449,8 +449,14 @@ namespace Sylvan.Data.Csv
 				}
 			}
 			fieldIdx++;
+#if NETSTANDARD2_1
 			if (string.IsNullOrEmpty(value))
 				return;
+#else
+			// to shut up the C# null checker
+			if (value == null || value.Length == 0)
+				return;
+#endif
 
 			goto field;
 		flush:
@@ -587,8 +593,13 @@ namespace Sylvan.Data.Csv
 				}
 			}
 			fieldIdx++;
+#if NETSTANDARD2_1
 			if (string.IsNullOrEmpty(value))
 				return;
+#else
+			if (value == null || value.Length == 0)
+				return;
+#endif
 
 			goto field;
 		flush:
@@ -637,11 +648,11 @@ namespace Sylvan.Data.Csv
 			{
 				return new ValueTask(this.FlushAsync());
 			}
-			
+
 			return new ValueTask(Task.CompletedTask);
 		}
 #endif
 
-#endregion
+		#endregion
 	}
 }

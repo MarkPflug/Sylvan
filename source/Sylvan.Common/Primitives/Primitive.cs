@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.Runtime.InteropServices;
 
 namespace Sylvan.Primitives
@@ -130,9 +131,9 @@ namespace Sylvan.Primitives
 
 		public Guid GuidValue => this.guidValue;
 
-#endregion
+		#endregion
 
-#region constructors
+		#region constructors
 
 		public Primitive(bool value)
 		{
@@ -236,9 +237,9 @@ namespace Sylvan.Primitives
 			this.guidValue = g;
 		}
 
-#endregion
+		#endregion
 
-#region implicit casts
+		#region implicit casts
 
 		public static implicit operator Primitive(bool value)
 		{
@@ -325,9 +326,9 @@ namespace Sylvan.Primitives
 			return new Primitive(value);
 		}
 
-#endregion
+		#endregion
 
-#region equality, hashing, tostring
+		#region equality, hashing, tostring
 
 		public override bool Equals(object obj)
 		{
@@ -349,44 +350,44 @@ namespace Sylvan.Primitives
 			return lo.ToString("x16") + hi.ToString("x16");
 		}
 
-		public string ToString(PrimitiveType type)
+		public string ToString(PrimitiveType type, CultureInfo culture)
 		{
 			switch (type)
 			{
 				case PrimitiveType.None:
 					return "None";
 				case PrimitiveType.Boolean:
-					return this.boolValue.ToString();
+					return this.boolValue.ToString(culture);
 				case PrimitiveType.Char:
-					return this.charValue.ToString();
+					return this.charValue.ToString(culture);
 				case PrimitiveType.Byte:
-					return this.byteValue.ToString();
+					return this.byteValue.ToString(culture);
 				case PrimitiveType.Int16:
-					return this.int16Value.ToString();
+					return this.int16Value.ToString(culture);
 				case PrimitiveType.Int32:
-					return this.int32Value.ToString();
+					return this.int32Value.ToString(culture);
 				case PrimitiveType.Int64:
-					return this.int64Value.ToString();
+					return this.int64Value.ToString(culture);
 				case PrimitiveType.SByte:
-					return this.sbyteValue.ToString();
+					return this.sbyteValue.ToString(culture);
 				case PrimitiveType.UInt16:
-					return this.uint16Value.ToString();
+					return this.uint16Value.ToString(culture);
 				case PrimitiveType.UInt32:
-					return this.uint32Value.ToString();
+					return this.uint32Value.ToString(culture);
 				case PrimitiveType.UInt64:
-					return this.uint64Value.ToString();
+					return this.uint64Value.ToString(culture);
 				case PrimitiveType.Float:
-					return this.floatValue.ToString();
+					return this.floatValue.ToString(culture);
 				case PrimitiveType.Double:
-					return this.doubleValue.ToString();
+					return this.doubleValue.ToString(culture);
 				case PrimitiveType.DateTime:
-					return this.dateTimeValue.ToString();
+					return this.dateTimeValue.ToString(culture);
 				case PrimitiveType.DateTimeOffset:
-					return this.dateTimeOffsetValue.ToString();
+					return this.dateTimeOffsetValue.ToString(culture);
 				case PrimitiveType.TimeSpan:
 					return this.timeSpanValue.ToString();
 				case PrimitiveType.Decimal:
-					return this.decimalValue.ToString();
+					return this.decimalValue.ToString(culture);
 				case PrimitiveType.Guid:
 					return this.guidValue.ToString();
 				default:
@@ -404,53 +405,12 @@ namespace Sylvan.Primitives
 			return !(p1 == p2);
 		}
 
-#endregion
+		#endregion
 
 		public static Primitive Unbox(object obj)
 		{
-			var t = obj.GetType();
-			var h = t.TypeHandle;
-
-			var code = Type.GetTypeCode(t);
-
-			switch (code)
-			{
-				case TypeCode.Boolean:
-					return new Primitive((bool)obj);
-				case TypeCode.Byte:
-					return new Primitive((byte)obj);
-				case TypeCode.SByte:
-					return new Primitive((sbyte)obj);
-				case TypeCode.Int16:
-					return new Primitive((short)obj);
-				case TypeCode.UInt16:
-					return new Primitive((ushort)obj);
-				case TypeCode.Int32:
-					return new Primitive((int)obj);
-				case TypeCode.UInt32:
-					return new Primitive((uint)obj);
-				case TypeCode.Int64:
-					return new Primitive((long)obj);
-				case TypeCode.UInt64:
-					return new Primitive((ulong)obj);
-				case TypeCode.Single:
-					return new Primitive((float)obj);
-				case TypeCode.Double:
-					return new Primitive((double)obj);
-				case TypeCode.Decimal:
-					return new Primitive((decimal)obj);
-				case TypeCode.DateTime:
-					return new Primitive((DateTime)obj);
-				case TypeCode.Object:
-					if (t == typeof(Guid))
-						return new Primitive((Guid)obj);
-					if (t == typeof(TimeSpan))
-						return new Primitive((TimeSpan)obj);
-					if (t == typeof(DateTimeOffset))
-						return new Primitive((DateTimeOffset)obj);
-					break;
-			}
-			throw new InvalidCastException();
+			var tp = TypedPrimitive.Unbox(obj);
+			return tp.Value;
 		}
 	}
 }

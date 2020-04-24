@@ -1,9 +1,9 @@
 # <img src="Sylvan.png" height="48" alt="Sylvan Logo"/> Sylvan
 
-Sylvan is a collection of .NET libraries authored by [@MarkPflug](https://github.com/MarkPflug).
+Sylvan is a collection of .NET libraries.
 
 ### Sylvan.Common
-A collection of common utility types
+A collection of common utility types.
 
 ### Sylvan.Data
 A library containing some types for working with ADO.net data objects.

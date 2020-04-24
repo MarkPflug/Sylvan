@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Data;
 using System.Data.Common;
 using System.Globalization;
 using System.IO;
@@ -67,6 +68,7 @@ namespace Sylvan.Data.Csv
 		readonly char delimiter;
 		readonly char quote;
 		readonly char escape;
+
 		readonly CultureInfo culture;
 
 		readonly TextReader reader;
@@ -151,8 +153,8 @@ namespace Sylvan.Data.Csv
 			// and support "hasRows" before Read.
 			this.hasRows = await NextRecordAsync();
 			InitializeSchema(schema);
-			
-			if(state == State.End)
+
+			if (state == State.End)
 			{
 				// in the event there is only one line in the file
 				state = State.Initialized;
@@ -335,7 +337,7 @@ namespace Sylvan.Data.Csv
 
 			if (complete || atEndOfText)
 			{
-				
+
 				if (state == State.Initializing)
 				{
 					if (fieldIdx >= fieldInfos.Length)
@@ -432,9 +434,9 @@ namespace Sylvan.Data.Csv
 			return c;
 		}
 
-		public override object this[int ordinal] => this.GetValue(ordinal);
+		public override object? this[int ordinal] => this.GetValue(ordinal);
 
-		public override object this[string name] => this[this.GetOrdinal(name)];
+		public override object? this[string name] => this[this.GetOrdinal(name)];
 
 		public override int Depth => 0;
 
@@ -483,9 +485,11 @@ namespace Sylvan.Data.Csv
 
 		public override long GetChars(int ordinal, long dataOffset, char[] buffer, int bufferOffset, int length)
 		{
-			var (b, o, l) = GetField(ordinal);
+			if (dataOffset > int.MaxValue) throw new ArgumentOutOfRangeException(nameof(dataOffset));
 
-			var len = Math.Min(l, length);
+			var (b, o, l) = GetField(ordinal);
+			var len = Math.Min(l - dataOffset, length);
+			
 			Array.Copy(b, o, buffer, bufferOffset, len);
 			return len;
 		}
@@ -651,14 +655,39 @@ namespace Sylvan.Data.Csv
 			return (buffer, offset, len);
 		}
 
-		public override object GetValue(int ordinal)
+		public override object? GetValue(int ordinal)
 		{
-			// todo: Should this use the type of the field to return a boxed value?
-			// yes. I guess I should implement that.
-			return GetString(ordinal);
+			if (columns[ordinal].AllowDBNull == true && this.IsDBNull(ordinal))
+			{
+				return null;
+			}
+			var type = this.GetFieldType(ordinal);
+
+			switch (Type.GetTypeCode(type))
+			{
+				case TypeCode.Boolean:
+					return this.GetBoolean(ordinal);
+				case TypeCode.Int16:
+					return this.GetInt16(ordinal);
+				case TypeCode.Int32:
+					return this.GetInt32(ordinal);
+				case TypeCode.Int64:
+					return this.GetInt64(ordinal);
+				case TypeCode.Single:
+					return this.GetFloat(ordinal);
+				case TypeCode.Double:
+					return this.GetDouble(ordinal);
+				case TypeCode.Decimal:
+					return this.GetDecimal(ordinal);
+				case TypeCode.DateTime:
+					return this.GetDateTime(ordinal);
+				case TypeCode.String:
+				default:
+					return this.GetString(ordinal);
+			}
 		}
 
-		public override int GetValues(object[] values)
+		public override int GetValues(object?[] values)
 		{
 			var count = Math.Min(this.fieldCount, values.Length);
 			for (int i = 0; i < count; i++)
@@ -670,9 +699,9 @@ namespace Sylvan.Data.Csv
 
 		public override bool IsDBNull(int ordinal)
 		{
-			if (((uint) ordinal) >= fieldCount)
+			if (((uint)ordinal) >= fieldCount)
 				throw new ArgumentOutOfRangeException(nameof(ordinal));
-			if(ordinal >= curFieldCount)
+			if (ordinal >= curFieldCount)
 			{
 				return true;
 			}
@@ -691,7 +720,7 @@ namespace Sylvan.Data.Csv
 		}
 
 		public override Task<bool> IsDBNullAsync(int ordinal, CancellationToken cancellationToken)
-		{		
+		{
 			return IsDBNull(ordinal) ? CompleteTrue : CompleteFalse;
 		}
 
@@ -750,6 +779,11 @@ namespace Sylvan.Data.Csv
 			return new ReadOnlyCollection<DbColumn>(columns);
 		}
 
+		public override DataTable GetSchemaTable()
+		{
+			return SchemaTable.GetSchemaTable(this.GetColumnSchema());
+		}
+
 		class CsvColumn : DbColumn
 		{
 			public CsvColumn(string? name, int ordinal, DbColumn? schema = null)
@@ -764,10 +798,9 @@ namespace Sylvan.Data.Csv
 
 				// by default, we don't consider string types to be nullable,
 				// an empty field for a string means "" not null.
-#warning revisit this decision
 				this.AllowDBNull = schema?.AllowDBNull ?? this.DataType.IsValueType;
 
-				this.ColumnSize = schema?.ColumnSize; // ?? bufferSize?
+				this.ColumnSize = schema?.ColumnSize ?? int.MaxValue;
 
 				this.IsUnique = schema?.IsUnique ?? false;
 				this.IsLong = schema?.IsLong ?? false;
@@ -783,7 +816,7 @@ namespace Sylvan.Data.Csv
 				this.BaseServerName = schema?.BaseServerName;
 				this.BaseSchemaName = schema?.BaseSchemaName;
 				this.BaseColumnName = schema?.BaseColumnName ?? name; // default in the orignal header name if they chose to remap it.
-				this.BaseCatalogName = schema?.BaseCatalogName;				
+				this.BaseCatalogName = schema?.BaseCatalogName;
 				this.UdtAssemblyQualifiedName = schema?.UdtAssemblyQualifiedName;
 			}
 		}

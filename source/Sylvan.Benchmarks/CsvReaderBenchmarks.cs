@@ -117,6 +117,22 @@ namespace Sylvan.Data.Csv
 		}
 
 		[Benchmark]
+		public void FlatFilesCsv()
+		{
+			var tr = TestData.GetTextReader();
+			var opts = new FlatFiles.SeparatedValueOptions() { IsFirstRecordSchema = true };
+			var dr = new FlatFiles.FlatFileDataReader(new FlatFiles.SeparatedValueReader(tr, opts));
+
+			while (dr.Read())
+			{
+				for (int i = 0; i < dr.FieldCount; i++)
+				{
+					var s = dr.GetValue(i);
+				}
+			}
+		}
+
+		[Benchmark]
 		public void NReco()
 		{
 			var tr = TestData.GetTextReader();
@@ -135,8 +151,8 @@ namespace Sylvan.Data.Csv
 		[Benchmark]
 		public async Task Sylvan()
 		{
-			var tr = TestData.GetTextReader();
-			var dr = await CsvDataReader.CreateAsync(tr);
+			using var tr = TestData.GetTextReader();
+			using var dr = await CsvDataReader.CreateAsync(tr);
 			while (await dr.ReadAsync())
 			{
 				for (int i = 0; i < dr.FieldCount; i++)
@@ -145,6 +161,7 @@ namespace Sylvan.Data.Csv
 				}
 			}
 		}
+			
 
 		[Benchmark]
 		public void NRecoSelect()
