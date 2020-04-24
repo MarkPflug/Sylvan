@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Data.Common;
 using System.IO;
 using System.Linq;
@@ -7,6 +8,21 @@ using System.Net.Http;
 
 namespace Sylvan.Data.Csv
 {
+
+	sealed class CsvSchema : ICsvSchemaProvider
+	{
+		readonly ReadOnlyCollection<DbColumn> schema;
+		public CsvSchema(ReadOnlyCollection<DbColumn> schema)
+		{
+			this.schema = schema;
+		}
+
+		public DbColumn GetColumn(string name, int ordinal)
+		{
+			return schema[ordinal];
+		}
+	}
+
 	static class TestData
 	{
 		const string DataSetUrl = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/f7c2384622806d5297d16c314a7bc0b9cde24937/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_US.csv";

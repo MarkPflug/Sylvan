@@ -7,7 +7,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Sylvan.Data.Csv.Tests\Sylvan.Data.Csv.Tests.csproj" />
     <ProjectReference Include="..\Sylvan.Data.Csv\Sylvan.Data.Csv.csproj" />
+    <ProjectReference Include="..\Sylvan.Data\Sylvan.Data.csproj" />
   </ItemGroup>
 
 </Project>

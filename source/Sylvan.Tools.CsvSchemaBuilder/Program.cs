@@ -1,9 +1,11 @@
-﻿using Sylvan.Data.Csv;
+﻿using Sylvan.Data;
+using Sylvan.Data.Csv;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 
 namespace Sylvan.Tools.CsvSchemaBuilder
@@ -45,294 +47,56 @@ namespace Sylvan.Tools.CsvSchemaBuilder
 
 		static void Main(string[] args)
 		{
-			var file = args[0];
-			var (delimiter, quote) = IdentifyFormat(file);
-			Console.WriteLine("Delimiter: " + delimiter);
-			Console.WriteLine("Quote: " + quote);
-
-			using var tr = File.OpenText(file);
-			var dr = CsvDataReader.Create(tr, new CsvDataReaderOptions() { Delimiter = delimiter, Quote = quote });
-		
-			WriteHeaders(dr);
-			var colInfos = new ColumnInfo[dr.FieldCount];
-			for (int i = 0; i < colInfos.Length; i++)
-			{
-				colInfos[i] = new ColumnInfo(i);
-			}
-			int count = 100000;
-			int c = 0;
-			var sw = Stopwatch.StartNew();
-			while (dr.Read() && c++ < count)
-			{
-				for (int i = 0; i < dr.FieldCount; i++)
-				{
-					colInfos[i].Analyze(dr, i);
-				}
-			}
-
-			DbColumn[] columns = new DbColumn[colInfos.Length];
-			for (int i = 0; i < colInfos.Length; i++)
-			{
-				columns[i] = colInfos[i].CreateColumnSchema(dr.GetName(i));
-			}
-			sw.Stop();
-			Console.WriteLine(sw.Elapsed.ToString());
+			new SqlServerLoadTest().BulkLoad2();
 		}
 
-		class ColumnSchema : DbColumn
-		{
-			public override string ToString()
+		static void F() { 
+			//var file = args[0];
+			string file = @"C:\Users\Mark\Desktop\PGYR18_P011720.ZIP";
+			using var s = File.OpenRead(file);
+			var za = new ZipArchive(s, ZipArchiveMode.Read);
+			var sa = new SchemaAnalyzer();
+			foreach(var entry in za.Entries)
 			{
-				var size = this.DataType == typeof(string) ? "[" + this.ColumnSize + "]" : "";
-				return $"{this.ColumnName} {this.DataTypeName}{(this.AllowDBNull == true ? "?" : "")}{size}";
+				Console.WriteLine(entry.Name);
+				using var tr = new StreamReader(entry.Open());
+				var data = CsvDataReader.Create(tr);
+				var sw = Stopwatch.StartNew();
+				int i = 0;
+				while (data.Read())
+				{
+					i++;
+				}
+				sw.Stop();
+				Console.WriteLine(i + " " + sw.Elapsed.ToString());
+				//var r = sa.Analyze(data);
 			}
 
-			ColumnSchema(int ordinal, string? name, bool isNullable, bool isUnique)
-			{
-				this.ColumnOrdinal = ordinal;
-				this.ColumnName = name;
-				this.AllowDBNull = isNullable;
-				this.IsUnique = IsUnique;
-			}
-
-			public static ColumnSchema CreateString(int ordinal, string? name, bool isNullable, bool isUnique, int length, bool isAscii)
-			{
-				return
-					new ColumnSchema(ordinal, name, isNullable, isUnique)
-					{
-						ColumnSize = length,
-						NumericPrecision = isAscii ? 8 : 16,
-						DataType = typeof(string),
-						DataTypeName = "string",
-					};
-			}
-
-			public static ColumnSchema CreateDate(int ordinal, string? name, bool isNullable, bool isUnique, int? precision)
-			{
-				return
-					new ColumnSchema(ordinal, name, isNullable, isUnique)
-					{
-						NumericPrecision = precision,
-						DataType = typeof(DateTime),
-						DataTypeName = precision == null ? "date" : "datetime",
-					};
-			}
-
-			public static ColumnSchema CreateInt(int ordinal, string? name, bool isNullable, bool isUnique, Type type)
-			{
-
-				var (p, s, n) =
-					(type == typeof(long))
-					? (19, 8, "long")
-					: (type == typeof(int))
-					? (18, 4, "int")
-					: (type == typeof(short))
-					? (5, 2, "short")
-					: (3, 1, "byte");
-
-				return
-					new ColumnSchema(ordinal, name, isNullable, isUnique)
-					{
-						DataType = type,
-						DataTypeName = n,
-						NumericPrecision = p,
-						ColumnSize = s,
-					};
-			}
-
-			public static ColumnSchema CreateFloat(int ordinal, string? name, bool isNullable, Type type)
-			{
-				var (p, s, n) =
-					(type == typeof(double))
-					? (15, 8, "double")
-					: (7, 4, "float");
-
-				return
-					new ColumnSchema(ordinal, name, isNullable, false)
-					{
-						DataType = type,
-						DataTypeName = n,
-						NumericPrecision = p,
-						ColumnSize = s,
-					};
-			}
 		}
 
-		class ColumnInfo
-		{
-			public ColumnInfo(int ordinal)
+		void Analyze(string file) {
+			char delimiter, quote;
 			{
-				this.ordinal = ordinal;
-				isInt = isFloat = isDate = isDateTime = isGuid = true;
-				isNullable = false;
-				dateHasFractionalSeconds = false;
-				isUnique = true;
-				intMax = long.MinValue;
-				intMin = long.MaxValue;
-				floatMax = double.MinValue;
-				floatMin = double.MaxValue;
-				dateMin = DateTime.MaxValue;
-				dateMax = DateTime.MinValue;
-				stringLenMax = 0;
-				isAscii = true;
-
-				this.valueCount = new Dictionary<string, int>();
+				using var tr = File.OpenText(file);
+				(delimiter, quote) = IdentifyFormat(tr);
+				Console.WriteLine("Delimiter: " + delimiter);
+				Console.WriteLine("Quote: " + quote);
 			}
-
-			bool isAscii;
-			int ordinal;
-			bool isInt, isFloat, isDate, isDateTime, isGuid;
-			bool dateHasFractionalSeconds;
-			bool isNullable;
-			bool isUnique;
-
-			int nullCount;
-
-			long intMin, intMax;
-			double floatMin, floatMax;
-			DateTime dateMin, dateMax;
-			int stringLenMax;
-
-			Dictionary<string, int> valueCount;
-
-			public void Analyze(DbDataReader dr, int ordinal)
 			{
-				var isNull = dr.IsDBNull(ordinal);
-				if (isNull)
-				{
-					nullCount++;
-					this.isNullable = true;
-					return;
-				}
+				using var tr = File.OpenText(file);
+				var opts =
+					new CsvDataReaderOptions() {
+						Delimiter = delimiter,
+						Quote = quote
+					};
 
-				var str = dr.GetString(ordinal);
-				if (str == null)
-					isNullable = true;
+				var dr = CsvDataReader.Create(tr, opts);
+				WriteHeaders(dr);
 
-				if (isFloat || isInt || isDate || isDateTime || isGuid)
-				{
-					if (string.IsNullOrEmpty(str))
-					{
-						isNullable = true;
-					}
-					else
-					{
-						if (isFloat)
-						{
-							if (double.TryParse(str, out var val))
-							{
-								floatMin = Math.Min(floatMin, val);
-								floatMax = Math.Max(floatMax, val);
-							}
-							else
-							{
-								isFloat = false;
-							}
-						}
-						if (isInt)
-						{
-							if (long.TryParse(str, out var val))
-							{
-								intMin = Math.Min(intMin, val);
-								intMax = Math.Max(intMax, val);
-							}
-							else
-							{
-								isInt = false;
-							}
-						}
-						if (isDateTime || isDate)
-						{
-							if (DateTime.TryParse(str, out var val))
-							{
-								dateMin = val < dateMin ? val : dateMin;
-								dateMax = val > dateMax ? val : dateMax;
-								if (val.TimeOfDay != TimeSpan.Zero)
-									isDate = false;
-								if (dateHasFractionalSeconds == false && (val.Ticks % TimeSpan.TicksPerSecond) != 0)
-								{
-									dateHasFractionalSeconds = true;
-								}
-							}
-							else
-							{
-								isDate = isDateTime = false;
-							}
-						}
-						if (isGuid)
-						{
-							if (Guid.TryParse(str, out var val))
-							{
-
-							}
-							else
-							{
-								isGuid = false;
-							}
-						}
-					}
-				}
-
-				if (str != null)
-				{
-					stringLenMax = Math.Max(stringLenMax, str.Length);
-
-					if (isAscii)
-					{
-						foreach (var c in str)
-						{
-							if (c >= 128)
-							{
-								isAscii = false;
-								break;
-							}
-						}
-					}
-					if (isUnique)
-					{
-						if (this.valueCount.TryGetValue(str, out int count))
-						{
-							Console.WriteLine(this.ordinal + ": " + str);
-							isUnique = false;
-							this.valueCount = null;
-						}
-						else
-						{
-							this.valueCount[str] = 1;
-						}
-					}
-				}
+				var analyzer = new SchemaAnalyzer();
+				var cols = analyzer.Analyze(dr);
 			}
-
-			public DbColumn CreateColumnSchema(string? name)
-			{
-				if (this.isDate || this.isDateTime)
-				{
-					int? precision = isDate ? (int?)null : dateHasFractionalSeconds ? 7 : 0;
-					return ColumnSchema.CreateDate(this.ordinal, name, isNullable, isUnique, precision);
-				}
-
-				if (this.isInt)
-				{
-					var type =
-						intMin < int.MinValue || intMax > int.MaxValue
-						? typeof(long)
-						: typeof(int);
-					return ColumnSchema.CreateInt(this.ordinal, name, isNullable, isUnique, type);
-				}
-
-				if (this.isFloat)
-				{
-					var type =
-						floatMin < float.MinValue || floatMax > float.MaxValue
-						? typeof(double)
-						: typeof(float);
-
-					return ColumnSchema.CreateFloat(this.ordinal, name, isNullable, type);
-				}
-
-				return ColumnSchema.CreateString(this.ordinal, name, isNullable, isUnique, stringLenMax, isAscii);
-			}
+			
 		}
 
 		static void WriteHeaders(DbDataReader reader)
@@ -352,9 +116,8 @@ namespace Sylvan.Tools.CsvSchemaBuilder
 			Console.WriteLine("----------------");
 		}
 
-		static (char delimiter, char quote) IdentifyFormat(string file)
+		static (char delimiter, char quote) IdentifyFormat(TextReader tr)
 		{
-			var tr = File.OpenText(file);
 			var buffer = new char[0x100];
 			var len = tr.ReadBlock(buffer, 0, buffer.Length);
 			var counters = new int[128];
