@@ -717,10 +717,6 @@ namespace Sylvan.Data.Csv
 			var startIdx = recordStart + (ordinal == 0 ? 0 : this.fieldInfos[ordinal - 1].endIdx + 1);
 			var endIdx = recordStart + fi.endIdx;
 			var isEmpty = endIdx - startIdx - (fi.isQuoted ? 2 : 0) - fi.escapeCount == 0;
-			if (col.DataType == typeof(DateTime) && this.GetString(ordinal) == "")
-			{
-				;
-			}
 			return isEmpty;
 		}
 
