@@ -10,3 +10,6 @@ A library containing some types for working with ADO.net data objects.
 
 ### [Sylvan.Data.Csv](docs/Sylvan.Data.Csv.md)
 An extremely fast, lightweight library for reading and writing delimited CSV data.
+
+### Sylvan.Terminal
+Provides types for using ANSI escape codes in .NET console applications.
