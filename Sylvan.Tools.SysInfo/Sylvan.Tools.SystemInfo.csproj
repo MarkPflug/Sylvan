@@ -7,9 +7,13 @@
     <ToolCommandName>sysinfo</ToolCommandName>
 
     <VersionPrefix>1.0.0</VersionPrefix>
-    <Title>System Information Tool</Title>
-    <Description>A dotnet global tool that outputs system information.</Description>
+    <Title>System information tool</Title>
+    <Description>A .NET global tool that outputs system information.</Description>
     <PackageTags>systeminfo;dotnet;global;tool</PackageTags>
   </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\source\Sylvan.Terminal\Sylvan.Terminal.csproj" />
+  </ItemGroup>
 
 </Project>
