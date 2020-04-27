@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -13,7 +13,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\source\Sylvan.Terminal\Sylvan.Terminal.csproj" />
+    <ProjectReference Include="..\Sylvan.Terminal\Sylvan.Terminal.csproj" />
   </ItemGroup>
 
 </Project>

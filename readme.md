@@ -1,6 +1,6 @@
 # <img src="Sylvan.png" height="48" alt="Sylvan Logo"/> Sylvan
 
-Sylvan is a collection of .NET libraries.
+Sylvan is a collection of .NET libraries and tools.
 
 ### Sylvan.Common
 A collection of common utility types.
