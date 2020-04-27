@@ -56,6 +56,5 @@ namespace Sylvan.Terminal
 
 		[DllImport(Kernel32)]
 		static extern int SetConsoleMode(IntPtr handle, uint mode);
-
 	}
 }

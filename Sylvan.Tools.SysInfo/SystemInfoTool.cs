@@ -3,14 +3,16 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Net.NetworkInformation;
 using System.Runtime.InteropServices;
 
 namespace Sylvan.Tools
 {
-	class SysInfo
+	class SystemInfoTool
 	{
+		
 		public static void Main()
 		{
 			using var trm = new ColorConsole();
@@ -20,9 +22,7 @@ namespace Sylvan.Tools
 			var isOSX = RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
 			var isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
 
-			trm.SetForeground(0x40, 0x80, 0x20);
-
-			iw.Value("Tool Version", typeof(SysInfo).Assembly.GetName().Version.ToString());
+			iw.Value("Tool Version", typeof(SystemInfoTool).Assembly.GetName().Version.ToString());
 
 			iw.Header("Machine");
 			iw.Value("Architecture", RuntimeInformation.ProcessArchitecture.ToString());
@@ -37,13 +37,15 @@ namespace Sylvan.Tools
 				: isOSX
 				? "OSX"
 				: "Other";
+
 			iw.Value("OS", os);
 			iw.Value("OSVersion", Environment.OSVersion.ToString());
 			iw.Value("ProcessorCount", Environment.ProcessorCount.ToString());
 			iw.Value("SystemPageSize", Environment.SystemPageSize.ToString());
-			var tickCount = Environment.TickCount;
-			iw.Value("SystemStarted", DateTime.Now.AddMilliseconds(-Environment.TickCount).ToString() + " (local)");
-			iw.Value("SystemUpTime", TimeSpan.FromMilliseconds(tickCount).ToString());
+
+			var tickCount = Environment.TickCount64;
+			iw.Value("SystemStarted", DateTime.Now.AddMilliseconds(-tickCount).ToString() + " (local)");
+			iw.Value("SystemUpTime", TimeSpan.FromMilliseconds(tickCount).ToString(@"d\.hh\:mm\:ss\.fff"));
 
 			iw.Header("Special Folders");
 			var specialFolders =
@@ -57,13 +59,13 @@ namespace Sylvan.Tools
 					.OrderBy(sf => sf.Name, StringComparer.OrdinalIgnoreCase)
 					.ToArray();
 
-			var maxSpecialFolderNameWith = specialFolders.Max(sf => sf.Name.Length);
+			var maxSpecialFolderNameWith = specialFolders.Max(sf => sf.Name.Length) + 1;
 
 			foreach (var specialFolder in specialFolders)
 				iw.Value(specialFolder.Name, specialFolder.Path, maxSpecialFolderNameWith);
 
 			iw.Header("Storage");
-			var drives = System.IO.DriveInfo.GetDrives();
+			var drives = DriveInfo.GetDrives();
 
 			bool first = true;
 			foreach (var drive in drives)
@@ -76,7 +78,6 @@ namespace Sylvan.Tools
 				{
 					Console.WriteLine();
 				}
-
 
 				iw.Value("Name", drive.Name);
 				iw.Value("Type", drive.DriveType.ToString());
@@ -164,7 +165,6 @@ namespace Sylvan.Tools
 					}
 				}
 			}
-			
 		}
 
 		const long KB = 1024;
