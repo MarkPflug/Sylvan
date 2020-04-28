@@ -37,13 +37,20 @@ namespace Sylvan.Terminal
 
 		static bool EnableVTProcessing()
 		{
-			var h = GetStdHandle(new IntPtr(ConsoleDevice.StdOutput));
+			try
+			{
+				var h = GetStdHandle(new IntPtr(ConsoleDevice.StdOutput));
 
-			uint flags = 0;
-			GetConsoleMode(h, out flags);
-			flags |= (uint)ConsoleMode.EnableVirtualTerminalProcessing;
-			var result = SetConsoleMode(h, flags);
-			return result != 0;
+				uint flags = 0;
+				GetConsoleMode(h, out flags);
+				flags |= (uint)ConsoleMode.EnableVirtualTerminalProcessing;
+				var result = SetConsoleMode(h, flags);
+				return result != 0;
+			}
+			catch (Exception)
+			{
+				return false;
+			}
 		}
 
 		const string Kernel32 = "kernel32.dll";

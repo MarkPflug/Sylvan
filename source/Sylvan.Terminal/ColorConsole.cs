@@ -113,8 +113,7 @@ namespace Sylvan.Terminal
 		}
 
 		public void SetColor(bool foreground, byte r, byte g, byte b)
-		{
-			
+		{			
 			buffer[0] = Escape;
 			buffer[1] = '[';
 			buffer[2] = foreground ? '3' : '4';
@@ -135,12 +134,14 @@ namespace Sylvan.Terminal
 
 		public void NewBuffer()
 		{
-			tw.Write(Escape + "[?1049h");
+			tw.Write(Escape);
+			tw.Write("[?1049h");
 		}
 
 		public void MainBuffer()
 		{
-			tw.Write(Escape + "[?1049l");
+			tw.Write(Escape);
+			tw.Write("[?1049l");
 		}
 
 		int WriteByte(char[] buffer, int pos, byte value)
