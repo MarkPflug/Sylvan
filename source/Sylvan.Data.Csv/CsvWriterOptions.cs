@@ -15,6 +15,8 @@ namespace Sylvan.Data.Csv
 
 		public CsvWriterOptions()
 		{
+			this.TrueString = bool.TrueString;
+			this.FalseString = bool.FalseString;
 			this.Delimiter = DefaultDelimiter;
 			this.Quote = DefaultQuote;
 			this.Escape = DefaultEscape;
@@ -22,6 +24,9 @@ namespace Sylvan.Data.Csv
 			this.BufferSize = DefaultBufferSize;
 			this.Culture = CultureInfo.InvariantCulture;
 		}
+
+		public string TrueString { get; set; }
+		public string FalseString { get; set; }
 
 		public char Delimiter { get; set; }
 		public char Quote { get; set; }

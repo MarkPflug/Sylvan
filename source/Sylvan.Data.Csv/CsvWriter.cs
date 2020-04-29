@@ -90,6 +90,10 @@ namespace Sylvan.Data.Csv
 
 		async Task FlushBufferAsync()
 		{
+			if(pos == 0)
+			{
+				throw new ArgumentOutOfRangeException();
+			}
 			await writer.WriteAsync(writeBuffer, 0, pos);
 			pos = 0;
 		}
@@ -476,7 +480,6 @@ namespace Sylvan.Data.Csv
 			if (WriteValue(value) == WriteResult.NeedsFlush)
 				goto flush;
 		}
-
 
 		public void EndRecord()
 		{

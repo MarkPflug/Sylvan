@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>datamigrate</ToolCommandName>
+
+    <VersionPrefix>0.1.0</VersionPrefix>
+    <Title>Sylvan data migration tool</Title>
+    <Description>A .NET global tool for migrating data to and from different formats and databases.</Description>
+    <PackageTags>data;ADO.NET;csv;sqlserver;mysql;postgres;dotnet;global;tool</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="1.1.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Sylvan.Common\Sylvan.Common.csproj" />
+    <ProjectReference Include="..\Sylvan.Data.Csv\Sylvan.Data.Csv.csproj" />
+    <ProjectReference Include="..\Sylvan.Data\Sylvan.Data.csproj" />
+  </ItemGroup>
+
+</Project>
