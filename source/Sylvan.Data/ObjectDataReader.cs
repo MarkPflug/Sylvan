@@ -32,7 +32,7 @@ namespace Sylvan.Data
 				this.DataType = type;
 				this.DataTypeName = this.DataType.Name;
 #warning todo: handle Nullable<T>. Unwrap T and set allow null.
-				this.AllowDBNull = this.DataType.IsValueType;
+				this.AllowDBNull = this.DataType.IsValueType == false;
 			}
 		}
 
@@ -227,6 +227,7 @@ namespace Sylvan.Data
 
 		public override bool IsDBNull(int ordinal)
 		{
+			if (this.columns[ordinal].AllowDBNull == false) return false;
 			return GetValue(ordinal) == null;
 		}
 

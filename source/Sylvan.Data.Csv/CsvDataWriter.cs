@@ -140,7 +140,107 @@ namespace Sylvan.Data.Csv
 
 		public void Write(DbDataReader reader)
 		{
-			this.WriteAsync(reader).Wait();
+			var c = reader.FieldCount;
+			var fieldTypes = new FieldInfo[c];
+
+			var schema = (reader as IDbColumnSchemaGenerator)?.GetColumnSchema();
+
+			for (int i = 0; i < c; i++)
+			{
+				var type = reader.GetFieldType(i);
+				var typeCode = Type.GetTypeCode(type);
+				fieldTypes[i] =
+					new FieldInfo
+					{
+						allowNull = schema?[i].AllowDBNull ?? true,
+						type = typeCode
+					};
+			}
+
+			for (int i = 0; i < c; i++)
+			{
+				var header = reader.GetName(i);
+				writer.WriteField(header);
+			}
+			writer.EndRecord();
+			int row = 0;
+			while (reader.Read())
+			{
+				row++;
+				int i = 0; // field
+				try
+				{
+					for (; i < c; i++)
+					{
+						var allowNull = fieldTypes[i].allowNull;
+
+						if (allowNull && reader.IsDBNull(i)) // TODO: async?
+						{
+							writer.WriteField("");
+							continue;
+						}
+
+						var typeCode = fieldTypes[i].type;
+						int intVal;
+						string? str;
+
+						switch (typeCode)
+						{
+							case TypeCode.Boolean:
+								var boolVal = reader.GetBoolean(i);
+								writer.WriteField(boolVal);
+								break;
+							case TypeCode.String:
+								str = reader.GetString(i);
+								goto str;
+							case TypeCode.Byte:
+								intVal = reader.GetByte(i);
+								goto intVal;
+							case TypeCode.Int16:
+								intVal = reader.GetInt16(i);
+								goto intVal;
+							case TypeCode.Int32:
+								intVal = reader.GetInt32(i);
+							intVal:
+								writer.WriteField(intVal);
+								break;
+							case TypeCode.Int64:
+								var longVal = reader.GetInt64(i);
+								writer.WriteField(longVal);
+								break;
+							case TypeCode.DateTime:
+								var dateVal = reader.GetDateTime(i);
+								writer.WriteField(dateVal);
+								break;
+							case TypeCode.Single:
+								var floatVal = reader.GetFloat(i);
+								writer.WriteField(floatVal);
+								break;
+							case TypeCode.Double:
+								var doubleVal = reader.GetDouble(i);
+								writer.WriteField(doubleVal);
+								break;
+							case TypeCode.Empty:
+							case TypeCode.DBNull:
+								writer.WriteField("");
+								break;
+							default:
+								str = reader.GetValue(i)?.ToString() ?? "";
+							str:
+								writer.WriteField(str);
+								break;
+						}
+					}
+				}
+				catch (ArgumentOutOfRangeException e)
+				{
+					throw new CsvRecordTooLargeException(row, i, null, e);
+				}
+
+				writer.EndRecord();
+			}
+			// flush any pending data on the way out.
+			writer.Flush();
 		}
 
 		enum FieldState
