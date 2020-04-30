@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -11,15 +11,17 @@
     <Description>A .NET global tool for migrating data to and from different formats and databases.</Description>
     <PackageTags>data;ADO.NET;csv;sqlserver;mysql;postgres;dotnet;global;tool</PackageTags>
   </PropertyGroup>
-
+  <ItemGroup>
+    <None Update="Data\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Data.SqlClient" Version="1.1.2" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\Sylvan.Common\Sylvan.Common.csproj" />
     <ProjectReference Include="..\Sylvan.Data.Csv\Sylvan.Data.Csv.csproj" />
     <ProjectReference Include="..\Sylvan.Data\Sylvan.Data.csproj" />
+    <ProjectReference Include="..\Sylvan.Terminal\Sylvan.Terminal.csproj" />
   </ItemGroup>
 
 </Project>

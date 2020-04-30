@@ -4,14 +4,14 @@ namespace Sylvan.Data.Csv
 {
 	public class CsvFormatException : Exception
 	{
-		internal CsvFormatException(int row, int ordinal, string? msg, Exception? inner) 
+		internal CsvFormatException(long row, int ordinal, string? msg, Exception? inner) 
 			: base(msg, inner)
 		{
 			this.RowNumber = row;
 			this.FieldOrdinal = ordinal;
 		}
 
-		public int RowNumber { get; }
+		public long RowNumber { get; }
 
 		public int FieldOrdinal { get; }
 	}
@@ -31,7 +31,7 @@ namespace Sylvan.Data.Csv
 	/// </remarks>
 	public sealed class CsvRecordTooLargeException : CsvFormatException
 	{
-		internal CsvRecordTooLargeException(int row, int ordinal, string? msg, Exception? inner) 
+		internal CsvRecordTooLargeException(long row, int ordinal, string? msg, Exception? inner) 
 			: base(row, ordinal, msg, inner) { }
 	}
 }
