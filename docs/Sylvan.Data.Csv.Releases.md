@@ -1,4 +1,9 @@
 # Sylvan.Data.Csv Release Notes
+_0.4.0_
+Fix bug with CsvDataWriter not handling null columns properly.
+Fix bug with CsvWriter spinning when record too large, now throws.
+Add CsvWriter options for custom boolean strings.
+Fix a performance regression in benchmarks which was caused by external code.
 
 _0.3.4_
 Fix a bug with CsvDataReader.GetChars(), which would misbehave when the data reader was used as a table value parameter in a sql query.

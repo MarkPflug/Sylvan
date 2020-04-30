@@ -70,9 +70,7 @@ namespace Sylvan.Data.Csv
 		{
 			var reader = File.OpenText("Data\\Schema.csv");
 			return CsvDataReader.Create(reader, new CsvDataReaderOptions() { Schema = DataSchema.Instance });
-		}
-
-		
+		}		
 
 		class DataSchema : ICsvSchemaProvider
 		{
@@ -101,7 +99,6 @@ namespace Sylvan.Data.Csv
 			}
 		}
 
-
 		public sealed class TestClass
 		{
 			public int Id { get; set; }
@@ -123,7 +120,6 @@ namespace Sylvan.Data.Csv
 			DateTime startDate = new DateTime(2020, 3, 23, 0, 0, 0, DateTimeKind.Utc);
 			row.DataSet = new double[valueCount];
 			var counter = 1;
-			
 			
 			return
 				Enumerable

@@ -12,6 +12,8 @@ namespace Sylvan.Data.Csv
 #endif
 	{
 		readonly TextWriter writer;
+		readonly string trueString;
+		readonly string falseString;
 		readonly char delimiter;
 		readonly char quote;
 		readonly char escape;
@@ -37,6 +39,8 @@ namespace Sylvan.Data.Csv
 			}
 
 			this.writer = writer;
+			this.trueString = options.TrueString;
+			this.falseString = options.FalseString;
 			this.delimiter = options.Delimiter;
 			this.quote = options.Quote;
 			this.escape = options.Escape;
@@ -90,12 +94,20 @@ namespace Sylvan.Data.Csv
 
 		async Task FlushBufferAsync()
 		{
+			if (pos == 0)
+			{
+				throw new ArgumentOutOfRangeException();
+			}
 			await writer.WriteAsync(writeBuffer, 0, pos);
 			pos = 0;
 		}
 
 		void FlushBuffer()
 		{
+			if (pos == 0)
+			{
+				throw new ArgumentOutOfRangeException();
+			}
 			writer.Write(writeBuffer, 0, pos);
 			pos = 0;
 		}
@@ -353,7 +365,7 @@ namespace Sylvan.Data.Csv
 			{
 				writeBuffer[pos++] = delimiter;
 			}
-			var str = value ? "true" : "false";
+			var str = value ? trueString : falseString;
 			fieldIdx++;
 			if (WriteValueOptimistic(str) == WriteResult.Okay)
 				return;
@@ -477,7 +489,6 @@ namespace Sylvan.Data.Csv
 				goto flush;
 		}
 
-
 		public void EndRecord()
 		{
 			if (!WriteNewLine())
@@ -498,7 +509,7 @@ namespace Sylvan.Data.Csv
 			{
 				writeBuffer[pos++] = delimiter;
 			}
-			var str = value ? "true" : "false";
+			var str = value ? trueString : falseString;
 			fieldIdx++;
 			if (WriteValueOptimistic(str) == WriteResult.Okay)
 				return;
