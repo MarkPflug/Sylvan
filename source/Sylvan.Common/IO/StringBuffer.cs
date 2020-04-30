@@ -197,35 +197,35 @@ namespace Sylvan.IO
 			}
 		}
 #else
-		unsafe string BuildString()
+		string BuildString()
 		{
 			var length = this.length;
 			var shift = this.factory.BlockShift;
 			var size = this.factory.BlockSize;
 			var mask = ~(~0 << shift);
 
-			var str = new string('\0', this.length);
-			fixed(char* p = str)
+			var buffer = new char[this.length];
+
+			int off = 0;
+			var c = length >> shift;
+			for (int i = 0; i < c; i++)
 			{
-				Span<char> span = new Span<char>(p, this.length);
-
-				var c = length >> shift;
-				for (int i = 0; i < c; i++)
+				var block = this.blocks[i];
+				if (block != null)
 				{
-					var block = this.blocks[i];
-					if (block != null)
-						block.CopyTo(span);
-					span = span.Slice(size);
+					Array.Copy(block, 0, buffer, off, size);
 				}
-
-				var rem = length & mask;
-				if (rem > 0)
-				{
-					ReadOnlySpan<char> block = this.blocks[c];
-					block.Slice(0, rem).CopyTo(span);
-				}
+				off += size;
 			}
-			return str;
+
+			var rem = length & mask;
+			if (rem > 0)
+			{
+				var block = this.blocks[c];
+				Array.Copy(block, 0, buffer, off, rem);
+			}
+
+			return new string(buffer, 0, this.length);
 		}
 #endif
 
