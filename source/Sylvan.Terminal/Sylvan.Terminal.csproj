@@ -4,7 +4,7 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <VersionPrefix>0.1.0</VersionPrefix>
     <VersionSuffix>B0002</VersionSuffix>
-    <Description>Sylvan.Terminal provides types for using ANSI escape codes in .NET console applications.</Description>
+    <Description>A .NET library for using ANSI escape codes in console applications.</Description>
     <PackageTags>console;terminal;color;vt;ansi</PackageTags>
     <Nullable>enable</Nullable>
   </PropertyGroup>
