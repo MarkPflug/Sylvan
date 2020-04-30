@@ -632,7 +632,7 @@ namespace Sylvan.Data.Csv
 			return;
 		}
 
-		#region IDisposable Support
+#region IDisposable Support
 		bool disposedValue = false;
 
 		void Dispose(bool disposing)

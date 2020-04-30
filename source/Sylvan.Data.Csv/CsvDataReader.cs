@@ -611,6 +611,7 @@ namespace Sylvan.Data.Csv
 			return b.AsSpan().Slice(o, l);
 		}
 #endif
+
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		(char[] buffer, int offset, int len) GetField(int ordinal)
 		{

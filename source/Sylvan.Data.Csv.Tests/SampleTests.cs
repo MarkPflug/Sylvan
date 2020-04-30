@@ -44,19 +44,7 @@ namespace Sylvan.Data.Csv
 			return File.OpenText(DataFileName);
 		}
 
-		sealed class Schema : ICsvSchemaProvider
-		{
-			readonly ReadOnlyCollection<DbColumn> schema;
-			public Schema(ReadOnlyCollection<DbColumn> schema)
-			{
-				this.schema = schema;
-			}
-
-			public DbColumn GetColumn(string name, int ordinal)
-			{
-				return schema[ordinal];
-			}
-		}
+		
 
 		[Fact(Skip = "Usage example.")]
 		public void SylvanDataTable()
@@ -292,7 +280,7 @@ order by ORDINAL_POSITION";
 			var reader = cmd.ExecuteReader();
 			var tableSchema = reader.GetColumnSchema();
 			reader.Close();
-			var csvSchema = new Schema(tableSchema);
+			var csvSchema = new CsvSchema(tableSchema);
 
 			var options = new CsvDataReaderOptions
 			{
@@ -332,7 +320,7 @@ order by ORDINAL_POSITION";
 			var tableSchema = reader.GetColumnSchema();
 			reader.Close();
 
-			var csvSchema = new Schema(tableSchema);
+			var csvSchema = new CsvSchema(tableSchema);
 
 			var options = new CsvDataReaderOptions
 			{
@@ -377,7 +365,7 @@ order by ORDINAL_POSITION";
 			var tableSchema = reader.GetColumnSchema();
 			reader.Close();
 
-			var csvSchema = new Schema(tableSchema);
+			var csvSchema = new CsvSchema(tableSchema);
 
 			var options = new CsvDataReaderOptions
 			{
@@ -427,13 +415,13 @@ order by ORDINAL_POSITION";
 			}
 		}
 
-		static Schema GetSchema(SqlConnection conn, string table)
+		static CsvSchema GetSchema(SqlConnection conn, string table)
 		{
 			using var cmd = conn.CreateCommand();
 			cmd.CommandText = "select top 0 * from " + table;
 			using var reader = cmd.ExecuteReader();
 			var tableSchema = reader.GetColumnSchema();
-			return new Schema(tableSchema);
+			return new CsvSchema(tableSchema);
 		}
 
 		[Fact]
