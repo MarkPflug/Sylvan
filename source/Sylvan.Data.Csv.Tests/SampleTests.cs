@@ -14,8 +14,7 @@ using Xunit;
 
 namespace Sylvan.Data.Csv
 {
-	public class SampleTests
-	{
+	public class SampleTests { 
 		const string DataSetUrl = "https://geonames.usgs.gov/docs/stategaz/NationalFile.zip";
 		const string ZipFileName = "GnisData.zip";
 		const string DataFileName = "GnisData.csv";
@@ -91,7 +90,7 @@ namespace Sylvan.Data.Csv
 			return new SqlConnection(csb.ConnectionString);
 		}
 
-		[Fact]//(Skip = "Usage example.")]
+		[Fact(Skip = "Usage example.")]
 		public async Task SylvanManualTVP()
 		{
 			using var tr = GetData();
@@ -311,7 +310,7 @@ order by ORDINAL_POSITION";
 			bcp.WriteToServer(dataReader);
 		}
 
-		[Fact]//(Skip = "Usage example.")]
+		[Fact(Skip = "Usage example.")]
 		public void SqlTVPRawSample()
 		{
 			using var csvText = GetData(); // Gets a TextReader over a large-ish CSV dataset
@@ -356,7 +355,7 @@ order by ORDINAL_POSITION";
 		}
 
 
-		[Fact]//(Skip = "Usage example.")]
+		[Fact(Skip = "Usage example.")]
 		public void SqlTVPSample()
 		{
 			using var csvText = GetData(); // Gets a TextReader over a large-ish CSV dataset
@@ -436,7 +435,7 @@ order by ORDINAL_POSITION";
 			return new Schema(tableSchema);
 		}
 
-		[Fact]
+		[Fact(Skip = "Usage example.")]
 		public void SqlTVPSimple2()
 		{
 			using var csvText = GetData(); // Gets a TextReader over a large-ish CSV dataset
@@ -469,7 +468,7 @@ order by ORDINAL_POSITION";
 			cmd.ExecuteNonQuery();
 		}
 
-		[Fact]
+		[Fact(Skip = "Usage example.")]
 		public void SqlTVPSimple2Csv()
 		{
 			using var csvText = GetData(); // Gets a TextReader over a large-ish CSV dataset
@@ -496,7 +495,7 @@ order by ORDINAL_POSITION";
 			cmd.ExecuteNonQuery();
 		}
 
-		[Fact]
+		[Fact(Skip = "Usage example.")]
 		public void SqlTVPSimple1()
 		{
 			using var csvText = GetData(); // Gets a TextReader over a large-ish CSV dataset
