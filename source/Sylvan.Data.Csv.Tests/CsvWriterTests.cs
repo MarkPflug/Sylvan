@@ -73,6 +73,19 @@ namespace Sylvan.Data.Csv
 			Assert.Equal(expected, tw.ToString());
 		}
 
+		[Fact]
+		public void WriteQuote()
+		{
+			var tw = new StringWriter();
+			using (var csv = new CsvWriter(tw))
+			{
+				csv.WriteField("Value with \"quote");
+				csv.EndRecord();
+			}
+			var str = tw.ToString();
+			Assert.Equal("\"Value with \"\"quote\"" + Environment.NewLine, str);
+		}
+
 #endif
 	}
 }
