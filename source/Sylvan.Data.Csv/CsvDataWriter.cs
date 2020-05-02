@@ -9,9 +9,8 @@ namespace Sylvan.Data.Csv
 	public sealed class CsvDataWriter
 	{
 		readonly CsvWriter writer;
-		readonly Action<long> rowCallback;
 
-		public CsvDataWriter(TextWriter writer, CsvWriterOptions? options = null, Action<long> rowCallback = null)
+		public CsvDataWriter(TextWriter writer, CsvWriterOptions? options = null)
 		{
 			if (writer == null) throw new ArgumentNullException(nameof(writer));
 			if (options != null)
@@ -22,7 +21,6 @@ namespace Sylvan.Data.Csv
 			{
 				options = CsvWriterOptions.Default;
 			}
-			this.rowCallback = rowCallback;
 			this.writer = new CsvWriter(writer, options);
 		}
 
@@ -239,7 +237,6 @@ namespace Sylvan.Data.Csv
 				}
 
 				writer.EndRecord();
-				rowCallback(row);
 			}
 			// flush any pending data on the way out.
 			writer.Flush();

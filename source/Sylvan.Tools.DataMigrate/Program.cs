@@ -285,27 +285,27 @@ namespace Sylvan.Tools.DataMigrate
 					using var dr = dc.ExecuteReader();
 
 					using var ts = new StreamWriter(os, Encoding.UTF8);
-					Action<long> cb = (r) =>
-					{
-						progress += rowInc;
-						pp += rowInc;
-						if (pp > updateT)
-						{
-							pp -= updateT;
+					//Action<long> cb = (r) =>
+					//{
+					//	progress += rowInc;
+					//	pp += rowInc;
+					//	if (pp > updateT)
+					//	{
+					//		pp -= updateT;
 
-							var p = progress * 100.0 / totalSize;
+					//		var p = progress * 100.0 / totalSize;
 
-							var e = sw.Elapsed;
-							var total = e.Ticks * totalSize / progress;
-							var time = TimeSpan.FromTicks(total);
+					//		var e = sw.Elapsed;
+					//		var total = e.Ticks * totalSize / progress;
+					//		var time = TimeSpan.FromTicks(total);
 
-							cc.SetCursorPosition(0, 2);
-							cc.WriteLine($"                                                                                                          ");
-							cc.SetCursorPosition(0, 2);
-							cc.Write($"{p,5:0.0}% {(int)e.TotalSeconds}/{(int)time.TotalSeconds}");
-						}
-					};
-					var csvw = new CsvDataWriter(ts, opts, cb);
+					//		cc.SetCursorPosition(0, 2);
+					//		cc.WriteLine($"                                                                                                          ");
+					//		cc.SetCursorPosition(0, 2);
+					//		cc.Write($"{p,5:0.0}% {(int)e.TotalSeconds}/{(int)time.TotalSeconds}");
+					//	}
+					//};
+					var csvw = new CsvDataWriter(ts, opts);
 					csvw.Write(dr);
 				}
 			}
