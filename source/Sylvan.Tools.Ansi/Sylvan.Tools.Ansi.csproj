@@ -19,9 +19,4 @@
   <ItemGroup>
     <ProjectReference Include="..\Sylvan.Terminal\Sylvan.Terminal.csproj" />
   </ItemGroup>
-  <ItemGroup>
-    <Reference Include="Sylvan.Terminal">
-      <HintPath>..\..\bin\Debug\netcoreapp3.1\Sylvan.Terminal.dll</HintPath>
-    </Reference>
-  </ItemGroup>
 </Project>

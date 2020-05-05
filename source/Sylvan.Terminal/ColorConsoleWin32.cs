@@ -35,9 +35,32 @@ namespace Sylvan.Terminal
 			DisableNewLineAutoReturn = 0x0008,
 		}
 
-		public static bool Enable()
+		public static IDisposable Enable()
 		{
-			return EnableVTProcessing();
+			var h = GetStdHandle(new IntPtr(ConsoleDevice.StdOutput));
+
+			uint flags = 0;
+			GetConsoleMode(h, out flags);
+			flags |= (uint)ConsoleMode.EnableVirtualTerminalProcessing;
+			var result = SetConsoleMode(h, flags);
+
+			return new Restore(h, flags);
+		}
+
+		class Restore : IDisposable
+		{
+			IntPtr h;
+			uint flags;
+			public Restore(IntPtr h, uint flags)
+			{
+				this.h = h;
+				this.flags = flags;
+			}
+
+			public void Dispose()
+			{
+				SetConsoleMode(h, flags);
+			}
 		}
 
 		static bool EnableVTProcessing()

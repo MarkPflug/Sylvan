@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Sylvan.Tools.Ansi": {
+      "commandName": "Project",
+      "commandLineArgs": "../../../Sylvan.png"
+    }
+  }
+}

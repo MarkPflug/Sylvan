@@ -10,11 +10,14 @@ namespace Sylvan.Tools.Ansi
 	{
 		static void Main(string[] args)
 		{
-			ColorConsole.Enable();
-			var vt = new VirtualTerminalWriter(Console.Out);
-			var r = new Renderer();
-			r.RenderImage(vt, args[0]);
-			vt.SetFormatDefault();
+			using (ColorConsole.Enable())
+			{
+				var vt = new VirtualTerminalWriter(Console.Out);
+				var r = new Renderer();
+				r.RenderImage(vt, args[0]);
+				vt.SetFormatDefault();
+				vt.SoftReset();
+			}
 		}
 	}
 
@@ -59,8 +62,7 @@ namespace Sylvan.Tools.Ansi
 			byte tb = 0;
 			byte br = 0;
 			byte bg = 0;
-			byte bb = 0;
-			vvt.NewBuffer();
+			byte bb = 0;			
 			vvt.SetForeground(Terminal.Color.Black);
 			vvt.SetBackground(Terminal.Color.Black);
 			var h = Math.Min(ii.Height, height * 2);
@@ -106,8 +108,7 @@ namespace Sylvan.Tools.Ansi
 				}
 				vvt.SetCursorPosition(0, (byte)(y + 1));
 			}
-			vvt.Flush();
-			
+			vvt.Flush();			
 		}
 
 		bool Near(int l, int r)
