@@ -90,7 +90,7 @@ namespace Sylvan.Terminal
 		}
 	}
 
-	public class VirtualTerminalWriter 
+	public class VirtualTerminalWriter  : TextWriter
 	{
 		const char Escape = '\x1b';
 		const char Backspace = '\x7f';
@@ -150,9 +150,21 @@ namespace Sylvan.Terminal
 		int counter;
 		readonly TextWriter output;
 
+		public override Encoding Encoding => output.Encoding;
+
 		public VirtualTerminalWriter(TextWriter output)
 		{
 			this.output = output;
+		}
+
+		public override void Write(char c)
+		{
+			output.Write(c);
+		}
+
+		public override void Write(char[] buffer, int offset, int length)
+		{
+			output.Write(buffer, offset, length);
 		}
 
 		public async Task FlushAsync()
@@ -163,11 +175,6 @@ namespace Sylvan.Terminal
 		public void CursorMove(Direction d, byte c = 1)
 		{
 			WriteCode(GetCode(d), c);
-		}
-
-		public void Write(char c)
-		{
-			Output(c);
 		}
 
 		public void WriteLine(String str)
@@ -371,7 +378,7 @@ namespace Sylvan.Terminal
 		void SetColor(byte r, byte g, byte b, bool foreground = true)
 		{
 			byte arg0 = foreground ? (byte)38 : (byte)48;
-			Span<byte> args = stackalloc byte[4] { arg0, r, g, b };
+			Span<byte> args = stackalloc byte[5] { arg0, 2, r, g, b };
 			WriteCode(Code.Format, args);
 		}
 
@@ -416,13 +423,13 @@ namespace Sylvan.Terminal
 			int i = 0;
 			code[i++] = Escape;
 			code[i++] = ']';
-			code[i++] = '0';
+			code[i++] = '2';
 			code[i++] = ';';
 			foreach (var c in str)
 			{
 				code[i++] = c;
 			}
-			code[i++] = '\b';
+			code[i++] = '\a';
 			Output(code, i);
 		}
 

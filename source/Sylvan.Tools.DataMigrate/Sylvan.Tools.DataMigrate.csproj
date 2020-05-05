@@ -9,7 +9,7 @@
     <VersionPrefix>0.1.0</VersionPrefix>
     <Title>Sylvan data migration tool</Title>
     <Description>A .NET global tool for migrating data to and from different formats and databases.</Description>
-    <PackageTags>data;ADO.NET;csv;sqlserver;mysql;postgres;dotnet;global;tool</PackageTags>
+    <PackageTags>data;ADO.NET;csv;sqlserver;mysql;postgres;</PackageTags>
   </PropertyGroup>
   <ItemGroup>
     <None Update="Data\**\*">

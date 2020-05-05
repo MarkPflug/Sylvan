@@ -1,6 +1,7 @@
 <Project>
   <PropertyGroup>
-    <PackageTags>$(PackageTags);.NET;Sylvan</PackageTags>
+    <PackageTags>$(PackageTags);dotnet;.NET;Sylvan</PackageTags>
+    <PackageTags Condition="$(MSBuildProjectName.StartsWith('Sylvan.Tools.'))">$(PackageTags);global;tool</PackageTags>
   </PropertyGroup>
   <Target Name="PrepareNupkg" BeforeTargets="ResolvePackageAssets">
     <!-- the package folder must exist before nuget restore runs -->

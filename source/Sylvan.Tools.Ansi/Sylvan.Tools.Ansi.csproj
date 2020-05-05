@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>ansi</ToolCommandName>
+
+    <VersionPrefix>0.1.0</VersionPrefix>
+    <Title>Sylvan ANSI tools</Title>
+    <Description>A .NET global tool for creating ANSI .ans files.</Description>
+    <PackageTags>ansi;bbs</PackageTags>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="SixLabors.ImageSharp" Version="1.0.0-rc0001" />
+    <PackageReference Include="System.CommandLine.DragonFruit" Version="0.3.0-alpha.20253.1" />
+    <PackageReference Include="System.Text.Encoding.CodePages" Version="4.7.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Sylvan.Terminal\Sylvan.Terminal.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="Sylvan.Terminal">
+      <HintPath>..\..\bin\Debug\netcoreapp3.1\Sylvan.Terminal.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+</Project>

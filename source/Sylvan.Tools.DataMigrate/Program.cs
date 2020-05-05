@@ -39,8 +39,8 @@ namespace Sylvan.Tools.DataMigrate
 
 		static void Main(string[] args)
 		{
-			SqlToCsv();
-		}
+
+		}		
 
 		static MySqlConnection GetMySqlConnection()
 		{
