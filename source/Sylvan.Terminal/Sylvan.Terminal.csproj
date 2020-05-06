@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFramework>netstandard2.1</TargetFramework>
     <VersionPrefix>0.1.0</VersionPrefix>
     <VersionSuffix>B0002</VersionSuffix>
     <Description>A .NET library for using ANSI escape codes in console applications.</Description>

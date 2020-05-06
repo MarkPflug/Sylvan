@@ -66,7 +66,7 @@ namespace Sylvan.Terminal
 			var len = StringLength(value);
 			int index = len;
 
-		
+
 			do
 			{
 				byte div = (byte)(value / 10);
