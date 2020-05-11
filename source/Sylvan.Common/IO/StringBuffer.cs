@@ -13,7 +13,7 @@ namespace Sylvan.IO
 	/// This factory exists to allow tuning the parameters of the constructed <see cref="BlockMemoryStream"/>,
 	/// while using a shared buffer pool.
 	/// </remarks>
-	public sealed class StringBufferFactory : IFactory<StringBuffer>
+	sealed class StringBufferFactory : IFactory<StringBuffer>
 	{
 		const int DefaultBlockShift = 12; // this was determined to be the fastest.
 		const int DefaultInitialBufferCount = 8;
@@ -62,7 +62,7 @@ namespace Sylvan.IO
 	/// <summary>
 	/// A memory-backed <see cref="TextWriter"/> implementation.
 	/// </summary>
-	public sealed class StringBuffer : TextWriter
+	sealed class StringBuffer : TextWriter
 	{
 		readonly StringBufferFactory factory;
 
