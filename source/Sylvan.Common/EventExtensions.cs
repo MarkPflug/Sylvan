@@ -11,6 +11,8 @@ namespace Sylvan
 		/// <exception cref="AggregateException">If any registered handlers throw.</exception>
 		public static void InvokeAll<T>(this EventHandler<T> evt, object sender, T args) where T : class
 		{
+			if (evt == null) throw new ArgumentNullException(nameof(evt));
+
 			List<Exception>? es = null;
 			foreach (EventHandler<T> item in evt.GetInvocationList())
 			{

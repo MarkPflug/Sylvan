@@ -11,7 +11,7 @@ namespace Sylvan
 	{
 		private SystemClock() { }
 
-		public static SystemClock Instance = new SystemClock();
+		public readonly static SystemClock Instance = new SystemClock();
 
 		public DateTime UtcNow { get { return DateTime.UtcNow; } }
 	}
