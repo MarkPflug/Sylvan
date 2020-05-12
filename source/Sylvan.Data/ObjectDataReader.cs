@@ -49,10 +49,11 @@ namespace Sylvan.Data
 
 		int c = 0;
 
-		public void AddColumn<T0>(string name, Func<T, T0> func)
+		public ObjectDataReader<T> AddColumn<T0>(string name, Func<T, T0> func)
 		{
 			Func<T, object> valueSelector = item => func(item);
 			this.columns.Add(new ColumnInfo(c++, name, typeof(T0), func, valueSelector));
+			return this;
 		}
 
 		public override bool IsClosed

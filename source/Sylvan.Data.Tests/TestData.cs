@@ -31,7 +31,13 @@ namespace Sylvan.Data
 				Enumerable
 				.Range(0, count)
 				.Select(i => new TestClass(i))
-				.AsDataReader();
+				.AsDataReader()
+				.AddColumn("Id", r => r.Id)
+				.AddColumn("Name", r => r.Name)
+				.AddColumn("Value", r => r.Value)
+				.AddColumn("Date", r => r.Date);
+			
+				
 		}
 	}
 }

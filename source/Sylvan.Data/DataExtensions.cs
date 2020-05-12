@@ -16,7 +16,7 @@ namespace Sylvan.Data
 		/// <example>
 		/// var reader = seq.CreateDataReader()
 		/// </example>
-		public static DbDataReader AsDataReader<T>(this IEnumerable<T> seq)
+		public static ObjectDataReader<T> AsDataReader<T>(this IEnumerable<T> seq)
 		{
 			return new ObjectDataReader<T>(seq.GetEnumerator());
 		}

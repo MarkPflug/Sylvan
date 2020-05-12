@@ -5,6 +5,8 @@ using System.Data.Common;
 
 namespace Sylvan.Data
 {
+
+	// This provides an implementation of DbDataReader.GetSchemaTable using the IDbColumnSchemaGenerator implementation.
 	static class SchemaTable
 	{
 		public static DataTable GetSchemaTable(ReadOnlyCollection<DbColumn> schema)

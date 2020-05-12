@@ -16,7 +16,14 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Sylvan.Data.Csv\Sylvan.Data.Csv.csproj" />
     <ProjectReference Include="..\Sylvan.Data\Sylvan.Data.csproj" />
   </ItemGroup>
-
+  
+  <ItemGroup>
+    <None Update="Data\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  
 </Project>
