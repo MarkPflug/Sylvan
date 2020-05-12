@@ -2,6 +2,8 @@
 using System.Buffers;
 using System.Diagnostics;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Sylvan.IO
 {
@@ -14,7 +16,7 @@ namespace Sylvan.IO
 	/// </remarks>
 	public sealed class BlockMemoryStreamFactory : IFactory<BlockMemoryStream>
 	{
-		const int DefaultBlockShift = 12;
+		const int DefaultBlockShift = 12; // use 4k blocks
 		const int DefaultInitialBufferCount = 8;
 
 		/// <summary>
@@ -37,21 +39,21 @@ namespace Sylvan.IO
 			this.bufferPool = new FixedArrayPool<byte>(this.BlockSize);
 		}
 
-		public int BlockShift { get; private set; }
-		public int BlockSize { get; private set; }
-		public int InitialBufferCount { get; private set; }
+		public int InitialBufferCount { get; }
+		public int BlockShift { get; }
+		internal int BlockSize { get; }
 
 		public BlockMemoryStream Create()
 		{
 			return new BlockMemoryStream(this);
 		}
 
-		public void Return(byte[] buffer)
+		internal void Return(byte[] buffer)
 		{
 			bufferPool.Return(buffer);
 		}
 
-		public byte[] Rent()
+		internal byte[] Rent()
 		{
 			return bufferPool.Rent(BlockSize);
 		}
@@ -111,6 +113,8 @@ namespace Sylvan.IO
 		{
 		}
 
+		int BlockMask => this.factory.BlockSize - 1;
+
 		public override int Read(byte[] buffer, int offset, int count)
 		{
 			if (buffer == null) throw new ArgumentNullException(nameof(buffer));
@@ -118,7 +122,7 @@ namespace Sylvan.IO
 			if (offset + count > buffer.Length) throw new ArgumentOutOfRangeException(nameof(offset));
 
 			var shift = factory.BlockShift;
-			var blockMask = ~(~0 << shift);
+			var blockMask = BlockMask;
 			var blockSize = factory.BlockSize;
 
 
@@ -143,7 +147,7 @@ namespace Sylvan.IO
 					Buffer.BlockCopy(curBlock, blockOffset, buffer, offset, cl);
 				}
 
-				pos = pos + c;
+				pos += cl;
 				offset += cl;
 				c -= cl;
 			}
@@ -200,13 +204,16 @@ namespace Sylvan.IO
 
 		public override void Write(byte[] buffer, int offset, int count)
 		{
-			if (buffer == null) throw new ArgumentNullException(nameof(buffer));
-			if (offset >= buffer.Length) throw new ArgumentOutOfRangeException(nameof(offset));
-			if (count < 0 || offset + count > buffer.Length) throw new ArgumentOutOfRangeException(nameof(count));
+			if (buffer == null) 
+				throw new ArgumentNullException(nameof(buffer));
+			if (offset >= buffer.Length) 
+				throw new ArgumentOutOfRangeException(nameof(offset));
+			if (count < 0 || offset + count > buffer.Length) 
+				throw new ArgumentOutOfRangeException(nameof(count));
 
 			var shift = factory.BlockShift;
-			var blockMask = ~(~0 << shift);
 			var blockSize = factory.BlockSize;
+			var blockMask = blockSize - 1;
 
 			var endLength = this.position + count;
 			var reqBlockCount = (endLength + (int)blockMask) >> shift;
@@ -248,6 +255,27 @@ namespace Sylvan.IO
 			this.position = (long)pos;
 			if (this.position > this.length)
 				this.length = this.position;
+		}
+
+		public override async Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
+		{
+			if (destination == null) throw new ArgumentNullException(nameof(destination));
+			var shift = factory.BlockShift;
+			var blockMask = BlockMask;
+			var blockSize = factory.BlockSize;
+
+			while (position < length)
+			{
+				var rem = length - position;
+				cancellationToken.ThrowIfCancellationRequested();
+				var blockIdx = position >> shift;
+				var block = this.blocks[blockIdx];
+				var blockOffset = (int)(position & blockMask);
+				var blockCount = blockSize - blockOffset;
+				var blockLen = rem < blockCount ? (int)rem : blockCount;
+				await destination.WriteAsync(block, blockOffset, blockLen).ConfigureAwait(false);
+				position += blockLen;
+			}
 		}
 
 		protected override void Dispose(bool disposing)

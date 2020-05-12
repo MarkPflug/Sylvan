@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using Sylvan.Benchmarks;
+using System.IO;
 using System.Text;
 using Xunit;
 
@@ -12,16 +13,26 @@ namespace Sylvan.IO
 			var f = new BlockMemoryStreamFactory();
 			var s = f.Create();
 
-			var data = Encoding.ASCII.GetBytes("This is a piece of short test data");
-			for(int i = 0; i < 10000; i++)
+			const string testStr = "This is a piece of short test data";
+			var data = Encoding.ASCII.GetBytes(testStr);
+			const int Count = 100;
+			for (int i = 0; i < Count; i++)
 			{
 				s.Write(data);
 			}
 
-			s.Seek(0, System.IO.SeekOrigin.Begin);
+			s.Seek(0, SeekOrigin.Begin);
 			var r = new StreamReader(s, Encoding.ASCII);
-			char[] cb = new char[0x1000];
-			var l = r.Read(cb, 0, cb.Length);
+			var str = r.ReadToEnd();
+			Assert.Equal(data.Length * Count, str.Length);
+		}
+
+		[Fact]
+		public void Test2()
+		{
+			var msb = new MemoryStreamBenchmarks();
+			msb.Count = 1000;
+			msb.BlockMemoryStream();
 		}
 	}
 }

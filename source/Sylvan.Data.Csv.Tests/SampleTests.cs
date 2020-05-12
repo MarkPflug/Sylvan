@@ -79,161 +79,6 @@ namespace Sylvan.Data.Csv
 			return new SqlConnection(csb.ConnectionString);
 		}
 
-		[Fact]//(Skip = "Usage example.")]
-		public async Task SylvanManualTVP()
-		{
-			using var tr = GetData();
-			using var conn = GetConnection();
-			await conn.OpenAsync();
-			await LoadData(conn, tr, "InsertFeatures");
-		}
-
-		static async Task LoadData(SqlConnection conn, TextReader tr, string procName)
-		{
-
-			var cmd = conn.CreateCommand();
-
-			cmd.CommandText = @"select
-parameter_name,
-user_defined_type_schema,
-user_defined_type_name
-
-from INFORMATION_SCHEMA.PARAMETERS
-where
-	parameter_mode = 'IN' and
-	specific_name = @name and
-	specific_schema = @schema
-
-order by ORDINAL_POSITION";
-			cmd.Parameters.AddWithValue("name", procName);
-			cmd.Parameters.AddWithValue("schema", "dbo");
-
-			var reader = await cmd.ExecuteReaderAsync();
-
-			if (!await reader.ReadAsync()) throw new InvalidOperationException();
-
-			var paramName = reader.GetString(0);
-			var typeSchema = reader.GetString(1);
-			var typeName = reader.GetString(2);
-			await reader.CloseAsync();
-			using var tran = (SqlTransaction)await conn.BeginTransactionAsync();
-
-			cmd.CommandText = "declare @data " + typeSchema + "." + typeName + ";select top 0 * from @data;";
-			cmd.Transaction = tran;
-			reader = await cmd.ExecuteReaderAsync();
-
-			var colSchema = reader.GetColumnSchema();
-			reader.Close();
-			var csvSchema = new SchemaProvider(colSchema);
-
-			DbDataReader csv = await CsvDataReader.CreateAsync(tr, new CsvDataReaderOptions { Schema = csvSchema, Delimiter = '|' });
-			csv = new BoundedDataReader(csv, 1000);
-
-			bool done = false;
-
-			var sbf = new StringBufferFactory(ArrayPool<char>.Shared);
-			int batchSize = 10000;
-			Task batchTask = null;
-
-			while (!done)
-			{
-				var sb = sbf.Create();
-				int count = 0;
-				sb.WriteLine("declare @p1 " + typeSchema + "." + typeName);
-
-				int batchCount = 0;
-				while (count++ < batchSize && await csv.ReadAsync())
-				{
-					batchCount++;
-					sb.Write("insert @p1 values (");
-
-					for (int i = 0; i < csv.FieldCount; i++)
-					{
-
-
-						if (i > 0)
-							sb.Write(",");
-
-						var col = colSchema[i];
-						bool isNull = false;
-						if (col.AllowDBNull != false)
-						{
-							isNull = csv.IsDBNull(i);
-						}
-
-						if (isNull)
-						{
-							sb.Write("null");
-							continue;
-						}
-
-						switch (Type.GetTypeCode(col.DataType))
-						{
-							case TypeCode.Boolean:
-								{
-									var val = csv.GetBoolean(i);
-									sb.Write(val ? "1" : "0");
-								}
-								break;
-							case TypeCode.Int32:
-								{
-									var val = csv.GetInt32(i);
-									sb.Write(val);
-								}
-								break;
-							case TypeCode.DateTime:
-								{
-									var val = csv.GetDateTime(i);
-									sb.Write($"\'{val:yyyy-MM-ddThh:MM:ss.fffff}\'");
-								}
-								break;
-							case TypeCode.Double:
-								{
-									var val = csv.GetDouble(i);
-									sb.Write(val);
-								}
-								break;
-							case TypeCode.String:
-								{
-									var val = csv.GetString(i);
-									sb.Write("N'");
-									sb.Write(val.Replace("'", "''"));
-									sb.Write("'");
-								}
-								break;
-							default:
-								throw new NotSupportedException();
-						}
-
-					}
-
-					sb.WriteLine(");");
-				}
-
-				if (batchCount > 0)
-				{
-					sb.Write("exec dbo." + procName + " " + paramName + " = @p1");
-					var cmdText = sb.ToString();
-					sb.Dispose();
-					if (batchTask != null)
-					{
-						await batchTask;
-					}
-
-					cmd.CommandText = cmdText;
-
-					batchTask = cmd.ExecuteNonQueryAsync();
-					if (batchCount < batchSize)
-						done = true;
-				}
-			}
-			if (batchTask != null)
-				await batchTask;
-
-
-			await tran.CommitAsync();
-		}
-
 		class SchemaProvider : ICsvSchemaProvider
 		{
 			readonly ReadOnlyCollection<DbColumn> schema;
@@ -299,7 +144,7 @@ order by ORDINAL_POSITION";
 			bcp.WriteToServer(dataReader);
 		}
 
-		[Fact]//(Skip = "Usage example.")]
+		[Fact(Skip = "Usage example.")]
 		public void SqlTVPRawSample()
 		{
 			using var csvText = GetData(); // Gets a TextReader over a large-ish CSV dataset
@@ -344,7 +189,7 @@ order by ORDINAL_POSITION";
 		}
 
 
-		[Fact]//(Skip = "Usage example.")]
+		[Fact(Skip = "Usage example.")]
 		public void SqlTVPSample()
 		{
 			using var csvText = GetData(); // Gets a TextReader over a large-ish CSV dataset
@@ -424,7 +269,7 @@ order by ORDINAL_POSITION";
 			return new CsvSchema(tableSchema);
 		}
 
-		[Fact]
+		[Fact(Skip = "Usage example.")]
 		public void SqlTVPSimple2()
 		{
 			using var csvText = GetData(); // Gets a TextReader over a large-ish CSV dataset
@@ -457,7 +302,7 @@ order by ORDINAL_POSITION";
 			cmd.ExecuteNonQuery();
 		}
 
-		[Fact]
+		[Fact(Skip = "Usage example.")]
 		public void SqlTVPSimple2Csv()
 		{
 			using var csvText = GetData(); // Gets a TextReader over a large-ish CSV dataset
@@ -484,7 +329,7 @@ order by ORDINAL_POSITION";
 			cmd.ExecuteNonQuery();
 		}
 
-		[Fact]
+		[Fact(Skip = "Usage example.")]
 		public void SqlTVPSimple1()
 		{
 			using var csvText = GetData(); // Gets a TextReader over a large-ish CSV dataset

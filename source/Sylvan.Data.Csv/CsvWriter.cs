@@ -137,15 +137,22 @@ namespace Sylvan.Data.Csv
 
 		WriteResult WriteValueOptimistic(string str)
 		{
+			var start = pos;
 			if (pos + str.Length >= bufferSize) return WriteResult.NeedsFlush; //TODO: benchmark without this check.
 
 			for (int i = 0; i < str.Length; i++)
 			{
 				var c = str[i];
 				if (c == delimiter || c == '\r' || c == '\n' || c == quote)
+				{
+					pos = start;
 					return WriteResult.Pessimistic;
+				}
 				if (pos == bufferSize)
+				{
+					pos = start;
 					return WriteResult.NeedsFlush;
+				}
 				writeBuffer[pos++] = c;
 			}
 			return WriteResult.Okay;
@@ -623,7 +630,7 @@ namespace Sylvan.Data.Csv
 					case WriteResult.Okay:
 						return;
 					case WriteResult.NeedsFlush:
-						goto flush;
+						goto flush;					
 				}
 			}
 

@@ -4,17 +4,17 @@ using System.Collections.Generic;
 
 namespace Sylvan.Collections
 {
-	public sealed class IntRangeList : IList<int>
+	public sealed class IntRange : IList<int>
 	{
 		public static IList<int> Range(int start, int count)
 		{
-			return new IntRangeList(start, count);
+			return new IntRange(start, count);
 		}
 
 		readonly int start;
 		readonly int count;
 
-		public IntRangeList(int start, int count)
+		public IntRange(int start, int count)
 		{
 			this.start = start;
 			this.count = count;

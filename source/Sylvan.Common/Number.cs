@@ -13,13 +13,7 @@ namespace Sylvan
 		const int PoolSize = 256;
 		const int PoolMask = ~0xff;
 
-		static string[] IntStrings;
-
-		static Number()
-		{
-			IntStrings = new string[PoolSize];
-		}
-
+		static string[] IntStrings = new string[PoolSize];
 
 		public static int ParseInt(ReadOnlySpan<char> text)
 		{
