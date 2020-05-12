@@ -16,6 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Sylvan.Benchmarks\Sylvan.Benchmarks.csproj" />
     <ProjectReference Include="..\Sylvan.Common\Sylvan.Common.csproj" />
   </ItemGroup>
 

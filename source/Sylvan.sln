@@ -23,7 +23,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sylvan.Terminal", "Sylvan.T
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tools", "Tools", "{38AEC6F9-6E57-4C17-ACDD-ACF310AA2537}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sylvan.Tools.SystemInfo", "Sylvan.Tools.SysInfo\Sylvan.Tools.SystemInfo.csproj", "{7FE08757-86A4-4E5D-AB4F-8645A03A7493}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sylvan.Tools.SystemInfo", "Sylvan.Tools.SystemInfo\Sylvan.Tools.SystemInfo.csproj", "{7FE08757-86A4-4E5D-AB4F-8645A03A7493}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sylvan.Tools.CsvSchemaBuilder", "Sylvan.Tools.CsvSchemaBuilder\Sylvan.Tools.CsvSchemaBuilder.csproj", "{629FFD04-40CF-45D1-AD72-87316BF3B5BE}"
 EndProject
