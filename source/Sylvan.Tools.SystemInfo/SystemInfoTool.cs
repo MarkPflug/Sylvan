@@ -12,6 +12,7 @@ namespace Sylvan.Tools
 {
 	class SystemInfoTool
 	{
+
 		
 		public static void Main()
 		{
@@ -42,10 +43,19 @@ namespace Sylvan.Tools
 			iw.Value("OSVersion", Environment.OSVersion.ToString());
 			iw.Value("ProcessorCount", Environment.ProcessorCount.ToString());
 			iw.Value("SystemPageSize", Environment.SystemPageSize.ToString());
-
+			iw.Value("OSPlatform", Environment.Is64BitOperatingSystem ? "64" : "32");
+			
 			var tickCount = Environment.TickCount64;
 			iw.Value("SystemStarted", DateTime.Now.AddMilliseconds(-tickCount).ToString() + " (local)");
 			iw.Value("SystemUpTime", TimeSpan.FromMilliseconds(tickCount).ToString(@"d\.hh\:mm\:ss\.fff"));
+
+			var mi = Memory.GetMemoryInfo();
+			if (mi != null)
+			{
+				iw.Header("Memory");
+				iw.Value("Total", FormatSize(mi.Total));
+				iw.Value("Available", FormatSize(mi.Available));
+			}
 
 			iw.Header("Special Folders");
 			var specialFolders =
@@ -56,6 +66,7 @@ namespace Sylvan.Tools
 								Name = name,
 								Path = Environment.GetFolderPath(value, Environment.SpecialFolderOption.DoNotVerify),
 							})
+					.Where(sf => !string.IsNullOrEmpty(sf.Path))
 					.OrderBy(sf => sf.Name, StringComparer.OrdinalIgnoreCase)
 					.ToArray();
 
@@ -63,6 +74,7 @@ namespace Sylvan.Tools
 
 			foreach (var specialFolder in specialFolders)
 				iw.Value(specialFolder.Name, specialFolder.Path, maxSpecialFolderNameWith);
+
 
 			iw.Header("Storage");
 			var drives = DriveInfo.GetDrives();
