@@ -49,12 +49,16 @@ namespace Sylvan.Tools
 			iw.Value("SystemStarted", DateTime.Now.AddMilliseconds(-tickCount).ToString() + " (local)");
 			iw.Value("SystemUpTime", TimeSpan.FromMilliseconds(tickCount).ToString(@"d\.hh\:mm\:ss\.fff"));
 
+			iw.Header("Memory");
 			var mi = Memory.GetMemoryInfo();
 			if (mi != null)
 			{
-				iw.Header("Memory");
 				iw.Value("Total", FormatSize(mi.Total));
 				iw.Value("Available", FormatSize(mi.Available));
+			} else
+			{
+				iw.Value("Total", "unknown");
+				iw.Value("Available", "unknown");
 			}
 
 			iw.Header("Special Folders");

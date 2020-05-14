@@ -54,16 +54,16 @@ namespace Sylvan.Tools
 
 		static MemoryInfo GetMemoryLinux()
 		{
-			var str = File.ReadAllText("/mem/meminfo");
+			var str = File.ReadAllText("/proc/meminfo");
 			var sr = new StringReader(str);
-			var line = "";
+			string line;
 			long total = -1;
 			long avail = -1;
 
 			while ((line = sr.ReadLine()) != null)
 			{
 				var s = r.Match(line);
-				if(s.Groups[1].Value == "MemTotal")
+				if (s.Groups[1].Value == "MemTotal")
 				{
 					total = long.Parse(s.Groups[2].Value) * 1024;
 				}
@@ -71,6 +71,8 @@ namespace Sylvan.Tools
 				{
 					avail = long.Parse(s.Groups[2].Value) * 1024;
 				}
+				if (total > 0 && avail > 0)
+					break;
 			}
 			if (total == -1 || avail == -1)
 				return null;
@@ -81,13 +83,18 @@ namespace Sylvan.Tools
 		{
 			try
 			{
-				if (Environment.OSVersion.Platform == PlatformID.Win32NT)
+				if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
 				{
 					return GetMemoryWindows();
 				}
-				else
+				else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
 				{
 					return GetMemoryLinux();
+				}
+				else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+				{
+					// not sure here...
+					return null;
 				}
 			}
 			catch { }
