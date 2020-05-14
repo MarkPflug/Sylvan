@@ -116,8 +116,8 @@ namespace Sylvan.Tools
 				iw.Value(specialFolder.Name, specialFolder.Path, maxSpecialFolderNameWith);
 
 			iw.Header("Time");
-			iw.Value("UTC Time", DateTime.UtcNow.ToString());
-			iw.Value("Local Time", DateTime.Now.ToString());
+			iw.Value("UTC Time", DateTime.UtcNow.ToString("u"));
+			iw.Value("Local Time", DateTime.Now.ToString("u"));
 			iw.Value("TimeZone", TimeZoneInfo.Local.StandardName);
 
 
