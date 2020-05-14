@@ -6,7 +6,7 @@
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>sysinfo</ToolCommandName>
 
-    <VersionPrefix>1.0.1</VersionPrefix>
+    <VersionPrefix>1.0.2</VersionPrefix>
     <Title>Sylvan system information tool</Title>
     <Description>A .NET global tool that outputs system information.</Description>
     <PackageTags>systeminfo;dotnet;global;tool</PackageTags>
