@@ -61,30 +61,12 @@ namespace Sylvan.Tools
 				iw.Value("Available", "unknown");
 			}
 
-			iw.Header("Special Folders");
-			var specialFolders =
-				Enum.GetNames(typeof(Environment.SpecialFolder))
-					.Zip(Enum.GetValues(typeof(Environment.SpecialFolder)).Cast<Environment.SpecialFolder>(),
-							(name, value) => new
-							{
-								Name = name,
-								Path = Environment.GetFolderPath(value, Environment.SpecialFolderOption.DoNotVerify),
-							})
-					.Where(sf => !string.IsNullOrEmpty(sf.Path))
-					.OrderBy(sf => sf.Name, StringComparer.OrdinalIgnoreCase)
-					.ToArray();
-
-			var maxSpecialFolderNameWith = specialFolders.Max(sf => sf.Name.Length) + 1;
-
-			foreach (var specialFolder in specialFolders)
-				iw.Value(specialFolder.Name, specialFolder.Path, maxSpecialFolderNameWith);
-
 
 			iw.Header("Storage");
 			var drives = DriveInfo.GetDrives();
 
 			bool first = true;
-			foreach (var drive in drives)
+			foreach (var drive in drives.Where(d => d.DriveType == DriveType.Fixed))
 			{
 				if (first)
 				{
@@ -114,6 +96,24 @@ namespace Sylvan.Tools
 					}
 				}
 			}
+
+			iw.Header("Special Folders");
+			var specialFolders =
+				Enum.GetNames(typeof(Environment.SpecialFolder))
+					.Zip(Enum.GetValues(typeof(Environment.SpecialFolder)).Cast<Environment.SpecialFolder>(),
+							(name, value) => new
+							{
+								Name = name,
+								Path = Environment.GetFolderPath(value, Environment.SpecialFolderOption.DoNotVerify),
+							})
+					.Where(sf => !string.IsNullOrEmpty(sf.Path))
+					.OrderBy(sf => sf.Name, StringComparer.OrdinalIgnoreCase)
+					.ToArray();
+
+			var maxSpecialFolderNameWith = specialFolders.Max(sf => sf.Name.Length) + 1;
+
+			foreach (var specialFolder in specialFolders)
+				iw.Value(specialFolder.Name, specialFolder.Path, maxSpecialFolderNameWith);
 
 			iw.Header("Time");
 			iw.Value("UTC Time", DateTime.UtcNow.ToString());
