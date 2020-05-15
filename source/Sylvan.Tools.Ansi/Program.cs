@@ -25,7 +25,7 @@ namespace Sylvan.Tools.Ansi
 	{
 		public RendererOptions()
 		{
-			this.Threshold = 12;
+			this.Threshold = 6;
 		}
 
 		public int Threshold
@@ -65,7 +65,10 @@ namespace Sylvan.Tools.Ansi
 			byte bb = 0;			
 			vvt.SetForeground(Terminal.Color.Black);
 			vvt.SetBackground(Terminal.Color.Black);
+			
+			vvt.SetCursorPosition(1, 1);
 			var h = Math.Min(ii.Height, height * 2);
+
 			for (int y = 0; y < h / 2; y++)
 			{
 				for (int x = 0; x < ii.Width; x++)
@@ -106,7 +109,7 @@ namespace Sylvan.Tools.Ansi
 
 					vvt.Write('\u2580'); // FG top, BG bot '▀'
 				}
-				vvt.SetCursorPosition(0, (byte)(y + 1));
+				vvt.SetCursorPosition(1, (byte)(y + 2));
 			}
 			vvt.Flush();			
 		}
