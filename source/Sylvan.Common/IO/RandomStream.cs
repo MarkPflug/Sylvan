@@ -5,18 +5,21 @@ namespace Sylvan.IO
 {
 	public sealed class RandomStream : Stream
 	{
+		const int DefaultBufferSize = 0x100;
 		readonly Random rand;
-		byte[] buffer;
+		byte[] temp;
 		int bufferPos;
 		long position;
 
-		public RandomStream() : this(new Random()) {}
+		public RandomStream() : this(new Random(), DefaultBufferSize) { }
 
-		public RandomStream(Random rand)
+		public RandomStream(Random rand, int bufferSize)
 		{
+			if (rand == null) throw new ArgumentNullException(nameof(rand));
+			if (bufferSize < 1) throw new ArgumentOutOfRangeException(nameof(bufferSize));
 			this.rand = rand;
-			this.buffer = new byte[0x1000];
-			this.bufferPos = 0;
+			this.temp = new byte[bufferSize];
+			this.bufferPos = temp.Length;
 			this.position = 0;
 		}
 
@@ -38,18 +41,18 @@ namespace Sylvan.IO
 		public override int Read(byte[] buffer, int offset, int count)
 		{
 			var c = count;
-			
-			while(count > 0)
+			while (count > 0)
 			{
-				if(bufferPos >= buffer.Length)
+				if (bufferPos >= this.temp.Length)
 				{
-					rand.NextBytes(buffer);
+					rand.NextBytes(temp);
 					bufferPos = 0;
 				}
-				var len = Math.Min(count, buffer.Length - bufferPos);
-				Buffer.BlockCopy(this.buffer, bufferPos, buffer, offset, len);
+				var len = Math.Min(count, temp.Length - bufferPos);
+				Buffer.BlockCopy(this.temp, bufferPos, buffer, offset, len);
 				offset += len;
 				count -= len;
+				bufferPos += len;
 			}
 			return c;
 		}

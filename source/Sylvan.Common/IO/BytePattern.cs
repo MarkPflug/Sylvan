@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Text.RegularExpressions;
 
 namespace Sylvan.IO
 {
@@ -80,12 +83,28 @@ namespace Sylvan.IO
 			}
 		}
 
-		public int Find(byte[] data, int offset)
+		public IEnumerable<int> SearchAll(byte[] data)
 		{
-			return Find(data, offset, data.Length);
+			return SearchAll(data, 0, data.Length);
 		}
 
-		public int Find(byte[] data, int offset, int endIdx)
+		public IEnumerable<int> SearchAll(byte[] data, int startIdx, int endIdx)
+		{
+			while(startIdx >= 0)
+			{
+				var idx = Search(data, startIdx, endIdx);
+				if (idx < 0) yield break;
+				yield return idx;
+				startIdx = idx + 1;
+			}
+		}
+
+		public int Search(byte[] data, int offset)
+		{
+			return Search(data, offset, data.Length);
+		}
+
+		public int Search(byte[] data, int offset, int endIdx)
 		{
 			if (data == null) throw new ArgumentNullException(nameof(data));
 			if (offset < 0) throw new ArgumentOutOfRangeException(nameof(offset));
