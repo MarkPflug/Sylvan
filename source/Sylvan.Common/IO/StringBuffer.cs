@@ -7,10 +7,10 @@ using System.Text;
 namespace Sylvan.IO
 {
 	/// <summary>
-	/// A factory class for creating <see cref="BlockMemoryStream"/> instances.
+	/// A factory class for creating <see cref="PooledMemoryStream"/> instances.
 	/// </summary>
 	/// <remarks>
-	/// This factory exists to allow tuning the parameters of the constructed <see cref="BlockMemoryStream"/>,
+	/// This factory exists to allow tuning the parameters of the constructed <see cref="PooledMemoryStream"/>,
 	/// while using a shared buffer pool.
 	/// </remarks>
 	sealed class StringBufferFactory : IFactory<StringBuffer>
@@ -19,7 +19,7 @@ namespace Sylvan.IO
 		const int DefaultInitialBufferCount = 8;
 
 		/// <summary>
-		/// A default factory instance used by the default <see cref="BlockMemoryStream"/> constructor.
+		/// A default factory instance used by the default <see cref="PooledMemoryStream"/> constructor.
 		/// </summary>
 		public static readonly StringBufferFactory Default = new StringBufferFactory(new FixedArrayPool<char>(1 << DefaultBlockShift), DefaultBlockShift, DefaultInitialBufferCount);
 				
