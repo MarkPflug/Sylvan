@@ -25,11 +25,11 @@ namespace Sylvan.Benchmarks
 		}
 
 		[Benchmark]
-		public void BlockMemoryStream()
+		public void PooledMemoryStream()
 		{
 			for (int i = 0; i < Iterations; i++)
 			{
-				using var stream = new BlockMemoryStream();
+				using var stream = new PooledMemoryStream();
 				Process(stream);
 			}
 		}
@@ -51,6 +51,5 @@ namespace Sylvan.Benchmarks
 			Fill(stream);
 			stream.CopyTo(Stream.Null);
 		}
-
 	}
 }

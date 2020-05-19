@@ -8,85 +8,50 @@ using System.Threading.Tasks;
 namespace Sylvan.IO
 {
 	/// <summary>
-	/// A factory class for creating <see cref="BlockMemoryStream"/> instances.
-	/// </summary>
-	/// <remarks>
-	/// This factory exists to allow tuning the parameters of the constructed <see cref="BlockMemoryStream"/>,
-	/// while using a shared buffer pool.
-	/// </remarks>
-	public sealed class BlockMemoryStreamFactory : IFactory<BlockMemoryStream>
-	{
-		const int DefaultBlockShift = 12; // use 4k blocks
-		const int DefaultInitialBufferCount = 8;
-
-		/// <summary>
-		/// A default factory instance used by the default <see cref="BlockMemoryStream"/> constructor.
-		/// </summary>
-		public static readonly BlockMemoryStreamFactory Default = new BlockMemoryStreamFactory(DefaultBlockShift, DefaultInitialBufferCount);
-
-		readonly ArrayPool<byte> bufferPool;
-
-		public BlockMemoryStreamFactory(
-			int blockShift = DefaultBlockShift,
-			int initialBufferCount = DefaultInitialBufferCount
-		)
-		{
-			if (blockShift < 6 || blockShift > 16) //128 - 64k
-				throw new ArgumentOutOfRangeException(nameof(blockShift));
-			this.BlockShift = blockShift;
-			this.BlockSize = 1 << blockShift;
-			this.InitialBufferCount = initialBufferCount;
-			this.bufferPool = new FixedArrayPool<byte>(this.BlockSize);
-		}
-
-		public int InitialBufferCount { get; }
-		public int BlockShift { get; }
-		internal int BlockSize { get; }
-
-		public BlockMemoryStream Create()
-		{
-			return new BlockMemoryStream(this);
-		}
-
-		internal void Return(byte[] buffer)
-		{
-			bufferPool.Return(buffer);
-		}
-
-		internal byte[] Rent()
-		{
-			return bufferPool.Rent(BlockSize);
-		}
-	}
-
-	/// <summary>
-	/// A memory-backed <see cref="Stream"/> implementation.
+	/// A memory-backed <see cref="Stream"/> implementation using pooled buffers.
 	/// </summary>
 	/// <remarks>
 	/// This class uses pooled buffers to reduce allocations, and memory clearing
 	/// that are present with <see cref="MemoryStream"/>.
 	/// </remarks>
-	public sealed class BlockMemoryStream : Stream
+	public sealed class PooledMemoryStream : Stream
 	{
-		readonly BlockMemoryStreamFactory factory;
+		const int DefaultBlockShift = 12; // default to 4k blocks
+		const int InitialBlockCount = 8;
+		int blockShift;
+		int blockSize;
+		int BlockMask => this.blockSize - 1;
 
 		long length;
 		long position;
+		bool clearOnReturn;
+		ArrayPool<byte> bufferPool;
 
 		byte[]?[] blocks;
 
 		/// <summary>
-		/// Creates a BlockMemoryStream using the default <see cref="BlockMemoryStreamFactory"/
+		/// Creates a PooledMemoryStream.
 		/// </summary>
-		public BlockMemoryStream() : this(BlockMemoryStreamFactory.Default)
+		public PooledMemoryStream() : this(ArrayPool<byte>.Shared, DefaultBlockShift, false)
 		{
 		}
 
-		public BlockMemoryStream(BlockMemoryStreamFactory factory)
+		/// <summary>
+		/// Creates a PooledMemoryStream.
+		/// </summary>
+		/// <param name="bufferPool">The <see cref="ArrayPool{T}"/> to use.</param>
+		/// <param name="blockShift">The size of the buffer to use expressed 1 &lt;&lt; blockShift. (Valid values 6 - 24)</param>
+		/// <param name="clearOnReturn">A boolean indicating whether to clear the buffers after use.</param>
+		public PooledMemoryStream(ArrayPool<byte> bufferPool, int blockShift = DefaultBlockShift, bool clearOnReturn = false)
 		{
-			if (factory == null) throw new ArgumentNullException(nameof(factory));
-			this.factory = factory;
-			this.blocks = new byte[]?[factory.InitialBufferCount];
+			if (blockShift < 6 || blockShift > 24) // 64b - 16MB
+				throw new ArgumentOutOfRangeException(nameof(blockShift));
+
+			this.bufferPool = bufferPool;
+			this.blocks = new byte[]?[InitialBlockCount];
+			this.blockShift = blockShift;
+			this.blockSize = 1 << blockShift;
+			this.clearOnReturn = clearOnReturn;
 		}
 
 		public override bool CanRead => true;
@@ -113,7 +78,6 @@ namespace Sylvan.IO
 		{
 		}
 
-		int BlockMask => this.factory.BlockSize - 1;
 
 		public override int Read(byte[] buffer, int offset, int count)
 		{
@@ -121,9 +85,9 @@ namespace Sylvan.IO
 			if (count < 0) throw new ArgumentOutOfRangeException(nameof(count));
 			if (offset + count > buffer.Length) throw new ArgumentOutOfRangeException(nameof(offset));
 
-			var shift = factory.BlockShift;
+			var shift = this.blockShift;
 			var blockMask = BlockMask;
-			var blockSize = factory.BlockSize;
+			var blockSize = this.blockSize;
 
 
 			var avail = this.length - this.position;
@@ -183,8 +147,8 @@ namespace Sylvan.IO
 
 			if (value < this.length)
 			{
-				long blocks = length >> factory.BlockShift;
-				long newBlocks = value >> factory.BlockShift;
+				long blocks = length >> blockShift;
+				long newBlocks = value >> blockShift;
 
 				// if the stream shrunk, return any unused blocks
 				for (long i = newBlocks; i <= blocks && i < this.blocks.Length; i++)
@@ -193,7 +157,7 @@ namespace Sylvan.IO
 					if (buffer != null)
 					{
 						this.blocks[i] = null;
-						this.factory.Return(buffer);
+						this.bufferPool.Return(buffer, clearOnReturn);
 					}
 					this.length = value;
 				}
@@ -204,15 +168,15 @@ namespace Sylvan.IO
 
 		public override void Write(byte[] buffer, int offset, int count)
 		{
-			if (buffer == null) 
+			if (buffer == null)
 				throw new ArgumentNullException(nameof(buffer));
-			if (offset >= buffer.Length) 
+			if (offset >= buffer.Length)
 				throw new ArgumentOutOfRangeException(nameof(offset));
-			if (count < 0 || offset + count > buffer.Length) 
+			if (count < 0 || offset + count > buffer.Length)
 				throw new ArgumentOutOfRangeException(nameof(count));
 
-			var shift = factory.BlockShift;
-			var blockSize = factory.BlockSize;
+			var shift = blockShift;
+			var blockSize = this.blockSize;
 			var blockMask = blockSize - 1;
 
 			var endLength = this.position + count;
@@ -240,7 +204,7 @@ namespace Sylvan.IO
 				var curBlock = blocks[blockIdx];
 				if (curBlock == null)
 				{
-					curBlock = factory.Rent();
+					curBlock = bufferPool.Rent(this.blockSize);
 					blocks[blockIdx] = curBlock;
 				}
 				var blockOffset = (int)(pos & blockMask);
@@ -260,9 +224,9 @@ namespace Sylvan.IO
 		public override async Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
 		{
 			if (destination == null) throw new ArgumentNullException(nameof(destination));
-			var shift = factory.BlockShift;
+			var shift = this.blockShift;
 			var blockMask = BlockMask;
-			var blockSize = factory.BlockSize;
+			var blockSize = this.blockSize;
 
 			while (position < length)
 			{
@@ -283,7 +247,7 @@ namespace Sylvan.IO
 			foreach (var block in this.blocks)
 			{
 				if (block != null)
-					factory.Return(block);
+					this.bufferPool.Return(block, clearOnReturn);
 			}
 		}
 	}

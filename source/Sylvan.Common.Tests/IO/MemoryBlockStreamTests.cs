@@ -10,8 +10,7 @@ namespace Sylvan.IO
 		[Fact]
 		public void Test1()
 		{
-			var f = new BlockMemoryStreamFactory();
-			var s = f.Create();
+			var s = new PooledMemoryStream();
 
 			const string testStr = "This is a piece of short test data";
 			var data = Encoding.ASCII.GetBytes(testStr);
@@ -32,7 +31,7 @@ namespace Sylvan.IO
 		{
 			var msb = new MemoryStreamBenchmarks();
 			msb.Count = 1000;
-			msb.BlockMemoryStream();
+			msb.PooledMemoryStream();
 		}
 	}
 }
