@@ -5,22 +5,22 @@ namespace Sylvan.IO
 {
 	public sealed class RandomStream : Stream
 	{
-		const int DefaultBufferSize = 0x100;
 		readonly Random rand;
 		byte[] temp;
 		int bufferPos;
 		long position;
+		long length;
 
-		public RandomStream() : this(new Random(), DefaultBufferSize) { }
+		public RandomStream(long length) : this(new Random(), length) { }
 
-		public RandomStream(Random rand, int bufferSize)
+		public RandomStream(Random rand, long length)
 		{
 			if (rand == null) throw new ArgumentNullException(nameof(rand));
-			if (bufferSize < 1) throw new ArgumentOutOfRangeException(nameof(bufferSize));
 			this.rand = rand;
-			this.temp = new byte[bufferSize];
+			this.temp = new byte[0x100];
 			this.bufferPos = temp.Length;
 			this.position = 0;
+			this.length = length;
 		}
 
 		public override bool CanRead => true;
@@ -29,7 +29,7 @@ namespace Sylvan.IO
 
 		public override bool CanWrite => false;
 
-		public override long Length => throw new NotSupportedException();
+		public override long Length => length;
 
 		public override long Position { get => position; set => throw new NotSupportedException(); }
 
@@ -41,14 +41,14 @@ namespace Sylvan.IO
 		public override int Read(byte[] buffer, int offset, int count)
 		{
 			var c = count;
-			while (count > 0)
+			while (count > 0 && this.position < this.length)
 			{
 				if (bufferPos >= this.temp.Length)
 				{
 					rand.NextBytes(temp);
 					bufferPos = 0;
 				}
-				var len = Math.Min(count, temp.Length - bufferPos);
+				var len = (int) Math.Min(Math.Min(count, temp.Length - bufferPos), this.length - this.position);
 				Buffer.BlockCopy(this.temp, bufferPos, buffer, offset, len);
 				offset += len;
 				count -= len;

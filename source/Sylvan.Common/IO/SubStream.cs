@@ -3,18 +3,19 @@ using System.IO;
 
 namespace Sylvan.IO
 {
-	public sealed class SubStream : Stream
+	/// <summary>
+	/// Provides readonly-only access to a sub-range of an existing stream.
+	/// </summary>
+	sealed class SubStream : Stream
 	{
 		readonly Stream inner;
-		readonly long offset;
 		readonly long length;
 
 		long position;
 
-		public SubStream(Stream inner, long offset, long length)
+		public SubStream(Stream inner, long length)
 		{
 			this.inner = inner;
-			this.offset = offset;
 			this.length = length;
 			this.position = 0;
 		}
@@ -47,11 +48,15 @@ namespace Sylvan.IO
 		public override int Read(byte[] buffer, int offset, int count)
 		{
 			var len = (int)Math.Min(count, this.length - this.position);
-			return inner.Read(buffer, offset, len);
+			var l = inner.Read(buffer, offset, len);
+			this.position += l;
+			return l;
 		}
 
 		public override long Seek(long offset, SeekOrigin origin)
 		{
+			if (!this.CanSeek) throw new NotSupportedException();
+
 			long pos = 0;
 			switch (origin)
 			{
@@ -70,7 +75,7 @@ namespace Sylvan.IO
 				throw new ArgumentOutOfRangeException(nameof(offset));
 			}
 
-			inner.Seek(this.offset + pos, SeekOrigin.Begin); // this might throw, fine.
+			inner.Seek(this.position - pos, SeekOrigin.Current); // this might throw, fine.
 			this.position = pos;
 			return this.position;
 		}
