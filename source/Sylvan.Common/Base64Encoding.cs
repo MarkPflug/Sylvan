@@ -186,7 +186,7 @@ namespace Sylvan
 			int accum = 0;
 			int bitCount = 0;
 
-			int len = DecodeInternal(src, buffer, src.Length, ref accum, ref bitCount);
+			int len = DecodeInternal(src.AsSpan(), buffer, src.Length, ref accum, ref bitCount);
 			Array.Resize(ref buffer, len);
 			return buffer;
 		}
