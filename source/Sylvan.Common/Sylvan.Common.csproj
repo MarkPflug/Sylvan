@@ -4,7 +4,8 @@
     <TargetFrameworks>netstandard2.0;netstandard2.1</TargetFrameworks>
     <RootNamespace>Sylvan</RootNamespace>
     <Description>A collection of common utility types.</Description>
-    <Version>0.1.6</Version>    
+    <VersionPrefix>0.1.8</VersionPrefix>
+    <VersionSuffix>b0001</VersionSuffix>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 

@@ -40,8 +40,8 @@ namespace Sylvan.IO
 
 		public override int Read(byte[] buffer, int offset, int count)
 		{
-			var c = count;
-			while (count > 0 && this.position < this.length)
+			var c = 0;
+			while (c < count && this.position < this.length)
 			{
 				if (bufferPos >= this.temp.Length)
 				{
@@ -51,8 +51,9 @@ namespace Sylvan.IO
 				var len = (int) Math.Min(Math.Min(count, temp.Length - bufferPos), this.length - this.position);
 				Buffer.BlockCopy(this.temp, bufferPos, buffer, offset, len);
 				offset += len;
-				count -= len;
 				bufferPos += len;
+				position += len;
+				c += len;
 			}
 			return c;
 		}
