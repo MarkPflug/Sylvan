@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Sylvan.IO
 {
-	class Base64Encoder : Encoder
+	public sealed class Base64Encoder : Encoder
 	{
 		static readonly byte[] DefaultEncodeMap =
 			Encoding.ASCII.GetBytes("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/");
@@ -29,7 +29,6 @@ namespace Sylvan.IO
 			return l + 2;
 		}
 
-
 		public Base64Encoder() : this(DefaultLineLength)
 		{
 		}
@@ -40,19 +39,23 @@ namespace Sylvan.IO
 			this.maxLineLength = lineLength;
 		}
 
-		public override EncoderResult Encode(ReadOnlySpan<byte> src, Span<byte> dst, out int bytesConsumed, out int bytesWritten)
+		public override unsafe EncoderResult Encode(ReadOnlySpan<byte> src, Span<byte> dst, out int bytesConsumed, out int bytesWritten)
 		{
 			bool final = src.Length == 0;
 
 			int srcOffset = 0;
 			int dstOffset = 0;
 			var count = src.Length;
-			//var dataLen = (dst.Length - 2) / 4 * 3;
-			//var availDst = dataLen - (dataLen / maxLineLength) * 2;
 			byte b0, b1, b2;
 
 			if (carry > 0) // if we've carried anything from the previous block
 			{
+				if (dst.Length < 6) // ensure we have enough room in the output
+				{
+					bytesConsumed = bytesWritten = 0;
+					return EncoderResult.RequiresOutputSpace;
+				}
+
 				if (carry + count >= 3) // if we can create a full triplet
 				{
 					if (carry == 1)
@@ -69,11 +72,7 @@ namespace Sylvan.IO
 						b2 = src[srcOffset++];
 						count -= 1;
 					}
-					if (dst.Length < 6) // ensure we have enough room in the output
-					{
-						bytesConsumed = bytesWritten = 0;
-						return EncoderResult.RequiresOutputSpace;
-					}
+					
 
 					dst[dstOffset++] = encodeMap[b0 >> 2];
 					dst[dstOffset++] = encodeMap[((b0 & 0x03) << 4) | (b1 >> 4)];
@@ -81,7 +80,7 @@ namespace Sylvan.IO
 					dst[dstOffset++] = encodeMap[b2 & 0x3F];
 
 					lineIdx += 4;
-					if (maxLineLength > 0 && lineIdx >= maxLineLength)
+					if (lineIdx >= maxLineLength)
 					{
 						dst[dstOffset++] = (byte)'\r';
 						dst[dstOffset++] = (byte)'\n';
@@ -129,34 +128,44 @@ namespace Sylvan.IO
 				}
 			}
 
-			for (int i = 0; i < count - 2; i += 3)
+			fixed (byte* srcStart = src.Slice(srcOffset))
+			fixed (byte* dstStart = dst.Slice(dstOffset))
 			{
-				if (dst.Length - dstOffset < 6)
-				{
-					// if we don't have enough room in the output buffer
-					// for an quad and a newline
-					bytesConsumed = srcOffset;
-					bytesWritten = dstOffset;
-					return EncoderResult.RequiresOutputSpace;
-				}
+				var srcP = srcStart;
+				var dstP = dstStart;
+				var dstEnd = dstStart + dst.Length;
 
-				b0 = src[srcOffset++];
-				b1 = src[srcOffset++];
-				b2 = src[srcOffset++];
-				dst[dstOffset++] = encodeMap[b0 >> 2];
-				dst[dstOffset++] = encodeMap[((b0 & 0x03) << 4) | (b1 >> 4)];
-				dst[dstOffset++] = encodeMap[((b1 & 0x0F) << 2) | (b2 >> 6)];
-				dst[dstOffset++] = encodeMap[b2 & 0x3F];
-
-				lineIdx += 4;
-				if (maxLineLength > 0 && lineIdx >= maxLineLength)
+				for (int i = 0; i < count - 2; i += 3)
 				{
-					dst[dstOffset++] = (byte)'\r';
-					dst[dstOffset++] = (byte)'\n';
-					lineIdx = 0;
+					if (dstP + 6 >= dstEnd)
+					{
+						// if we don't have enough room in the output buffer
+						// for an quad and a newline
+						bytesConsumed = srcOffset + (int)(srcP - srcStart);
+						bytesWritten  = dstOffset + (int)(dstP - dstStart);
+						return EncoderResult.RequiresOutputSpace;
+					}
+
+					b0 = *srcP++;
+					b1 = *srcP++;
+					b2 = *srcP++;
+
+					*dstP++ = encodeMap[b0 >> 2];
+					*dstP++ = encodeMap[((b0 & 0x03) << 4) | (b1 >> 4)];
+					*dstP++ = encodeMap[((b1 & 0x0F) << 2) | (b2 >> 6)];
+					*dstP++ = encodeMap[b2 & 0x3F];
+
+					lineIdx += 4;
+					if (lineIdx >= maxLineLength)
+					{
+						*dstP++ = (byte)'\r';
+						*dstP++ = (byte)'\n';
+						lineIdx = 0;
+					}
 				}
+				srcOffset += (int)(srcP - srcStart);
+				dstOffset += (int)(dstP - dstStart);
 			}
-
 			// Handle the tail of the data.  There are 0, 1, or 2 remaining bytes.
 			// The tail characters are enough to get the decode algorithm to
 			// recover the byte(s).
