@@ -15,7 +15,7 @@ namespace Sylvan
 		const int DefaultLineLength = 76;
 
 		/// <summary>
-		/// Gets the default Base64Codec, which uses the standard Base64 alphabet.
+		/// Gets the default Base64Encoding, which uses the standard Base64 alphabet.
 		/// </summary>
 		public static readonly Base64Encoding Default;
 
@@ -56,7 +56,7 @@ namespace Sylvan
 		readonly int lineLength;
 
 		/// <summary>
-		/// Creates a new Base64Codec.
+		/// Creates a new Base64Encoding.
 		/// </summary>
 		public Base64Encoding()
 		{
@@ -119,6 +119,7 @@ namespace Sylvan
 			int lineIdx = 0;
 			return EncodeInternal(src, srcOffset, dst, dstOffset, count, ref lineIdx);
 		}
+
 
 		int EncodeInternal(byte[] src, int srcOffset, char[] dst, int dstOffset, int count, ref int lineIdx)
 		{
@@ -253,7 +254,5 @@ namespace Sylvan
 			}
 			return dstIdx;
 		}
-
-		
 	}
 }
