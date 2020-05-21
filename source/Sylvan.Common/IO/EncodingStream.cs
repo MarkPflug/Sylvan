@@ -57,7 +57,6 @@ namespace Sylvan.IO
 
 		public override EncoderResult Encode(ReadOnlySpan<byte> src, Span<byte> dst, out int bytesConsumed, out int bytesWritten)
 		{
-			var outputLen = GetOutputBufferLength(src.Length);
 			bool final = src.Length == 0;
 
 			int srcOffset = 0;
@@ -194,7 +193,6 @@ namespace Sylvan.IO
 					break;
 			}
 
-
 			bytesWritten = dstOffset;
 			bytesConsumed = srcOffset;
 
@@ -206,7 +204,7 @@ namespace Sylvan.IO
 	{
 		readonly Stream stream;
 		readonly Encoder encoder;
-		byte[] buffer;
+		readonly byte[] buffer;
 		int bufferIdx;
 
 		public EncoderStream(Stream stream, Encoder encoder)

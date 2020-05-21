@@ -133,10 +133,10 @@ namespace Sylvan
 				byte b0 = src[srcOffset++];
 				byte b1 = src[srcOffset++];
 				byte b2 = src[srcOffset++];
-				dst[dstOffset++] = encodeMap[(b0 >> 2) & 0x3F]; // b0 top 6 bits
-				dst[dstOffset++] = encodeMap[((b0 & 0x03) << 4) | ((b1 >> 4) & 0x0F)]; // b0 bottom 2, b1 top 4
-				dst[dstOffset++] = encodeMap[((b1 & 0x0F) << 2) | ((b2 >> 6) & 0x03)]; // b1 bottom 4, b2 top 2
-				dst[dstOffset++] = encodeMap[(b2 >> 0) & 0x3F]; // b2 bottom 6 bits
+				dst[dstOffset++] = encodeMap[b0 >> 2]; // b0 top 6 bits
+				dst[dstOffset++] = encodeMap[((b0 & 0x03) << 4) | (b1 >> 4)]; // b0 bottom 2, b1 top 4
+				dst[dstOffset++] = encodeMap[((b1 & 0x0F) << 2) | (b2 >> 6)]; // b1 bottom 4, b2 top 2
+				dst[dstOffset++] = encodeMap[b2 & 0x3F]; // b2 bottom 6 bits
 
 				lineIdx += 4;
 				if (lineLength > 0 && lineIdx >= lineLength)
@@ -151,11 +151,11 @@ namespace Sylvan
 			// The tail characters are enough to get the decode algorithm to
 			// recover the byte(s).
 
-			int rem = count % 3;
+			int rem = count - (srcOffset - startOffset);
 			if (rem == 1)
 			{
 				var b0 = src[srcOffset++];
-				dst[dstOffset++] = encodeMap[(b0 >> 2) & 0x3F]; // top 6 bits
+				dst[dstOffset++] = encodeMap[b0 >> 2]; // top 6 bits
 				dst[dstOffset++] = encodeMap[(b0 & 0x03) << 4]; // bottom 2 bits
 				dst[dstOffset++] = '=';
 				dst[dstOffset++] = '=';
@@ -164,8 +164,8 @@ namespace Sylvan
 			{
 				var b0 = src[srcOffset++];
 				var b1 = src[srcOffset++];
-				dst[dstOffset++] = encodeMap[(b0 >> 2) & 0x3F]; // top 6 bits
-				dst[dstOffset++] = encodeMap[((b0 & 0x03) << 4) | ((b1 >> 4) & 0x0F)]; // 2,4 bits
+				dst[dstOffset++] = encodeMap[b0 >> 2]; // top 6 bits
+				dst[dstOffset++] = encodeMap[((b0 & 0x03) << 4) | (b1 >> 4)]; // 2,4 bits
 				dst[dstOffset++] = encodeMap[(b1 & 0x0F) << 2]; // last 4 bits
 				dst[dstOffset++] = '=';
 			}
