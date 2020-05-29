@@ -36,11 +36,18 @@ namespace Sylvan.Data.Csv
 			}
 		}
 
+		enum QuoteState
+		{
+			Unquoted = 0,
+			Quoted = 1,
+			BrokenQuotes = 2,
+		}
+
 		struct FieldInfo
 		{
 			internal int endIdx;
 			internal int escapeCount;
-			internal bool isQuoted;
+			internal QuoteState isQuoted;
 
 			public override string ToString()
 			{
@@ -232,7 +239,9 @@ namespace Sylvan.Data.Csv
 		{
 			char c;
 			var idx = this.idx;
-			bool isQuoted = false;
+			// this will remain -1 if it is unquoted. 
+			// Otherwise we use it to determine if the quotes were "clean".
+			var closeQuoteIdx = -1;
 			int escapeCount = 0;
 			int fieldEnd = 0;
 			var buffer = this.buffer;
@@ -249,7 +258,7 @@ namespace Sylvan.Data.Csv
 				if (c == quote)
 				{
 					idx++;
-					isQuoted = true;
+					closeQuoteIdx = idx;
 					// consume quoted field.
 					while (idx < bufferEnd)
 					{
@@ -269,6 +278,7 @@ namespace Sylvan.Data.Csv
 									if (escape == quote)
 									{
 										idx--;
+										closeQuoteIdx = idx;
 										// the quote (escape) we just saw was a the closing quote
 										break;
 									}
@@ -289,6 +299,7 @@ namespace Sylvan.Data.Csv
 							// immediately after the quote should be a delimiter, eol, or eof, but...
 							// we can simply treat the remainder of the record like a normal unquoted field
 							// we are currently positioned on the quote, the next while loop will consume it
+							closeQuoteIdx = idx;
 							break;
 						}
 						if (IsEndOfLine(c))
@@ -337,7 +348,6 @@ namespace Sylvan.Data.Csv
 
 			if (complete || atEndOfText)
 			{
-
 				if (state == State.Initializing)
 				{
 					if (fieldIdx >= fieldInfos.Length)
@@ -351,7 +361,12 @@ namespace Sylvan.Data.Csv
 				{
 					curFieldCount++;
 					ref var fi = ref fieldInfos[fieldIdx];
-					fi.isQuoted = isQuoted;
+					fi.isQuoted =
+						closeQuoteIdx == -1
+						? QuoteState.Unquoted
+						: fieldEnd == (closeQuoteIdx - recordStart)
+						? QuoteState.Quoted
+						: QuoteState.BrokenQuotes;
 					fi.escapeCount = escapeCount;
 					fi.endIdx = complete ? fieldEnd : (idx - recordStart);
 				}
@@ -489,7 +504,7 @@ namespace Sylvan.Data.Csv
 
 			var (b, o, l) = GetField(ordinal);
 			var len = Math.Min(l - dataOffset, length);
-			
+
 			Array.Copy(b, o, buffer, bufferOffset, len);
 			return len;
 		}
@@ -599,9 +614,9 @@ namespace Sylvan.Data.Csv
 			if (((uint)ordinal) < curFieldCount)
 			{
 				var (b, o, l) = GetField(ordinal);
-				return new string(b, o, l);
+				return l == 0 ? string.Empty : new string(b, o, l);
 			}
-			return "";
+			return string.Empty;
 		}
 
 #if NETSTANDARD2_1
@@ -620,12 +635,20 @@ namespace Sylvan.Data.Csv
 			int offset = startIdx;
 			int len = endIdx - startIdx;
 			var buffer = this.buffer;
-			if (fi.isQuoted)
+			if (fi.isQuoted != QuoteState.Unquoted)
 			{
+				// if there are no escapes, we can just "trim" the quotes off
 				offset += 1;
 				len -= 2;
-				if (fi.escapeCount > 0)
+
+				if (fi.isQuoted == QuoteState.Quoted && fi.escapeCount == 0)
 				{
+					// happy path, nothing else to do
+				}
+				else
+				{
+					bool inQuote = true; // we start inside the quotes
+
 					var eLen = len - fi.escapeCount;
 					// if there is room in the buffer before the current record
 					// we'll use that as scratch space to unescape the value
@@ -638,12 +661,32 @@ namespace Sylvan.Data.Csv
 
 					int i = 0;
 					int d = 0;
-					while (i < len)
+					while (d < len)
 					{
 						var c = buffer[offset + i++];
-						if (c == escape)
+						if (inQuote)
 						{
-							c = buffer[offset + i++];
+							if (c == escape)
+							{
+								c = buffer[offset + i++];
+								if(c != quote && c != escape)
+								{
+									if(quote == escape)
+									{
+										// the escape we just saw was actually the closing quote
+										// the remainder of the field will be added verbatim
+										inQuote = false;
+									}
+								}
+							}
+							else
+							if (c == quote)
+							{
+								// we've found the broken closing quote
+								// skip it.
+								inQuote = false;
+								continue;
+							}
 						}
 						temp[d++] = c;
 					}
@@ -657,6 +700,9 @@ namespace Sylvan.Data.Csv
 
 		public override object? GetValue(int ordinal)
 		{
+			if ((uint)ordinal >= fieldCount)
+				throw new ArgumentOutOfRangeException(nameof(ordinal));
+
 			if (columns[ordinal].AllowDBNull == true && this.IsDBNull(ordinal))
 			{
 				return null;
@@ -715,7 +761,7 @@ namespace Sylvan.Data.Csv
 			ref var fi = ref fieldInfos[ordinal];
 			var startIdx = recordStart + (ordinal == 0 ? 0 : this.fieldInfos[ordinal - 1].endIdx + 1);
 			var endIdx = recordStart + fi.endIdx;
-			var isEmpty = endIdx - startIdx - (fi.isQuoted ? 2 : 0) - fi.escapeCount == 0;
+			var isEmpty = endIdx - startIdx - (fi.isQuoted != QuoteState.Unquoted ? 2 : 0) - fi.escapeCount == 0;
 			return isEmpty;
 		}
 
