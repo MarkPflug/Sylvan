@@ -18,13 +18,14 @@ namespace Sylvan.IO
 	{
 		const int DefaultBlockShift = 12; // default to 4k blocks
 		const int InitialBlockCount = 8;
-		int blockShift;
-		int blockSize;
-		int BlockMask => this.blockSize - 1;
+		readonly int blockShift;
+		readonly int blockSize;
+		readonly int blockMask;
+		readonly bool clearOnReturn;
 
 		long length;
 		long position;
-		bool clearOnReturn;
+		
 		ArrayPool<byte> bufferPool;
 
 		byte[]?[] blocks;
@@ -51,6 +52,7 @@ namespace Sylvan.IO
 			this.blocks = new byte[]?[InitialBlockCount];
 			this.blockShift = blockShift;
 			this.blockSize = 1 << blockShift;
+			this.blockMask = blockSize - 1;
 			this.clearOnReturn = clearOnReturn;
 		}
 
@@ -85,18 +87,13 @@ namespace Sylvan.IO
 			if (count < 0) throw new ArgumentOutOfRangeException(nameof(count));
 			if (offset + count > buffer.Length) throw new ArgumentOutOfRangeException(nameof(offset));
 
-			var shift = this.blockShift;
-			var blockMask = BlockMask;
-			var blockSize = this.blockSize;
-
-
 			var avail = this.length - this.position;
 			var c = (int)(avail < count ? avail : count);
 			var len = c;
 			var pos = this.position;
 			while (c > 0)
 			{
-				var blockIdx = pos >> shift;
+				var blockIdx = pos >> blockShift;
 				var curBlock = blocks[blockIdx];
 				var blockOffset = (int)(pos & blockMask);
 				var blockRem = blockSize - blockOffset;
@@ -180,7 +177,7 @@ namespace Sylvan.IO
 			var blockMask = blockSize - 1;
 
 			var endLength = this.position + count;
-			var reqBlockCount = (endLength + (int)blockMask) >> shift;
+			var reqBlockCount = (endLength + blockMask) >> shift;
 
 			var blocks = this.blocks;
 			if (reqBlockCount > blocks.Length)
@@ -216,7 +213,7 @@ namespace Sylvan.IO
 				pos = pos + c;
 				offset += c;
 			}
-			this.position = (long)pos;
+			this.position = pos;
 			if (this.position > this.length)
 				this.length = this.position;
 		}
@@ -224,15 +221,12 @@ namespace Sylvan.IO
 		public override async Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
 		{
 			if (destination == null) throw new ArgumentNullException(nameof(destination));
-			var shift = this.blockShift;
-			var blockMask = BlockMask;
-			var blockSize = this.blockSize;
 
 			while (position < length)
 			{
 				var rem = length - position;
 				cancellationToken.ThrowIfCancellationRequested();
-				var blockIdx = position >> shift;
+				var blockIdx = position >> blockShift;
 				var block = this.blocks[blockIdx];
 				var blockOffset = (int)(position & blockMask);
 				var blockCount = blockSize - blockOffset;
