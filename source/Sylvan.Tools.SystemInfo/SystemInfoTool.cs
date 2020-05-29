@@ -46,7 +46,7 @@ namespace Sylvan.Tools
 			iw.Value("OSPlatform", Environment.Is64BitOperatingSystem ? "64" : "32");
 			
 			var tickCount = Environment.TickCount64;
-			iw.Value("SystemStarted", DateTime.Now.AddMilliseconds(-tickCount).ToString() + " (local)");
+			iw.Value("SystemStarted", DateTime.Now.AddMilliseconds(-tickCount).ToString("u") + " (local)");
 			iw.Value("SystemUpTime", TimeSpan.FromMilliseconds(tickCount).ToString(@"d\.hh\:mm\:ss\.fff"));
 
 			iw.Header("Memory");

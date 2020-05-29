@@ -108,14 +108,13 @@ namespace Sylvan
 
 		public int Encode(byte[] src, int srcOffset, char[] dst, int dstOffset, int count)
 		{
-			if (src == null) throw new ArgumentNullException("src");
-			if (dst == null) throw new ArgumentNullException("dst");
-			if (count < 0) throw new ArgumentOutOfRangeException("count");
-			if (srcOffset + count > src.Length) throw new ArgumentException("src", "The length of src is less than srcOffset plus count.");
+			if (src == null) throw new ArgumentNullException(nameof(src));
+			if (dst == null) throw new ArgumentNullException(nameof(dst));
+			if (count < 0 || srcOffset + count > src.Length) throw new ArgumentOutOfRangeException(nameof(count));
 
 			var outputLen = GetOutputBufferLength(count);
 
-			if (dstOffset + outputLen > dst.Length) throw new ArgumentException("dst", "The length of dst is less than srcOffset plus count * 2.");
+			if (dstOffset + outputLen > dst.Length) throw new ArgumentOutOfRangeException(nameof(dstOffset));
 			int lineIdx = 0;
 			return EncodeInternal(src, srcOffset, dst, dstOffset, count, ref lineIdx);
 		}
@@ -133,10 +132,10 @@ namespace Sylvan
 				byte b0 = src[srcOffset++];
 				byte b1 = src[srcOffset++];
 				byte b2 = src[srcOffset++];
-				dst[dstOffset++] = encodeMap[b0 >> 2]; // b0 top 6 bits
-				dst[dstOffset++] = encodeMap[((b0 & 0x03) << 4) | (b1 >> 4)]; // b0 bottom 2, b1 top 4
-				dst[dstOffset++] = encodeMap[((b1 & 0x0F) << 2) | (b2 >> 6)]; // b1 bottom 4, b2 top 2
-				dst[dstOffset++] = encodeMap[b2 & 0x3F]; // b2 bottom 6 bits
+				dst[dstOffset++] = encodeMap[b0 >> 2];
+				dst[dstOffset++] = encodeMap[((b0 & 0x03) << 4) | (b1 >> 4)];
+				dst[dstOffset++] = encodeMap[((b1 & 0x0F) << 2) | (b2 >> 6)];
+				dst[dstOffset++] = encodeMap[b2 & 0x3F];
 
 				lineIdx += 4;
 				if (lineLength > 0 && lineIdx >= lineLength)

@@ -1,4 +1,10 @@
 # Sylvan.Data.Csv Release Notes
+_0.4.2_
+Fix bug with handling improperly quoted fields.
+
+_0.4.1_
+Fix bug with CsvWriter not handling fields correctly in fast path.
+
 _0.4.0_
 Fix bug with CsvDataWriter not handling null columns properly.
 Fix bug with CsvWriter spinning when record too large, now throws.
