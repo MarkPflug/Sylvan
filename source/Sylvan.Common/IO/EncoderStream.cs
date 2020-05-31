@@ -1,16 +1,10 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Diagnostics.SymbolStore;
 using System.IO;
-using System.Text;
 
 namespace Sylvan.IO
 {
-	
-
-	
-
-	class EncoderStream : Stream
+	sealed class EncoderStream : Stream
 	{
 		readonly Stream stream;
 		readonly Encoder encoder;

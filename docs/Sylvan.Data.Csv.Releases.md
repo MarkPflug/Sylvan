@@ -1,6 +1,7 @@
 # Sylvan.Data.Csv Release Notes
+
 _0.4.2_
-Fix bug with handling improperly quoted fields.
+Fix bug with handling improperly quoted fields in CsvDataReader.
 
 _0.4.1_
 Fix bug with CsvWriter not handling fields correctly in fast path.
