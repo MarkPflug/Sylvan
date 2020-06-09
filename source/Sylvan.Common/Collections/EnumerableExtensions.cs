@@ -9,6 +9,8 @@ namespace Sylvan.Collections
 	{
 		public static (T min, T max) MinMax<T>(this IEnumerable<T> seq) where T : IComparable
 		{
+			if (seq == null) throw new ArgumentNullException(nameof(seq));
+
 			T min, max;
 			var e = seq.GetEnumerator();
 			if (e.MoveNext())
@@ -38,6 +40,8 @@ namespace Sylvan.Collections
 
 		public static IEnumerable<T> RecurseDepthFirst<T>(this IEnumerable<T> seq, Func<T, IEnumerable<T>> selector)
 		{
+			if (seq == null) throw new ArgumentNullException(nameof(seq));
+
 			var enumStack = new Stack<IEnumerator<T>>();
 
 			var e = seq.GetEnumerator();
@@ -85,6 +89,9 @@ namespace Sylvan.Collections
 			where T : class
 			where TK : IComparable<TK>
 		{
+			if (seq == null) throw new ArgumentNullException(nameof(seq));
+			if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
+
 			return OneBy(seq, keySelector, (k1, k2) => k1.CompareTo(k2) > 0);
 		}
 
@@ -99,6 +106,8 @@ namespace Sylvan.Collections
 			where T : class
 			where TK : IComparable<TK>
 		{
+			if (seq == null) throw new ArgumentNullException(nameof(seq));
+			if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
 
 			return OneBy(seq, keySelector, (k1, k2) => k1.CompareTo(k2) < 0);
 		}

@@ -6,10 +6,30 @@ using System.Threading.Tasks;
 
 namespace Sylvan.Data.Csv
 {
+	/// <summary>
+	/// Writes data from a DbDataReader as delimited values to a TextWriter.
+	/// </summary>
 	public sealed class CsvDataWriter
 	{
+		class FieldInfo
+		{
+			public bool allowNull;
+			public TypeCode type;
+		}
+
+		enum FieldState
+		{
+			Start,
+			Done,
+		}
+
 		readonly CsvWriter writer;
 
+		/// <summary>
+		/// Creates a new CsvDataWriter.
+		/// </summary>
+		/// <param name="writer">The TextWriter to receive the delimited data.</param>
+		/// <param name="options">The options used to configure the writer, or null to use the defaults.</param>
 		public CsvDataWriter(TextWriter writer, CsvWriterOptions? options = null)
 		{
 			if (writer == null) throw new ArgumentNullException(nameof(writer));
@@ -25,12 +45,12 @@ namespace Sylvan.Data.Csv
 			this.writer = new CsvWriter(writer, options);
 		}
 
-		class FieldInfo
-		{
-			public bool allowNull;
-			public TypeCode type;
-		}
-
+		/// <summary>
+		/// Asynchronously writes delimited data.
+		/// </summary>
+		/// <param name="reader">The DbDataReader to be written.</param>
+		/// <param name="cancel">A cancellation token to cancel the asynchronous operation.</param>
+		/// <returns>A task representing the asynchronous write operation.</returns>
 		public async Task WriteAsync(DbDataReader reader, CancellationToken cancel = default)
 		{
 			var c = reader.FieldCount;
@@ -69,7 +89,7 @@ namespace Sylvan.Data.Csv
 						var typeCode = fieldTypes[i].type;
 						var allowNull = fieldTypes[i].allowNull;
 
-						if (allowNull && reader.IsDBNull(i)) // TODO: async?
+						if (allowNull && await reader.IsDBNullAsync(i))
 						{
 							await writer.WriteFieldAsync("");
 							continue;
@@ -138,6 +158,10 @@ namespace Sylvan.Data.Csv
 			await writer.FlushAsync();
 		}
 
+		/// <summary>
+		/// Writes delimited data to the output.
+		/// </summary>
+		/// <param name="reader">The DbDataReader to be written.</param>
 		public void Write(DbDataReader reader)
 		{
 			var c = reader.FieldCount;
@@ -241,12 +265,6 @@ namespace Sylvan.Data.Csv
 			}
 			// flush any pending data on the way out.
 			writer.Flush();
-		}
-
-		enum FieldState
-		{
-			Start,
-			Done,
 		}
 	}
 }
