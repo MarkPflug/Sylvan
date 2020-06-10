@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Sylvan.IO
 {
@@ -42,6 +44,12 @@ namespace Sylvan.IO
 			bufferIdx = 0;
 		}
 
+		public override async Task FlushAsync(CancellationToken cancel)
+		{
+			await this.stream.WriteAsync(this.buffer, 0, bufferIdx, cancel).ConfigureAwait(false);
+			bufferIdx = 0;
+		}
+
 		public override int Read(byte[] buffer, int offset, int count)
 		{
 			throw new NotSupportedException();
@@ -57,20 +65,37 @@ namespace Sylvan.IO
 			throw new NotSupportedException();
 		}
 
+		EncoderResult Encode(byte[] buffer, ref int offset, ref int count)
+		{
+			var src = buffer.AsSpan().Slice(offset, count);
+			var dst = this.buffer.AsSpan().Slice(bufferIdx);
+			int dstCount;
+			int srcCount;
+			var result = this.encoder.Encode(src, dst, out srcCount, out dstCount);
+
+			offset += srcCount;
+			count -= srcCount;
+			this.bufferIdx += dstCount;
+			return result;
+		}
+
+		public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+		{
+			while (count > 0)
+			{
+				var result = Encode(buffer, ref offset, ref count);
+				if (result == EncoderResult.RequiresOutputSpace)
+				{
+					await FlushAsync(cancellationToken).ConfigureAwait(false);
+				}
+			}
+		}
+
 		public override void Write(byte[] buffer, int offset, int count)
 		{
 			while (count > 0)
 			{
-				var src = buffer.AsSpan().Slice(offset, count);
-				var dst = this.buffer.AsSpan().Slice(bufferIdx);
-				int dstCount;
-				int srcCount;
-				var result = this.encoder.Encode(src, dst, out srcCount, out dstCount);
-
-				offset += srcCount;
-				count -= srcCount;
-				this.bufferIdx += dstCount;
-
+				var result = Encode(buffer, ref offset, ref count);
 				if (result == EncoderResult.RequiresOutputSpace)
 				{
 					Flush();
