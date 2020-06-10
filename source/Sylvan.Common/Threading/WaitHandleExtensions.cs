@@ -29,7 +29,7 @@ namespace Sylvan.Threading
 						state => ((TaskCompletionSource<bool>?)state)?.TrySetCanceled(),
 						tcs
 					);
-				return await tcs.Task;
+				return await tcs.Task.ConfigureAwait(false);
 			}
 			finally
 			{

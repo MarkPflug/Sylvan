@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.InteropServices;
 
@@ -17,6 +18,7 @@ namespace Sylvan.Primitives
 	/// of values needs to be stored and it would be more efficient to store the type information
 	/// externally.
 	/// </remarks>
+	[SuppressMessage("Usage", "CA2225:Operator overloads have named alternates", Justification = "<Pending>")]
 	[StructLayout(LayoutKind.Explicit)]
 	public struct Primitive : IEquatable<Primitive>
 	{
@@ -347,7 +349,8 @@ namespace Sylvan.Primitives
 
 		public override string ToString()
 		{
-			return lo.ToString("x16") + hi.ToString("x16");
+			var c = CultureInfo.InvariantCulture;
+			return lo.ToString("x16", c) + hi.ToString("x16", c);
 		}
 
 		public string ToString(PrimitiveType type, CultureInfo culture)
@@ -407,9 +410,9 @@ namespace Sylvan.Primitives
 
 		#endregion
 
-		public static Primitive Unbox(object obj)
+		public static Primitive Unbox(object value)
 		{
-			var tp = TypedPrimitive.Unbox(obj);
+			var tp = TypedPrimitive.Unbox(value);
 			return tp.Value;
 		}
 	}

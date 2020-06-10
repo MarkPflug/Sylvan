@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.InteropServices;
 
@@ -14,6 +15,8 @@ namespace Sylvan.Primitives
 	/// use <see cref="Primitive"/> directly, when the <see cref="PrimitiveType"/> value can be
 	/// stored externally.
 	/// </remarks>
+	[SuppressMessage("Design", "CA1065:Do not raise exceptions in unexpected locations", Justification = "<Pending>")]
+	[SuppressMessage("Usage", "CA2225:Operator overloads have named alternates", Justification = "<Pending>")]
 	[StructLayout(LayoutKind.Explicit, Size = 20)]
 	public struct TypedPrimitive : IEquatable<TypedPrimitive>
 	{
@@ -237,44 +240,45 @@ namespace Sylvan.Primitives
 
 		#region constructors
 
-		public static TypedPrimitive Unbox(object obj)
+		public static TypedPrimitive Unbox(object value)
 		{
-			var t = obj.GetType();
+			if (value == null) throw new ArgumentNullException(nameof(value));
+			var t = value.GetType();
 			var code = System.Type.GetTypeCode(t);
 
 			switch (code)
 			{
 				case TypeCode.Boolean:
-					return new TypedPrimitive((bool)obj);
+					return new TypedPrimitive((bool)value);
 				case TypeCode.Byte:
-					return new TypedPrimitive((byte)obj);
+					return new TypedPrimitive((byte)value);
 				case TypeCode.SByte:
-					return new TypedPrimitive((sbyte)obj);
+					return new TypedPrimitive((sbyte)value);
 				case TypeCode.Int16:
-					return new TypedPrimitive((short)obj);
+					return new TypedPrimitive((short)value);
 				case TypeCode.UInt16:
-					return new TypedPrimitive((ushort)obj);
+					return new TypedPrimitive((ushort)value);
 				case TypeCode.Int32:
-					return new TypedPrimitive((int)obj);
+					return new TypedPrimitive((int)value);
 				case TypeCode.UInt32:
-					return new TypedPrimitive((uint)obj);
+					return new TypedPrimitive((uint)value);
 				case TypeCode.Int64:
-					return new TypedPrimitive((long)obj);
+					return new TypedPrimitive((long)value);
 				case TypeCode.UInt64:
-					return new TypedPrimitive((ulong)obj);
+					return new TypedPrimitive((ulong)value);
 				case TypeCode.Single:
-					return new TypedPrimitive((float)obj);
+					return new TypedPrimitive((float)value);
 				case TypeCode.Double:
-					return new TypedPrimitive((double)obj);
+					return new TypedPrimitive((double)value);
 				case TypeCode.Decimal:
-					return new TypedPrimitive((decimal)obj);
+					return new TypedPrimitive((decimal)value);
 				case TypeCode.DateTime:
-					return new TypedPrimitive((DateTime)obj);
+					return new TypedPrimitive((DateTime)value);
 				case TypeCode.Object:
 					if (t == typeof(Guid))
-						return new TypedPrimitive((Guid)obj);
+						return new TypedPrimitive((Guid)value);
 					if (t == typeof(TimeSpan))
-						return new TypedPrimitive((TimeSpan)obj);
+						return new TypedPrimitive((TimeSpan)value);
 					break;
 			}
 			throw new InvalidCastException();
@@ -356,6 +360,7 @@ namespace Sylvan.Primitives
 
 		#endregion
 
+		
 		public static implicit operator TypedPrimitive(bool value)
 		{
 			return new TypedPrimitive(value);

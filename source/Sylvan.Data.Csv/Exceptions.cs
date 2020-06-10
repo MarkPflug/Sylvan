@@ -2,6 +2,9 @@
 
 namespace Sylvan.Data.Csv
 {
+	/// <summary>
+	/// The exception that is thrown when CSV data is malformed.
+	/// </summary>
 	public class CsvFormatException : Exception
 	{
 		internal CsvFormatException(int row, int ordinal, string? msg, Exception? inner) 
@@ -11,11 +14,20 @@ namespace Sylvan.Data.Csv
 			this.FieldOrdinal = ordinal;
 		}
 
+		/// <summary>
+		/// The row number containing the malformed data.
+		/// </summary>
 		public int RowNumber { get; }
 
+		/// <summary>
+		/// The ordinal of the field containing the malformed data.
+		/// </summary>
 		public int FieldOrdinal { get; }
 	}
 
+	/// <summary>
+	/// The exception that is thrown when the configuration options specify invalid options.
+	/// </summary>
 	public class CsvConfigurationException : ArgumentException
 	{
 		internal CsvConfigurationException() { }

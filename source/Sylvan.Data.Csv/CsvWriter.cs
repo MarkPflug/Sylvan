@@ -5,6 +5,9 @@ using System.Threading.Tasks;
 
 namespace Sylvan.Data.Csv
 {
+	/// <summary>
+	/// Writes delimited data to a TextWriter.
+	/// </summary>
 	public sealed class CsvWriter :
 		IDisposable
 #if NETSTANDARD2_1
@@ -26,6 +29,11 @@ namespace Sylvan.Data.Csv
 		int fieldIdx;
 		bool defaultCulture;
 
+		/// <summary>
+		/// Creates a CsvWriter.
+		/// </summary>
+		/// <param name="writer">The TextWriter to receive the delimited data.</param>
+		/// <param name="options">The options to configure the writer.</param>
 		public CsvWriter(TextWriter writer, CsvWriterOptions? options = null)
 		{
 			if (writer == null) throw new ArgumentNullException(nameof(writer));
@@ -342,6 +350,10 @@ namespace Sylvan.Data.Csv
 			return true;
 		}
 
+		/// <summary>
+		/// Asynchronously writes the end of the current record.
+		/// </summary>
+		/// <returns>A task representing the asynchronous write.</returns>
 		public async Task EndRecordAsync()
 		{
 			if (!WriteNewLine())
@@ -352,16 +364,28 @@ namespace Sylvan.Data.Csv
 			fieldIdx = 0;
 		}
 
+		/// <summary>
+		/// Flushes any pending data to the output writer.
+		/// </summary>
 		public void Flush()
 		{
 			FlushBuffer();
 		}
 
+		/// <summary>
+		/// Asynchronously flushes any pending data to the output writer.
+		/// </summary>
+		/// <returns>A task representing the asynchronous operation.</returns>
 		public Task FlushAsync()
 		{
 			return FlushBufferAsync();
 		}
 
+		/// <summary>
+		/// Asynchronously writes a value to the current record.
+		/// </summary>
+		/// <param name="value">The value to write.</param>
+		/// <returns>A task representing the asynchronous operation.</returns>
 		public async Task WriteFieldAsync(bool value)
 		{
 			if (pos + 6 >= bufferSize)
@@ -380,6 +404,11 @@ namespace Sylvan.Data.Csv
 			WriteValue(str);
 		}
 
+		/// <summary>
+		/// Asynchronously writes a value to the current record.
+		/// </summary>
+		/// <param name="value">The value to write.</param>
+		/// <returns>A task representing the asynchronous operation.</returns>
 		public async Task WriteFieldAsync(double value)
 		{
 			if (pos + 32 >= bufferSize)
@@ -397,6 +426,11 @@ namespace Sylvan.Data.Csv
 			WriteValue(value);
 		}
 
+		/// <summary>
+		/// Asynchronously writes a value to the current record.
+		/// </summary>
+		/// <param name="value">The value to write.</param>
+		/// <returns>A task representing the asynchronous operation.</returns>
 		public async Task WriteFieldAsync(long value)
 		{
 			if (pos + 32 >= bufferSize)
@@ -414,6 +448,11 @@ namespace Sylvan.Data.Csv
 			WriteValue(value);
 		}
 
+		/// <summary>
+		/// Asynchronously writes a value to the current record.
+		/// </summary>
+		/// <param name="value">The value to write.</param>
+		/// <returns>A task representing the asynchronous operation.</returns>
 		public async Task WriteFieldAsync(int value)
 		{
 			if (pos + 32 >= bufferSize)
@@ -431,6 +470,11 @@ namespace Sylvan.Data.Csv
 			WriteValue(value);
 		}
 
+		/// <summary>
+		/// Asynchronously writes a value to the current record.
+		/// </summary>
+		/// <param name="value">The value to write.</param>
+		/// <returns>A task representing the asynchronous operation.</returns>
 		public async Task WriteFieldAsync(DateTime value)
 		{
 			if (pos + 64 >= bufferSize)
@@ -448,6 +492,11 @@ namespace Sylvan.Data.Csv
 			WriteValue(value);
 		}
 
+		/// <summary>
+		/// Asynchronously writes a value to the current record.
+		/// </summary>
+		/// <param name="value">The value to write.</param>
+		/// <returns>A task representing the asynchronous operation.</returns>
 		public async Task WriteFieldAsync(string? value)
 		{
 
@@ -496,6 +545,9 @@ namespace Sylvan.Data.Csv
 				goto flush;
 		}
 
+		/// <summary>
+		/// Writes the end of the curent record.
+		/// </summary>
 		public void EndRecord()
 		{
 			if (!WriteNewLine())
@@ -506,6 +558,10 @@ namespace Sylvan.Data.Csv
 			fieldIdx = 0;
 		}
 
+		/// <summary>
+		/// Writes a value to the current record.
+		/// </summary>
+		/// <param name="value">The value to write.</param>
 		public void WriteField(bool value)
 		{
 			if (pos + 6 >= bufferSize)
@@ -524,6 +580,10 @@ namespace Sylvan.Data.Csv
 			WriteValue(str);
 		}
 
+		/// <summary>
+		/// Writes a value to the current record.
+		/// </summary>
+		/// <param name="value">The value to write.</param>
 		public void WriteField(float value)
 		{
 			if (pos + 32 >= bufferSize)
@@ -541,6 +601,10 @@ namespace Sylvan.Data.Csv
 			WriteValue(value);
 		}
 
+		/// <summary>
+		/// Writes a value to the current record.
+		/// </summary>
+		/// <param name="value">The value to write.</param>
 		public void WriteField(double value)
 		{
 			if (pos + 32 >= bufferSize)
@@ -558,6 +622,10 @@ namespace Sylvan.Data.Csv
 			WriteValue(value);
 		}
 
+		/// <summary>
+		/// Writes a value to the current record.
+		/// </summary>
+		/// <param name="value">The value to write.</param>
 		public void WriteField(int value)
 		{
 			if (pos + 32 >= bufferSize)
@@ -575,6 +643,10 @@ namespace Sylvan.Data.Csv
 			WriteValue(value);
 		}
 
+		/// <summary>
+		/// Writes a value to the current record.
+		/// </summary>
+		/// <param name="value">The value to write.</param>
 		public void WriteField(DateTime value)
 		{
 			if (pos + 64 >= bufferSize)
@@ -592,6 +664,10 @@ namespace Sylvan.Data.Csv
 			WriteValue(value);
 		}
 
+		/// <summary>
+		/// Writes a value to the current record.
+		/// </summary>
+		/// <param name="value">The value to write.</param>
 		public void WriteField(string? value)
 		{
 			bool optimistic = true;
@@ -630,7 +706,7 @@ namespace Sylvan.Data.Csv
 					case WriteResult.Okay:
 						return;
 					case WriteResult.NeedsFlush:
-						goto flush;					
+						goto flush;
 				}
 			}
 
