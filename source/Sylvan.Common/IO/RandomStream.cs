@@ -42,6 +42,9 @@ namespace Sylvan.IO
 
 		public override void CopyTo(Stream destination, int bufferSize)
 		{
+			if (destination == null)
+				throw new ArgumentNullException(nameof(destination));
+
 			while (this.position < this.length)
 			{
 				if (bufferPos >= this.temp.Length)

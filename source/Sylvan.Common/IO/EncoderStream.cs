@@ -4,11 +4,13 @@ using System.IO;
 
 namespace Sylvan.IO
 {
-	sealed class EncoderStream : Stream
+	public sealed class EncoderStream : Stream
 	{
+		readonly bool ownsStream;
 		readonly Stream stream;
 		readonly Encoder encoder;
 		readonly byte[] buffer;
+		bool isClosed;
 		int bufferIdx;
 
 		public EncoderStream(Stream stream, Encoder encoder)
@@ -16,6 +18,8 @@ namespace Sylvan.IO
 			this.stream = stream;
 			this.encoder = encoder;
 			this.buffer = new byte[0x1000];
+			this.isClosed = false;
+			this.ownsStream = false;
 		}
 
 		public override bool CanRead => false;
@@ -76,18 +80,29 @@ namespace Sylvan.IO
 
 		public override void Close()
 		{
-			var dst = this.buffer.AsSpan().Slice(bufferIdx);
-			int srcCount, dstCount;
-			var result = this.encoder.Encode(ReadOnlySpan<byte>.Empty, dst, out srcCount, out dstCount);
-			this.bufferIdx += dstCount;
-			if (result == EncoderResult.RequiresOutputSpace)
+			if (isClosed == false)
 			{
-				Flush();
-				result = this.encoder.Encode(ReadOnlySpan<byte>.Empty, dst, out srcCount, out dstCount);
+				var dst = this.buffer.AsSpan().Slice(bufferIdx);
+				int srcCount, dstCount;
+				var result = this.encoder.Encode(ReadOnlySpan<byte>.Empty, dst, out srcCount, out dstCount);
 				this.bufferIdx += dstCount;
-				Debug.Assert(result == EncoderResult.Complete);
+				if (result == EncoderResult.RequiresOutputSpace)
+				{
+					Flush();
+					result = this.encoder.Encode(ReadOnlySpan<byte>.Empty, dst, out srcCount, out dstCount);
+					this.bufferIdx += dstCount;
+					Debug.Assert(result == EncoderResult.Complete);
+				}
+				Flush();
+				this.isClosed = true;
 			}
-			Flush();
+		}
+
+		protected override void Dispose(bool disposing)
+		{
+			this.Close();
+			if (this.ownsStream)
+				this.stream.Dispose();
 		}
 	}
 }
