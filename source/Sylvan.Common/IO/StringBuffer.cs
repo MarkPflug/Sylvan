@@ -99,15 +99,18 @@ namespace Sylvan.IO
 		public override void Write(char[] buffer, int offset, int count)
 		{
 			if (count < 0)
-				throw new ArgumentOutOfRangeException();
+				throw new ArgumentOutOfRangeException(nameof(count));
 			if (offset + count > buffer.Length)
-				throw new ArgumentOutOfRangeException();
+				throw new ArgumentOutOfRangeException(nameof(offset));
 
 			this.Write(((Span<char>)buffer).Slice(offset, count));
 		}
 
-
+#if NETSTANDARD2_1
+		public override void Write(ReadOnlySpan<char> buffer)
+#else
 		public void Write(ReadOnlySpan<char> buffer)
+#endif
 		{
 			var offset = 0;
 			var count = buffer.Length;

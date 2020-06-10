@@ -1,4 +1,8 @@
 # Sylvan.Data.Csv Release Notes
+
+_0.4.3_
+Add API documentation.
+
 _0.4.2_
 Fix bug with handling improperly quoted fields.
 

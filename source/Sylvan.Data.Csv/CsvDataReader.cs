@@ -12,6 +12,9 @@ using System.Threading.Tasks;
 
 namespace Sylvan.Data.Csv
 {
+	/// <summary>
+	/// A data reader for delimited text data.
+	/// </summary>
 	public sealed class CsvDataReader : DbDataReader, IDbColumnSchemaGenerator
 	{
 		struct Enumerator : IEnumerator
@@ -102,11 +105,23 @@ namespace Sylvan.Data.Csv
 		CsvColumn[] columns;
 		State state;
 
+		/// <summary>
+		/// Creates a new CsvDataReader.
+		/// </summary>
+		/// <param name="reader">The TextReader for the delimited data.</param>
+		/// <param name="options">The options to configure the reader, or null to use the default options.</param>
+		/// <returns>A CsvDataReader instance.</returns>
 		public static CsvDataReader Create(TextReader reader, CsvDataReaderOptions? options = null)
 		{
 			return CreateAsync(reader, options).Result;
 		}
 
+		/// <summary>
+		/// Creates a new CsvDataReader asynchronously.
+		/// </summary>
+		/// <param name="reader">The TextReader for the delimited data.</param>
+		/// <param name="options">The options to configure the reader, or null to use the default options.</param>
+		/// <returns>A task representing the asynchronous creation of a CsvDataReader instance.</returns>
 		public static async Task<CsvDataReader> CreateAsync(TextReader reader, CsvDataReaderOptions? options = null)
 		{
 			if (reader == null) throw new ArgumentNullException(nameof(reader));
@@ -449,22 +464,31 @@ namespace Sylvan.Data.Csv
 			return c;
 		}
 
+		/// <inheritdoc/>
 		public override object? this[int ordinal] => this.GetValue(ordinal);
 
+		/// <inheritdoc/>
 		public override object? this[string name] => this[this.GetOrdinal(name)];
 
+		/// <inheritdoc/>
 		public override int Depth => 0;
 
+		/// <inheritdoc/>
 		public override int FieldCount => fieldCount;
 
+		/// <inheritdoc/>
 		public override bool HasRows => hasRows;
 
+		/// <summary> Gets the current 1-based row number of the data reader.</summary>
 		public int RowNumber => rowNumber;
 
+		/// <inheritdoc/>
 		public override bool IsClosed => state == State.Closed;
 
+		/// <inheritdoc/>
 		public override int RecordsAffected => -1;
 
+		/// <inheritdoc/>
 		public override bool GetBoolean(int ordinal)
 		{
 #if NETSTANDARD2_1
@@ -474,6 +498,7 @@ namespace Sylvan.Data.Csv
 #endif
 		}
 
+		/// <inheritdoc/>
 		public override byte GetByte(int ordinal)
 		{
 #if NETSTANDARD2_1
@@ -483,11 +508,13 @@ namespace Sylvan.Data.Csv
 #endif
 		}
 
+		/// <inheritdoc/>
 		public override long GetBytes(int ordinal, long dataOffset, byte[] buffer, int bufferOffset, int length)
 		{
 			throw new NotSupportedException();
 		}
 
+		/// <inheritdoc/>
 		public override char GetChar(int ordinal)
 		{
 			var (b, o, l) = GetField(ordinal);
@@ -498,6 +525,7 @@ namespace Sylvan.Data.Csv
 			throw new FormatException();
 		}
 
+		/// <inheritdoc/>
 		public override long GetChars(int ordinal, long dataOffset, char[] buffer, int bufferOffset, int length)
 		{
 			if (dataOffset > int.MaxValue) throw new ArgumentOutOfRangeException(nameof(dataOffset));
@@ -509,6 +537,7 @@ namespace Sylvan.Data.Csv
 			return len;
 		}
 
+		/// <inheritdoc/>
 		public override DateTime GetDateTime(int ordinal)
 		{
 #if NETSTANDARD2_1
@@ -518,6 +547,7 @@ namespace Sylvan.Data.Csv
 #endif
 		}
 
+		/// <inheritdoc/>
 		public override decimal GetDecimal(int ordinal)
 		{
 #if NETSTANDARD2_1
@@ -527,6 +557,7 @@ namespace Sylvan.Data.Csv
 #endif
 		}
 
+		/// <inheritdoc/>
 		public override double GetDouble(int ordinal)
 		{
 #if NETSTANDARD2_1
@@ -537,21 +568,25 @@ namespace Sylvan.Data.Csv
 #endif
 		}
 
+		/// <inheritdoc/>
 		public override IEnumerator GetEnumerator()
 		{
 			return new Enumerator(this);
 		}
 
+		/// <inheritdoc/>
 		public override string GetDataTypeName(int ordinal)
 		{
 			return this.columns[ordinal].DataTypeName;
 		}
 
+		/// <inheritdoc/>
 		public override Type GetFieldType(int ordinal)
 		{
 			return this.columns[ordinal].DataType;
 		}
 
+		/// <inheritdoc/>
 		public override float GetFloat(int ordinal)
 		{
 #if NETSTANDARD2_1
@@ -561,6 +596,7 @@ namespace Sylvan.Data.Csv
 #endif
 		}
 
+		/// <inheritdoc/>
 		public override Guid GetGuid(int ordinal)
 		{
 #if NETSTANDARD2_1
@@ -570,6 +606,7 @@ namespace Sylvan.Data.Csv
 #endif
 		}
 
+		/// <inheritdoc/>
 		public override short GetInt16(int ordinal)
 		{
 #if NETSTANDARD2_1
@@ -579,6 +616,7 @@ namespace Sylvan.Data.Csv
 #endif
 		}
 
+		/// <inheritdoc/>
 		public override int GetInt32(int ordinal)
 		{
 #if NETSTANDARD2_1
@@ -588,6 +626,7 @@ namespace Sylvan.Data.Csv
 #endif
 		}
 
+		/// <inheritdoc/>
 		public override long GetInt64(int ordinal)
 		{
 #if NETSTANDARD2_1
@@ -597,18 +636,21 @@ namespace Sylvan.Data.Csv
 #endif
 		}
 
+		/// <inheritdoc/>
 		public override string GetName(int ordinal)
 		{
 			if (this.hasHeaders == false) throw new InvalidOperationException();
 			return columns[ordinal].ColumnName;
 		}
 
+		/// <inheritdoc/>
 		public override int GetOrdinal(string name)
 		{
 			if (this.hasHeaders == false) throw new InvalidOperationException();
 			return this.headerMap.TryGetValue(name, out var idx) ? idx : -1;
 		}
 
+		/// <inheritdoc/>
 		public override string GetString(int ordinal)
 		{
 			if (((uint)ordinal) < curFieldCount)
@@ -698,6 +740,7 @@ namespace Sylvan.Data.Csv
 			return (buffer, offset, len);
 		}
 
+		/// <inheritdoc/>
 		public override object? GetValue(int ordinal)
 		{
 			if ((uint)ordinal >= fieldCount)
@@ -733,6 +776,7 @@ namespace Sylvan.Data.Csv
 			}
 		}
 
+		/// <inheritdoc/>
 		public override int GetValues(object?[] values)
 		{
 			var count = Math.Min(this.fieldCount, values.Length);
@@ -743,6 +787,7 @@ namespace Sylvan.Data.Csv
 			return count;
 		}
 
+		/// <inheritdoc/>
 		public override bool IsDBNull(int ordinal)
 		{
 			if (((uint)ordinal) >= fieldCount)
@@ -765,17 +810,20 @@ namespace Sylvan.Data.Csv
 			return isEmpty;
 		}
 
+		/// <inheritdoc/>
 		public override Task<bool> IsDBNullAsync(int ordinal, CancellationToken cancellationToken)
 		{
 			return IsDBNull(ordinal) ? CompleteTrue : CompleteFalse;
 		}
 
+		/// <inheritdoc/>
 		public override bool NextResult()
 		{
 			state = State.End;
 			return false;
 		}
 
+		/// <inheritdoc/>
 		public override Task<bool> NextResultAsync(CancellationToken cancellationToken)
 		{
 			state = State.End;
@@ -785,6 +833,7 @@ namespace Sylvan.Data.Csv
 		readonly static Task<bool> CompleteTrue = Task.FromResult(true);
 		readonly static Task<bool> CompleteFalse = Task.FromResult(false);
 
+		/// <inheritdoc/>
 		public override Task<bool> ReadAsync(CancellationToken cancellationToken)
 		{
 			cancellationToken.ThrowIfCancellationRequested();
@@ -814,17 +863,23 @@ namespace Sylvan.Data.Csv
 			throw new InvalidOperationException();
 		}
 
+		/// <inheritdoc/>
 		public override bool Read()
 		{
 			return this.ReadAsync().Result;
 		}
 
+		/// <summary>
+		/// Gets a collection of DbColumns describing the schema of the data reader.
+		/// </summary>
+		/// <returns>A collection of DbColumn.</returns>
 		public ReadOnlyCollection<DbColumn> GetColumnSchema()
 		{
 			// I expect that callers would only call this once, so no bother caching.
 			return new ReadOnlyCollection<DbColumn>(columns);
 		}
 
+		/// <inheritdoc/>
 		public override DataTable GetSchemaTable()
 		{
 			return SchemaTable.GetSchemaTable(this.GetColumnSchema());

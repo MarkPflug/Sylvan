@@ -6,4 +6,9 @@
     <!-- the package folder must exist before nuget restore runs -->
     <MakeDir Condition="!Exists($(PackageOutputPath))" Directories="$(PackageOutputPath)" />
   </Target>
+
+  <Target Name="PackReleaseOnly" BeforeTargets="Pack">
+    <!-- Attempt to prevent myself from accidentally releaseing a debug build. -->
+    <Error Condition="$(Configuration) != 'Release'" Text="Attempting to pack a debug build."/>
+  </Target>
 </Project>

@@ -83,6 +83,8 @@ namespace Sylvan.IO
 
 		public IEnumerable<int> SearchAll(byte[] data)
 		{
+			if (data == null) throw new ArgumentNullException(nameof(data));
+
 			return SearchAll(data, 0, data.Length);
 		}
 
@@ -99,6 +101,8 @@ namespace Sylvan.IO
 
 		public int Search(byte[] data, int offset)
 		{
+			if (data == null) throw new ArgumentNullException(nameof(data));
+
 			return Search(data, offset, data.Length);
 		}
 

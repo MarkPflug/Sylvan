@@ -80,6 +80,8 @@ namespace Sylvan
 		/// <returns>A base64 encoded string.</returns>
 		public string Encode(byte[] data)
 		{
+			if (data == null) throw new ArgumentNullException(nameof(data));
+
 			var bufferSize = GetOutputBufferLength(data.Length);
 			char[] chars = new char[bufferSize];
 			int lineIdx = 0;
@@ -92,6 +94,8 @@ namespace Sylvan
 		/// </summary>
 		public void Encode(Stream iStream, TextWriter writer)
 		{
+			if (iStream == null) throw new ArgumentNullException(nameof(iStream));
+			if (writer == null) throw new ArgumentNullException(nameof(writer));
 			// this buffer length MUST be a multiple of three for
 			// this to work properly
 			const int BufferLength = 3 * 0x1000;
@@ -179,6 +183,9 @@ namespace Sylvan
 		/// <returns>The decoded data.</returns>
 		public byte[] Decode(string src)
 		{
+			if (src == null) throw new ArgumentNullException(nameof(src));
+			if (src.Length == 0) return Array.Empty<byte>();
+
 			byte[] buffer = new byte[(src.Length * 3 + 3) / 4];
 
 			// decoder state.
@@ -197,6 +204,7 @@ namespace Sylvan
 		/// <returns>The decoded data.</returns>
 		public byte[] Decode(char[] src)
 		{
+			if (src == null) throw new ArgumentNullException(nameof(src));
 			// decoder state.
 			int accum = 0;
 			int bitCount = 0;
@@ -214,6 +222,9 @@ namespace Sylvan
 		/// <param name="oStream">The stream to capture the decoded data.</param>
 		public void Decode(TextReader reader, Stream oStream)
 		{
+			if (reader == null) throw new ArgumentNullException(nameof(reader));
+			if (oStream == null) throw new ArgumentNullException(nameof(oStream));
+
 			const int BufferLength = 0x1000;
 			char[] iBuffer = new char[GetOutputBufferLength(BufferLength)];
 			byte[] oBuffer = new byte[BufferLength];

@@ -21,9 +21,9 @@ namespace Sylvan.Data
 			return new ObjectDataReader<T>(seq.GetEnumerator());
 		}
 
-		public static DbDataReader Transform(this DbDataReader reader, Action<TransformBuilder> transform)
-		{
-			return new TransformDataReader(reader, transform);
-		}
+		//public static DbDataReader Transform(this DbDataReader reader, Action<TransformBuilder> transform)
+		//{
+		//	return new TransformDataReader(reader, transform);
+		//}
 	}
 }

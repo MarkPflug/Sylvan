@@ -83,6 +83,15 @@ namespace Sylvan.Data.Csv
 			}
 		}
 
+		class TypedCsvColumn : DbColumn
+		{
+			public TypedCsvColumn(Type type, bool allowNull)
+			{
+				this.DataType = type;
+				this.AllowDBNull = allowNull;
+			}
+		}
+
 		public sealed class TestClass
 		{
 			public int Id { get; set; }
