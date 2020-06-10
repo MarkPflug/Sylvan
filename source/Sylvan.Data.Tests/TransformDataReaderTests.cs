@@ -8,13 +8,13 @@ namespace Sylvan.Data
 	public class TransformDataReaderTests
 	{
 
-		[Fact]
-		public void TransformDataReaderTest1()
-		{
+		//[Fact]
+		//public void TransformDataReaderTest1()
+		//{
 
-			var data = TestData.GetTestData();
+		//	var data = TestData.GetTestData();
 
-			data.Transform(t => t.Map(2, 0));
-		}
+		//	data.Transform(t => t.Map(2, 0));
+		//}
 	}
 }
