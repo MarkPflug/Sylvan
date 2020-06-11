@@ -11,12 +11,14 @@ namespace Sylvan.IO
 
 		const int DefaultLineLength = 76;
 		const byte Pad = (byte)'=';
+
+		readonly byte[] encodeMap;
+		readonly int maxLineLength;
+
 		int carry;
 		byte carry0;
 		byte carry1;
 
-		readonly byte[] encodeMap;
-		readonly int maxLineLength;
 		int lineIdx;
 
 		int GetOutputBufferLength(int inputLength)
@@ -72,7 +74,6 @@ namespace Sylvan.IO
 						b2 = src[srcOffset++];
 						count -= 1;
 					}
-					
 
 					dst[dstOffset++] = encodeMap[b0 >> 2];
 					dst[dstOffset++] = encodeMap[((b0 & 0x03) << 4) | (b1 >> 4)];
@@ -130,19 +131,22 @@ namespace Sylvan.IO
 
 			fixed (byte* srcStart = src.Slice(srcOffset))
 			fixed (byte* dstStart = dst.Slice(dstOffset))
+			fixed (byte* emp = encodeMap)
 			{
 				var srcP = srcStart;
 				var dstP = dstStart;
 				var dstEnd = dstStart + dst.Length;
 
+				var safeEnd = dstEnd - 6;
+
 				for (int i = 0; i < count - 2; i += 3)
 				{
-					if (dstP + 6 >= dstEnd)
+					if (dstP >= safeEnd)
 					{
 						// if we don't have enough room in the output buffer
-						// for an quad and a newline
+						// for a quad and a newline
 						bytesConsumed = srcOffset + (int)(srcP - srcStart);
-						bytesWritten  = dstOffset + (int)(dstP - dstStart);
+						bytesWritten = dstOffset + (int)(dstP - dstStart);
 						return EncoderResult.RequiresOutputSpace;
 					}
 
@@ -150,10 +154,10 @@ namespace Sylvan.IO
 					b1 = *srcP++;
 					b2 = *srcP++;
 
-					*dstP++ = encodeMap[b0 >> 2];
-					*dstP++ = encodeMap[((b0 & 0x03) << 4) | (b1 >> 4)];
-					*dstP++ = encodeMap[((b1 & 0x0F) << 2) | (b2 >> 6)];
-					*dstP++ = encodeMap[b2 & 0x3F];
+					*dstP++ = emp[b0 >> 2];
+					*dstP++ = emp[((b0 & 0x03) << 4) | (b1 >> 4)];
+					*dstP++ = emp[((b1 & 0x0F) << 2) | (b2 >> 6)];
+					*dstP++ = emp[b2 & 0x3F];
 
 					lineIdx += 4;
 					if (lineIdx >= maxLineLength)

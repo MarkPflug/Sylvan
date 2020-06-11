@@ -11,7 +11,7 @@ namespace Sylvan.IO
 		/// Indicates that all input data was consumed and encoded to the output buffer.
 		/// </summary>
 		/// <remarks>
-		/// This doesn't necessarily indicate that the output is complete however.
+		/// This result doesn't necessarily indicate that the output is complete however.
 		/// A subsequent call to Encode with an empty input buffer might be required to 
 		/// finalize the output encoding.
 		/// </remarks>
