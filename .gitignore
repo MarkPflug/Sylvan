@@ -203,3 +203,6 @@ _Pvt_Extensions/
 ModelManifest.xml
 
 BenchmarkDotNet.Artifacts/
+
+#coverage reports
+reports/
