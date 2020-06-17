@@ -16,6 +16,10 @@
     <PackageProjectUrl>$(RepositoryUrl)</PackageProjectUrl>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <WarningsNotAsErrors>CS1030;$(WarningsNotAsErrors)</WarningsNotAsErrors>
+  
+  
+    <IsTestProject Condition="$(MSBuildProjectName.EndsWith('.Tests')) == 'true'">true</IsTestProject>
+      
   </PropertyGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)license.txt" Pack="true" PackagePath="">
@@ -25,4 +29,6 @@
       <Visible>false</Visible>
     </None>
   </ItemGroup>
+    
+
 </Project>
