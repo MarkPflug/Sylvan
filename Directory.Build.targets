@@ -17,30 +17,12 @@
     <CoverletOutput>$(ReportsDirectory)\$(MSBuildProjectName)\</CoverletOutput>
     <CoverletOutputFormat>json,cobertura</CoverletOutputFormat>
   </PropertyGroup>
-  
-  <Target 
-    Name="GenerateCoverageReport" 
-    AfterTargets="GenerateCoverageResult">
-
-    <PropertyGroup>
-      <ReportDirectory>$(MSBuildThisFileDirectory)/reports</ReportDirectory>
-    </PropertyGroup>
-    
-    <MakeDir Directories="$(ReportDirectory)"/>
-
-    <!--<ReportGenerator
-      ReportFiles=""
-      TargetDirectory="$(ReportDirectory)"
-    />-->
-
-  </Target>
 
   <ItemGroup Condition="'$(IsTestProject)' == 'true'">
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.5.0" />
     <PackageReference Include="xunit" Version="2.4.0" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.4.0" />
-    <PackageReference Include="Coverlet.Collector" Version="1.3.0"/>
-    <PackageReference Include="Coverlet.MSBuild" Version="2.9.0"/>
+    <PackageReference Include="Coverlet.MSbuild" Version="2.9.0"/>
     <PackageReference Include="ReportGenerator" Version="4.5.0"/>
   </ItemGroup>
 
