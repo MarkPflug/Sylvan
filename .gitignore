@@ -203,3 +203,4 @@ _Pvt_Extensions/
 ModelManifest.xml
 
 BenchmarkDotNet.Artifacts/
+reports/
