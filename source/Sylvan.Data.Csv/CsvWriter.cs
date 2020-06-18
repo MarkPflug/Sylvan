@@ -623,6 +623,38 @@ namespace Sylvan.Data.Csv
 		}
 
 		/// <summary>
+		/// Writes hex-encoded data to the current record.
+		/// </summary>
+		/// <param name="buffer">The buffer containing the data to write.</param>
+		public void WriteField(byte[] buffer)
+		{
+			this.WriteField(buffer, 0, buffer.Length);
+		}
+		/// <summary>
+		/// Writes hex-encoded data to the current record.
+		/// </summary>
+		/// <param name="buffer">The buffer containing the data to write.</param>
+		/// <param name="offset">The offset in the buffer from which to begin writing.</param>
+		/// <param name="length">The number of bytes to be written.</param>
+		public void WriteField(byte[] buffer, int offset, int length)
+		{
+			throw new NotImplementedException();
+			//if (pos + 32 >= bufferSize)
+			//{
+			//	FlushBuffer();
+			//}
+			//if (fieldIdx > 0)
+			//{
+			//	writeBuffer[pos++] = delimiter;
+			//}
+			//fieldIdx++;
+			//if (WriteValueOptimistic(value) == WriteResult.Okay)
+			//	return;
+
+			//WriteValue(value);
+		}
+
+		/// <summary>
 		/// Writes a value to the current record.
 		/// </summary>
 		/// <param name="value">The value to write.</param>

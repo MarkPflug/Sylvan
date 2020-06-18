@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Data.Common;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -13,8 +14,15 @@ namespace Sylvan.Data.Csv
 	{
 		class FieldInfo
 		{
+			public FieldInfo(bool allowNull, Type type)
+			{
+				this.allowNull = allowNull;
+				this.type = type;
+				this.typeCode = Type.GetTypeCode(type);
+			}
 			public bool allowNull;
-			public TypeCode type;
+			public Type type;
+			public TypeCode typeCode;
 		}
 
 		enum FieldState
@@ -61,13 +69,8 @@ namespace Sylvan.Data.Csv
 			for (int i = 0; i < c; i++)
 			{
 				var type = reader.GetFieldType(i);
-				var typeCode = Type.GetTypeCode(type);
-				fieldTypes[i] =
-					new FieldInfo
-					{
-						allowNull = schema?[i].AllowDBNull ?? true,
-						type = typeCode
-					};
+				var allowNull = schema?[i].AllowDBNull ?? true;
+				fieldTypes[i] = new FieldInfo(allowNull, type);
 			}
 
 			for (int i = 0; i < c; i++)
@@ -86,7 +89,7 @@ namespace Sylvan.Data.Csv
 				{
 					for (; i < c; i++)
 					{
-						var typeCode = fieldTypes[i].type;
+						var typeCode = fieldTypes[i].typeCode;
 						var allowNull = fieldTypes[i].allowNull;
 
 						if (allowNull && await reader.IsDBNullAsync(i))
@@ -172,13 +175,8 @@ namespace Sylvan.Data.Csv
 			for (int i = 0; i < c; i++)
 			{
 				var type = reader.GetFieldType(i);
-				var typeCode = Type.GetTypeCode(type);
-				fieldTypes[i] =
-					new FieldInfo
-					{
-						allowNull = schema?[i].AllowDBNull ?? true,
-						type = typeCode
-					};
+				var allowNull = schema?[i].AllowDBNull ?? true;
+				fieldTypes[i] = new FieldInfo(allowNull, type);
 			}
 
 			for (int i = 0; i < c; i++)
@@ -204,7 +202,8 @@ namespace Sylvan.Data.Csv
 							continue;
 						}
 
-						var typeCode = fieldTypes[i].type;
+						
+						var typeCode = fieldTypes[i].typeCode;
 						int intVal;
 						string? str;
 
@@ -249,6 +248,19 @@ namespace Sylvan.Data.Csv
 								writer.WriteField("");
 								break;
 							default:
+								var type = fieldTypes[i].type;
+								if (type == typeof(byte[]))
+								{
+									throw new NotImplementedException();
+								}
+
+								if(type == typeof(Guid))
+								{
+									var guid = reader.GetGuid(i);
+									//writer.WriteField(guid);
+									throw new NotImplementedException();
+								}
+
 								str = reader.GetValue(i)?.ToString() ?? "";
 							str:
 								writer.WriteField(str);

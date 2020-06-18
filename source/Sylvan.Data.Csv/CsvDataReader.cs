@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Data;
 using System.Data.Common;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -508,10 +509,111 @@ namespace Sylvan.Data.Csv
 #endif
 		}
 
+#if NETSTANDARD2_1
+		byte[]? scratch;
+#endif
+
 		/// <inheritdoc/>
 		public override long GetBytes(int ordinal, long dataOffset, byte[] buffer, int bufferOffset, int length)
 		{
-			throw new NotSupportedException();
+
+#if NETSTANDARD2_1
+			if (dataOffset > int.MaxValue) throw new ArgumentOutOfRangeException(nameof(dataOffset));
+
+			if (scratch == null) scratch = new byte[3];
+
+			var scratchSpan = scratch.AsSpan();
+
+			var offset = (int)dataOffset;
+
+			var count = 0;
+
+			var (b, o, l) = GetField(ordinal);
+
+			var quadIdx = Math.DivRem(offset, 3, out int rem);
+
+			var iBuf = b.AsSpan().Slice(o, l);
+
+			iBuf = iBuf.Slice(quadIdx * 4);
+
+			var oBuf = buffer.AsSpan().Slice(bufferOffset);
+
+			// align to the next base64 quad
+			if (rem != 0)
+			{
+				if (Convert.TryFromBase64Chars(iBuf.Slice(0, 4), scratchSpan, out int c))
+				{
+					if (c == rem)
+					{
+						// we already decoded everything available in the previous pass
+						return 0; //count
+					}
+
+					Debug.Assert(c != 0); // c will be 1 2 or 3
+
+					var partial = 3 - rem;
+					while (partial > 0)
+					{
+						oBuf[count++] = scratch[3 - partial];
+						c--;
+						partial--;
+						length--;
+						if (c == 0 || length == 0)
+						{
+							return count;
+						}
+					}
+				}
+				else
+				{
+					throw new InvalidCastException();
+				}
+				iBuf = iBuf.Slice(4); // slice away the partial quad
+			}
+
+			{
+				// copy as many full quads as possible
+				var quadCount = Math.Min(length / 3, iBuf.Length / 4);
+				if (quadCount > 0)
+				{
+					var byteCount = quadCount * 4;
+					if (Convert.TryFromBase64Chars(iBuf.Slice(0, byteCount), oBuf.Slice(count, quadCount * 3), out int c))
+					{
+						length -= c;
+						iBuf = iBuf.Slice(byteCount);
+						count += c;
+					}
+					else
+					{
+						throw new InvalidCastException();
+					}
+				}
+			}
+			if (iBuf.Length == 0)
+				return count;
+
+			if (length > 0)
+			{
+
+				if (Convert.TryFromBase64Chars(iBuf.Slice(0, 4), scratchSpan, out int c))
+				{
+					c = length < c ? length : c;
+					for (int i = 0; i < c; i++)
+					{
+						oBuf[count++] = scratchSpan[i];
+					}
+				}
+				else
+				{
+					throw new InvalidCastException();
+				}
+			}
+
+			return count;
+#else
+
+			throw new NotImplementedException();
+#endif
 		}
 
 		/// <inheritdoc/>
@@ -711,9 +813,9 @@ namespace Sylvan.Data.Csv
 							if (c == escape)
 							{
 								c = buffer[offset + i++];
-								if(c != quote && c != escape)
+								if (c != quote && c != escape)
 								{
-									if(quote == escape)
+									if (quote == escape)
 									{
 										// the escape we just saw was actually the closing quote
 										// the remainder of the field will be added verbatim

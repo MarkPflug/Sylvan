@@ -1,6 +1,8 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
+using System.Text;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -34,6 +36,39 @@ namespace Sylvan.Data.Csv
 				Assert.Equal("High", csv[2]);
 				Assert.Equal("1989-03-14", csv[3]);
 				Assert.False(await csv.ReadAsync());
+			}
+		}
+
+		[Fact]
+		public async Task Binary()
+		{
+			const string Value = "Hello, world!";
+			const string Value2 = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
+
+			using (var reader = File.OpenText("Data\\Binary.csv"))
+			{
+				var csv = await CsvDataReader.CreateAsync(reader);
+				csv.Read();
+				var id = csv.GetInt32(0);
+				byte[] buffer = new byte[16];
+				var len = csv.GetBytes(1, 0, buffer, 0, 2);
+				Assert.Equal(2, len);
+				len += csv.GetBytes(1, len, buffer, (int)len, 14);
+				Assert.Equal(Value.Length, len);
+				var expected = Encoding.ASCII.GetBytes(Value);
+				Assert.Equal(expected, buffer.Take((int)len));
+				csv.Read();
+
+				var p = 0;
+				len = 0;
+				var sw = new StringWriter();
+				while ((len = csv.GetBytes(1, p, buffer, 0, buffer.Length)) != 0)
+				{
+					p += (int)len;
+					sw.Write(Encoding.ASCII.GetString(buffer, 0, (int)len));
+				}
+				var str = sw.ToString();
+				Assert.Equal(Value2, str);
 			}
 		}
 
@@ -143,7 +178,7 @@ namespace Sylvan.Data.Csv
 		{
 			var tr = TestData.GetTextReader();
 			string str = null;
-			
+
 			var csv = await CsvDataReader.CreateAsync(tr);
 			while (await csv.ReadAsync())
 			{
