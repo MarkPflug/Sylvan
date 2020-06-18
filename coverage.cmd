@@ -1,0 +1,1 @@
+dotnet test /p:CollectCoverage=true source/Sylvan.sln
