@@ -97,6 +97,7 @@ namespace Sylvan.Data.Csv
 		int lineNumber;
 
 		readonly char[] buffer;
+		byte[]? scratch;
 		FieldInfo[] fieldInfos;
 
 		bool atEndOfText;
@@ -509,39 +510,37 @@ namespace Sylvan.Data.Csv
 #endif
 		}
 
-#if NETSTANDARD2_1
-		byte[]? scratch;
-#endif
-
 		/// <inheritdoc/>
 		public override long GetBytes(int ordinal, long dataOffset, byte[] buffer, int bufferOffset, int length)
 		{
-
-#if NETSTANDARD2_1
 			if (dataOffset > int.MaxValue) throw new ArgumentOutOfRangeException(nameof(dataOffset));
 
-			if (scratch == null) scratch = new byte[3];
-
-			var scratchSpan = scratch.AsSpan();
+			if (scratch == null)
+			{
+				scratch = new byte[3];
+			}			
 
 			var offset = (int)dataOffset;
 
-			var count = 0;
+			//var count = 0;
 
 			var (b, o, l) = GetField(ordinal);
 
 			var quadIdx = Math.DivRem(offset, 3, out int rem);
 
-			var iBuf = b.AsSpan().Slice(o, l);
+			var iBuf = b;
 
-			iBuf = iBuf.Slice(quadIdx * 4);
+			var iOff = 0;
+			iOff += quadIdx * 4;
 
-			var oBuf = buffer.AsSpan().Slice(bufferOffset);
+			var oBuf = buffer;
+
+			var oOff = bufferOffset;
 
 			// align to the next base64 quad
 			if (rem != 0)
 			{
-				if (Convert.TryFromBase64Chars(iBuf.Slice(0, 4), scratchSpan, out int c))
+				if (TryFromBase64Chars(iBuf, o + iOff, 4, scratch, 0, out int c))
 				{
 					if (c == rem)
 					{
@@ -554,13 +553,13 @@ namespace Sylvan.Data.Csv
 					var partial = 3 - rem;
 					while (partial > 0)
 					{
-						oBuf[count++] = scratch[3 - partial];
+						oBuf[oOff++] = scratch[3 - partial];
 						c--;
 						partial--;
 						length--;
 						if (c == 0 || length == 0)
 						{
-							return count;
+							return oOff - bufferOffset;
 						}
 					}
 				}
@@ -568,20 +567,21 @@ namespace Sylvan.Data.Csv
 				{
 					throw new InvalidCastException();
 				}
-				iBuf = iBuf.Slice(4); // slice away the partial quad
+				iOff += 4; // advance the partial quad
 			}
 
 			{
 				// copy as many full quads as possible
-				var quadCount = Math.Min(length / 3, iBuf.Length / 4);
+				var quadCount = Math.Min(length / 3, (l - iOff) / 4);
 				if (quadCount > 0)
 				{
-					var byteCount = quadCount * 4;
-					if (Convert.TryFromBase64Chars(iBuf.Slice(0, byteCount), oBuf.Slice(count, quadCount * 3), out int c))
+					var charCount = quadCount * 4;
+
+					if (TryFromBase64Chars(iBuf, o + iOff, charCount, oBuf, oOff, out int c))
 					{
 						length -= c;
-						iBuf = iBuf.Slice(byteCount);
-						count += c;
+						iOff += charCount;
+						oOff += c;
 					}
 					else
 					{
@@ -589,18 +589,22 @@ namespace Sylvan.Data.Csv
 					}
 				}
 			}
-			if (iBuf.Length == 0)
-				return count;
+			//if (iBuf.Length == 0)
+			//	return count;
+			if(iOff == l)
+			{
+				return oOff - bufferOffset;
+			}
 
 			if (length > 0)
 			{
 
-				if (Convert.TryFromBase64Chars(iBuf.Slice(0, 4), scratchSpan, out int c))
+				if (TryFromBase64Chars(iBuf, o + iOff, 4, scratch, 0, out int c))
 				{
 					c = length < c ? length : c;
 					for (int i = 0; i < c; i++)
 					{
-						oBuf[count++] = scratchSpan[i];
+						oBuf[oOff++] = scratch[i];
 					}
 				}
 				else
@@ -609,10 +613,26 @@ namespace Sylvan.Data.Csv
 				}
 			}
 
-			return count;
-#else
+			return oOff - bufferOffset;
+		}
 
-			throw new NotImplementedException();
+		bool TryFromBase64Chars(char[] chars, int charsOffset, int charsLen, byte[] bytes, int bytesOffset, out int bytesWritten)
+		{
+#if NETSTANDARD2_1
+			return Convert.TryFromBase64Chars(chars.AsSpan().Slice(charsOffset, charsLen), bytes.AsSpan().Slice(bytesOffset), out bytesWritten);
+#else
+			try
+			{
+				var buff = Convert.FromBase64CharArray(chars, charsOffset, charsLen);
+				Array.Copy(buff, 0, bytes, bytesOffset, buff.Length);
+				bytesWritten = buff.Length;
+				return true;
+			}
+			catch (Exception)
+			{
+				bytesWritten = 0;
+				return false;
+			}
 #endif
 		}
 
