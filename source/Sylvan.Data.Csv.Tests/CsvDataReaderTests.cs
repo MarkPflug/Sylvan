@@ -38,13 +38,13 @@ namespace Sylvan.Data.Csv
 				Assert.False(await csv.ReadAsync());
 			}
 		}
+		const string BinaryValue1 = "Hello, world!";
+		const string BinaryValue2 = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
+
 
 		[Fact]
 		public async Task Binary()
-		{
-			const string Value = "Hello, world!";
-			const string Value2 = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
-
+		{			
 			using (var reader = File.OpenText("Data\\Binary.csv"))
 			{
 				var csv = await CsvDataReader.CreateAsync(reader);
@@ -54,8 +54,8 @@ namespace Sylvan.Data.Csv
 				var len = csv.GetBytes(1, 0, buffer, 0, 2);
 				Assert.Equal(2, len);
 				len += csv.GetBytes(1, len, buffer, (int)len, 14);
-				Assert.Equal(Value.Length, len);
-				var expected = Encoding.ASCII.GetBytes(Value);
+				Assert.Equal(BinaryValue1.Length, len);
+				var expected = Encoding.ASCII.GetBytes(BinaryValue1);
 				Assert.Equal(expected, buffer.Take((int)len));
 				csv.Read();
 
@@ -68,7 +68,28 @@ namespace Sylvan.Data.Csv
 					sw.Write(Encoding.ASCII.GetString(buffer, 0, (int)len));
 				}
 				var str = sw.ToString();
-				Assert.Equal(Value2, str);
+				Assert.Equal(BinaryValue2, str);
+			}
+		}
+
+		[Fact]
+		public async Task BinaryValues()
+		{
+			using (var reader = File.OpenText("Data\\Binary.csv"))
+			{
+				var schema = new TypedCsvSchema();
+				schema.Add(1, typeof(byte[]));
+				var opts = new CsvDataReaderOptions() { Schema = schema };
+				var csv = await CsvDataReader.CreateAsync(reader, opts);
+				csv.Read();
+				var vals = new object[2];
+				csv.GetValues(vals);
+				var expected = Encoding.ASCII.GetBytes(BinaryValue1);
+				Assert.Equal(expected, (byte[])vals[1]);
+				csv.Read();
+				csv.GetValues(vals);
+				expected = Encoding.ASCII.GetBytes(BinaryValue2);
+				Assert.Equal(expected, (byte[])vals[1]);
 			}
 		}
 

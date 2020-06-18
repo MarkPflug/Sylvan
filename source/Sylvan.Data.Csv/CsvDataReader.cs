@@ -518,11 +518,9 @@ namespace Sylvan.Data.Csv
 			if (scratch == null)
 			{
 				scratch = new byte[3];
-			}			
+			}
 
 			var offset = (int)dataOffset;
-
-			//var count = 0;
 
 			var (b, o, l) = GetField(ordinal);
 
@@ -571,7 +569,7 @@ namespace Sylvan.Data.Csv
 			}
 
 			{
-				// copy as many full quads as possible
+				// copy as many full quads as possible straight to the output buffer
 				var quadCount = Math.Min(length / 3, (l - iOff) / 4);
 				if (quadCount > 0)
 				{
@@ -589,16 +587,14 @@ namespace Sylvan.Data.Csv
 					}
 				}
 			}
-			//if (iBuf.Length == 0)
-			//	return count;
-			if(iOff == l)
+
+			if (iOff == l)
 			{
 				return oOff - bufferOffset;
 			}
 
 			if (length > 0)
 			{
-
 				if (TryFromBase64Chars(iBuf, o + iOff, 4, scratch, 0, out int c))
 				{
 					c = length < c ? length : c;
@@ -893,8 +889,26 @@ namespace Sylvan.Data.Csv
 				case TypeCode.DateTime:
 					return this.GetDateTime(ordinal);
 				case TypeCode.String:
-				default:
 					return this.GetString(ordinal);
+				default:
+					if(type == typeof(byte[]))
+					{
+						var(b, o, l) = this.GetField(ordinal);
+						var dataLen = l / 4 * 3; 
+						var buffer = new byte[dataLen];
+						var len = GetBytes(ordinal, 0, buffer, 0, dataLen);
+						// 2/3 chance we'll have to resize.
+						if (len < dataLen)
+						{
+							Array.Resize(ref buffer, (int)len);
+						}
+						return buffer;
+					}
+					if(type == typeof(Guid))
+					{
+						return this.GetGuid(ordinal);
+					}
+					return this.GetString(ordinal);					
 			}
 		}
 
