@@ -143,6 +143,64 @@ namespace Sylvan.Data.Csv
 			return WriteResult.Okay;
 		}
 
+
+		/// <summary>
+		/// Asynchronously writes a value to the current record.
+		/// </summary>
+		/// <param name="value">The value to write.</param>
+		/// <returns>A task representing the asynchronous operation.</returns>
+		public void WriteField(Guid value)
+		{
+			if (pos + 64 >= bufferSize)
+			{
+				FlushBuffer();
+			}
+			if (fieldIdx > 0)
+			{
+				writeBuffer[pos++] = delimiter;
+			}
+			fieldIdx++;
+
+			// keep it fast/allocation-free in the sane case.
+			if (delimiter == '-' || quote == '-')
+			{
+				WriteValue(value.ToString());
+			}
+			else
+			{
+				WriteValueInvariant(value);
+			}
+		}
+
+		/// <summary>
+		/// Asynchronously writes a value to the current record.
+		/// </summary>
+		/// <param name="value">The value to write.</param>
+		/// <returns>A task representing the asynchronous operation.</returns>
+		public void WriteField(byte[] value)
+		{
+			AssertBinaryPrereq();
+			var size = (value.Length * 4 / 3) + 1;
+
+			if (size > writeBuffer.Length)
+			{
+				throw new ArgumentOutOfRangeException(nameof(value));
+			}
+			if (fieldIdx > 0)
+			{
+				writeBuffer[pos++] = delimiter;
+			}
+			fieldIdx++;
+
+			if (pos + size >= bufferSize)
+			{
+				FlushBuffer();
+			}
+
+			var len = Convert.ToBase64CharArray(value, 0, value.Length, this.writeBuffer, pos);
+			pos += len;
+		}
+
 		WriteResult WriteValueOptimistic(string str)
 		{
 			var start = pos;
@@ -248,6 +306,22 @@ namespace Sylvan.Data.Csv
 			return WriteResult.NeedsFlush;
 #else
 			var str = value.ToString(culture);
+			return WriteValue(str);
+#endif
+		}
+
+		WriteResult WriteValueInvariant(Guid value)
+		{
+#if NETSTANDARD2_1
+			var span = writeBuffer.AsSpan()[pos..bufferSize];
+			if (value.TryFormat(span, out int c))
+			{
+				pos += c;
+				return WriteResult.Okay;
+			}
+			return WriteResult.NeedsFlush;
+#else
+			var str = value.ToString();
 			return WriteValue(str);
 #endif
 		}
@@ -448,6 +522,8 @@ namespace Sylvan.Data.Csv
 			WriteValue(value);
 		}
 
+
+
 		/// <summary>
 		/// Asynchronously writes a value to the current record.
 		/// </summary>
@@ -546,6 +622,71 @@ namespace Sylvan.Data.Csv
 		}
 
 		/// <summary>
+		/// Asynchronously writes a value to the current record.
+		/// </summary>
+		/// <param name="value">The value to write.</param>
+		/// <returns>A task representing the asynchronous operation.</returns>
+		public async Task WriteFieldAsync(Guid value)
+		{
+			if (pos + 64 >= bufferSize)
+			{
+				await FlushBufferAsync();
+			}
+			if (fieldIdx > 0)
+			{
+				writeBuffer[pos++] = delimiter;
+			}
+			fieldIdx++;
+			
+			// keep it fast/allocation-free in the sane case.
+			if(delimiter == '-' || quote == '-')
+			{
+				WriteValue(value.ToString());
+			} else
+			{
+				WriteValueInvariant(value);
+			}			
+		}
+
+		/// <summary>
+		/// Asynchronously writes a value to the current record.
+		/// </summary>
+		/// <param name="value">The value to write.</param>
+		/// <returns>A task representing the asynchronous operation.</returns>
+		public async Task WriteFieldAsync(byte[] value)
+		{
+			var size = (value.Length * 4 / 3) + 1;
+
+			if(size > writeBuffer.Length)
+			{
+				throw new ArgumentOutOfRangeException(nameof(value));
+			}
+
+			if (pos + size >= bufferSize)
+			{
+				await FlushBufferAsync();
+			}
+
+			AssertBinaryPrereq();
+
+			Convert.ToBase64CharArray(value, 0, value.Length, this.writeBuffer, pos);
+		}
+
+		void AssertBinaryPrereq()
+		{
+			// punt these crazy scenarios.
+			if (delimiter == '+' || delimiter == '/' || delimiter == '=')
+			{
+				throw new InvalidOperationException();
+			}
+
+			if (quote == '+' || quote == '/' || quote == '=')
+			{
+				throw new InvalidOperationException();
+			}
+		}
+
+		/// <summary>
 		/// Writes the end of the curent record.
 		/// </summary>
 		public void EndRecord()
@@ -611,10 +752,12 @@ namespace Sylvan.Data.Csv
 			{
 				FlushBuffer();
 			}
+
 			if (fieldIdx > 0)
 			{
 				writeBuffer[pos++] = delimiter;
 			}
+
 			fieldIdx++;
 			if (WriteValueOptimistic(value) == WriteResult.Okay)
 				return;
@@ -622,14 +765,6 @@ namespace Sylvan.Data.Csv
 			WriteValue(value);
 		}
 
-		/// <summary>
-		/// Writes hex-encoded data to the current record.
-		/// </summary>
-		/// <param name="buffer">The buffer containing the data to write.</param>
-		public void WriteField(byte[] buffer)
-		{
-			this.WriteField(buffer, 0, buffer.Length);
-		}
 		/// <summary>
 		/// Writes hex-encoded data to the current record.
 		/// </summary>
@@ -745,6 +880,24 @@ namespace Sylvan.Data.Csv
 			if (WriteValue(value) == WriteResult.NeedsFlush)
 				goto flush;
 			return;
+		}
+
+		internal async Task StartBinaryFieldAsync()
+		{
+			AssertBinaryPrereq();
+			await FlushBufferAsync();
+			if (fieldIdx > 0)
+			{
+				writeBuffer[pos++] = delimiter;
+			}
+			fieldIdx++;
+		}
+
+		internal int ContinueBinaryField(byte[] buffer, int len)
+		{
+			var written = Convert.ToBase64CharArray(buffer, 0, len, writeBuffer, pos);
+			pos += written;
+			return written;
 		}
 
 		#region IDisposable Support

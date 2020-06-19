@@ -54,7 +54,7 @@ namespace Sylvan.Data.Csv
 		{
 			var reader = File.OpenText("Data\\Schema.csv");
 			return CsvDataReader.Create(reader, new CsvDataReaderOptions() { Schema = DataSchema.Instance });
-		}		
+		}
 
 		class DataSchema : ICsvSchemaProvider
 		{
@@ -113,7 +113,7 @@ namespace Sylvan.Data.Csv
 			DateTime startDate = new DateTime(2020, 3, 23, 0, 0, 0, DateTimeKind.Utc);
 			row.DataSet = new double[valueCount];
 			var counter = 1;
-			
+
 			return
 				Enumerable
 				.Range(0, recordCount)
@@ -133,6 +133,28 @@ namespace Sylvan.Data.Csv
 				);
 		}
 
+		public static DbDataReader GetBinaryData()
+		{
+			var items = GetTestBinary();
+			var reader = ObjectDataReader.Create(items);
+			reader.AddColumn("Id", d => d.Id);
+			reader.AddColumn("Data", d => d.Data);
+			return reader;
+		}
+
+		public class BinaryData
+		{
+			public int Id { get; set; }
+			public byte[] Data { get; set; }
+		}
+
+		public static IEnumerable<BinaryData> GetTestBinary()
+		{
+			yield return new BinaryData { Id = 1, Data = new byte[] { 1, 2, 3, 4, 5 } };
+			yield return new BinaryData { Id = 2, Data = new byte[] { 5, 4, 3, 2, 1 } };
+
+		}
+
 		public static DbDataReader GetTestDataReader(int recordCount = DefaultRecordCount, int valueCount = DefaultDataValueCount)
 		{
 			var items = GetTestObjects(recordCount, valueCount);
@@ -142,7 +164,7 @@ namespace Sylvan.Data.Csv
 			reader.AddColumn("Date", d => d.Date);
 			reader.AddColumn("IsActive", d => d.IsActive);
 
-			for(int i = 0; i < valueCount; i++)
+			for (int i = 0; i < valueCount; i++)
 			{
 				var idx = 0;
 				reader.AddColumn("Value" + i, d => d.DataSet[idx]);

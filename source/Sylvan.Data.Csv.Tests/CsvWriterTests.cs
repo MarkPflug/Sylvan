@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Text;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -13,16 +14,15 @@ namespace Sylvan.Data.Csv
 			return File.ReadAllText(@"Data\Writer_3_1_Expected.csv");
 		}
 
-#if NETCOREAPP3_1
-
 		// these tests are a problem in net 461 because of changes to float formatting
 
+#if NETCOREAPP3_1
 		[Fact]
 		public async Task Async()
 		{
 			var tw = new StringWriter();
 			var items = TestData.GetTestObjects(3, 1);
-			await using (var csv = new CsvWriter(tw))
+			using (var csv = new CsvWriter(tw))
 			{
 				await csv.WriteFieldAsync("Id");
 				await csv.WriteFieldAsync("Name");
@@ -73,6 +73,8 @@ namespace Sylvan.Data.Csv
 			Assert.Equal(expected, tw.ToString());
 		}
 
+#endif
+
 		[Fact]
 		public void WriteQuote()
 		{
@@ -86,6 +88,18 @@ namespace Sylvan.Data.Csv
 			Assert.Equal("\"Value with \"\"quote\"" + Environment.NewLine, str);
 		}
 
-#endif
+		[Fact]
+		public void WriteBinary()
+		{
+			var tw = new StringWriter();
+			using (var csv = new CsvWriter(tw))
+			{
+				csv.WriteField(Encoding.ASCII.GetBytes("Hello, csv!"));
+				csv.WriteField(Guid.Empty);
+				csv.EndRecord();
+			}
+			var str = tw.ToString();
+			Assert.Equal("SGVsbG8sIGNzdiE=,00000000-0000-0000-0000-000000000000\r\n", str);
+		}
 	}
 }

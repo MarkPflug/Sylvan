@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Data.Common;
 using System.IO;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -53,6 +52,8 @@ namespace Sylvan.Data.Csv
 			this.writer = new CsvWriter(writer, options);
 		}
 
+		const int Base64EncSize = 3 * 256; // must be a multiple of 3.
+
 		/// <summary>
 		/// Asynchronously writes delimited data.
 		/// </summary>
@@ -65,6 +66,8 @@ namespace Sylvan.Data.Csv
 			var fieldTypes = new FieldInfo[c];
 
 			var schema = (reader as IDbColumnSchemaGenerator)?.GetColumnSchema();
+
+			byte[]? dataBuffer = null;
 
 			for (int i = 0; i < c; i++)
 			{
@@ -89,6 +92,7 @@ namespace Sylvan.Data.Csv
 				{
 					for (; i < c; i++)
 					{
+						var type = fieldTypes[i].type;
 						var typeCode = fieldTypes[i].typeCode;
 						var allowNull = fieldTypes[i].allowNull;
 
@@ -141,6 +145,28 @@ namespace Sylvan.Data.Csv
 								await writer.WriteFieldAsync("");
 								break;
 							default:
+								if (type == typeof(byte[]))
+								{
+									if (dataBuffer == null)
+									{
+										dataBuffer = new byte[Base64EncSize];
+									}
+									var idx = 0;
+									await writer.StartBinaryFieldAsync();
+									int len = 0;
+									while ((len = (int)reader.GetBytes(i, idx, dataBuffer, 0, Base64EncSize)) != 0)
+									{
+										writer.ContinueBinaryField(dataBuffer, len);
+										idx += len;
+									}
+									break;
+								}
+								if (type == typeof(Guid))
+								{
+									var guid = reader.GetGuid(i);
+									await writer.WriteFieldAsync(guid);
+									break;
+								}
 								str = reader.GetValue(i)?.ToString() ?? "";
 							str:
 								await writer.WriteFieldAsync(str);
@@ -202,7 +228,7 @@ namespace Sylvan.Data.Csv
 							continue;
 						}
 
-						
+
 						var typeCode = fieldTypes[i].typeCode;
 						int intVal;
 						string? str;
@@ -254,7 +280,7 @@ namespace Sylvan.Data.Csv
 									throw new NotImplementedException();
 								}
 
-								if(type == typeof(Guid))
+								if (type == typeof(Guid))
 								{
 									var guid = reader.GetGuid(i);
 									//writer.WriteField(guid);
