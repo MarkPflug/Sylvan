@@ -511,18 +511,23 @@ namespace Sylvan.Data.Csv
 			{
 				await FlushBufferAsync();
 			}
-			if (fieldIdx > 0)
-			{
-				writeBuffer[pos++] = delimiter;
-			}
-			fieldIdx++;
+			
+			StartField();
+
 			if (WriteValueOptimistic(value) == WriteResult.Okay)
 				return;
 
 			WriteValue(value);
 		}
 
-
+		void StartField()
+		{
+			if (fieldIdx > 0)
+			{
+				writeBuffer[pos++] = delimiter;
+			}
+			fieldIdx++;
+		}
 
 		/// <summary>
 		/// Asynchronously writes a value to the current record.

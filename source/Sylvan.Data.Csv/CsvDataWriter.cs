@@ -196,6 +196,8 @@ namespace Sylvan.Data.Csv
 			var c = reader.FieldCount;
 			var fieldTypes = new FieldInfo[c];
 
+			byte[]? dataBuffer = null;
+
 			var schema = (reader as IDbColumnSchemaGenerator)?.GetColumnSchema();
 
 			for (int i = 0; i < c; i++)
@@ -277,14 +279,25 @@ namespace Sylvan.Data.Csv
 								var type = fieldTypes[i].type;
 								if (type == typeof(byte[]))
 								{
-									throw new NotImplementedException();
+									if (dataBuffer == null)
+									{
+										dataBuffer = new byte[Base64EncSize];
+									}
+									var idx = 0;
+									writer.StartBinaryFieldAsync().Wait();
+									int len = 0;
+									while ((len = (int)reader.GetBytes(i, idx, dataBuffer, 0, Base64EncSize)) != 0)
+									{
+										writer.ContinueBinaryField(dataBuffer, len);
+										idx += len;
+									}
+									break;
 								}
-
 								if (type == typeof(Guid))
 								{
 									var guid = reader.GetGuid(i);
-									//writer.WriteField(guid);
-									throw new NotImplementedException();
+									writer.WriteField(guid);
+									break;
 								}
 
 								str = reader.GetValue(i)?.ToString() ?? "";

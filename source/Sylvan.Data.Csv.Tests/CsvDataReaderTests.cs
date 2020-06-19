@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Data;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -43,7 +45,7 @@ namespace Sylvan.Data.Csv
 
 		[Fact]
 		public async Task Binary()
-		{			
+		{
 			using (var reader = File.OpenText("Data\\Binary.csv"))
 			{
 				var csv = await CsvDataReader.CreateAsync(reader);
@@ -292,6 +294,168 @@ namespace Sylvan.Data.Csv
 					Assert.Equal(typeof(string), cols[i].DataType);
 				}
 			}
+		}
+
+		[Fact]
+		public void GetSchemaTable()
+		{
+			using (var reader = File.OpenText("Data\\Simple.csv"))
+			{
+				var csv = CsvDataReader.Create(reader);
+				var schema = csv.GetSchemaTable();
+
+				var names = new[] { "Id", "Name", "Value", "Date" };
+				for (int i = 0; i < schema.Rows.Count; i++)
+				{
+					var row = schema.Rows[i];
+					Assert.Equal(names[i], (string)row["ColumnName"]);
+					Assert.Equal(typeof(string), (Type)row["DataType"]);
+				}
+			}
+		}
+
+		[Fact]
+		public void Enumerator()
+		{
+			using (var reader = File.OpenText("Data\\Simple.csv"))
+			{
+				var csv = CsvDataReader.Create(reader);
+				int c = 0;
+				foreach (IDataRecord row in csv)
+				{
+					c++;
+					Assert.Same(row, csv);
+				}
+				Assert.Equal(2, c);
+			}
+		}
+
+		[Fact]
+		public void Create()
+		{
+			Assert.ThrowsAsync<ArgumentNullException>(() => CsvDataReader.CreateAsync(null));
+		}
+
+		[Fact]
+		public void NoHeaders()
+		{
+			Assert.Throws<CsvMissingHeadersException>(() => CsvDataReader.Create(new StringReader("")));
+		}
+
+		[Fact]
+		public void BufferTooSmall()
+		{
+			var opts = new CsvDataReaderOptions() { BufferSize = 128 };
+			using var tr = File.OpenText("Data\\Binary.csv");
+			var csv = CsvDataReader.Create(tr, opts);
+			csv.Read();
+			Assert.Throws<CsvRecordTooLargeException>(() => csv.Read());
+		}
+
+		[Fact]
+		public void NextResult()
+		{
+			using var tr = File.OpenText("Data\\Binary.csv");
+			var csv = CsvDataReader.Create(tr);
+			Assert.False(csv.NextResult());
+			Assert.False(csv.Read());
+		}
+
+		[Fact]
+		public async Task NextResultAsync()
+		{
+			using var tr = File.OpenText("Data\\Binary.csv");
+			var csv = CsvDataReader.Create(tr);
+			Assert.False(await csv.NextResultAsync());
+			Assert.False(await csv.ReadAsync());
+		}
+
+		CsvDataReader GetTypedReader()
+		{
+			var tr = File.OpenText("Data\\Types.csv");
+			var schema = new TypedCsvSchema();
+			schema.Add("Byte", typeof(byte));
+			schema.Add("Int16", typeof(short));
+			schema.Add("Int32", typeof(int));
+			schema.Add("Int64", typeof(long));
+			schema.Add("Char", typeof(char));
+			schema.Add("String", typeof(string));
+			schema.Add("Bool", typeof(bool));
+			schema.Add("Float", typeof(float));
+			schema.Add("Double", typeof(double));
+			schema.Add("DateTime", typeof(DateTime));
+			schema.Add("Decimal", typeof(decimal));
+			schema.Add("Guid", typeof(Guid));
+
+			var opts = new CsvDataReaderOptions() { Schema = schema };
+
+			return CsvDataReader.Create(tr, opts);
+		}
+
+		[Fact]
+		public void Types()
+		{
+			var csv = GetTypedReader();
+			csv.Read();
+			var rowData = new object[csv.FieldCount];
+			var count = csv.GetValues(rowData);
+			var types = new HashSet<string>();
+			for (var i = 0; i < csv.FieldCount; i++)
+			{
+				Assert.True(types.Add(csv.GetDataTypeName(i)));
+			}
+			Assert.Equal(rowData.Length, count);
+			foreach (var obj in rowData)
+			{
+				Assert.NotNull(obj);
+			}
+		}
+
+		[Fact]
+		public void TextReader()
+		{
+			using var tr = File.OpenText("Data\\Binary.csv");
+			var csv = CsvDataReader.Create(tr);
+			var buf = new char[32];
+			while (csv.Read())
+			{
+				var idx = 0;
+				int len;
+				while ((len = (int) csv.GetChars(1, idx, buf, 0, buf.Length)) != 0)
+				{
+					idx += len;
+				}
+
+				Assert.True(idx > 0);
+			}
+		}
+
+		[Fact]
+		public void LineEndings()
+		{
+			using var tr = new StringReader("Id\r1\r\n2\n3\n\r");
+			var csv = CsvDataReader.Create(tr);
+			Assert.Equal("Id", csv.GetName(0));
+			Assert.True(csv.Read());
+			Assert.Equal("1", csv.GetString(0));
+			Assert.True(csv.Read());
+			Assert.Equal("2", csv.GetString(0));
+			Assert.True(csv.Read());
+			Assert.Equal("3", csv.GetString(0));
+			Assert.True(csv.Read());
+			Assert.Equal("", csv.GetString(0));
+			Assert.False(csv.Read());
+		}
+
+		[Fact]
+		public void MiscCoverage()
+		{
+			using var tr = new StringReader("Id,Name,Value");
+			var csv = CsvDataReader.Create(tr);
+			Assert.False(csv.HasRows);
+			Assert.Equal(0, csv.Depth);
+			Assert.False(csv.IsClosed);
+			Assert.Equal(-1, csv.RecordsAffected);
 		}
 	}
 }

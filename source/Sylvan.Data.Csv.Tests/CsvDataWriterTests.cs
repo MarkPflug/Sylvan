@@ -32,7 +32,6 @@ namespace Sylvan.Data.Csv
 			var sw = new StringWriter();
 			var csv = new CsvDataWriter(sw);
 			await csv.WriteAsync(dr);
-
 			var str = sw.ToString();
 		}
 	}

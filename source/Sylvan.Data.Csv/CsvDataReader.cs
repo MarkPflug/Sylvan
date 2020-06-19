@@ -53,10 +53,12 @@ namespace Sylvan.Data.Csv
 			internal int escapeCount;
 			internal QuoteState isQuoted;
 
+#if DEBUG
 			public override string ToString()
 			{
 				return $"EndIdx: {endIdx} IsQuoted: {isQuoted} EscapeCount: {escapeCount}";
 			}
+#endif
 		}
 
 		enum State
@@ -115,7 +117,7 @@ namespace Sylvan.Data.Csv
 		/// <returns>A CsvDataReader instance.</returns>
 		public static CsvDataReader Create(TextReader reader, CsvDataReaderOptions? options = null)
 		{
-			return CreateAsync(reader, options).Result;
+			return CreateAsync(reader, options).GetAwaiter().GetResult();
 		}
 
 		/// <summary>
@@ -170,7 +172,7 @@ namespace Sylvan.Data.Csv
 				}
 				else
 				{
-					throw new InvalidDataException("no headers");
+					throw new CsvMissingHeadersException();
 				}
 			}
 			// read the first row of data to determine fieldCount (if there were no headers)
@@ -538,33 +540,28 @@ namespace Sylvan.Data.Csv
 			// align to the next base64 quad
 			if (rem != 0)
 			{
-				if (TryFromBase64Chars(iBuf, o + iOff, 4, scratch, 0, out int c))
+				FromBase64Chars(iBuf, o + iOff, 4, scratch, 0, out int c);
+				if (c == rem)
 				{
-					if (c == rem)
-					{
-						// we already decoded everything available in the previous pass
-						return 0; //count
-					}
+					// we already decoded everything available in the previous pass
+					return 0; //count
+				}
 
-					Debug.Assert(c != 0); // c will be 1 2 or 3
+				Debug.Assert(c != 0); // c will be 1 2 or 3
 
-					var partial = 3 - rem;
-					while (partial > 0)
+				var partial = 3 - rem;
+				while (partial > 0)
+				{
+					oBuf[oOff++] = scratch[3 - partial];
+					c--;
+					partial--;
+					length--;
+					if (c == 0 || length == 0)
 					{
-						oBuf[oOff++] = scratch[3 - partial];
-						c--;
-						partial--;
-						length--;
-						if (c == 0 || length == 0)
-						{
-							return oOff - bufferOffset;
-						}
+						return oOff - bufferOffset;
 					}
 				}
-				else
-				{
-					throw new InvalidCastException();
-				}
+
 				iOff += 4; // advance the partial quad
 			}
 
@@ -574,17 +571,10 @@ namespace Sylvan.Data.Csv
 				if (quadCount > 0)
 				{
 					var charCount = quadCount * 4;
-
-					if (TryFromBase64Chars(iBuf, o + iOff, charCount, oBuf, oOff, out int c))
-					{
-						length -= c;
-						iOff += charCount;
-						oOff += c;
-					}
-					else
-					{
-						throw new InvalidCastException();
-					}
+					FromBase64Chars(iBuf, o + iOff, charCount, oBuf, oOff, out int c);
+					length -= c;
+					iOff += charCount;
+					oOff += c;
 				}
 			}
 
@@ -595,40 +585,28 @@ namespace Sylvan.Data.Csv
 
 			if (length > 0)
 			{
-				if (TryFromBase64Chars(iBuf, o + iOff, 4, scratch, 0, out int c))
+				FromBase64Chars(iBuf, o + iOff, 4, scratch, 0, out int c);
+				c = length < c ? length : c;
+				for (int i = 0; i < c; i++)
 				{
-					c = length < c ? length : c;
-					for (int i = 0; i < c; i++)
-					{
-						oBuf[oOff++] = scratch[i];
-					}
-				}
-				else
-				{
-					throw new InvalidCastException();
+					oBuf[oOff++] = scratch[i];
 				}
 			}
 
 			return oOff - bufferOffset;
 		}
 
-		bool TryFromBase64Chars(char[] chars, int charsOffset, int charsLen, byte[] bytes, int bytesOffset, out int bytesWritten)
+		void FromBase64Chars(char[] chars, int charsOffset, int charsLen, byte[] bytes, int bytesOffset, out int bytesWritten)
 		{
 #if NETSTANDARD2_1
-			return Convert.TryFromBase64Chars(chars.AsSpan().Slice(charsOffset, charsLen), bytes.AsSpan().Slice(bytesOffset), out bytesWritten);
+			if (!Convert.TryFromBase64Chars(chars.AsSpan().Slice(charsOffset, charsLen), bytes.AsSpan().Slice(bytesOffset), out bytesWritten))
+			{
+				throw new FormatException();
+			}
 #else
-			try
-			{
-				var buff = Convert.FromBase64CharArray(chars, charsOffset, charsLen);
-				Array.Copy(buff, 0, bytes, bytesOffset, buff.Length);
-				bytesWritten = buff.Length;
-				return true;
-			}
-			catch (Exception)
-			{
-				bytesWritten = 0;
-				return false;
-			}
+			var buff = Convert.FromBase64CharArray(chars, charsOffset, charsLen);
+			Array.Copy(buff, 0, bytes, bytesOffset, buff.Length);
+			bytesWritten = buff.Length;
 #endif
 		}
 
@@ -874,6 +852,10 @@ namespace Sylvan.Data.Csv
 			{
 				case TypeCode.Boolean:
 					return this.GetBoolean(ordinal);
+				case TypeCode.Char:
+					return this.GetChar(ordinal);
+				case TypeCode.Byte:
+					return this.GetByte(ordinal);
 				case TypeCode.Int16:
 					return this.GetInt16(ordinal);
 				case TypeCode.Int32:
@@ -891,10 +873,10 @@ namespace Sylvan.Data.Csv
 				case TypeCode.String:
 					return this.GetString(ordinal);
 				default:
-					if(type == typeof(byte[]))
+					if (type == typeof(byte[]))
 					{
-						var(b, o, l) = this.GetField(ordinal);
-						var dataLen = l / 4 * 3; 
+						var (b, o, l) = this.GetField(ordinal);
+						var dataLen = l / 4 * 3;
 						var buffer = new byte[dataLen];
 						var len = GetBytes(ordinal, 0, buffer, 0, dataLen);
 						// 2/3 chance we'll have to resize.
@@ -904,11 +886,11 @@ namespace Sylvan.Data.Csv
 						}
 						return buffer;
 					}
-					if(type == typeof(Guid))
+					if (type == typeof(Guid))
 					{
 						return this.GetGuid(ordinal);
 					}
-					return this.GetString(ordinal);					
+					return this.GetString(ordinal);
 			}
 		}
 
@@ -1002,7 +984,7 @@ namespace Sylvan.Data.Csv
 		/// <inheritdoc/>
 		public override bool Read()
 		{
-			return this.ReadAsync().Result;
+			return this.ReadAsync().GetAwaiter().GetResult();
 		}
 
 		/// <summary>

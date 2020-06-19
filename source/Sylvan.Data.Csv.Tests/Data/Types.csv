@@ -1,0 +1,2 @@
+﻿Byte,Int32,Int16,Int64,Char,String,Bool,Float,Double,DateTime,Decimal,Guid
+255,123456,4312,93838848182384,&,value,True,4312.9943,1234.56,2020-06-19 09:40:32,12345.5432,24fc4d7b-c89e-4278-bc5f-12106f14ea5c
