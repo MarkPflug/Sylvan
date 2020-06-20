@@ -81,6 +81,7 @@ namespace Sylvan.Data.Csv
 		readonly char delimiter;
 		readonly char quote;
 		readonly char escape;
+		readonly bool ownsReader;
 
 		readonly CultureInfo culture;
 
@@ -156,6 +157,7 @@ namespace Sylvan.Data.Csv
 			this.headerMap = new Dictionary<string, int>(options.HeaderComparer);
 			this.columns = Array.Empty<CsvColumn>();
 			this.culture = options.Culture;
+			this.ownsReader = options.OwnsReader;
 		}
 
 		async Task InitializeAsync(ICsvSchemaProvider? schema)
@@ -1039,5 +1041,33 @@ namespace Sylvan.Data.Csv
 				this.UdtAssemblyQualifiedName = schema?.UdtAssemblyQualifiedName;
 			}
 		}
+
+		/// <inheritdoc/>
+		public override void Close()
+		{
+			if (this.state != State.Closed)
+			{
+				if (ownsReader)
+					this.reader.Dispose();
+				this.state = State.Closed;
+			}
+		}
+
+#if NETSTANDARD2_1
+
+		/// <inheritdoc/>
+		public override Task CloseAsync()
+		{
+			if (this.state != State.Closed)
+			{
+				if (ownsReader)
+					this.reader.Dispose();
+				this.state = State.Closed;
+			}
+			return Task.CompletedTask;
+		}
+
+#endif
+
 	}
 }

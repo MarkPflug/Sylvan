@@ -29,6 +29,7 @@ namespace Sylvan.Data.Csv
 			this.HeaderComparer = StringComparer.Ordinal;
 			this.Culture = CultureInfo.InvariantCulture;
 			this.Schema = null;
+			this.OwnsReader = true;
 		}
 
 		/// <summary>
@@ -70,6 +71,11 @@ namespace Sylvan.Data.Csv
 		/// Defaults to the InvariantCulture.
 		/// </summary>
 		public CultureInfo Culture { get; set; }
+
+		/// <summary>
+		/// Indicates if the TextReader should be closed when the CsvDataReader is closed. The default is true.
+		/// </summary>
+		public bool OwnsReader { get; set; }
 
 		/// <summary>
 		/// Allows specifying a strongly-typed schema for the CSV data.

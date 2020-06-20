@@ -10,6 +10,10 @@ namespace Sylvan.Data.Csv
 	/// Writes data from a DbDataReader as delimited values to a TextWriter.
 	/// </summary>
 	public sealed class CsvDataWriter
+		: IDisposable
+#if NETSTANDARD2_1
+		, IAsyncDisposable
+#endif
 	{
 		class FieldInfo
 		{
@@ -31,6 +35,7 @@ namespace Sylvan.Data.Csv
 		}
 
 		readonly CsvWriter writer;
+		bool disposedValue;
 
 		/// <summary>
 		/// Creates a new CsvDataWriter.
@@ -317,5 +322,32 @@ namespace Sylvan.Data.Csv
 			// flush any pending data on the way out.
 			writer.Flush();
 		}
+
+		private void Dispose(bool disposing)
+		{
+			if (!disposedValue)
+			{
+				if (disposing)
+				{
+					((IDisposable)this.writer).Dispose();
+				}
+
+				disposedValue = true;
+			}
+		}
+
+		void IDisposable.Dispose()
+		{
+			Dispose(disposing: true);
+			GC.SuppressFinalize(this);
+		}
+
+#if NETSTANDARD2_1
+		ValueTask IAsyncDisposable.DisposeAsync()
+		{
+			return ((IAsyncDisposable)this.writer).DisposeAsync();
+		}
+#endif
+
 	}
 }
