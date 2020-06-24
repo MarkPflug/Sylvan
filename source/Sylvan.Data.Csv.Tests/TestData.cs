@@ -126,7 +126,7 @@ namespace Sylvan.Data.Csv
 						row.IsActive = i % 2 == 1;
 						for (int idx = 0; idx < row.DataSet.Length; idx++)
 						{
-							row.DataSet[idx] = Math.PI * counter++;
+							row.DataSet[idx] = .25 * counter++;
 						}
 						return row;
 					}

@@ -320,8 +320,13 @@ namespace Sylvan.Data.Csv
 				writer.EndRecord();
 			}
 			// flush any pending data on the way out.
-			writer.Flush();
+			((IDisposable)this.writer).Dispose();
 		}
+
+		//void Close()
+		//{
+		//	writer.Flush();
+		//}
 
 		private void Dispose(bool disposing)
 		{

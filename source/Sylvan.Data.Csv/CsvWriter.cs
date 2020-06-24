@@ -104,20 +104,14 @@ namespace Sylvan.Data.Csv
 
 		async Task FlushBufferAsync()
 		{
-			if (pos == 0)
-			{
-				throw new ArgumentOutOfRangeException();
-			}
+			if (this.pos == 0) return;
 			await writer.WriteAsync(writeBuffer, 0, pos);
 			pos = 0;
 		}
 
 		void FlushBuffer()
 		{
-			if (pos == 0)
-			{
-				throw new ArgumentOutOfRangeException();
-			}
+			if (this.pos == 0) return;
 			writer.Write(writeBuffer, 0, pos);
 			pos = 0;
 		}
@@ -144,7 +138,6 @@ namespace Sylvan.Data.Csv
 			pos += l;
 			return WriteResult.Okay;
 		}
-
 
 		/// <summary>
 		/// Asynchronously writes a value to the current record.
@@ -173,17 +166,7 @@ namespace Sylvan.Data.Csv
 		/// <returns>A task representing the asynchronous operation.</returns>
 		public void WriteField(byte[] value)
 		{
-			AssertBinaryPrereq();
-			var size = (value.Length * 4 / 3) + 1;
-
-			if (size > writeBuffer.Length)
-			{
-				throw new ArgumentOutOfRangeException(nameof(value));
-			}
-			StartField(size);
-
-			var len = Convert.ToBase64CharArray(value, 0, value.Length, this.writeBuffer, pos);
-			pos += len;
+			this.WriteField(value, 0, value.Length);
 		}
 
 		WriteResult WriteValueOptimistic(string str)
@@ -383,7 +366,7 @@ namespace Sylvan.Data.Csv
 
 		WriteResult WriteValueOptimistic(double value)
 		{
-			if (defaultCulture)
+			if (defaultCulture && delimiter != '.')
 			{
 				return WriteValueInvariant(value);
 			}
@@ -634,16 +617,7 @@ namespace Sylvan.Data.Csv
 		/// <returns>A task representing the asynchronous operation.</returns>
 		public async Task WriteFieldAsync(byte[] value)
 		{
-			var size = (value.Length * 4 / 3) + 1;
-
-			if (size > writeBuffer.Length)
-			{
-				throw new ArgumentOutOfRangeException(nameof(value));
-			}
-
-			await StartFieldAsync(size);
-			AssertBinaryPrereq();
-			Convert.ToBase64CharArray(value, 0, value.Length, this.writeBuffer, pos);
+			await WriteFieldAsync(value, 0, value.Length);
 		}
 
 		/// <summary>
@@ -663,7 +637,8 @@ namespace Sylvan.Data.Csv
 
 			await StartFieldAsync(size);
 			AssertBinaryPrereq();
-			Convert.ToBase64CharArray(buffer, offset, length, this.writeBuffer, pos, Base64FormattingOptions.None);
+			var len = Convert.ToBase64CharArray(buffer, offset, length, this.writeBuffer, pos, Base64FormattingOptions.None);
+			pos += len;
 		}
 
 		void AssertBinaryPrereq()
@@ -753,7 +728,8 @@ namespace Sylvan.Data.Csv
 
 			AssertBinaryPrereq();
 
-			Convert.ToBase64CharArray(buffer, offset, length, this.writeBuffer, pos, Base64FormattingOptions.None);
+			var len = Convert.ToBase64CharArray(buffer, offset, length, this.writeBuffer, pos, Base64FormattingOptions.None);
+			pos += len;
 		}
 
 		/// <summary>

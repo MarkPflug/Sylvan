@@ -30,9 +30,25 @@ namespace Sylvan.Data.Csv
 		{
 			var dr = TestData.GetBinaryData();
 			var sw = new StringWriter();
-			var csv = new CsvDataWriter(sw);
+			using var csv = new CsvDataWriter(sw);
 			await csv.WriteAsync(dr);
 			var str = sw.ToString();
+		}
+
+		class TypedObject
+		{
+			public int Id { get; set; }
+		}
+
+
+		[Fact]
+		public void WriteTypes()
+		{
+			var data = TestData.GetTypedData();
+			var tw = new StringWriter();
+			using var csv = new CsvDataWriter(tw);
+			csv.Write(data);
+			var str = tw.ToString();
 		}
 	}
 }
