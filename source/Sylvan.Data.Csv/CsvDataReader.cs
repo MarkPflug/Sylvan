@@ -636,21 +636,26 @@ namespace Sylvan.Data.Csv
 		/// <inheritdoc/>
 		public override string GetName(int ordinal)
 		{
-			if (this.hasHeaders == false) throw new InvalidOperationException();
-			return columns[ordinal].ColumnName;
+			if (ordinal < 0 || ordinal >= fieldCount) 
+				throw new IndexOutOfRangeException();
+
+			return columns[ordinal].ColumnName ?? "";
 		}
 
 		/// <inheritdoc/>
 		public override int GetOrdinal(string name)
 		{
-			if (this.hasHeaders == false) throw new InvalidOperationException();
-			return this.headerMap.TryGetValue(name, out var idx) ? idx : -1;
+			if (this.headerMap.TryGetValue(name, out var idx))
+			{
+				return idx;
+			}
+			throw new IndexOutOfRangeException();
 		}
 
 		/// <inheritdoc/>
 		public override string GetString(int ordinal)
 		{
-			if (((uint)ordinal) < curFieldCount)
+			if (ordinal >= 0 && ordinal < curFieldCount)
 			{
 				var (b, o, l) = GetField(ordinal);
 				return l == 0 ? string.Empty : new string(b, o, l);

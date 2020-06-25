@@ -103,8 +103,8 @@ namespace Sylvan.Data.Csv
 				Assert.Equal(4, csv.FieldCount);
 				Assert.True(csv.HasRows);
 				Assert.Equal(0, csv.RowNumber);
-				Assert.Throws<InvalidOperationException>(() => csv.GetName(0));
-				Assert.Throws<InvalidOperationException>(() => csv.GetOrdinal("Id"));
+				Assert.Equal("", csv.GetName(0));
+				Assert.Throws<IndexOutOfRangeException>(() => csv.GetOrdinal("Id"));
 				Assert.True(await csv.ReadAsync());
 				Assert.Equal(1, csv.RowNumber);
 				Assert.Equal("1", csv[0]);
@@ -120,6 +120,43 @@ namespace Sylvan.Data.Csv
 				Assert.False(await csv.ReadAsync());
 			}
 		}
+
+		[Fact]
+		public async Task NoHeadersWithSchema()
+		{
+			var schema = new ExcelHeaders();
+			var opts = 
+				new CsvDataReaderOptions {
+					HasHeaders = false,
+					Schema = schema 
+				};
+
+			using (var reader = File.OpenText("Data\\DataOnly.csv"))
+			{
+				var csv = await CsvDataReader.CreateAsync(reader, opts);
+				Assert.Equal(4, csv.FieldCount);
+				Assert.True(csv.HasRows);
+				Assert.Equal(0, csv.RowNumber);
+				Assert.Equal("C", csv.GetName(2));
+				Assert.Equal(3, csv.GetOrdinal("D"));
+				Assert.Equal("A", csv.GetName(0));
+				Assert.Throws<IndexOutOfRangeException>(() => csv.GetOrdinal("Id"));
+				Assert.True(await csv.ReadAsync());
+				Assert.Equal(1, csv.RowNumber);
+				Assert.Equal("1", csv[0]);
+				Assert.Equal("John", csv[1]);
+				Assert.Equal("Low", csv[2]);
+				Assert.Equal("2000-11-11", csv[3]);
+				Assert.True(await csv.ReadAsync());
+				Assert.Equal(2, csv.RowNumber);
+				Assert.Equal("2", csv[0]);
+				Assert.Equal("Jane", csv[1]);
+				Assert.Equal("High", csv[2]);
+				Assert.Equal("1989-03-14", csv[3]);
+				Assert.False(await csv.ReadAsync());
+			}
+		}
+
 
 		[Theory]
 		[InlineData("Id,Name,Value,Date")]
@@ -241,16 +278,16 @@ namespace Sylvan.Data.Csv
 			}
 		}
 
-		class HeaderFix : ICsvSchemaProvider
+		class ExcelHeaders : ICsvSchemaProvider
 		{
 			public DbColumn GetColumn(string name, int ordinal)
 			{
-				return new FixCol("" + (char)('A' + ordinal), ordinal);
+				return new ExcelColumn("" + (char)('A' + ordinal), ordinal);
 			}
 
-			class FixCol : DbColumn
+			class ExcelColumn : DbColumn
 			{
-				public FixCol(string name, int ordinal)
+				public ExcelColumn(string name, int ordinal)
 				{
 					this.ColumnName = name;
 					this.ColumnOrdinal = ordinal;
@@ -263,7 +300,7 @@ namespace Sylvan.Data.Csv
 		{
 			var data = "a,b,c,d,e,e";
 
-			var fixSchema = new HeaderFix();
+			var fixSchema = new ExcelHeaders();
 			var opts = new CsvDataReaderOptions { Schema = fixSchema };
 
 			var csv = CsvDataReader.Create(new StringReader(data), opts);

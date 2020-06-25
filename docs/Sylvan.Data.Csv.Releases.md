@@ -1,5 +1,9 @@
 # Sylvan.Data.Csv Release Notes
 
+_0.4.5_
+Fix bug where schema provided headers aren't used when HasHeaders=false. HasHeaders is only meant to indicate if headers are present in the data file.
+
+
 _0.4.4_
 Fix a bug where ISchemaProvider column name overrides weren't used to populate the headers.
 Allows handling CSV with duplicate headers via ISchemaProvider.
