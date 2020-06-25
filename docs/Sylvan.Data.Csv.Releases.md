@@ -1,5 +1,10 @@
 # Sylvan.Data.Csv Release Notes
 
+_0.4.4_
+Fix a bug where ISchemaProvider column name overrides weren't used to populate the headers.
+Allows handling CSV with duplicate headers via ISchemaProvider.
+Fix bug where headers wouldn't fully initialize when there was a single line, with no newline.
+
 _0.4.3_
 Add API documentation.
 
