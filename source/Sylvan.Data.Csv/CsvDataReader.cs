@@ -188,7 +188,7 @@ namespace Sylvan.Data.Csv
 				var name = hasHeaders ? GetString(i) : null;
 				var columnSchema = schema?.GetColumn(name, i);
 				columns[i] = new CsvColumn(name, i, columnSchema);
-				
+
 				name = columns[i].ColumnName;
 				if (name != null)
 				{
@@ -708,9 +708,9 @@ namespace Sylvan.Data.Csv
 							if (c == escape)
 							{
 								c = buffer[offset + i++];
-								if(c != quote && c != escape)
+								if (c != quote && c != escape)
 								{
-									if(quote == escape)
+									if (quote == escape)
 									{
 										// the escape we just saw was actually the closing quote
 										// the remainder of the field will be added verbatim

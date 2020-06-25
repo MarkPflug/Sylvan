@@ -1,9 +1,6 @@
 using System;
 using System.Data.Common;
-using System.Diagnostics;
 using System.IO;
-using System.Net.Http;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Xunit;
 
