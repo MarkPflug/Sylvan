@@ -1,6 +1,9 @@
 using System;
+using System.Data.Common;
+using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -95,7 +98,7 @@ namespace Sylvan.Data.Csv
 		}
 
 		[Fact]
-		public async Task DataOnly()
+		public async Task NoHeaders()
 		{
 			using (var reader = File.OpenText("Data\\DataOnly.csv"))
 			{
@@ -121,11 +124,13 @@ namespace Sylvan.Data.Csv
 			}
 		}
 
-		[Fact]
-		public async Task HeadersOnly()
+		[Theory]
+		[InlineData("Id,Name,Value,Date")]
+		[InlineData("Id,Name,Value,Date\n")]
+		[InlineData("Id,Name,Value,Date\r\n")]
+		public async Task HeadersOnly(string data)
 		{
-			using (var reader = File.OpenText("Data\\HeadersOnly.csv"))
-			{
+			using (var reader = new StringReader(data)) { 
 				var csv = await CsvDataReader.CreateAsync(reader);
 				Assert.Equal(4, csv.FieldCount);
 				Assert.False(csv.HasRows);
@@ -237,6 +242,36 @@ namespace Sylvan.Data.Csv
 					Assert.Equal(typeof(string), cols[i].DataType);
 				}
 			}
+		}
+
+		class HeaderFix : ICsvSchemaProvider
+		{
+			public DbColumn GetColumn(string name, int ordinal)
+			{
+				return new FixCol("" + (char)('A' + ordinal), ordinal);
+			}
+
+			class FixCol : DbColumn
+			{
+				public FixCol(string name, int ordinal)
+				{
+					this.ColumnName = name;
+					this.ColumnOrdinal = ordinal;
+				}
+			}
+		}
+
+		[Fact]
+		public void DupeHeaderFix()
+		{
+			var data = "a,b,c,d,e,e";
+
+			var fixSchema = new HeaderFix();
+			var opts = new CsvDataReaderOptions { Schema = fixSchema };
+
+			var csv = CsvDataReader.Create(new StringReader(data), opts);
+			Assert.Equal(6, csv.FieldCount);
+
 		}
 	}
 }

@@ -113,7 +113,7 @@ namespace Sylvan.Data.Csv
 		/// <returns>A CsvDataReader instance.</returns>
 		public static CsvDataReader Create(TextReader reader, CsvDataReaderOptions? options = null)
 		{
-			return CreateAsync(reader, options).Result;
+			return CreateAsync(reader, options).GetAwaiter().GetResult();
 		}
 
 		/// <summary>
@@ -171,16 +171,11 @@ namespace Sylvan.Data.Csv
 					throw new InvalidDataException("no headers");
 				}
 			}
+
 			// read the first row of data to determine fieldCount (if there were no headers)
-			// and support "hasRows" before Read.
+			// and support calling HasRows before Read is first called.
 			this.hasRows = await NextRecordAsync();
 			InitializeSchema(schema);
-
-			if (state == State.End)
-			{
-				// in the event there is only one line in the file
-				state = State.Initialized;
-			}
 		}
 
 		void InitializeSchema(ICsvSchemaProvider? schema)
@@ -190,14 +185,17 @@ namespace Sylvan.Data.Csv
 			columns = new CsvColumn[this.fieldCount];
 			for (int i = 0; i < this.fieldCount; i++)
 			{
-				var name = GetString(i);
+				var name = hasHeaders ? GetString(i) : null;
 				var columnSchema = schema?.GetColumn(name, i);
 				columns[i] = new CsvColumn(name, i, columnSchema);
-
-				headerMap.Add(name, i);
+				
+				name = columns[i].ColumnName;
+				if (name != null)
+				{
+					headerMap.Add(name, i);
+				}
 			}
-
-			state = State.Initialized;
+			this.state = State.Initialized;
 		}
 
 		async Task<bool> NextRecordAsync()
@@ -389,7 +387,6 @@ namespace Sylvan.Data.Csv
 
 				if (complete)
 					return last ? ReadResult.False : ReadResult.True;
-				this.state = State.End;
 
 				return ReadResult.False;
 			}
@@ -866,7 +863,7 @@ namespace Sylvan.Data.Csv
 		/// <inheritdoc/>
 		public override bool Read()
 		{
-			return this.ReadAsync().Result;
+			return this.ReadAsync().GetAwaiter().GetResult();
 		}
 
 		/// <summary>
