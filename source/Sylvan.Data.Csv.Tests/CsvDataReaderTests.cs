@@ -13,6 +13,13 @@ namespace Sylvan.Data.Csv
 	public class CsvDataReaderTests
 	{
 		[Fact]
+		public async Task SylvanSchemaBench()
+		{
+			var b = new CsvReaderBenchmarks();
+			await b.SylvanSchema();
+		}
+
+		[Fact]
 		public async Task Simple()
 		{
 			using (var reader = File.OpenText("Data\\Simple.csv"))
@@ -40,9 +47,9 @@ namespace Sylvan.Data.Csv
 				Assert.False(await csv.ReadAsync());
 			}
 		}
+
 		const string BinaryValue1 = "Hello, world!";
 		const string BinaryValue2 = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
-
 
 		[Fact]
 		public async Task Binary()
