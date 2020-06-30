@@ -11,7 +11,7 @@ namespace Sylvan.Data.Csv
 {
 	public class PostreSqlLoadTest
 	{
-		[Fact]
+		[Fact(Skip = "Sample")]
 		public void BulkLoad()
 		{
 			using var conn = GetConnection();
@@ -21,7 +21,7 @@ namespace Sylvan.Data.Csv
 			Insert(conn, targetTable, dr);
 		}
 
-		[Fact]
+		[Fact(Skip = "Sample")]
 		public void BulkLoad2()
 		{
 			const string FileName = @"C:\users\mark\desktop\OP_DTL_GNRL_PGYR2018_P01172020.csv";

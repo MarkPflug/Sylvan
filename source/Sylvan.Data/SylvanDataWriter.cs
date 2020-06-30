@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 
 namespace Sylvan.Data
 {
-
 	public enum SylvanDataType
 	{
 		None = 0,
@@ -28,7 +27,7 @@ namespace Sylvan.Data
 		const uint Marker = 0x766c7973;		
 		const uint Version = 1;
 
-		public async Task WriteAsync(DbDataReader data)
+		public Task WriteAsync(DbDataReader data)
 		{
 			BinaryWriter w = new BinaryWriter(stream);
 			w.Write(Marker);
@@ -67,6 +66,7 @@ namespace Sylvan.Data
 					}					
 				}
 			}
+			return Task.CompletedTask;
 		}
 	}
 }

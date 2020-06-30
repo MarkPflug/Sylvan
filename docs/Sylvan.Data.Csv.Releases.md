@@ -1,4 +1,24 @@
 # Sylvan.Data.Csv Release Notes
+_0.5.0_
+Adds support for reading/writeing binary data as base64 encoded strings.
+
+_0.4.5_
+Fix bug where schema provided headers aren't used when HasHeaders=false. HasHeaders is only meant to indicate if headers are present in the data file.
+
+_0.4.4_
+Fix a bug where ISchemaProvider column name overrides weren't used to populate the headers.
+Allows handling CSV with duplicate headers via ISchemaProvider.
+Fix bug where headers wouldn't fully initialize when there was a single line, with no newline.
+
+_0.4.3_
+Add API documentation.
+
+_0.4.2_
+Fix bug with handling improperly quoted fields.
+
+_0.4.1_
+Fix bug with CsvWriter not handling fields correctly in fast path.
+
 _0.4.0_
 Fix bug with CsvDataWriter not handling null columns properly.
 Fix bug with CsvWriter spinning when record too large, now throws.

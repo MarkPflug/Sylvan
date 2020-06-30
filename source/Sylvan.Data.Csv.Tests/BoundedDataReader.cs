@@ -14,7 +14,7 @@ namespace Sylvan.Data.Csv
 
 		public override bool Read()
 		{
-			var success = count < rows && dr.Read();
+			var success = count < rows && Reader.Read();
 
 			if (success)
 			{

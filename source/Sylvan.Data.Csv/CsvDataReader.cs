@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Data;
 using System.Data.Common;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -12,6 +13,9 @@ using System.Threading.Tasks;
 
 namespace Sylvan.Data.Csv
 {
+	/// <summary>
+	/// A data reader for delimited text data.
+	/// </summary>
 	public sealed class CsvDataReader : DbDataReader, IDbColumnSchemaGenerator
 	{
 		struct Enumerator : IEnumerator
@@ -36,16 +40,25 @@ namespace Sylvan.Data.Csv
 			}
 		}
 
+		enum QuoteState
+		{
+			Unquoted = 0,
+			Quoted = 1,
+			BrokenQuotes = 2,
+		}
+
 		struct FieldInfo
 		{
 			internal int endIdx;
 			internal int escapeCount;
-			internal bool isQuoted;
+			internal QuoteState isQuoted;
 
+#if DEBUG
 			public override string ToString()
 			{
 				return $"EndIdx: {endIdx} IsQuoted: {isQuoted} EscapeCount: {escapeCount}";
 			}
+#endif
 		}
 
 		enum State
@@ -68,6 +81,7 @@ namespace Sylvan.Data.Csv
 		readonly char delimiter;
 		readonly char quote;
 		readonly char escape;
+		readonly bool ownsReader;
 
 		readonly CultureInfo culture;
 
@@ -86,6 +100,7 @@ namespace Sylvan.Data.Csv
 		int lineNumber;
 
 		readonly char[] buffer;
+		byte[]? scratch;
 		FieldInfo[] fieldInfos;
 
 		bool atEndOfText;
@@ -95,11 +110,23 @@ namespace Sylvan.Data.Csv
 		CsvColumn[] columns;
 		State state;
 
+		/// <summary>
+		/// Creates a new CsvDataReader.
+		/// </summary>
+		/// <param name="reader">The TextReader for the delimited data.</param>
+		/// <param name="options">The options to configure the reader, or null to use the default options.</param>
+		/// <returns>A CsvDataReader instance.</returns>
 		public static CsvDataReader Create(TextReader reader, CsvDataReaderOptions? options = null)
 		{
-			return CreateAsync(reader, options).Result;
+			return CreateAsync(reader, options).GetAwaiter().GetResult();
 		}
 
+		/// <summary>
+		/// Creates a new CsvDataReader asynchronously.
+		/// </summary>
+		/// <param name="reader">The TextReader for the delimited data.</param>
+		/// <param name="options">The options to configure the reader, or null to use the default options.</param>
+		/// <returns>A task representing the asynchronous creation of a CsvDataReader instance.</returns>
 		public static async Task<CsvDataReader> CreateAsync(TextReader reader, CsvDataReaderOptions? options = null)
 		{
 			if (reader == null) throw new ArgumentNullException(nameof(reader));
@@ -130,6 +157,7 @@ namespace Sylvan.Data.Csv
 			this.headerMap = new Dictionary<string, int>(options.HeaderComparer);
 			this.columns = Array.Empty<CsvColumn>();
 			this.culture = options.Culture;
+			this.ownsReader = options.OwnsReader;
 		}
 
 		async Task InitializeAsync(ICsvSchemaProvider? schema)
@@ -146,19 +174,14 @@ namespace Sylvan.Data.Csv
 				}
 				else
 				{
-					throw new InvalidDataException("no headers");
+					throw new CsvMissingHeadersException();
 				}
 			}
+
 			// read the first row of data to determine fieldCount (if there were no headers)
-			// and support "hasRows" before Read.
+			// and support calling HasRows before Read is first called.
 			this.hasRows = await NextRecordAsync();
 			InitializeSchema(schema);
-
-			if (state == State.End)
-			{
-				// in the event there is only one line in the file
-				state = State.Initialized;
-			}
 		}
 
 		void InitializeSchema(ICsvSchemaProvider? schema)
@@ -168,14 +191,17 @@ namespace Sylvan.Data.Csv
 			columns = new CsvColumn[this.fieldCount];
 			for (int i = 0; i < this.fieldCount; i++)
 			{
-				var name = GetString(i);
+				var name = hasHeaders ? GetString(i) : null;
 				var columnSchema = schema?.GetColumn(name, i);
 				columns[i] = new CsvColumn(name, i, columnSchema);
 
-				headerMap.Add(name, i);
+				name = columns[i].ColumnName;
+				if (name != null)
+				{
+					headerMap.Add(name, i);
+				}
 			}
-
-			state = State.Initialized;
+			this.state = State.Initialized;
 		}
 
 		async Task<bool> NextRecordAsync()
@@ -232,7 +258,9 @@ namespace Sylvan.Data.Csv
 		{
 			char c;
 			var idx = this.idx;
-			bool isQuoted = false;
+			// this will remain -1 if it is unquoted. 
+			// Otherwise we use it to determine if the quotes were "clean".
+			var closeQuoteIdx = -1;
 			int escapeCount = 0;
 			int fieldEnd = 0;
 			var buffer = this.buffer;
@@ -249,7 +277,7 @@ namespace Sylvan.Data.Csv
 				if (c == quote)
 				{
 					idx++;
-					isQuoted = true;
+					closeQuoteIdx = idx;
 					// consume quoted field.
 					while (idx < bufferEnd)
 					{
@@ -269,6 +297,7 @@ namespace Sylvan.Data.Csv
 									if (escape == quote)
 									{
 										idx--;
+										closeQuoteIdx = idx;
 										// the quote (escape) we just saw was a the closing quote
 										break;
 									}
@@ -289,6 +318,7 @@ namespace Sylvan.Data.Csv
 							// immediately after the quote should be a delimiter, eol, or eof, but...
 							// we can simply treat the remainder of the record like a normal unquoted field
 							// we are currently positioned on the quote, the next while loop will consume it
+							closeQuoteIdx = idx;
 							break;
 						}
 						if (IsEndOfLine(c))
@@ -337,7 +367,6 @@ namespace Sylvan.Data.Csv
 
 			if (complete || atEndOfText)
 			{
-
 				if (state == State.Initializing)
 				{
 					if (fieldIdx >= fieldInfos.Length)
@@ -351,7 +380,12 @@ namespace Sylvan.Data.Csv
 				{
 					curFieldCount++;
 					ref var fi = ref fieldInfos[fieldIdx];
-					fi.isQuoted = isQuoted;
+					fi.isQuoted =
+						closeQuoteIdx == -1
+						? QuoteState.Unquoted
+						: fieldEnd == (closeQuoteIdx - recordStart)
+						? QuoteState.Quoted
+						: QuoteState.BrokenQuotes;
 					fi.escapeCount = escapeCount;
 					fi.endIdx = complete ? fieldEnd : (idx - recordStart);
 				}
@@ -359,7 +393,6 @@ namespace Sylvan.Data.Csv
 
 				if (complete)
 					return last ? ReadResult.False : ReadResult.True;
-				this.state = State.End;
 
 				return ReadResult.False;
 			}
@@ -434,22 +467,31 @@ namespace Sylvan.Data.Csv
 			return c;
 		}
 
+		/// <inheritdoc/>
 		public override object? this[int ordinal] => this.GetValue(ordinal);
 
+		/// <inheritdoc/>
 		public override object? this[string name] => this[this.GetOrdinal(name)];
 
+		/// <inheritdoc/>
 		public override int Depth => 0;
 
+		/// <inheritdoc/>
 		public override int FieldCount => fieldCount;
 
+		/// <inheritdoc/>
 		public override bool HasRows => hasRows;
 
+		/// <summary> Gets the current 1-based row number of the data reader.</summary>
 		public int RowNumber => rowNumber;
 
+		/// <inheritdoc/>
 		public override bool IsClosed => state == State.Closed;
 
+		/// <inheritdoc/>
 		public override int RecordsAffected => -1;
 
+		/// <inheritdoc/>
 		public override bool GetBoolean(int ordinal)
 		{
 #if NETSTANDARD2_1
@@ -459,6 +501,7 @@ namespace Sylvan.Data.Csv
 #endif
 		}
 
+		/// <inheritdoc/>
 		public override byte GetByte(int ordinal)
 		{
 #if NETSTANDARD2_1
@@ -468,11 +511,105 @@ namespace Sylvan.Data.Csv
 #endif
 		}
 
+		/// <inheritdoc/>
 		public override long GetBytes(int ordinal, long dataOffset, byte[] buffer, int bufferOffset, int length)
 		{
-			throw new NotSupportedException();
+			if (dataOffset > int.MaxValue) throw new ArgumentOutOfRangeException(nameof(dataOffset));
+
+			if (scratch == null)
+			{
+				scratch = new byte[3];
+			}
+
+			var offset = (int)dataOffset;
+
+			var (b, o, l) = GetField(ordinal);
+
+			var quadIdx = Math.DivRem(offset, 3, out int rem);
+
+			var iBuf = b;
+
+			var iOff = 0;
+			iOff += quadIdx * 4;
+
+			var oBuf = buffer;
+
+			var oOff = bufferOffset;
+
+			// align to the next base64 quad
+			if (rem != 0)
+			{
+				FromBase64Chars(iBuf, o + iOff, 4, scratch, 0, out int c);
+				if (c == rem)
+				{
+					// we already decoded everything available in the previous pass
+					return 0; //count
+				}
+
+				Debug.Assert(c != 0); // c will be 1 2 or 3
+
+				var partial = 3 - rem;
+				while (partial > 0)
+				{
+					oBuf[oOff++] = scratch[3 - partial];
+					c--;
+					partial--;
+					length--;
+					if (c == 0 || length == 0)
+					{
+						return oOff - bufferOffset;
+					}
+				}
+
+				iOff += 4; // advance the partial quad
+			}
+
+			{
+				// copy as many full quads as possible straight to the output buffer
+				var quadCount = Math.Min(length / 3, (l - iOff) / 4);
+				if (quadCount > 0)
+				{
+					var charCount = quadCount * 4;
+					FromBase64Chars(iBuf, o + iOff, charCount, oBuf, oOff, out int c);
+					length -= c;
+					iOff += charCount;
+					oOff += c;
+				}
+			}
+
+			if (iOff == l)
+			{
+				return oOff - bufferOffset;
+			}
+
+			if (length > 0)
+			{
+				FromBase64Chars(iBuf, o + iOff, 4, scratch, 0, out int c);
+				c = length < c ? length : c;
+				for (int i = 0; i < c; i++)
+				{
+					oBuf[oOff++] = scratch[i];
+				}
+			}
+
+			return oOff - bufferOffset;
 		}
 
+		void FromBase64Chars(char[] chars, int charsOffset, int charsLen, byte[] bytes, int bytesOffset, out int bytesWritten)
+		{
+#if NETSTANDARD2_1
+			if (!Convert.TryFromBase64Chars(chars.AsSpan().Slice(charsOffset, charsLen), bytes.AsSpan().Slice(bytesOffset), out bytesWritten))
+			{
+				throw new FormatException();
+			}
+#else
+			var buff = Convert.FromBase64CharArray(chars, charsOffset, charsLen);
+			Array.Copy(buff, 0, bytes, bytesOffset, buff.Length);
+			bytesWritten = buff.Length;
+#endif
+		}
+
+		/// <inheritdoc/>
 		public override char GetChar(int ordinal)
 		{
 			var (b, o, l) = GetField(ordinal);
@@ -483,17 +620,19 @@ namespace Sylvan.Data.Csv
 			throw new FormatException();
 		}
 
+		/// <inheritdoc/>
 		public override long GetChars(int ordinal, long dataOffset, char[] buffer, int bufferOffset, int length)
 		{
 			if (dataOffset > int.MaxValue) throw new ArgumentOutOfRangeException(nameof(dataOffset));
 
 			var (b, o, l) = GetField(ordinal);
 			var len = Math.Min(l - dataOffset, length);
-			
+
 			Array.Copy(b, o, buffer, bufferOffset, len);
 			return len;
 		}
 
+		/// <inheritdoc/>
 		public override DateTime GetDateTime(int ordinal)
 		{
 #if NETSTANDARD2_1
@@ -503,6 +642,7 @@ namespace Sylvan.Data.Csv
 #endif
 		}
 
+		/// <inheritdoc/>
 		public override decimal GetDecimal(int ordinal)
 		{
 #if NETSTANDARD2_1
@@ -512,6 +652,7 @@ namespace Sylvan.Data.Csv
 #endif
 		}
 
+		/// <inheritdoc/>
 		public override double GetDouble(int ordinal)
 		{
 #if NETSTANDARD2_1
@@ -522,21 +663,25 @@ namespace Sylvan.Data.Csv
 #endif
 		}
 
+		/// <inheritdoc/>
 		public override IEnumerator GetEnumerator()
 		{
 			return new Enumerator(this);
 		}
 
+		/// <inheritdoc/>
 		public override string GetDataTypeName(int ordinal)
 		{
 			return this.columns[ordinal].DataTypeName;
 		}
 
+		/// <inheritdoc/>
 		public override Type GetFieldType(int ordinal)
 		{
 			return this.columns[ordinal].DataType;
 		}
 
+		/// <inheritdoc/>
 		public override float GetFloat(int ordinal)
 		{
 #if NETSTANDARD2_1
@@ -546,6 +691,7 @@ namespace Sylvan.Data.Csv
 #endif
 		}
 
+		/// <inheritdoc/>
 		public override Guid GetGuid(int ordinal)
 		{
 #if NETSTANDARD2_1
@@ -555,6 +701,7 @@ namespace Sylvan.Data.Csv
 #endif
 		}
 
+		/// <inheritdoc/>
 		public override short GetInt16(int ordinal)
 		{
 #if NETSTANDARD2_1
@@ -564,6 +711,7 @@ namespace Sylvan.Data.Csv
 #endif
 		}
 
+		/// <inheritdoc/>
 		public override int GetInt32(int ordinal)
 		{
 #if NETSTANDARD2_1
@@ -573,6 +721,7 @@ namespace Sylvan.Data.Csv
 #endif
 		}
 
+		/// <inheritdoc/>
 		public override long GetInt64(int ordinal)
 		{
 #if NETSTANDARD2_1
@@ -582,26 +731,34 @@ namespace Sylvan.Data.Csv
 #endif
 		}
 
+		/// <inheritdoc/>
 		public override string GetName(int ordinal)
 		{
-			if (this.hasHeaders == false) throw new InvalidOperationException();
-			return columns[ordinal].ColumnName;
+			if (ordinal < 0 || ordinal >= fieldCount) 
+				throw new IndexOutOfRangeException();
+
+			return columns[ordinal].ColumnName ?? "";
 		}
 
+		/// <inheritdoc/>
 		public override int GetOrdinal(string name)
 		{
-			if (this.hasHeaders == false) throw new InvalidOperationException();
-			return this.headerMap.TryGetValue(name, out var idx) ? idx : -1;
+			if (this.headerMap.TryGetValue(name, out var idx))
+			{
+				return idx;
+			}
+			throw new IndexOutOfRangeException();
 		}
 
+		/// <inheritdoc/>
 		public override string GetString(int ordinal)
 		{
-			if (((uint)ordinal) < curFieldCount)
+			if (ordinal >= 0 && ordinal < curFieldCount)
 			{
 				var (b, o, l) = GetField(ordinal);
-				return new string(b, o, l);
+				return l == 0 ? string.Empty : new string(b, o, l);
 			}
-			return "";
+			return string.Empty;
 		}
 
 #if NETSTANDARD2_1
@@ -621,12 +778,20 @@ namespace Sylvan.Data.Csv
 			int offset = startIdx;
 			int len = endIdx - startIdx;
 			var buffer = this.buffer;
-			if (fi.isQuoted)
+			if (fi.isQuoted != QuoteState.Unquoted)
 			{
+				// if there are no escapes, we can just "trim" the quotes off
 				offset += 1;
 				len -= 2;
-				if (fi.escapeCount > 0)
+
+				if (fi.isQuoted == QuoteState.Quoted && fi.escapeCount == 0)
 				{
+					// happy path, nothing else to do
+				}
+				else
+				{
+					bool inQuote = true; // we start inside the quotes
+
 					var eLen = len - fi.escapeCount;
 					// if there is room in the buffer before the current record
 					// we'll use that as scratch space to unescape the value
@@ -639,12 +804,32 @@ namespace Sylvan.Data.Csv
 
 					int i = 0;
 					int d = 0;
-					while (i < len)
+					while (d < len)
 					{
 						var c = buffer[offset + i++];
-						if (c == escape)
+						if (inQuote)
 						{
-							c = buffer[offset + i++];
+							if (c == escape)
+							{
+								c = buffer[offset + i++];
+								if (c != quote && c != escape)
+								{
+									if (quote == escape)
+									{
+										// the escape we just saw was actually the closing quote
+										// the remainder of the field will be added verbatim
+										inQuote = false;
+									}
+								}
+							}
+							else
+							if (c == quote)
+							{
+								// we've found the broken closing quote
+								// skip it.
+								inQuote = false;
+								continue;
+							}
 						}
 						temp[d++] = c;
 					}
@@ -656,8 +841,12 @@ namespace Sylvan.Data.Csv
 			return (buffer, offset, len);
 		}
 
+		/// <inheritdoc/>
 		public override object? GetValue(int ordinal)
 		{
+			if ((uint)ordinal >= fieldCount)
+				throw new ArgumentOutOfRangeException(nameof(ordinal));
+
 			if (columns[ordinal].AllowDBNull == true && this.IsDBNull(ordinal))
 			{
 				return null;
@@ -668,6 +857,10 @@ namespace Sylvan.Data.Csv
 			{
 				case TypeCode.Boolean:
 					return this.GetBoolean(ordinal);
+				case TypeCode.Char:
+					return this.GetChar(ordinal);
+				case TypeCode.Byte:
+					return this.GetByte(ordinal);
 				case TypeCode.Int16:
 					return this.GetInt16(ordinal);
 				case TypeCode.Int32:
@@ -683,11 +876,30 @@ namespace Sylvan.Data.Csv
 				case TypeCode.DateTime:
 					return this.GetDateTime(ordinal);
 				case TypeCode.String:
+					return this.GetString(ordinal);
 				default:
+					if (type == typeof(byte[]))
+					{
+						var (b, o, l) = this.GetField(ordinal);
+						var dataLen = l / 4 * 3;
+						var buffer = new byte[dataLen];
+						var len = GetBytes(ordinal, 0, buffer, 0, dataLen);
+						// 2/3 chance we'll have to resize.
+						if (len < dataLen)
+						{
+							Array.Resize(ref buffer, (int)len);
+						}
+						return buffer;
+					}
+					if (type == typeof(Guid))
+					{
+						return this.GetGuid(ordinal);
+					}
 					return this.GetString(ordinal);
 			}
 		}
 
+		/// <inheritdoc/>
 		public override int GetValues(object?[] values)
 		{
 			var count = Math.Min(this.fieldCount, values.Length);
@@ -698,6 +910,7 @@ namespace Sylvan.Data.Csv
 			return count;
 		}
 
+		/// <inheritdoc/>
 		public override bool IsDBNull(int ordinal)
 		{
 			if (((uint)ordinal) >= fieldCount)
@@ -716,21 +929,24 @@ namespace Sylvan.Data.Csv
 			ref var fi = ref fieldInfos[ordinal];
 			var startIdx = recordStart + (ordinal == 0 ? 0 : this.fieldInfos[ordinal - 1].endIdx + 1);
 			var endIdx = recordStart + fi.endIdx;
-			var isEmpty = endIdx - startIdx - (fi.isQuoted ? 2 : 0) - fi.escapeCount == 0;
+			var isEmpty = endIdx - startIdx - (fi.isQuoted != QuoteState.Unquoted ? 2 : 0) - fi.escapeCount == 0;
 			return isEmpty;
 		}
 
+		/// <inheritdoc/>
 		public override Task<bool> IsDBNullAsync(int ordinal, CancellationToken cancellationToken)
 		{
 			return IsDBNull(ordinal) ? CompleteTrue : CompleteFalse;
 		}
 
+		/// <inheritdoc/>
 		public override bool NextResult()
 		{
 			state = State.End;
 			return false;
 		}
 
+		/// <inheritdoc/>
 		public override Task<bool> NextResultAsync(CancellationToken cancellationToken)
 		{
 			state = State.End;
@@ -740,6 +956,7 @@ namespace Sylvan.Data.Csv
 		readonly static Task<bool> CompleteTrue = Task.FromResult(true);
 		readonly static Task<bool> CompleteFalse = Task.FromResult(false);
 
+		/// <inheritdoc/>
 		public override Task<bool> ReadAsync(CancellationToken cancellationToken)
 		{
 			cancellationToken.ThrowIfCancellationRequested();
@@ -769,17 +986,23 @@ namespace Sylvan.Data.Csv
 			throw new InvalidOperationException();
 		}
 
+		/// <inheritdoc/>
 		public override bool Read()
 		{
-			return this.ReadAsync().Result;
+			return this.ReadAsync().GetAwaiter().GetResult();
 		}
 
+		/// <summary>
+		/// Gets a collection of DbColumns describing the schema of the data reader.
+		/// </summary>
+		/// <returns>A collection of DbColumn.</returns>
 		public ReadOnlyCollection<DbColumn> GetColumnSchema()
 		{
 			// I expect that callers would only call this once, so no bother caching.
 			return new ReadOnlyCollection<DbColumn>(columns);
 		}
 
+		/// <inheritdoc/>
 		public override DataTable GetSchemaTable()
 		{
 			return SchemaTable.GetSchemaTable(this.GetColumnSchema());
@@ -821,5 +1044,33 @@ namespace Sylvan.Data.Csv
 				this.UdtAssemblyQualifiedName = schema?.UdtAssemblyQualifiedName;
 			}
 		}
+
+		/// <inheritdoc/>
+		public override void Close()
+		{
+			if (this.state != State.Closed)
+			{
+				if (ownsReader)
+					this.reader.Dispose();
+				this.state = State.Closed;
+			}
+		}
+
+#if NETSTANDARD2_1
+
+		/// <inheritdoc/>
+		public override Task CloseAsync()
+		{
+			if (this.state != State.Closed)
+			{
+				if (ownsReader)
+					this.reader.Dispose();
+				this.state = State.Closed;
+			}
+			return Task.CompletedTask;
+		}
+
+#endif
+
 	}
 }

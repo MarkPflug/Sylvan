@@ -15,7 +15,7 @@ namespace Sylvan.Data.Csv
 
 		public override string GetString(int ordinal)
 		{
-			var str = dr.GetString(ordinal);
+			var str = Reader.GetString(ordinal);
 			return str?.Length == 0 ? null : str;
 		}
 

@@ -1,0 +1,11 @@
+<Project>
+
+  <Target Name="Build">
+    <RemoveDir Directories="../reports/"/>
+    <MakeDir Directories="../reports/"/>
+    <MSBuild Projects="../source/Sylvan.sln" Targets="VSTest" Properties="CollectCoverage=true"/>
+    <Exec 
+      Command="reportgenerator.exe -reports:../reports/**/*.xml -targetDir:../reports" 
+      WorkingDirectory="../reports/"/>
+  </Target>
+</Project>

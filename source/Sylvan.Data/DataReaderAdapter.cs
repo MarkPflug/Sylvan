@@ -9,7 +9,9 @@ namespace Sylvan.Data
 {
 	public abstract partial class DataReaderAdapter : DbDataReader, IDbColumnSchemaGenerator
 	{
-		protected DbDataReader dr;
+		DbDataReader dr;
+
+		protected DbDataReader Reader => dr;
 
 		public DataReaderAdapter(DbDataReader dr)
 		{
@@ -120,7 +122,7 @@ namespace Sylvan.Data
 			return dr.GetOrdinal(name);
 		}
 
-		public override string GetString(int ordinal)
+		public override string? GetString(int ordinal)
 		{
 			return dr.GetString(ordinal);
 		}
@@ -178,6 +180,7 @@ namespace Sylvan.Data
 
 		public override int GetValues(object?[] values)
 		{
+			if (values == null) throw new ArgumentNullException(nameof(values));
 			var count = Math.Min(this.FieldCount, values.Length);
 			for (int i = 0; i < count; i++)
 			{

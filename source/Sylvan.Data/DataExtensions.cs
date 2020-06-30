@@ -18,12 +18,13 @@ namespace Sylvan.Data
 		/// </example>
 		public static ObjectDataReader<T> AsDataReader<T>(this IEnumerable<T> seq)
 		{
+			if (seq == null) throw new ArgumentNullException(nameof(seq));
 			return new ObjectDataReader<T>(seq.GetEnumerator());
 		}
 
-		public static DbDataReader Transform(this DbDataReader reader, Action<TransformBuilder> transform)
-		{
-			return new TransformDataReader(reader, transform);
-		}
+		//public static DbDataReader Transform(this DbDataReader reader, Action<TransformBuilder> transform)
+		//{
+		//	return new TransformDataReader(reader, transform);
+		//}
 	}
 }

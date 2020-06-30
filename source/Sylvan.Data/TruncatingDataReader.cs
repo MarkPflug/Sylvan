@@ -13,7 +13,7 @@ namespace Sylvan.Data
 
 		public override string? GetString(int ordinal)
 		{
-			var str = dr.GetString(ordinal);
+			var str = this.Reader.GetString(ordinal);
 			if (str == null || str.Length == 0) return null;
 			return
 				str.Length > len

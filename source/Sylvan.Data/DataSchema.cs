@@ -8,7 +8,7 @@ namespace Sylvan.Data
 
 	public class DataSchema : IDbColumnSchemaGenerator
 	{
-		public string Name { get; }
+		//public string Name { get; }
 
 		public ReadOnlyCollection<DbColumn> GetColumnSchema()
 		{

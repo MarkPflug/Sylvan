@@ -80,6 +80,8 @@ namespace Sylvan
 		/// <returns>A base64 encoded string.</returns>
 		public string Encode(byte[] data)
 		{
+			if (data == null) throw new ArgumentNullException(nameof(data));
+
 			var bufferSize = GetOutputBufferLength(data.Length);
 			char[] chars = new char[bufferSize];
 			int lineIdx = 0;
@@ -92,6 +94,8 @@ namespace Sylvan
 		/// </summary>
 		public void Encode(Stream iStream, TextWriter writer)
 		{
+			if (iStream == null) throw new ArgumentNullException(nameof(iStream));
+			if (writer == null) throw new ArgumentNullException(nameof(writer));
 			// this buffer length MUST be a multiple of three for
 			// this to work properly
 			const int BufferLength = 3 * 0x1000;
@@ -108,14 +112,13 @@ namespace Sylvan
 
 		public int Encode(byte[] src, int srcOffset, char[] dst, int dstOffset, int count)
 		{
-			if (src == null) throw new ArgumentNullException("src");
-			if (dst == null) throw new ArgumentNullException("dst");
-			if (count < 0) throw new ArgumentOutOfRangeException("count");
-			if (srcOffset + count > src.Length) throw new ArgumentException("src", "The length of src is less than srcOffset plus count.");
+			if (src == null) throw new ArgumentNullException(nameof(src));
+			if (dst == null) throw new ArgumentNullException(nameof(dst));
+			if (count < 0 || srcOffset + count > src.Length) throw new ArgumentOutOfRangeException(nameof(count));
 
 			var outputLen = GetOutputBufferLength(count);
 
-			if (dstOffset + outputLen > dst.Length) throw new ArgumentException("dst", "The length of dst is less than srcOffset plus count * 2.");
+			if (dstOffset + outputLen > dst.Length) throw new ArgumentOutOfRangeException(nameof(dstOffset));
 			int lineIdx = 0;
 			return EncodeInternal(src, srcOffset, dst, dstOffset, count, ref lineIdx);
 		}
@@ -132,10 +135,10 @@ namespace Sylvan
 				byte b0 = src[srcOffset++];
 				byte b1 = src[srcOffset++];
 				byte b2 = src[srcOffset++];
-				dst[dstOffset++] = encodeMap[(b0 >> 2) & 0x3F]; // b0 top 6 bits
-				dst[dstOffset++] = encodeMap[((b0 & 0x03) << 4) | ((b1 >> 4) & 0x0F)]; // b0 bottom 2, b1 top 4
-				dst[dstOffset++] = encodeMap[((b1 & 0x0F) << 2) | ((b2 >> 6) & 0x03)]; // b1 bottom 4, b2 top 2
-				dst[dstOffset++] = encodeMap[(b2 >> 0) & 0x3F]; // b2 bottom 6 bits
+				dst[dstOffset++] = encodeMap[b0 >> 2];
+				dst[dstOffset++] = encodeMap[((b0 & 0x03) << 4) | (b1 >> 4)];
+				dst[dstOffset++] = encodeMap[((b1 & 0x0F) << 2) | (b2 >> 6)];
+				dst[dstOffset++] = encodeMap[b2 & 0x3F];
 
 				lineIdx += 4;
 				if (lineLength > 0 && lineIdx >= lineLength)
@@ -154,7 +157,7 @@ namespace Sylvan
 			if (rem == 1)
 			{
 				var b0 = src[srcOffset++];
-				dst[dstOffset++] = encodeMap[(b0 >> 2) & 0x3F]; // top 6 bits
+				dst[dstOffset++] = encodeMap[b0 >> 2]; // top 6 bits
 				dst[dstOffset++] = encodeMap[(b0 & 0x03) << 4]; // bottom 2 bits
 				dst[dstOffset++] = '=';
 				dst[dstOffset++] = '=';
@@ -163,8 +166,8 @@ namespace Sylvan
 			{
 				var b0 = src[srcOffset++];
 				var b1 = src[srcOffset++];
-				dst[dstOffset++] = encodeMap[(b0 >> 2) & 0x3F]; // top 6 bits
-				dst[dstOffset++] = encodeMap[((b0 & 0x03) << 4) | ((b1 >> 4) & 0x0F)]; // 2,4 bits
+				dst[dstOffset++] = encodeMap[b0 >> 2]; // top 6 bits
+				dst[dstOffset++] = encodeMap[((b0 & 0x03) << 4) | (b1 >> 4)]; // 2,4 bits
 				dst[dstOffset++] = encodeMap[(b1 & 0x0F) << 2]; // last 4 bits
 				dst[dstOffset++] = '=';
 			}
@@ -180,6 +183,9 @@ namespace Sylvan
 		/// <returns>The decoded data.</returns>
 		public byte[] Decode(string src)
 		{
+			if (src == null) throw new ArgumentNullException(nameof(src));
+			if (src.Length == 0) return Array.Empty<byte>();
+
 			byte[] buffer = new byte[(src.Length * 3 + 3) / 4];
 
 			// decoder state.
@@ -198,6 +204,7 @@ namespace Sylvan
 		/// <returns>The decoded data.</returns>
 		public byte[] Decode(char[] src)
 		{
+			if (src == null) throw new ArgumentNullException(nameof(src));
 			// decoder state.
 			int accum = 0;
 			int bitCount = 0;
@@ -215,6 +222,9 @@ namespace Sylvan
 		/// <param name="oStream">The stream to capture the decoded data.</param>
 		public void Decode(TextReader reader, Stream oStream)
 		{
+			if (reader == null) throw new ArgumentNullException(nameof(reader));
+			if (oStream == null) throw new ArgumentNullException(nameof(oStream));
+
 			const int BufferLength = 0x1000;
 			char[] iBuffer = new char[GetOutputBufferLength(BufferLength)];
 			byte[] oBuffer = new byte[BufferLength];
@@ -253,7 +263,5 @@ namespace Sylvan
 			}
 			return dstIdx;
 		}
-
-		
 	}
 }

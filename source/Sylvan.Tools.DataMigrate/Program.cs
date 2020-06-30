@@ -256,11 +256,11 @@ namespace Sylvan.Tools.DataMigrate
 
 			long totalSize = tableInfo.Sum(t => t.Size);
 
-			long progress = 0;
+			//long progress = 0;
 
 			long updateT = totalSize / 1000;
 
-			long pp = 0;
+			//long pp = 0;
 			var sw = Stopwatch.StartNew();
 			{
 				cmd.CommandText = "select table_schema, table_name from information_schema.tables where table_type = 'BASE TABLE'";

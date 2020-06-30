@@ -6,10 +6,42 @@ using System.Threading.Tasks;
 
 namespace Sylvan.Data.Csv
 {
+	/// <summary>
+	/// Writes data from a DbDataReader as delimited values to a TextWriter.
+	/// </summary>
 	public sealed class CsvDataWriter
+		: IDisposable
+#if NETSTANDARD2_1
+		, IAsyncDisposable
+#endif
 	{
-		readonly CsvWriter writer;
+		class FieldInfo
+		{
+			public FieldInfo(bool allowNull, Type type)
+			{
+				this.allowNull = allowNull;
+				this.type = type;
+				this.typeCode = Type.GetTypeCode(type);
+			}
+			public bool allowNull;
+			public Type type;
+			public TypeCode typeCode;
+		}
 
+		enum FieldState
+		{
+			Start,
+			Done,
+		}
+
+		readonly CsvWriter writer;
+		bool disposedValue;
+
+		/// <summary>
+		/// Creates a new CsvDataWriter.
+		/// </summary>
+		/// <param name="writer">The TextWriter to receive the delimited data.</param>
+		/// <param name="options">The options used to configure the writer, or null to use the defaults.</param>
 		public CsvDataWriter(TextWriter writer, CsvWriterOptions? options = null)
 		{
 			if (writer == null) throw new ArgumentNullException(nameof(writer));
@@ -24,12 +56,14 @@ namespace Sylvan.Data.Csv
 			this.writer = new CsvWriter(writer, options);
 		}
 
-		class FieldInfo
-		{
-			public bool allowNull;
-			public TypeCode type;
-		}
+		const int Base64EncSize = 3 * 256; // must be a multiple of 3.
 
+		/// <summary>
+		/// Asynchronously writes delimited data.
+		/// </summary>
+		/// <param name="reader">The DbDataReader to be written.</param>
+		/// <param name="cancel">A cancellation token to cancel the asynchronous operation.</param>
+		/// <returns>A task representing the asynchronous write operation.</returns>
 		public async Task WriteAsync(DbDataReader reader, CancellationToken cancel = default)
 		{
 			var c = reader.FieldCount;
@@ -37,16 +71,13 @@ namespace Sylvan.Data.Csv
 
 			var schema = (reader as IDbColumnSchemaGenerator)?.GetColumnSchema();
 
+			byte[]? dataBuffer = null;
+
 			for (int i = 0; i < c; i++)
 			{
 				var type = reader.GetFieldType(i);
-				var typeCode = Type.GetTypeCode(type);
-				fieldTypes[i] =
-					new FieldInfo
-					{
-						allowNull = schema?[i].AllowDBNull ?? true,
-						type = typeCode
-					};
+				var allowNull = schema?[i].AllowDBNull ?? true;
+				fieldTypes[i] = new FieldInfo(allowNull, type);
 			}
 
 			for (int i = 0; i < c; i++)
@@ -65,10 +96,11 @@ namespace Sylvan.Data.Csv
 				{
 					for (; i < c; i++)
 					{
-						var typeCode = fieldTypes[i].type;
+						var type = fieldTypes[i].type;
+						var typeCode = fieldTypes[i].typeCode;
 						var allowNull = fieldTypes[i].allowNull;
 
-						if (allowNull && reader.IsDBNull(i)) // TODO: async?
+						if (allowNull && await reader.IsDBNullAsync(i))
 						{
 							await writer.WriteFieldAsync("");
 							continue;
@@ -117,6 +149,28 @@ namespace Sylvan.Data.Csv
 								await writer.WriteFieldAsync("");
 								break;
 							default:
+								if (type == typeof(byte[]))
+								{
+									if (dataBuffer == null)
+									{
+										dataBuffer = new byte[Base64EncSize];
+									}
+									var idx = 0;
+									await writer.StartBinaryFieldAsync();
+									int len = 0;
+									while ((len = (int)reader.GetBytes(i, idx, dataBuffer, 0, Base64EncSize)) != 0)
+									{
+										writer.ContinueBinaryField(dataBuffer, len);
+										idx += len;
+									}
+									break;
+								}
+								if (type == typeof(Guid))
+								{
+									var guid = reader.GetGuid(i);
+									await writer.WriteFieldAsync(guid);
+									break;
+								}
 								str = reader.GetValue(i)?.ToString() ?? "";
 							str:
 								await writer.WriteFieldAsync(str);
@@ -137,23 +191,24 @@ namespace Sylvan.Data.Csv
 			await writer.FlushAsync();
 		}
 
+		/// <summary>
+		/// Writes delimited data to the output.
+		/// </summary>
+		/// <param name="reader">The DbDataReader to be written.</param>
 		public void Write(DbDataReader reader)
 		{
 			var c = reader.FieldCount;
 			var fieldTypes = new FieldInfo[c];
+
+			byte[]? dataBuffer = null;
 
 			var schema = (reader as IDbColumnSchemaGenerator)?.GetColumnSchema();
 
 			for (int i = 0; i < c; i++)
 			{
 				var type = reader.GetFieldType(i);
-				var typeCode = Type.GetTypeCode(type);
-				fieldTypes[i] =
-					new FieldInfo
-					{
-						allowNull = schema?[i].AllowDBNull ?? true,
-						type = typeCode
-					};
+				var allowNull = schema?[i].AllowDBNull ?? true;
+				fieldTypes[i] = new FieldInfo(allowNull, type);
 			}
 
 			for (int i = 0; i < c; i++)
@@ -162,7 +217,7 @@ namespace Sylvan.Data.Csv
 				writer.WriteField(header);
 			}
 			writer.EndRecord();
-			long row = 0;
+			int row = 0;
 			while (reader.Read())
 			{
 				row++;
@@ -179,7 +234,8 @@ namespace Sylvan.Data.Csv
 							continue;
 						}
 
-						var typeCode = fieldTypes[i].type;
+
+						var typeCode = fieldTypes[i].typeCode;
 						int intVal;
 						string? str;
 
@@ -224,6 +280,30 @@ namespace Sylvan.Data.Csv
 								writer.WriteField("");
 								break;
 							default:
+								var type = fieldTypes[i].type;
+								if (type == typeof(byte[]))
+								{
+									if (dataBuffer == null)
+									{
+										dataBuffer = new byte[Base64EncSize];
+									}
+									var idx = 0;
+									writer.StartBinaryFieldAsync().Wait();
+									int len = 0;
+									while ((len = (int)reader.GetBytes(i, idx, dataBuffer, 0, Base64EncSize)) != 0)
+									{
+										writer.ContinueBinaryField(dataBuffer, len);
+										idx += len;
+									}
+									break;
+								}
+								if (type == typeof(Guid))
+								{
+									var guid = reader.GetGuid(i);
+									writer.WriteField(guid);
+									break;
+								}
+
 								str = reader.GetValue(i)?.ToString() ?? "";
 							str:
 								writer.WriteField(str);
@@ -239,13 +319,39 @@ namespace Sylvan.Data.Csv
 				writer.EndRecord();
 			}
 			// flush any pending data on the way out.
-			writer.Flush();
+			((IDisposable)this.writer).Dispose();
 		}
 
-		enum FieldState
+		//void Close()
+		//{
+		//	writer.Flush();
+		//}
+
+		private void Dispose(bool disposing)
 		{
-			Start,
-			Done,
+			if (!disposedValue)
+			{
+				if (disposing)
+				{
+					((IDisposable)this.writer).Dispose();
+				}
+
+				disposedValue = true;
+			}
 		}
+
+		void IDisposable.Dispose()
+		{
+			Dispose(disposing: true);
+			GC.SuppressFinalize(this);
+		}
+
+#if NETSTANDARD2_1
+		ValueTask IAsyncDisposable.DisposeAsync()
+		{
+			return ((IAsyncDisposable)this.writer).DisposeAsync();
+		}
+#endif
+
 	}
 }

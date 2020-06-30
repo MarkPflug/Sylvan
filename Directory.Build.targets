@@ -7,4 +7,31 @@
     <!-- the package folder must exist before nuget restore runs -->
     <MakeDir Condition="!Exists($(PackageOutputPath))" Directories="$(PackageOutputPath)" />
   </Target>
+
+  <Target Name="PackReleaseOnly" BeforeTargets="Pack">
+    <!-- Attempt to prevent myself from accidentally releaseing a debug build. -->
+    <Error Condition="$(Configuration) != 'Release'" Text="Attempting to pack a debug build."/>
+  </Target>
+
+  <PropertyGroup>
+    <ReportsDirectory>$(MSBuildThisFileDirectory)/reports</ReportsDirectory>
+    <CoverletOutput>$(ReportsDirectory)\$(MSBuildProjectName)\</CoverletOutput>
+    <CoverletOutputFormat>json,cobertura</CoverletOutputFormat>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(IsTestProject)' == 'true'">
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.5.0" />
+    <PackageReference Include="xunit" Version="2.4.0" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.4.0" />
+    <PackageReference Include="Coverlet.MSbuild" Version="2.9.0"/>
+    <PackageReference Include="ReportGenerator" Version="4.5.0"/>    
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- TODO:
+    <PackageReference Include="Microsoft.CodeAnalysis.FxCopAnalyzers" Version="3.0.0" PrivateAssets="all"/>
+    -->
+    <PackageReference Include="MSBuildGitHash" Version="2.0.1" PrivateAssets="all"/>
+  </ItemGroup>
+
 </Project>

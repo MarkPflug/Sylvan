@@ -58,7 +58,7 @@ namespace Sylvan.Diagnostics
 		{
 			var count = this.count;
 			var elapsed = this.TotalElasped;
-			return $"Timer: {Name}, Count: {count}, Elapsed: {elapsed.ToString()}, Average: {AverageElapsed.ToString()}";
+			return $"Timer: {Name}, Count: {count}, Elapsed: {elapsed}, Average: {AverageElapsed}";
 		}
 
 		public readonly struct TimedSection : IDisposable

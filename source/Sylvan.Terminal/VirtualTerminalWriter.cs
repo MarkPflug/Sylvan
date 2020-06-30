@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
@@ -167,7 +166,7 @@ namespace Sylvan.Terminal
 			output.Write(buffer, offset, length);
 		}
 
-		public async Task FlushAsync()
+		public override async Task FlushAsync()
 		{
 			await this.output.FlushAsync();
 		}
@@ -177,13 +176,13 @@ namespace Sylvan.Terminal
 			WriteCode(GetCode(d), c);
 		}
 
-		public void WriteLine(String str)
+		public override void WriteLine(String str)
 		{
 			Output(str);
 			Output(this.newLine);
 		}
 
-		public void Write(string str)
+		public override void Write(string str)
 		{
 			Output(str);
 		}

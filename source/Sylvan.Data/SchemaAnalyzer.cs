@@ -39,7 +39,7 @@ namespace Sylvan.Data
 			}
 		}
 
-		class BusinessNumberColumnSizer : IColumnSize
+		class HumanNumberColumnSizer : IColumnSize
 		{
 			public int GetSize(int maxLen)
 			{
@@ -63,7 +63,7 @@ namespace Sylvan.Data
 
 		public static readonly IColumnSize None = new NoneColumnSizer();
 		public static readonly IColumnSize Programmer = new ProgrammerNumberColumnSizer();
-		public static readonly IColumnSize Business = new NoneColumnSizer();
+		public static readonly IColumnSize Human = new HumanNumberColumnSizer();
 
 		public static readonly IColumnSize Size256 = new FixedColumnSizer(0x100);
 		public static readonly IColumnSize Size1024 = new FixedColumnSizer(0x800);
@@ -130,7 +130,7 @@ namespace Sylvan.Data
 			{
 				for (int i = 0; i < dataReader.FieldCount; i++)
 				{
-					await colInfos[i].AnalyzeAsync(dataReader, i);
+					colInfos[i].Analyze(dataReader, i);
 				}
 			}
 			sw.Stop();
@@ -278,7 +278,7 @@ namespace Sylvan.Data
 
 			Dictionary<string, int> valueCount;
 
-			public async Task AnalyzeAsync(DbDataReader dr, int ordinal)
+			public void Analyze(DbDataReader dr, int ordinal)
 			{
 				count++;
 				var isNull = dr.IsDBNull(ordinal);
