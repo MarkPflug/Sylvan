@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Data;
 using System.Data.Common;
 using System.IO;
 using System.Linq;
@@ -148,6 +150,11 @@ namespace Sylvan.Data.Csv
 				Assert.Equal("", csv[4]);
 				Assert.False(await csv.ReadAsync());
 			}
+		}
+		[Fact]
+		public void MissingHeaders()
+		{
+			Assert.Throws<CsvMissingHeadersException>(() => CsvDataReader.Create(new StringReader("")));
 		}
 
 		[Fact]
@@ -404,11 +411,7 @@ namespace Sylvan.Data.Csv
 			Assert.ThrowsAsync<ArgumentNullException>(() => CsvDataReader.CreateAsync(null));
 		}
 
-		[Fact]
-		public void NoHeaders()
-		{
-			Assert.Throws<CsvMissingHeadersException>(() => CsvDataReader.Create(new StringReader("")));
-		}
+		
 
 		[Fact]
 		public void BufferTooSmall()
