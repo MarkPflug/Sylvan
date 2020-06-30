@@ -1,6 +1,5 @@
 using System;
-using System.Collections.Generic;
-using System.Data;
+using System.Data.Common;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -152,7 +151,7 @@ namespace Sylvan.Data.Csv
 		}
 
 		[Fact]
-		public async Task DataOnly()
+		public async Task NoHeaders()
 		{
 			using (var reader = File.OpenText("Data\\DataOnly.csv"))
 			{
@@ -160,8 +159,8 @@ namespace Sylvan.Data.Csv
 				Assert.Equal(4, csv.FieldCount);
 				Assert.True(csv.HasRows);
 				Assert.Equal(0, csv.RowNumber);
-				Assert.Throws<InvalidOperationException>(() => csv.GetName(0));
-				Assert.Throws<InvalidOperationException>(() => csv.GetOrdinal("Id"));
+				Assert.Equal("", csv.GetName(0));
+				Assert.Throws<IndexOutOfRangeException>(() => csv.GetOrdinal("Id"));
 				Assert.True(await csv.ReadAsync());
 				Assert.Equal(1, csv.RowNumber);
 				Assert.Equal("1", csv[0]);
@@ -179,10 +178,49 @@ namespace Sylvan.Data.Csv
 		}
 
 		[Fact]
-		public async Task HeadersOnly()
+		public async Task NoHeadersWithSchema()
 		{
-			using (var reader = File.OpenText("Data\\HeadersOnly.csv"))
+			var schema = new ExcelHeaders();
+			var opts = 
+				new CsvDataReaderOptions {
+					HasHeaders = false,
+					Schema = schema 
+				};
+
+			using (var reader = File.OpenText("Data\\DataOnly.csv"))
 			{
+				var csv = await CsvDataReader.CreateAsync(reader, opts);
+				Assert.Equal(4, csv.FieldCount);
+				Assert.True(csv.HasRows);
+				Assert.Equal(0, csv.RowNumber);
+				Assert.Equal("C", csv.GetName(2));
+				Assert.Equal(3, csv.GetOrdinal("D"));
+				Assert.Equal("A", csv.GetName(0));
+				Assert.Throws<IndexOutOfRangeException>(() => csv.GetOrdinal("Id"));
+				Assert.True(await csv.ReadAsync());
+				Assert.Equal(1, csv.RowNumber);
+				Assert.Equal("1", csv[0]);
+				Assert.Equal("John", csv[1]);
+				Assert.Equal("Low", csv[2]);
+				Assert.Equal("2000-11-11", csv[3]);
+				Assert.True(await csv.ReadAsync());
+				Assert.Equal(2, csv.RowNumber);
+				Assert.Equal("2", csv[0]);
+				Assert.Equal("Jane", csv[1]);
+				Assert.Equal("High", csv[2]);
+				Assert.Equal("1989-03-14", csv[3]);
+				Assert.False(await csv.ReadAsync());
+			}
+		}
+
+
+		[Theory]
+		[InlineData("Id,Name,Value,Date")]
+		[InlineData("Id,Name,Value,Date\n")]
+		[InlineData("Id,Name,Value,Date\r\n")]
+		public async Task HeadersOnly(string data)
+		{
+			using (var reader = new StringReader(data)) { 
 				var csv = await CsvDataReader.CreateAsync(reader);
 				Assert.Equal(4, csv.FieldCount);
 				Assert.False(csv.HasRows);
@@ -294,6 +332,36 @@ namespace Sylvan.Data.Csv
 					Assert.Equal(typeof(string), cols[i].DataType);
 				}
 			}
+		}
+
+		class ExcelHeaders : ICsvSchemaProvider
+		{
+			public DbColumn GetColumn(string name, int ordinal)
+			{
+				return new ExcelColumn("" + (char)('A' + ordinal), ordinal);
+			}
+
+			class ExcelColumn : DbColumn
+			{
+				public ExcelColumn(string name, int ordinal)
+				{
+					this.ColumnName = name;
+					this.ColumnOrdinal = ordinal;
+				}
+			}
+		}
+
+		[Fact]
+		public void DupeHeaderFix()
+		{
+			var data = "a,b,c,d,e,e";
+
+			var fixSchema = new ExcelHeaders();
+			var opts = new CsvDataReaderOptions { Schema = fixSchema };
+
+			var csv = CsvDataReader.Create(new StringReader(data), opts);
+			Assert.Equal(6, csv.FieldCount);
+
 		}
 
 		[Fact]

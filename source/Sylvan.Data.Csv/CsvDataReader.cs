@@ -177,16 +177,11 @@ namespace Sylvan.Data.Csv
 					throw new CsvMissingHeadersException();
 				}
 			}
+
 			// read the first row of data to determine fieldCount (if there were no headers)
-			// and support "hasRows" before Read.
+			// and support calling HasRows before Read is first called.
 			this.hasRows = await NextRecordAsync();
 			InitializeSchema(schema);
-
-			if (state == State.End)
-			{
-				// in the event there is only one line in the file
-				state = State.Initialized;
-			}
 		}
 
 		void InitializeSchema(ICsvSchemaProvider? schema)
@@ -196,14 +191,17 @@ namespace Sylvan.Data.Csv
 			columns = new CsvColumn[this.fieldCount];
 			for (int i = 0; i < this.fieldCount; i++)
 			{
-				var name = GetString(i);
+				var name = hasHeaders ? GetString(i) : null;
 				var columnSchema = schema?.GetColumn(name, i);
 				columns[i] = new CsvColumn(name, i, columnSchema);
 
-				headerMap.Add(name, i);
+				name = columns[i].ColumnName;
+				if (name != null)
+				{
+					headerMap.Add(name, i);
+				}
 			}
-
-			state = State.Initialized;
+			this.state = State.Initialized;
 		}
 
 		async Task<bool> NextRecordAsync()
@@ -395,7 +393,6 @@ namespace Sylvan.Data.Csv
 
 				if (complete)
 					return last ? ReadResult.False : ReadResult.True;
-				this.state = State.End;
 
 				return ReadResult.False;
 			}
@@ -737,21 +734,26 @@ namespace Sylvan.Data.Csv
 		/// <inheritdoc/>
 		public override string GetName(int ordinal)
 		{
-			if (this.hasHeaders == false) throw new InvalidOperationException();
-			return columns[ordinal].ColumnName;
+			if (ordinal < 0 || ordinal >= fieldCount) 
+				throw new IndexOutOfRangeException();
+
+			return columns[ordinal].ColumnName ?? "";
 		}
 
 		/// <inheritdoc/>
 		public override int GetOrdinal(string name)
 		{
-			if (this.hasHeaders == false) throw new InvalidOperationException();
-			return this.headerMap.TryGetValue(name, out var idx) ? idx : -1;
+			if (this.headerMap.TryGetValue(name, out var idx))
+			{
+				return idx;
+			}
+			throw new IndexOutOfRangeException();
 		}
 
 		/// <inheritdoc/>
 		public override string GetString(int ordinal)
 		{
-			if (((uint)ordinal) < curFieldCount)
+			if (ordinal >= 0 && ordinal < curFieldCount)
 			{
 				var (b, o, l) = GetField(ordinal);
 				return l == 0 ? string.Empty : new string(b, o, l);
