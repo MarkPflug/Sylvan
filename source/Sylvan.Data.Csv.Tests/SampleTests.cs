@@ -1,6 +1,4 @@
-﻿using Sylvan.IO;
-using System;
-using System.Buffers;
+﻿using System;
 using System.Collections.ObjectModel;
 using System.Data;
 using System.Data.Common;
@@ -9,7 +7,6 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
-using System.Threading.Tasks;
 using Xunit;
 
 namespace Sylvan.Data.Csv

@@ -26,7 +26,7 @@ namespace Sylvan.IO
 		long length;
 		long position;
 		
-		ArrayPool<byte> bufferPool;
+		readonly ArrayPool<byte> bufferPool;
 
 		byte[]?[] blocks;
 

@@ -10,7 +10,7 @@ namespace Sylvan.Benchmarks
 	public class MemoryStreamBenchmarks
 	{
 		const int Iterations = 100;
-
+		
 		[Params(100, 500, 1000, 5000)]
 		public int Count { get; set; }
 
@@ -34,6 +34,7 @@ namespace Sylvan.Benchmarks
 			}
 		}
 
+	
 		void Fill(Stream stream)
 		{
 			var tw = new StreamWriter(stream);

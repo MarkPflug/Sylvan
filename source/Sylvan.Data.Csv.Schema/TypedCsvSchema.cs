@@ -4,20 +4,20 @@ using System.Data.Common;
 
 namespace Sylvan.Data.Csv
 {
-	class TypedCsvColumn : DbColumn
-	{
-		public TypedCsvColumn(Type type, bool allowNull)
-		{
-			this.DataType = type;
-			this.AllowDBNull = allowNull;
-		}
-	}
-
 	/// <summary>
 	/// An implementation of ICsvSchemaProvider that allows specifying a data type for columns.
 	/// </summary>
 	public class TypedCsvSchema : ICsvSchemaProvider
 	{
+		class TypedCsvColumn : DbColumn
+		{
+			public TypedCsvColumn(Type type, bool allowNull)
+			{
+				this.DataType = type;
+				this.AllowDBNull = allowNull;
+			}
+		}
+
 		Dictionary<string, Type> nameMap;
 		Dictionary<int, Type> ordinalMap;
 
@@ -56,15 +56,15 @@ namespace Sylvan.Data.Csv
 			if ((name != null && nameMap.TryGetValue(name, out type)) || ordinalMap.TryGetValue(ordinal, out type))
 			{
 				bool allowNull = type != typeof(string);
-				if(type.IsGenericType)
+				if (type.IsGenericType)
 				{
-					if(type.GetGenericTypeDefinition() == typeof(Nullable<>))
+					if (type.GetGenericTypeDefinition() == typeof(Nullable<>))
 					{
 						type = type.GetGenericArguments()[0];
 						allowNull = true;
 					}
 				}
-				
+
 				return new TypedCsvColumn(type, allowNull);
 			}
 			return null;

@@ -113,12 +113,41 @@ namespace Sylvan.Data.Csv
 		/// <summary>
 		/// Creates a new CsvDataReader.
 		/// </summary>
+		/// <param name="filename">The name of a file containing CSV data.</param>
+		/// <param name="options">The options to configure the reader, or null to use the default options.</param>
+		/// <returns>A CsvDataReader instance.</returns>
+		public static CsvDataReader Create(string filename, CsvDataReaderOptions? options = null)
+		{
+			return CreateAsync(filename, options).GetAwaiter().GetResult();
+		}
+
+		/// <summary>
+		/// Creates a new CsvDataReader.
+		/// </summary>
 		/// <param name="reader">The TextReader for the delimited data.</param>
 		/// <param name="options">The options to configure the reader, or null to use the default options.</param>
 		/// <returns>A CsvDataReader instance.</returns>
 		public static CsvDataReader Create(TextReader reader, CsvDataReaderOptions? options = null)
 		{
 			return CreateAsync(reader, options).GetAwaiter().GetResult();
+		}
+
+		/// <summary>
+		/// Creates a new CsvDataReader asynchronously.                                                                                          
+		/// </summary>
+		/// <param name="filename">The name of a file containing CSV data.</param>
+		/// <param name="options">The options to configure the reader, or null to use the default options.</param>
+		/// <returns>A task representing the asynchronous creation of a CsvDataReader instance.</returns>
+		public static async Task<CsvDataReader> CreateAsync(string filename, CsvDataReaderOptions? options = null)
+		{
+			if (filename == null) throw new ArgumentNullException(nameof(filename));
+			// TextReader must be owned when we open it.
+			if (options?.OwnsReader == false) throw new InvalidOperationException();
+
+			var reader = File.OpenText(filename);
+			var csv = new CsvDataReader(reader, options);
+			await csv.InitializeAsync(options?.Schema);
+			return csv;
 		}
 
 		/// <summary>
@@ -734,7 +763,7 @@ namespace Sylvan.Data.Csv
 		/// <inheritdoc/>
 		public override string GetName(int ordinal)
 		{
-			if (ordinal < 0 || ordinal >= fieldCount) 
+			if (ordinal < 0 || ordinal >= fieldCount)
 				throw new IndexOutOfRangeException();
 
 			return columns[ordinal].ColumnName ?? "";

@@ -7,67 +7,22 @@ using System.Text;
 namespace Sylvan.IO
 {
 	/// <summary>
-	/// A factory class for creating <see cref="PooledMemoryStream"/> instances.
-	/// </summary>
-	/// <remarks>
-	/// This factory exists to allow tuning the parameters of the constructed <see cref="PooledMemoryStream"/>,
-	/// while using a shared buffer pool.
-	/// </remarks>
-	sealed class StringBufferFactory : IFactory<StringBuffer>
-	{
-		const int DefaultBlockShift = 12; // this was determined to be the fastest.
-		const int DefaultInitialBufferCount = 8;
-
-		/// <summary>
-		/// A default factory instance used by the default <see cref="PooledMemoryStream"/> constructor.
-		/// </summary>
-		public static readonly StringBufferFactory Default = new StringBufferFactory(new FixedArrayPool<char>(1 << DefaultBlockShift), DefaultBlockShift, DefaultInitialBufferCount);
-				
-		readonly ArrayPool<char> bufferPool;
-
-		public StringBufferFactory(
-			ArrayPool<char> bufferPool,
-			int blockShift = DefaultBlockShift,
-			int initialBufferCount = DefaultInitialBufferCount
-		)
-		{
-			if (blockShift < 6 || blockShift > 16) //128 - 64k
-				throw new ArgumentOutOfRangeException(nameof(blockShift));
-			this.BlockShift = blockShift;
-			this.BlockSize = 1 << blockShift;
-			this.InitialBufferCount = initialBufferCount;
-			this.bufferPool = bufferPool;
-		}
-
-        public int BlockShift { get; private set; }
-        public int BlockSize { get; private set; }
-        public int InitialBufferCount { get; private set; }
-
-        public StringBuffer Create()
-		{
-			return new StringBuffer(this);
-		}
-
-		public void Return(char[] buffer)
-		{
-			bufferPool.Return(buffer);
-		}
-
-		public char[] Rent()
-		{
-			return bufferPool.Rent(BlockSize);
-		}
-	}
-
-	/// <summary>
 	/// A memory-backed <see cref="TextWriter"/> implementation.
 	/// </summary>
 	sealed class StringBuffer : TextWriter
 	{
-		readonly StringBufferFactory factory;
+		const int DefaultBlockShift = 12; // default to 4k blocks
+		const int InitialBlockCount = 8;
+		
+		readonly int blockShift;
+		readonly int blockSize;
+		readonly int blockMask;
+		readonly bool clearOnReturn;
 
 		int length;
 		int position;
+
+		readonly ArrayPool<char> bufferPool;
 
 		char[]?[] blocks;
 
@@ -76,14 +31,18 @@ namespace Sylvan.IO
 		/// <summary>
 		/// Creates a BlockMemoryStream using the default <see cref="BlockMemoryStreamFactory"/
 		/// </summary>
-		public StringBuffer() : this(StringBufferFactory.Default)
+		public StringBuffer() : this(ArrayPool<char>.Shared)
 		{
 		}
 
-		public StringBuffer(StringBufferFactory factory)
+		public StringBuffer(ArrayPool<char> bufferPool, int blockShift = DefaultBlockShift, bool clearOnReturn = false)
 		{
-			this.factory = factory;
-			this.blocks = new char[]?[factory.InitialBufferCount];
+			this.bufferPool = bufferPool;
+			this.blockShift = blockShift;
+			this.blockSize = 1 << blockShift;
+			this.blockMask = blockSize - 1;
+			this.blocks = new char[]?[InitialBlockCount];
+			this.clearOnReturn = clearOnReturn;
 		}
 
 		public override void Flush()
@@ -115,9 +74,9 @@ namespace Sylvan.IO
 			var offset = 0;
 			var count = buffer.Length;
 
-			var shift = factory.BlockShift;
-			var blockMask = ~(~0 << shift);
-			var blockSize = factory.BlockSize;
+			var shift = blockShift;
+			
+			var blockSize = this.blockSize;
 
 			var endLength = this.position + count;
 			var reqBlockCount = (endLength + (int)blockMask) >> shift;
@@ -144,7 +103,7 @@ namespace Sylvan.IO
 				char[]? curBlock = blocks[blockIdx];
 				if (curBlock == null)
 				{
-					curBlock = factory.Rent();
+					curBlock = bufferPool.Rent(blockSize);
 					blocks[blockIdx] = curBlock;
 				}
 				var blockOffset = (int)(pos & blockMask);
@@ -179,9 +138,9 @@ namespace Sylvan.IO
 		static void StringBufferWriter(Span<char> str, StringBuffer buffer)
 		{
 			var length = buffer.length;
-			var shift = buffer.factory.BlockShift;
-			var size = buffer.factory.BlockSize;
-			var mask = ~(~0 << shift);
+			var shift = buffer.blockShift;
+			var size = buffer.blockSize;
+			var mask = buffer.blockMask;
 
 			var c = length >> shift;
 			for (int i = 0; i < c; i++)
@@ -203,9 +162,9 @@ namespace Sylvan.IO
 		unsafe string BuildString()
 		{
 			var length = this.length;
-			var shift = this.factory.BlockShift;
-			var size = this.factory.BlockSize;
-			var mask = ~(~0 << shift);
+			var shift = this.blockShift;
+			var size = this.blockSize;
+			var mask = this.blockMask;
 
 			var str = new string('\0', this.length);
 			fixed(char* p = str)
@@ -237,7 +196,7 @@ namespace Sylvan.IO
 			foreach (var block in this.blocks)
 			{
 				if (block != null)
-					factory.Return(block);
+					bufferPool.Return(block, clearOnReturn);
 			}
 		}
 	}

@@ -1,10 +1,8 @@
 ﻿using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Jobs;
-using FlatFiles.TypeMapping;
 using Microsoft.VisualBasic.FileIO;
 using System;
 using System.Data;
-using System.Data.Common;
 using System.Data.OleDb;
 using System.Globalization;
 using System.IO;
