@@ -13,6 +13,13 @@ namespace Sylvan.Data.Csv
 	public class CsvDataReaderTests
 	{
 		[Fact]
+		public async Task SylvanSchemaBench()
+		{
+			var b = new CsvReaderBenchmarks();
+			await b.SylvanSchema();
+		}
+
+		[Fact]
 		public async Task Simple()
 		{
 			using (var reader = File.OpenText("Data\\Simple.csv"))

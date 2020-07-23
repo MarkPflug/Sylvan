@@ -72,6 +72,9 @@ namespace Sylvan.Data.Csv
 			return CsvDataReader.Create(reader, new CsvDataReaderOptions() { Schema = DataSchema.Instance });
 		}
 
+		public static ICsvSchemaProvider TestDataSchema => DataSchema.Instance;
+
+
 		class DataSchema : ICsvSchemaProvider
 		{
 			public static DataSchema Instance = new DataSchema();

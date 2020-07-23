@@ -1,5 +1,5 @@
 ﻿using Microsoft.Data.SqlClient;
-using MySql.Data.MySqlClient;
+using MySqlConnector;
 using Sylvan.Data;
 using Sylvan.Data.Csv;
 using Sylvan.Terminal;

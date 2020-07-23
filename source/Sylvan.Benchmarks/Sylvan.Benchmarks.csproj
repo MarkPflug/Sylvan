@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFrameworks>netcoreapp3.1;net462</TargetFrameworks>
   </PropertyGroup>
 
   <ItemGroup>
@@ -16,7 +16,7 @@
     <PackageReference Include="Microsoft.VisualBasic" Version="10.3.0" />
     <PackageReference Include="NLight" Version="2.1.1" />
     <PackageReference Include="NReco.Csv" Version="1.0.0" />
-    <PackageReference Include="System.Data.OleDb" Version="4.7.0" />
+    <PackageReference Include="System.Data.OleDb" Version="4.7.1" />
   </ItemGroup>
 
   <ItemGroup>
