@@ -8,14 +8,7 @@
     <MakeDir Condition="!Exists($(PackageOutputPath))" Directories="$(PackageOutputPath)" />
   </Target>
 
-  <Target Name="PackValidations" BeforeTargets="Pack;GenerateNuspec">
-    <!-- Attempt to prevent myself from accidentally releaseing a debug build. -->
-    <Error Condition="$(Configuration) != 'Release'" Text="Attempting to pack a debug build."/>
-    <Error Condition="$(SourceRevisionId.Contains('-dirty'))" Text="Attempting to pack from a dirty repository."/>
-    <PropertyGroup>
-      <RepositoryCommit Condition="$(RepositoryCommit) == ''">$(SourceRevisionId)</RepositoryCommit>
-    </PropertyGroup>
-  </Target>
+ 
 
   <PropertyGroup>
     <ReportsDirectory>$(MSBuildThisFileDirectory)/reports</ReportsDirectory>
@@ -35,6 +28,15 @@
     <!--<PackageReference Include="Microsoft.CodeAnalysis.FxCopAnalyzers" Version="3.0.0" PrivateAssets="all"/>-->
   </ItemGroup>
 
+   <Target Name="PackValidations" BeforeTargets="GenerateNuspec">
+    <!-- Attempt to prevent myself from accidentally releaseing a debug build. -->
+    <Error Condition="$(Configuration) != 'Release'" Text="Attempting to pack a debug build."/>
+    <Error Condition="$(SourceRevisionId.Contains('-dirty'))" Text="Attempting to pack from a dirty repository."/>
+    <PropertyGroup>
+      <RepositoryCommit Condition="$(RepositoryCommit) == ''">$(SourceRevisionId)</RepositoryCommit>
+    </PropertyGroup>
+  </Target>
+    
   <Target Name="GetSourceRevisionId" BeforeTargets="AddSourceRevisionToInformationalVersion;PackValidations">
     <Exec 
       Command="git describe --long --always --dirty --exclude=* --abbrev=8"
