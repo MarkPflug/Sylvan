@@ -1,16 +1,24 @@
 ﻿using Microsoft.Data.SqlClient;
 using MySqlConnector;
+using Npgsql;
+using Sylvan.CommandLine;
 using Sylvan.Data;
 using Sylvan.Data.Csv;
 using Sylvan.Terminal;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.CommandLine;
+using System.CommandLine.Invocation;
+using System.CommandLine.Parsing;
+using System.Data;
 using System.Data.Common;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace Sylvan.Tools.DataMigrate
 {
@@ -37,10 +45,196 @@ namespace Sylvan.Tools.DataMigrate
 			}
 		}
 
-		static void Main(string[] args)
+		static void InitializeProviders()
+		{
+			DbProviderFactories.RegisterFactory("MySqlConnector", MySqlConnectorFactory.Instance);
+			DbProviderFactories.RegisterFactory("Npgsql", NpgsqlFactory.Instance);
+			DbProviderFactories.RegisterFactory("Microsoft.Data.SqlClient", SqlClientFactory.Instance);
+		}
+
+		static Task<int> Main(string[] args)
 		{
 
-		}		
+			var cmdline = Environment.CommandLine;
+
+			var program = new Program();
+
+			InitializeProviders();
+
+
+			var cmd = new RootCommand("migrate")
+			{
+				new Option<string>("--source", description: "The source to copy data from."),
+				new Option<string>("--sourceProvider", description: "The source data provider name."),
+				new Option<string>("--destination", description: "The destination to copy data to."),
+				new Option<string>("--destinationProvider", description: "The destination data provider name.")
+			};
+
+			var handler =
+				CommandHandler.Create<string, string,string,string>(program.Migrate);
+			
+			cmd.Handler = handler;
+
+			return cmd.InvokeAsync(args);
+		}
+
+		[Command]
+		void Migrate(string sourceProvider, string srcConnectionString, string dstProviderName, string dstConnectionString)
+		{
+			var srcProvider = DbProviderFactories.GetFactory(sourceProvider);
+			var dstProvider = DbProviderFactories.GetFactory(dstProviderName);
+
+			var srcCSB = srcProvider.CreateConnectionStringBuilder();
+			srcCSB.ConnectionString = srcConnectionString;
+
+			var dstCSB = dstProvider.CreateConnectionStringBuilder();
+			dstCSB.ConnectionString = dstConnectionString;
+		}
+
+		void WriteTo(DbConnection conn, DbDataReader data, string tableName)
+		{
+			
+			switch (conn) {
+				case SqlConnection msSql:
+					WriteTo(msSql, data, tableName);
+					break;
+				case MySqlConnection mySql:
+					WriteTo(mySql, data);
+					break;
+				case NpgsqlConnection npgsqlConn:
+					WriteTo(npgsqlConn, data);
+					break;
+				default:
+					throw new NotSupportedException();
+			}
+		}
+
+		void WriteMsSqlColumn(TextWriter w, DbColumn col)
+		{
+			w.Write("[");
+			w.Write(col.BaseColumnName);
+			w.Write("] ");
+			var type = col.DataType;
+			var typeCode = Type.GetTypeCode(type);
+
+			void WriteLength(TextWriter w, DbColumn col)
+			{
+				w.Write('(');
+				if (col.IsLong == true || col.ColumnSize > 256)
+				{
+					w.Write("max");
+				}
+				else
+				{
+					var len = Math.Min(col.ColumnSize ?? 256, 256);
+					w.Write(len);
+				}
+				w.Write(')');
+			}
+
+			switch (typeCode)
+			{
+				case TypeCode.Boolean:
+					w.Write("bit");
+					break;
+				case TypeCode.Int32:
+					w.Write("int");
+					break;
+				case TypeCode.Int64:
+					w.Write("bigint");
+					break;
+				case TypeCode.String:
+					w.Write("varchar");
+					WriteLength(w, col);
+					break;
+				case TypeCode.DateTime:
+					w.Write("datetime2");
+					break;
+				case TypeCode.Single:
+					w.Write("float");
+					break;
+				case TypeCode.Double:
+					w.Write("double");
+					break;
+				default:
+					if (type == typeof(byte[]))
+					{
+						w.Write("varbinary");
+						WriteLength(w, col);
+					}
+					if (type == typeof(Guid))
+					{
+						w.Write("uniqueidentifier");
+					}
+					throw new NotSupportedException();
+			}
+			if (col.AllowDBNull == true)
+			{
+				w.Write(" null");
+			}
+			else
+			{
+				w.Write(" not null");
+			}
+		}
+
+		void WriteMsSqlSchema(TextWriter w, string tableName, ReadOnlyCollection<DbColumn> schema)
+		{
+			w.Write("create table ");
+			w.Write("[" + tableName + "]");
+			w.WriteLine();
+			w.Write("(");
+
+			bool first = true;
+			foreach(var col in schema)
+			{
+				if(first)
+				{
+					first = false;
+				} else
+				{
+					w.Write(',');
+				}
+				w.WriteLine();
+				WriteMsSqlColumn(w, col);
+			}
+			w.WriteLine();
+
+			w.Write(")");
+			w.WriteLine();
+		}
+
+		string GetMsSqlCreateTable(DbDataReader data, string table)
+		{
+			var w = new StringWriter();
+			WriteMsSqlSchema(w, table, data.GetColumnSchema());
+			return w.ToString();
+		}
+
+		void WriteTo(SqlConnection conn, DbDataReader data, string tableName)
+		{
+			var tx = conn.BeginTransaction();
+			var createCmd = GetMsSqlCreateTable(data, tableName);
+
+			var cmd = conn.CreateCommand();
+			cmd.CommandText = createCmd;
+			cmd.ExecuteNonQuery();
+
+			var bc = new SqlBulkCopy(conn, SqlBulkCopyOptions.CheckConstraints, tx);
+			bc.DestinationTableName = tableName;
+			bc.WriteToServer(data);
+			tx.Commit();
+		}
+
+		void WriteTo(MySqlConnection conn, DbDataReader data)
+		{
+			throw new NotImplementedException();
+		}
+
+		void WriteTo(NpgsqlConnection conn, DbDataReader data)
+		{
+			throw new NotImplementedException();
+		}
 
 		static MySqlConnection GetMySqlConnection()
 		{

@@ -29,7 +29,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sylvan.Tools.CsvSchemaBuild
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sylvan.Tools.DataMigrate", "Sylvan.Tools.DataMigrate\Sylvan.Tools.DataMigrate.csproj", "{F42CF808-E465-48D4-80C0-A631BE244203}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sylvan.Tools.Ansi", "Sylvan.Tools.Ansi\Sylvan.Tools.Ansi.csproj", "{E875A34A-756A-4BE3-96A9-F7B451A09C01}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sylvan.Tools.Ansi", "Sylvan.Tools.Ansi\Sylvan.Tools.Ansi.csproj", "{E875A34A-756A-4BE3-96A9-F7B451A09C01}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Build", "Build", "{70EFA271-0E5B-4977-90F0-F86C13B937AF}"
 	ProjectSection(SolutionItems) = preProject
@@ -39,6 +39,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Build", "Build", "{70EFA271
 		..\Directory.Build.props = ..\Directory.Build.props
 		..\Directory.Build.targets = ..\Directory.Build.targets
 	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sylvan.Data.Migration", "Sylvan.Data.Migration\Sylvan.Data.Migration.csproj", "{1D14617C-372E-4A54-9F86-497683EE9B6F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sylvan.CommandLine", "Sylvan.CommandLine\Sylvan.CommandLine.csproj", "{ACBBA0EE-4D33-40D6-BCC6-862B71E87AA6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -194,6 +198,30 @@ Global
 		{E875A34A-756A-4BE3-96A9-F7B451A09C01}.Release|x64.Build.0 = Release|Any CPU
 		{E875A34A-756A-4BE3-96A9-F7B451A09C01}.Release|x86.ActiveCfg = Release|Any CPU
 		{E875A34A-756A-4BE3-96A9-F7B451A09C01}.Release|x86.Build.0 = Release|Any CPU
+		{1D14617C-372E-4A54-9F86-497683EE9B6F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1D14617C-372E-4A54-9F86-497683EE9B6F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1D14617C-372E-4A54-9F86-497683EE9B6F}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{1D14617C-372E-4A54-9F86-497683EE9B6F}.Debug|x64.Build.0 = Debug|Any CPU
+		{1D14617C-372E-4A54-9F86-497683EE9B6F}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{1D14617C-372E-4A54-9F86-497683EE9B6F}.Debug|x86.Build.0 = Debug|Any CPU
+		{1D14617C-372E-4A54-9F86-497683EE9B6F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1D14617C-372E-4A54-9F86-497683EE9B6F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1D14617C-372E-4A54-9F86-497683EE9B6F}.Release|x64.ActiveCfg = Release|Any CPU
+		{1D14617C-372E-4A54-9F86-497683EE9B6F}.Release|x64.Build.0 = Release|Any CPU
+		{1D14617C-372E-4A54-9F86-497683EE9B6F}.Release|x86.ActiveCfg = Release|Any CPU
+		{1D14617C-372E-4A54-9F86-497683EE9B6F}.Release|x86.Build.0 = Release|Any CPU
+		{ACBBA0EE-4D33-40D6-BCC6-862B71E87AA6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ACBBA0EE-4D33-40D6-BCC6-862B71E87AA6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ACBBA0EE-4D33-40D6-BCC6-862B71E87AA6}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{ACBBA0EE-4D33-40D6-BCC6-862B71E87AA6}.Debug|x64.Build.0 = Debug|Any CPU
+		{ACBBA0EE-4D33-40D6-BCC6-862B71E87AA6}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{ACBBA0EE-4D33-40D6-BCC6-862B71E87AA6}.Debug|x86.Build.0 = Debug|Any CPU
+		{ACBBA0EE-4D33-40D6-BCC6-862B71E87AA6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ACBBA0EE-4D33-40D6-BCC6-862B71E87AA6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{ACBBA0EE-4D33-40D6-BCC6-862B71E87AA6}.Release|x64.ActiveCfg = Release|Any CPU
+		{ACBBA0EE-4D33-40D6-BCC6-862B71E87AA6}.Release|x64.Build.0 = Release|Any CPU
+		{ACBBA0EE-4D33-40D6-BCC6-862B71E87AA6}.Release|x86.ActiveCfg = Release|Any CPU
+		{ACBBA0EE-4D33-40D6-BCC6-862B71E87AA6}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

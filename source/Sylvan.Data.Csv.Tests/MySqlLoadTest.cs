@@ -83,7 +83,6 @@ namespace Sylvan.Data.Csv
 			return conn;
 		}
 
-
 		static IDbColumnSchemaGenerator GetSchema(string file)
 		{
 			using var tr = File.OpenText(file);
@@ -105,10 +104,11 @@ namespace Sylvan.Data.Csv
 			bc.BulkCopyTimeout = 0;
 			bc.DestinationTableName = tableName;
 			bc.WriteToServer(data);
+			
 			sw.Stop();
 
 
-			Console.WriteLine($"Inserted in {sw.Elapsed.ToString()}");
+			Console.WriteLine($"Inserted in {sw.Elapsed}");
 		}
 
 		static string BuildTable(string name, IDbColumnSchemaGenerator schema)

@@ -19,8 +19,12 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Data.SqlClient" Version="2.0.0" />
     <PackageReference Include="MySqlConnector" Version="1.0.0" />
+    <PackageReference Include="Npgsql" Version="4.1.4" />
+    <PackageReference Include="System.CommandLine" Version="2.0.0-beta1.20371.2" />
+    <ProjectReference Include="..\Sylvan.CommandLine\Sylvan.CommandLine.csproj" />
     <ProjectReference Include="..\Sylvan.Common\Sylvan.Common.csproj" />
     <ProjectReference Include="..\Sylvan.Data.Csv\Sylvan.Data.Csv.csproj" />
+    <ProjectReference Include="..\Sylvan.Data.Migration\Sylvan.Data.Migration.csproj" />
     <ProjectReference Include="..\Sylvan.Data\Sylvan.Data.csproj" />
     <ProjectReference Include="..\Sylvan.Terminal\Sylvan.Terminal.csproj" />
   </ItemGroup>

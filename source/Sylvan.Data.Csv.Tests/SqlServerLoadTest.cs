@@ -100,6 +100,7 @@ namespace Sylvan.Data.Csv
 			var sw = Stopwatch.StartNew();
 			var bc = new SqlBulkCopy(conn);
 			bc.BulkCopyTimeout = 0;
+			bc.EnableStreaming = true;
 			bc.DestinationTableName = tableName;
 			bc.WriteToServer(data);
 			sw.Stop();
