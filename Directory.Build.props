@@ -19,7 +19,7 @@
   
   
     <IsTestProject Condition="$(MSBuildProjectName.EndsWith('.Tests')) == 'true'">true</IsTestProject>
-      
+    <SourceControlInformationFeatureSupported>true</SourceControlInformationFeatureSupported>      
   </PropertyGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)license.txt" Pack="true" PackagePath="">
