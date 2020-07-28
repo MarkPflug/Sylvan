@@ -1,6 +1,6 @@
 ﻿namespace Sylvan
 {
-	public interface IFactory<T>
+	interface IFactory<T>
 	{
 		T Create();
 	}

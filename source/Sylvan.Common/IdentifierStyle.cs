@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 
@@ -12,7 +13,7 @@ namespace Sylvan
 
 		public abstract string Convert(string str);
 
-		public static IEnumerable<Range> GetSegments(string identifier)
+		internal static IEnumerable<Range> GetSegments(string identifier)
 		{
 			int start = 0;
 			int length = 0;
@@ -83,7 +84,7 @@ namespace Sylvan
 			}
 		}
 
-		public static bool IsAllUpper(string str)
+		internal static bool IsAllUpper(string str)
 		{
 			for (int i = str.Length - 1; i >= 0; i--)
 			{
@@ -93,7 +94,7 @@ namespace Sylvan
 			return true;
 		}
 
-		public struct Range
+		internal struct Range
 		{
 			public int Start { get; }
 			public int Length { get; }
@@ -112,7 +113,7 @@ namespace Sylvan
 	{
 		public override string Convert(string str)
 		{
-			var sw = new StringWriter();
+			using var sw = new StringWriter();
 			bool isUpper = IsAllUpper(str);
 
 			foreach (var segment in GetSegments(str))
@@ -142,7 +143,7 @@ namespace Sylvan
 	{
 		public override string Convert(string str)
 		{
-			var sw = new StringWriter();
+			using var sw = new StringWriter();
 			bool isUpper = IsAllUpper(str);
 
 			bool first = true;
@@ -154,7 +155,7 @@ namespace Sylvan
 					var c = str[i];
 					if (first)
 					{
-						c = char.ToLower(c);
+						c = char.ToLowerInvariant(c);
 					}
 					else
 					{
@@ -216,7 +217,9 @@ namespace Sylvan
 
 		public override string Convert(string str)
 		{
-			var sw = new StringWriter();
+			if (str == null) throw new ArgumentNullException(nameof(str));
+
+			using var sw = new StringWriter();
 			if (quote != '\0')
 			{
 				sw.Write(quote);
@@ -241,11 +244,11 @@ namespace Sylvan
 						switch (this.segmentStyle)
 						{
 							case CasingStyle.LowerCase:
-								c = char.ToLower(c);
+								c = char.ToLowerInvariant(c);
 								break;
 							case CasingStyle.TitleCase:
 							case CasingStyle.UpperCase:
-								c = char.ToUpper(c);
+								c = char.ToUpperInvariant(c);
 								break;
 						}
 					}
@@ -254,16 +257,16 @@ namespace Sylvan
 						switch (this.segmentStyle)
 						{
 							case CasingStyle.LowerCase:
-								c = char.ToLower(c);
+								c = char.ToLowerInvariant(c);
 								break;
 							case CasingStyle.TitleCase:
 								if (isUpper)
 								{
-									c = char.ToLower(c);
+									c = char.ToLowerInvariant(c);
 								}
 								break;
 							case CasingStyle.UpperCase:
-								c = char.ToUpper(c);
+								c = char.ToUpperInvariant(c);
 								break;
 						}
 					}
