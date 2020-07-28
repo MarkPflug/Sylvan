@@ -23,7 +23,7 @@ namespace Sylvan
 		/// <summary>
 		/// A "database_name" identifier style".
 		/// </summary>
-		public static readonly IdentifierStyle Database = new QuotedIdentifierStyle(CasingStyle.LowerCase);
+		public static readonly IdentifierStyle Database = new QuotedIdentifierStyle(CasingStyle.LowerCase, '_');
 
 		/// <summary>
 		/// Converts a string to the given identifier style.
@@ -365,18 +365,21 @@ namespace Sylvan
 	public sealed class QuotedIdentifierStyle : IdentifierStyle
 	{
 		readonly CasingStyle style;
+		readonly char separator;
 
 		/// <summary>
 		/// Constructs a new QuotedIdentifierStyle.
 		/// </summary>
-		public QuotedIdentifierStyle(CasingStyle style = CasingStyle.LowerCase)
+		public QuotedIdentifierStyle(CasingStyle style = CasingStyle.LowerCase, char separator = '_')
 		{
 			this.style = style;
+			this.separator = separator;
 		}
+
 		/// <inheritdoc/>
 		public override string Convert(string str)
 		{
-			return Separated(str, style, '_', '\"');
+			return Separated(str, style, separator, '\"');
 		}
 	}
 }

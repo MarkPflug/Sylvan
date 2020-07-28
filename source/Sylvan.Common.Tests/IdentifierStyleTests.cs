@@ -124,7 +124,7 @@ namespace Sylvan
 		[InlineData("CLR_TYPE", "\"clr type\"")]
 		public void QuotedIdentifierStyle(string input, string expected)
 		{
-			var style = new QuotedIdentifierStyle(CasingStyle.LowerCase);
+			var style = new QuotedIdentifierStyle(CasingStyle.LowerCase, ' ');
 			var output = style.Convert(input);
 			Assert.Equal(expected, output);
 		}
