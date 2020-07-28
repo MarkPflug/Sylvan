@@ -8,8 +8,6 @@
     <MakeDir Condition="!Exists($(PackageOutputPath))" Directories="$(PackageOutputPath)" />
   </Target>
 
- 
-
   <PropertyGroup>
     <ReportsDirectory>$(MSBuildThisFileDirectory)/reports</ReportsDirectory>
     <CoverletOutput>$(ReportsDirectory)\$(MSBuildProjectName)\</CoverletOutput>
@@ -34,7 +32,7 @@
     <Error Condition="$(SourceRevisionId.Contains('-dirty'))" Text="Attempting to pack from a dirty repository."/>
   </Target>
     
-  <Target Name="GetSourceRevisionId" BeforeTargets="AddSourceRevisionToInformationalVersion;PackValidations">
+  <Target Name="InitializeSourceControlInformation" BeforeTargets="PackValidations">
     <Exec 
       Command="git describe --long --always --dirty --exclude=* --abbrev=8"
       ConsoleToMsBuild="True"
