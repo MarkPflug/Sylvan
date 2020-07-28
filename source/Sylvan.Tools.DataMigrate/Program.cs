@@ -2,7 +2,6 @@
 using MySqlConnector;
 using Npgsql;
 using Sylvan.CommandLine;
-using Sylvan.Data;
 using Sylvan.Data.Csv;
 using Sylvan.Terminal;
 using System;
@@ -11,7 +10,6 @@ using System.Collections.ObjectModel;
 using System.CommandLine;
 using System.CommandLine.Invocation;
 using System.CommandLine.Parsing;
-using System.Data;
 using System.Data.Common;
 using System.Diagnostics;
 using System.IO;
@@ -54,7 +52,11 @@ namespace Sylvan.Tools.DataMigrate
 
 		static Task<int> Main(string[] args)
 		{
+			SqlToCsv(args[0], args[1]);
+			return Task.FromResult(1);
+		}
 
+		static Task<int> DbMigrate() {
 			var cmdline = Environment.CommandLine;
 
 			var program = new Program();
@@ -75,7 +77,7 @@ namespace Sylvan.Tools.DataMigrate
 			
 			cmd.Handler = handler;
 
-			return cmd.InvokeAsync(args);
+			return cmd.InvokeAsync(Environment.GetCommandLineArgs());
 		}
 
 		[Command]
@@ -406,12 +408,12 @@ namespace Sylvan.Tools.DataMigrate
 			return col.DataTypeName == "binary";
 		}
 
-		static void SqlToCsv()
+		static void SqlToCsv(string server, string database)
 		{
 			var csb = new SqlConnectionStringBuilder
 			{
-				DataSource = ".",
-				InitialCatalog = "scdev",
+				DataSource = server,
+				InitialCatalog = database,
 				IntegratedSecurity = true,
 				MultipleActiveResultSets = true,
 			};

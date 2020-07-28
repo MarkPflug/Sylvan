@@ -151,7 +151,7 @@ namespace Sylvan.Data
 				this.ColumnOrdinal = ordinal;
 				this.ColumnName = name?.Length > 64 ? name.Substring(0, 64) : name;
 				this.AllowDBNull = isNullable;
-				this.IsUnique = IsUnique;
+				this.IsUnique = isUnique;
 			}
 
 			public static ColumnSchema CreateString(int ordinal, string? name, bool isNullable, bool isUnique, int length, bool isAscii)
@@ -213,20 +213,27 @@ namespace Sylvan.Data
 					};
 			}
 
-			public static ColumnSchema CreateFloat(int ordinal, string? name, bool isNullable, Type type)
+			public static ColumnSchema CreateFloat(int ordinal, string? name, bool isNullable)
 			{
-				var (p, s, n) =
-					(type == typeof(double))
-					? (15, 8, "double")
-					: (7, 4, "float");
-
 				return
 					new ColumnSchema(ordinal, name, isNullable, false)
 					{
-						DataType = type,
-						DataTypeName = n,
-						NumericPrecision = p,
-						ColumnSize = s,
+						DataType = typeof(float),
+						DataTypeName = "float",
+						NumericPrecision = 7,
+						ColumnSize = 4,
+					};
+			}
+
+			public static ColumnSchema CreateDouble(int ordinal, string? name, bool isNullable)
+			{
+				return
+					new ColumnSchema(ordinal, name, isNullable, false)
+					{
+						DataType = typeof(double),
+						DataTypeName = "double",
+						NumericPrecision = 15,
+						ColumnSize = 8,
 					};
 			}
 		}
@@ -419,12 +426,10 @@ namespace Sylvan.Data
 
 				if (this.isFloat)
 				{
-					var type =
+					return
 						floatMin < float.MinValue || floatMax > float.MaxValue
-						? typeof(double)
-						: typeof(float);
-
-					return ColumnSchema.CreateFloat(this.ordinal, name, isNullable, type);
+						? ColumnSchema.CreateDouble(this.ordinal, name, isNullable)
+						: ColumnSchema.CreateFloat(this.ordinal, name, isNullable);
 				}
 
 				var len = Math.Max(DefaultStringSize, stringLenMax);
