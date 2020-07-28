@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace Sylvan.Threading
 {
-	public sealed class SignalEvent : IDisposable
+	sealed class SignalEvent : IDisposable
 	{
 		// This is the main triggering event.
 		readonly EventWaitHandle set;

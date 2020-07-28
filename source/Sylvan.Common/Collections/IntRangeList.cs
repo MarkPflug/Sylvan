@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace Sylvan.Collections
 {
-	public sealed class IntRangeList : IList<int>
+	sealed class IntRangeList : IList<int>
 	{
 		public static IList<int> Range(int start, int count)
 		{

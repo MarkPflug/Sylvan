@@ -4,9 +4,10 @@
     <TargetFrameworks>netstandard2.0;netstandard2.1</TargetFrameworks>
     <RootNamespace>Sylvan</RootNamespace>
     <Description>A collection of common utility types.</Description>
-    <VersionPrefix>0.1.9</VersionPrefix>
-    <VersionSuffix>b0001</VersionSuffix>
+    <VersionPrefix>0.2.0</VersionPrefix>
+    <VersionSuffix>B0001</VersionSuffix>
     <Nullable>enable</Nullable>
+    <!--<GenerateDocumentationFile>true</GenerateDocumentationFile>-->
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(TargetFramework)' == 'netstandard2.1'">

@@ -3,6 +3,9 @@ using System.IO;
 
 namespace Sylvan.IO
 {
+	/// <summary>
+	/// A readonly stream implementation that provides a random sequence of bytes.
+	/// </summary>
 	public sealed class RandomStream : Stream
 	{
 		readonly Random rand;
@@ -11,8 +14,14 @@ namespace Sylvan.IO
 		long position;
 		long length;
 
+		/// <summary>
+		/// Constructs a new RandomStream instance.
+		/// </summary>
 		public RandomStream(long length) : this(new Random(), length) { }
 
+		/// <summary>
+		/// Constructs a new RandomStream instance.
+		/// </summary>
 		public RandomStream(Random rand, long length)
 		{
 			if (rand == null) throw new ArgumentNullException(nameof(rand));
@@ -23,21 +32,25 @@ namespace Sylvan.IO
 			this.length = length;
 		}
 
+		/// <inheritdoc/>
 		public override bool CanRead => true;
 
+		/// <inheritdoc/>
 		public override bool CanSeek => false;
 
+		/// <inheritdoc/>
 		public override bool CanWrite => false;
 
+		/// <inheritdoc/>
 		public override long Length => length;
 
+		/// <inheritdoc/>
 		public override long Position { get => position; set => throw new NotSupportedException(); }
 
-		public override void Flush()
-		{
-			throw new NotSupportedException();
-		}
+		/// <inheritdoc/>
+		public override void Flush() { }
 
+		/// <inheritdoc/>
 		public override int Read(byte[] buffer, int offset, int count)
 		{
 			var c = 0;
@@ -58,16 +71,19 @@ namespace Sylvan.IO
 			return c;
 		}
 
+		/// <inheritdoc/>
 		public override long Seek(long offset, SeekOrigin origin)
 		{
 			throw new NotSupportedException();
 		}
 
+		/// <inheritdoc/>
 		public override void SetLength(long value)
 		{
 			throw new NotSupportedException();
 		}
 
+		/// <inheritdoc/>
 		public override void Write(byte[] buffer, int offset, int count)
 		{
 			throw new NotSupportedException();
