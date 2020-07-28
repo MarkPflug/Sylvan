@@ -1,6 +1,9 @@
 # Sylvan.Data.Csv Release Notes
+_0.6.0_
+Refactor schema provider implementations into a separate package.
+
 _0.5.0_
-Adds support for reading/writeing binary data as base64 encoded strings.
+Adds support for reading/writing binary data as base64 encoded strings.
 
 _0.4.5_
 Fix bug where schema provided headers aren't used when HasHeaders=false. HasHeaders is only meant to indicate if headers are present in the data file.

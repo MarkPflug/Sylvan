@@ -14,3 +14,5 @@ using System.Diagnostics.CodeAnalysis;
 [assembly: SuppressMessage("Naming", "CA1720:Identifier contains type name", Justification = "<Pending>", Scope = "type", Target = "~T:Sylvan.Primitives.PrimitiveType")]
 [assembly: SuppressMessage("Usage", "CA2225:Operator overloads have named alternates", Justification = "<Pending>", Scope = "member", Target = "~M:Sylvan.Primitives.TypedPrimitive")]
 [assembly: SuppressMessage("Usage", "CA2225:Operator overloads have named alternates", Justification = "<Pending>", Scope = "member", Target = "~M:Sylvan.Primitives.Primitive~")]
+[assembly: SuppressMessage("Design", "CA1034:Nested types should not be visible", Justification = "<Pending>", Scope = "type", Target = "~T:Sylvan.Diagnostics.PerformanceCounter.CountedSection")]
+[assembly: SuppressMessage("Performance", "CA1815:Override equals and operator equals on value types", Justification = "<Pending>", Scope = "type", Target = "~T:Sylvan.Diagnostics.PerformanceCounter.CountedSection")]

@@ -415,10 +415,8 @@ namespace Sylvan.Data.Csv
 		[Fact]
 		public void Create()
 		{
-			Assert.ThrowsAsync<ArgumentNullException>(() => CsvDataReader.CreateAsync(null));
+			Assert.ThrowsAsync<ArgumentNullException>(() => CsvDataReader.CreateAsync((TextReader)null));
 		}
-
-		
 
 		[Fact]
 		public void BufferTooSmall()

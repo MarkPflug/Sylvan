@@ -1,11 +1,10 @@
 ﻿using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Jobs;
+using Sylvan.Diagnostics;
 using System;
-using System.Diagnostics;
 
 namespace Sylvan.Benchmarks
 {
-
 	[SimpleJob(RuntimeMoniker.NetCoreApp31)]
 	public class TimeBenchmarks
 	{
@@ -24,7 +23,22 @@ namespace Sylvan.Benchmarks
 		[Benchmark]
 		public void GetTimestamp()
 		{
-			var v = Stopwatch.GetTimestamp();
+			var v = System.Diagnostics.Stopwatch.GetTimestamp();
+		}
+
+		static PerformanceTimer timer = new PerformanceTimer("TestTimer");
+		static PerformanceCounter counter = new PerformanceCounter("TestCounter");
+
+		[Benchmark]
+		public void TimerTest()
+		{
+			using var s = timer.Start();
+		}
+
+		[Benchmark]
+		public void CounterTest()
+		{
+			counter.Increment();
 		}
 	}
 }

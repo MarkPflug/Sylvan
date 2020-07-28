@@ -9,88 +9,64 @@ namespace Sylvan.Data
 	// This provides an implementation of DbDataReader.GetSchemaTable using the IDbColumnSchemaGenerator implementation.
 	static class SchemaTable
 	{
+		static DataColumn Add(DataTable table, string name, Type type)
+		{
+			var col = new DataColumn(name, type);
+			table.Columns.Add(col);
+			return col;
+		}
+
 		public static DataTable GetSchemaTable(ReadOnlyCollection<DbColumn> schema)
 		{
-			// what an absolute nightmare...
-
+			object dbNull = DBNull.Value;
+			var s = typeof(string);
+			var i = typeof(int);
+			var h = typeof(short);
+			var b = typeof(bool);
+			
 			var table = new DataTable("SchemaTable");
-			var cols = table.Columns;
-			var nameCol = new DataColumn(SchemaTableColumn.ColumnName, typeof(string));
-			var ordinalCol = new DataColumn(SchemaTableColumn.ColumnOrdinal, typeof(int));
-			var sizeCol = new DataColumn(SchemaTableColumn.ColumnSize, typeof(int));
-			var precCol = new DataColumn(SchemaTableColumn.NumericPrecision, typeof(short));
-			var scaleCol = new DataColumn(SchemaTableColumn.NumericScale, typeof(short));
-			var typeCol = new DataColumn(SchemaTableColumn.DataType, typeof(Type));
-			var allowNullCol = new DataColumn(SchemaTableColumn.AllowDBNull, typeof(bool));
+			var nameCol = Add(table, SchemaTableColumn.ColumnName, s);
+			var ordinalCol = Add(table, SchemaTableColumn.ColumnOrdinal, i);
+			var sizeCol = Add(table, SchemaTableColumn.ColumnSize, i);
+			var precCol = Add(table, SchemaTableColumn.NumericPrecision, h);
+			var scaleCol = Add(table, SchemaTableColumn.NumericScale, h);
+			var typeCol = Add(table, SchemaTableColumn.DataType, typeof(Type));
+			var allowNullCol = Add(table, SchemaTableColumn.AllowDBNull, b);
 
-			var baseNameCol = new DataColumn(SchemaTableColumn.BaseColumnName, typeof(string));
-			var baseSchemaCol = new DataColumn(SchemaTableColumn.BaseSchemaName, typeof(string));
-			var baseTableCol = new DataColumn(SchemaTableColumn.BaseTableName, typeof(string));
+			var baseNameCol = Add(table, SchemaTableColumn.BaseColumnName, s);
+			var baseSchemaCol = Add(table, SchemaTableColumn.BaseSchemaName, s);
+			var baseTableCol = Add(table, SchemaTableColumn.BaseTableName, s);
 
-			var isAliasedCol = new DataColumn(SchemaTableColumn.IsAliased, typeof(bool));
-			var isExpressionCol = new DataColumn(SchemaTableColumn.IsExpression, typeof(bool));
-			var isKeyCol = new DataColumn(SchemaTableColumn.IsKey, typeof(bool));
-			var isLongCol = new DataColumn(SchemaTableColumn.IsLong, typeof(bool));
-			var isUniqueCol = new DataColumn(SchemaTableColumn.IsUnique, typeof(bool));
+			var isAliasedCol = Add(table, SchemaTableColumn.IsAliased, b);
+			var isExpressionCol = Add(table, SchemaTableColumn.IsExpression, b);
+			var isKeyCol = Add(table, SchemaTableColumn.IsKey, b);
+			var isLongCol = Add(table, SchemaTableColumn.IsLong, b);
+			var isUniqueCol = Add(table, SchemaTableColumn.IsUnique, b);
 
-			var providerTypeCol = new DataColumn(SchemaTableColumn.ProviderType, typeof(int));
-			var nvProviderTypeCol = new DataColumn(SchemaTableColumn.NonVersionedProviderType, typeof(int));
-
-			cols.Add(nameCol);
-			cols.Add(ordinalCol);
-			cols.Add(sizeCol);
-			cols.Add(precCol);
-			cols.Add(scaleCol);
-			cols.Add(typeCol);
-			cols.Add(allowNullCol);
-			cols.Add(baseNameCol);
-			cols.Add(baseSchemaCol);
-			cols.Add(baseTableCol);
-			cols.Add(isAliasedCol);
-			cols.Add(isExpressionCol);
-			cols.Add(isKeyCol);
-			cols.Add(isLongCol);
-			cols.Add(isUniqueCol);
-			cols.Add(providerTypeCol);
-			cols.Add(nvProviderTypeCol);
+			var providerTypeCol = Add(table, SchemaTableColumn.ProviderType, i);
+			var nvProviderTypeCol = Add(table, SchemaTableColumn.NonVersionedProviderType, i);
 
 			foreach (var col in schema)
 			{
 				var row = table.NewRow();
-				row[nameCol] = col.ColumnName ?? (object)DBNull.Value;
-				row[ordinalCol] = col.ColumnOrdinal ?? (object)DBNull.Value;
-				row[sizeCol] = col.ColumnSize ?? (object) DBNull.Value;
+				row[nameCol] = col.ColumnName ?? dbNull;
+				row[ordinalCol] = col.ColumnOrdinal ?? dbNull;
+				row[sizeCol] = col.ColumnSize ?? dbNull;
+				row[precCol] = col.NumericPrecision ?? dbNull;
+				row[scaleCol] = col.NumericScale ?? dbNull;
 
-				if (col.DataType == typeof(int))
-				{
-					row[precCol] = 10;
-					row[scaleCol] = 0;
-				}
-				else
-				if (col.DataType == typeof(double))
-				{
-					row[precCol] = 15;
-					row[scaleCol] = 0;
-				}
-				else
-				{
-					row[precCol] = DBNull.Value;
-					row[scaleCol] = DBNull.Value;
-				}
+				row[typeCol] = col.DataType ?? dbNull;
+				row[allowNullCol] = col.AllowDBNull ?? dbNull;
+				row[baseNameCol] = col.BaseColumnName ?? dbNull;
+				row[baseSchemaCol] = col.BaseSchemaName ?? dbNull;
+				row[baseTableCol] = col.BaseTableName ?? dbNull;
 
+				row[isAliasedCol] = col.IsAliased ?? dbNull;
+				row[isExpressionCol] = col.IsExpression ?? dbNull;
 
-				row[typeCol] = col.DataType;
-				row[allowNullCol] = col.AllowDBNull ?? (object)DBNull.Value;
-				row[baseNameCol] = col.BaseColumnName ?? (object)DBNull.Value;
-				row[baseSchemaCol] = col.BaseSchemaName ?? (object)DBNull.Value;
-				row[baseTableCol] = col.BaseTableName ?? (object)DBNull.Value;
-
-				row[isAliasedCol] = col.IsAliased ?? (object)DBNull.Value;
-				row[isExpressionCol] = col.IsExpression ?? (object)DBNull.Value;
-
-				row[isKeyCol] = col.IsKey ?? (object)DBNull.Value;
-				row[isLongCol] = col.IsLong ?? (object) DBNull.Value;
-				row[isUniqueCol] = col.IsUnique ?? (object)DBNull.Value;
+				row[isKeyCol] = col.IsKey ?? dbNull;
+				row[isLongCol] = col.IsLong ?? dbNull;
+				row[isUniqueCol] = col.IsUnique ?? dbNull;
 
 				var code = (int)Type.GetTypeCode(col.DataType);
 				row[providerTypeCol] = code;

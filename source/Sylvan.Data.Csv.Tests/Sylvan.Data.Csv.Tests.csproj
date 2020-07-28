@@ -18,6 +18,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Sylvan.Benchmarks\Sylvan.Benchmarks.csproj" />
     <ProjectReference Include="..\Sylvan.Common\Sylvan.Common.csproj" />
+    <ProjectReference Include="..\Sylvan.Data.Csv.Schema\Sylvan.Data.Csv.Schema.csproj" />
     <ProjectReference Include="..\Sylvan.Data.Csv\Sylvan.Data.Csv.csproj" />
     <ProjectReference Include="..\Sylvan.Data\Sylvan.Data.csproj" />
   </ItemGroup>

@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0</TargetFrameworks>
+    <Version>0.1.0</Version>
+    <RootNamespace>Sylvan.Data.Csv</RootNamespace>
+    <Description>Schema implementations for for Sylvan.Data.Csv.CsvDataReader.</Description>
+    <PackageTags>csv;delimited;datareader;schema</PackageTags>
+    <Nullable>enable</Nullable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Sylvan.Data.Csv\Sylvan.Data.Csv.csproj" />
+  </ItemGroup>
+
+</Project>
