@@ -1,7 +1,10 @@
 ﻿using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Jobs;
+using FlatFiles.TypeMapping;
 using Microsoft.VisualBasic.FileIO;
+using System;
 using System.Data;
+using System.Data.Common;
 using System.Data.OleDb;
 using System.Globalization;
 using System.IO;
@@ -161,7 +164,44 @@ namespace Sylvan.Data.Csv
 				}
 			}
 		}
+
+		
+
+		[Benchmark]
+		public async Task SylvanSchema()
+		{
+			using var tr = TestData.GetTextReader();
+			using var dr = await CsvDataReader.CreateAsync(tr, new CsvDataReaderOptions { Schema = TestData.TestDataSchema });
+			var types = new TypeCode[dr.FieldCount];
 			
+			for(int i = 0; i < types.Length; i++)
+			{
+				types[i] = Type.GetTypeCode(dr.GetFieldType(i));
+			}
+			while (await dr.ReadAsync())
+			{
+				for (int i = 0; i < dr.FieldCount; i++)
+				{
+					switch (types[i])
+					{
+						case TypeCode.Int32:
+							var v = dr.GetInt32(i);
+							break;
+						case TypeCode.Double:
+							if (i == 4 && dr.IsDBNull(i))
+								break;
+							var d = dr.GetDouble(i);
+							break;
+						case TypeCode.String:
+							var s = dr.GetString(i);
+							break;
+						default:
+							break;
+					}
+				}
+			}
+		}
+
 
 		[Benchmark]
 		public void NRecoSelect()

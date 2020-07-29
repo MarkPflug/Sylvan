@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Data;
 using System.Data.Common;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -52,10 +53,12 @@ namespace Sylvan.Data.Csv
 			internal int escapeCount;
 			internal QuoteState isQuoted;
 
+#if DEBUG
 			public override string ToString()
 			{
 				return $"EndIdx: {endIdx} IsQuoted: {isQuoted} EscapeCount: {escapeCount}";
 			}
+#endif
 		}
 
 		enum State
@@ -78,6 +81,7 @@ namespace Sylvan.Data.Csv
 		readonly char delimiter;
 		readonly char quote;
 		readonly char escape;
+		readonly bool ownsReader;
 
 		readonly CultureInfo culture;
 
@@ -96,6 +100,7 @@ namespace Sylvan.Data.Csv
 		int lineNumber;
 
 		readonly char[] buffer;
+		byte[]? scratch;
 		FieldInfo[] fieldInfos;
 
 		bool atEndOfText;
@@ -113,7 +118,7 @@ namespace Sylvan.Data.Csv
 		/// <returns>A CsvDataReader instance.</returns>
 		public static CsvDataReader Create(TextReader reader, CsvDataReaderOptions? options = null)
 		{
-			return CreateAsync(reader, options).Result;
+			return CreateAsync(reader, options).GetAwaiter().GetResult();
 		}
 
 		/// <summary>
@@ -152,6 +157,7 @@ namespace Sylvan.Data.Csv
 			this.headerMap = new Dictionary<string, int>(options.HeaderComparer);
 			this.columns = Array.Empty<CsvColumn>();
 			this.culture = options.Culture;
+			this.ownsReader = options.OwnsReader;
 		}
 
 		async Task InitializeAsync(ICsvSchemaProvider? schema)
@@ -168,19 +174,14 @@ namespace Sylvan.Data.Csv
 				}
 				else
 				{
-					throw new InvalidDataException("no headers");
+					throw new CsvMissingHeadersException();
 				}
 			}
+
 			// read the first row of data to determine fieldCount (if there were no headers)
-			// and support "hasRows" before Read.
+			// and support calling HasRows before Read is first called.
 			this.hasRows = await NextRecordAsync();
 			InitializeSchema(schema);
-
-			if (state == State.End)
-			{
-				// in the event there is only one line in the file
-				state = State.Initialized;
-			}
 		}
 
 		void InitializeSchema(ICsvSchemaProvider? schema)
@@ -190,14 +191,17 @@ namespace Sylvan.Data.Csv
 			columns = new CsvColumn[this.fieldCount];
 			for (int i = 0; i < this.fieldCount; i++)
 			{
-				var name = GetString(i);
+				var name = hasHeaders ? GetString(i) : null;
 				var columnSchema = schema?.GetColumn(name, i);
 				columns[i] = new CsvColumn(name, i, columnSchema);
 
-				headerMap.Add(name, i);
+				name = columns[i].ColumnName;
+				if (name != null)
+				{
+					headerMap.Add(name, i);
+				}
 			}
-
-			state = State.Initialized;
+			this.state = State.Initialized;
 		}
 
 		async Task<bool> NextRecordAsync()
@@ -389,7 +393,6 @@ namespace Sylvan.Data.Csv
 
 				if (complete)
 					return last ? ReadResult.False : ReadResult.True;
-				this.state = State.End;
 
 				return ReadResult.False;
 			}
@@ -511,7 +514,99 @@ namespace Sylvan.Data.Csv
 		/// <inheritdoc/>
 		public override long GetBytes(int ordinal, long dataOffset, byte[] buffer, int bufferOffset, int length)
 		{
-			throw new NotSupportedException();
+			if (dataOffset > int.MaxValue) throw new ArgumentOutOfRangeException(nameof(dataOffset));
+
+			if (scratch == null)
+			{
+				scratch = new byte[3];
+			}
+
+			var offset = (int)dataOffset;
+
+			var (b, o, l) = GetField(ordinal);
+
+			var quadIdx = Math.DivRem(offset, 3, out int rem);
+
+			var iBuf = b;
+
+			var iOff = 0;
+			iOff += quadIdx * 4;
+
+			var oBuf = buffer;
+
+			var oOff = bufferOffset;
+
+			// align to the next base64 quad
+			if (rem != 0)
+			{
+				FromBase64Chars(iBuf, o + iOff, 4, scratch, 0, out int c);
+				if (c == rem)
+				{
+					// we already decoded everything available in the previous pass
+					return 0; //count
+				}
+
+				Debug.Assert(c != 0); // c will be 1 2 or 3
+
+				var partial = 3 - rem;
+				while (partial > 0)
+				{
+					oBuf[oOff++] = scratch[3 - partial];
+					c--;
+					partial--;
+					length--;
+					if (c == 0 || length == 0)
+					{
+						return oOff - bufferOffset;
+					}
+				}
+
+				iOff += 4; // advance the partial quad
+			}
+
+			{
+				// copy as many full quads as possible straight to the output buffer
+				var quadCount = Math.Min(length / 3, (l - iOff) / 4);
+				if (quadCount > 0)
+				{
+					var charCount = quadCount * 4;
+					FromBase64Chars(iBuf, o + iOff, charCount, oBuf, oOff, out int c);
+					length -= c;
+					iOff += charCount;
+					oOff += c;
+				}
+			}
+
+			if (iOff == l)
+			{
+				return oOff - bufferOffset;
+			}
+
+			if (length > 0)
+			{
+				FromBase64Chars(iBuf, o + iOff, 4, scratch, 0, out int c);
+				c = length < c ? length : c;
+				for (int i = 0; i < c; i++)
+				{
+					oBuf[oOff++] = scratch[i];
+				}
+			}
+
+			return oOff - bufferOffset;
+		}
+
+		void FromBase64Chars(char[] chars, int charsOffset, int charsLen, byte[] bytes, int bytesOffset, out int bytesWritten)
+		{
+#if NETSTANDARD2_1
+			if (!Convert.TryFromBase64Chars(chars.AsSpan().Slice(charsOffset, charsLen), bytes.AsSpan().Slice(bytesOffset), out bytesWritten))
+			{
+				throw new FormatException();
+			}
+#else
+			var buff = Convert.FromBase64CharArray(chars, charsOffset, charsLen);
+			Array.Copy(buff, 0, bytes, bytesOffset, buff.Length);
+			bytesWritten = buff.Length;
+#endif
 		}
 
 		/// <inheritdoc/>
@@ -639,21 +734,26 @@ namespace Sylvan.Data.Csv
 		/// <inheritdoc/>
 		public override string GetName(int ordinal)
 		{
-			if (this.hasHeaders == false) throw new InvalidOperationException();
-			return columns[ordinal].ColumnName;
+			if (ordinal < 0 || ordinal >= fieldCount) 
+				throw new IndexOutOfRangeException();
+
+			return columns[ordinal].ColumnName ?? "";
 		}
 
 		/// <inheritdoc/>
 		public override int GetOrdinal(string name)
 		{
-			if (this.hasHeaders == false) throw new InvalidOperationException();
-			return this.headerMap.TryGetValue(name, out var idx) ? idx : -1;
+			if (this.headerMap.TryGetValue(name, out var idx))
+			{
+				return idx;
+			}
+			throw new IndexOutOfRangeException();
 		}
 
 		/// <inheritdoc/>
 		public override string GetString(int ordinal)
 		{
-			if (((uint)ordinal) < curFieldCount)
+			if (ordinal >= 0 && ordinal < curFieldCount)
 			{
 				var (b, o, l) = GetField(ordinal);
 				return l == 0 ? string.Empty : new string(b, o, l);
@@ -711,9 +811,9 @@ namespace Sylvan.Data.Csv
 							if (c == escape)
 							{
 								c = buffer[offset + i++];
-								if(c != quote && c != escape)
+								if (c != quote && c != escape)
 								{
-									if(quote == escape)
+									if (quote == escape)
 									{
 										// the escape we just saw was actually the closing quote
 										// the remainder of the field will be added verbatim
@@ -756,6 +856,10 @@ namespace Sylvan.Data.Csv
 			{
 				case TypeCode.Boolean:
 					return this.GetBoolean(ordinal);
+				case TypeCode.Char:
+					return this.GetChar(ordinal);
+				case TypeCode.Byte:
+					return this.GetByte(ordinal);
 				case TypeCode.Int16:
 					return this.GetInt16(ordinal);
 				case TypeCode.Int32:
@@ -771,7 +875,25 @@ namespace Sylvan.Data.Csv
 				case TypeCode.DateTime:
 					return this.GetDateTime(ordinal);
 				case TypeCode.String:
+					return this.GetString(ordinal);
 				default:
+					if (type == typeof(byte[]))
+					{
+						var (b, o, l) = this.GetField(ordinal);
+						var dataLen = l / 4 * 3;
+						var buffer = new byte[dataLen];
+						var len = GetBytes(ordinal, 0, buffer, 0, dataLen);
+						// 2/3 chance we'll have to resize.
+						if (len < dataLen)
+						{
+							Array.Resize(ref buffer, (int)len);
+						}
+						return buffer;
+					}
+					if (type == typeof(Guid))
+					{
+						return this.GetGuid(ordinal);
+					}
 					return this.GetString(ordinal);
 			}
 		}
@@ -866,7 +988,7 @@ namespace Sylvan.Data.Csv
 		/// <inheritdoc/>
 		public override bool Read()
 		{
-			return this.ReadAsync().Result;
+			return this.ReadAsync().GetAwaiter().GetResult();
 		}
 
 		/// <summary>
@@ -921,5 +1043,33 @@ namespace Sylvan.Data.Csv
 				this.UdtAssemblyQualifiedName = schema?.UdtAssemblyQualifiedName;
 			}
 		}
+
+		/// <inheritdoc/>
+		public override void Close()
+		{
+			if (this.state != State.Closed)
+			{
+				if (ownsReader)
+					this.reader.Dispose();
+				this.state = State.Closed;
+			}
+		}
+
+#if NETSTANDARD2_1
+
+		/// <inheritdoc/>
+		public override Task CloseAsync()
+		{
+			if (this.state != State.Closed)
+			{
+				if (ownsReader)
+					this.reader.Dispose();
+				this.state = State.Closed;
+			}
+			return Task.CompletedTask;
+		}
+
+#endif
+
 	}
 }

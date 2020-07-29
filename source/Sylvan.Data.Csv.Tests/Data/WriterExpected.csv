@@ -1,0 +1,4 @@
+﻿Id,Name,Date,IsActive,Value
+0,Model Number: 1337,03/23/2020 00:00:00,False,0.25
+1,Model Number: 1337,03/24/2020 00:00:00,True,0.5
+2,Model Number: 1337,03/25/2020 00:00:00,False,0.75

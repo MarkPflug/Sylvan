@@ -5,8 +5,14 @@ using System.Linq;
 
 namespace Sylvan.Collections
 {
+	/// <summary>
+	/// Extension methods for IEnumerable.
+	/// </summary>
 	public static class EnumerableExtensions
 	{
+		/// <summary>
+		/// Gets the minimum and maximum value in a sequence.
+		/// </summary>
 		public static (T min, T max) MinMax<T>(this IEnumerable<T> seq) where T : IComparable
 		{
 			if (seq == null) throw new ArgumentNullException(nameof(seq));
@@ -31,6 +37,9 @@ namespace Sylvan.Collections
 			return (min, max);
 		}
 
+		/// <summary>
+		/// Enumerates a heirarchy depth first.
+		/// </summary>
 		public static IEnumerable<T> RecurseDepthFirst<T>(this T item, Func<T, IEnumerable<T>> selector)
 		{
 			if (selector == null) throw new ArgumentNullException(nameof(selector));
@@ -38,6 +47,9 @@ namespace Sylvan.Collections
 			return RecurseDepthFirst(seq, selector);
 		}
 
+		/// <summary>
+		/// Enumerates a heirarchy depth first.
+		/// </summary>
 		public static IEnumerable<T> RecurseDepthFirst<T>(this IEnumerable<T> seq, Func<T, IEnumerable<T>> selector)
 		{
 			if (seq == null) throw new ArgumentNullException(nameof(seq));

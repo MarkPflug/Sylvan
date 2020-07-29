@@ -46,4 +46,12 @@ namespace Sylvan.Data.Csv
 		internal CsvRecordTooLargeException(int row, int ordinal, string? msg, Exception? inner) 
 			: base(row, ordinal, msg, inner) { }
 	}
+
+	/// <summary>
+	/// The exception that is thrown when reading an empty CSV when headers are expected.
+	/// </summary>
+	public sealed class CsvMissingHeadersException : CsvFormatException
+	{
+		internal CsvMissingHeadersException() : base(0, 0, null, null) { }
+	}
 }

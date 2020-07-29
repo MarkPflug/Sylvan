@@ -29,6 +29,7 @@ namespace Sylvan.Data.Csv
 			this.NewLine = Environment.NewLine;
 			this.BufferSize = DefaultBufferSize;
 			this.Culture = CultureInfo.InvariantCulture;
+			this.OwnsWriter = true;
 		}
 
 		/// <summary>
@@ -71,6 +72,11 @@ namespace Sylvan.Data.Csv
 		/// The CultureInfo to use when writing values. The default is the InvariantCulture.
 		/// </summary>
 		public CultureInfo Culture { get; set; }
+
+		/// <summary>
+		/// Indicates if the TextWriter should be closed when the CsvWriter is closed. The default is true.
+		/// </summary>
+		public bool OwnsWriter { get; set; }
 
 		internal void Validate()
 		{

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Sylvan
 {
-	public static class EventExtensions
+	static class EventExtensions
 	{
 		/// <summary>
 		/// Invokes a multicast delegate, ensureing that all registered handlers are invoked and aggregating any exceptions.
