@@ -5,17 +5,14 @@
     <RootNamespace>Sylvan</RootNamespace>
     <Description>A collection of common utility types.</Description>
     <VersionPrefix>0.2.0</VersionPrefix>
-    <VersionSuffix>B0001</VersionSuffix>
+    <VersionSuffix>B0002</VersionSuffix>
     <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <!--<GenerateDocumentationFile>true</GenerateDocumentationFile>-->
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(TargetFramework)' == 'netstandard2.1'">
     <DefineConstants>$(DefineConstants);StringSpan</DefineConstants>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">

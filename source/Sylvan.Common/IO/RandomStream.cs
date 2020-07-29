@@ -50,7 +50,29 @@ namespace Sylvan.IO
 		/// <inheritdoc/>
 		public override void Flush() { }
 
+#if NETSTANDARD2_1
 		/// <inheritdoc/>
+		public override void CopyTo(Stream destination, int bufferSize)
+		{
+			if (destination == null)
+				throw new ArgumentNullException(nameof(destination));
+
+			while (this.position < this.length)
+			{
+				if (bufferPos >= this.temp.Length)
+				{
+					rand.NextBytes(temp);
+					bufferPos = 0;
+				}
+				var len = (int)Math.Min(temp.Length - bufferPos, this.length - this.position);
+				destination.Write(this.temp, bufferPos, len);
+				bufferPos += len;
+				position += len;
+			}
+		}
+
+#endif
+
 		public override int Read(byte[] buffer, int offset, int count)
 		{
 			var c = 0;
