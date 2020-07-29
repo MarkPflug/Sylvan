@@ -6,7 +6,7 @@ namespace Sylvan
 	/// <summary>
 	/// Provides encoding/decoding to Base64.
 	/// </summary>
-	class Base64Encoding
+	public class Base64Encoding
 	{
 		static readonly char[] DefaultEncodeMap;
 		static readonly byte[] DefaultDecodeMap;
@@ -58,7 +58,7 @@ namespace Sylvan
 		/// <summary>
 		/// Creates a new Base64Encoding.
 		/// </summary>
-		public Base64Encoding()
+		private Base64Encoding()
 		{
 			this.encodeMap = DefaultEncodeMap;
 			this.decodeMap = DefaultDecodeMap;
@@ -72,44 +72,7 @@ namespace Sylvan
 			this.decodeMap = DefaultDecodeMap;
 			this.lineLength = lineLength;
 		}
-
-		///// <summary>
-		///// Base64 encodes data.
-		///// </summary>
-		///// <param name="data">The input data.</param>
-		///// <returns>A base64 encoded string.</returns>
-		//public string Encode(byte[] data)
-		//{
-		//	if (data == null) throw new ArgumentNullException(nameof(data));
-
-		//	var bufferSize = GetOutputBufferLength(data.Length);
-		//	char[] chars = new char[bufferSize];
-		//	int lineIdx = 0;
-		//	var len = EncodeInternal(data, 0, chars, 0, data.Length, ref lineIdx);
-		//	return new String(chars, 0, len);
-		//}
-
-		///// <summary>
-		///// Base64 encodes data.
-		///// </summary>
-		//public void Encode(Stream iStream, TextWriter writer)
-		//{
-		//	if (iStream == null) throw new ArgumentNullException(nameof(iStream));
-		//	if (writer == null) throw new ArgumentNullException(nameof(writer));
-		//	// this buffer length MUST be a multiple of three for
-		//	// this to work properly
-		//	const int BufferLength = 3 * 0x1000;
-		//	byte[] iBuffer = new byte[BufferLength];
-		//	char[] oBuffer = new char[GetOutputBufferLength(BufferLength)];
-		//	int len;
-		//	int lineIdx = 0;
-		//	while ((len = iStream.Read(iBuffer, 0, BufferLength)) > 0)
-		//	{
-		//		int count = EncodeInternal(iBuffer, 0, oBuffer, 0, len, ref lineIdx);
-		//		writer.Write(oBuffer, 0, count);
-		//	}
-		//}
-
+		
 		public int Encode(byte[] src, int srcOffset, char[] dst, int dstOffset, int count)
 		{
 			if (src == null) throw new ArgumentNullException(nameof(src));

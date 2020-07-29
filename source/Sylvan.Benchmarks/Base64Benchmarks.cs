@@ -12,8 +12,8 @@ namespace Sylvan.Benchmarks
 	public class Base64Benchmarks
 	{
 		byte[] inputData;
-		byte[] outputData;
 		char[] outputChars;
+
 		public Base64Benchmarks()
 		{
 			var sw = new StringWriter();
@@ -22,7 +22,6 @@ namespace Sylvan.Benchmarks
 				sw.WriteLine($"{i}: abcdefghijklmnopqrstuvwxyz");
 			}
 			this.inputData = Encoding.ASCII.GetBytes(sw.ToString());
-			this.outputData = new byte[inputData.Length * 4];
 			this.outputChars = new char[inputData.Length * 4];
 		}
 
@@ -42,9 +41,9 @@ namespace Sylvan.Benchmarks
 		}
 
 		[Benchmark]
-		public void SylvanEncoder()
+		public void SylvanEncoding()
 		{
-			var enc = new Base64Encoding();
+			var enc = Base64Encoding.Default;
 			enc.Encode(inputData, 0, outputChars, 0, inputData.Length);
 
 		}

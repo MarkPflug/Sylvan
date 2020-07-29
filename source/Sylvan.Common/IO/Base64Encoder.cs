@@ -106,8 +106,8 @@ namespace Sylvan.IO
 						if (carry == 1)
 						{
 							b0 = carry0;
-							dst[dstOffset++] = encodeMap[b0 >> 2]; // top 6 bits
-							dst[dstOffset++] = encodeMap[(b0 & 0x03) << 4]; // bottom 2 bits
+							dst[dstOffset++] = encodeMap[b0 >> 2];
+							dst[dstOffset++] = encodeMap[(b0 & 0x03) << 4];
 							dst[dstOffset++] = Pad;
 							dst[dstOffset++] = Pad;
 						}
@@ -115,9 +115,9 @@ namespace Sylvan.IO
 						{
 							b0 = carry0;
 							b1 = carry1;
-							dst[dstOffset++] = encodeMap[b0 >> 2]; // top 6 bits
-							dst[dstOffset++] = encodeMap[((b0 & 0x03) << 4) | (b1 >> 4)]; // 2,4 bits
-							dst[dstOffset++] = encodeMap[(b1 & 0x0F) << 2]; // last 4 bits
+							dst[dstOffset++] = encodeMap[b0 >> 2];
+							dst[dstOffset++] = encodeMap[((b0 & 0x03) << 4) | (b1 >> 4)];
+							dst[dstOffset++] = encodeMap[(b1 & 0x0F) << 2];
 							dst[dstOffset++] = Pad;
 						}
 					}
