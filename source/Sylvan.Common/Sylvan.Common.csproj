@@ -5,7 +5,7 @@
     <RootNamespace>Sylvan</RootNamespace>
     <Description>A collection of common utility types.</Description>
     <VersionPrefix>0.2.0</VersionPrefix>
-    <VersionSuffix>B0001</VersionSuffix>
+    <VersionSuffix>B0002</VersionSuffix>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <!--<GenerateDocumentationFile>true</GenerateDocumentationFile>-->
