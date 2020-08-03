@@ -9,10 +9,11 @@ using System.Net.Http;
 namespace Sylvan.Data.Csv
 {
 
-	sealed class CsvSchema : ICsvSchemaProvider
+	sealed class TestCsvSchema : ICsvSchemaProvider
 	{
 		readonly ReadOnlyCollection<DbColumn> schema;
-		public CsvSchema(ReadOnlyCollection<DbColumn> schema)
+
+		public TestCsvSchema(ReadOnlyCollection<DbColumn> schema)
 		{
 			this.schema = schema;
 		}

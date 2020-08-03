@@ -52,8 +52,9 @@ namespace Sylvan.Tools.DataMigrate
 
 		static Task<int> Main(string[] args)
 		{
-			SqlToCsv(args[0], args[1]);
-			return Task.FromResult(1);
+			SqlToMySql(args[0], args[1]);
+			//SqlToCsv(args[0], args[1]);
+			return Task.FromResult(0);
 		}
 
 		static Task<int> DbMigrate() {
@@ -238,24 +239,27 @@ namespace Sylvan.Tools.DataMigrate
 			throw new NotImplementedException();
 		}
 
-		static MySqlConnection GetMySqlConnection()
+		static MySqlConnection GetMySqlConnection(string dbName)
 		{
 			var connStr = Environment.GetEnvironmentVariable("MySqlConnStr");
-			var csb = new MySqlConnectionStringBuilder(connStr);
-			csb.Database = "floop";
-			csb.AllowLoadLocalInfile = true;
+			var csb = new MySqlConnectionStringBuilder(connStr)
+			{
+				Database = dbName,
+				AllowLoadLocalInfile = true,
+			};
+			
 			connStr = csb.ToString();
 			var conn = new MySqlConnection(connStr);
 			conn.Open();
 			return conn;
 		}
 
-		static void SqlToMySql()
+		static void SqlToMySql(string sqlDb, string mySqlDbName)
 		{
-			var csb = new SqlConnectionStringBuilder
+			var csb = new SqlConnectionStringBuilder()
 			{
 				DataSource = ".",
-				InitialCatalog = "scdev",
+				InitialCatalog = sqlDb,
 				IntegratedSecurity = true,
 				MultipleActiveResultSets = true,
 			};
@@ -269,8 +273,10 @@ namespace Sylvan.Tools.DataMigrate
 
 			var dc = conn.CreateCommand();
 
-			var mconn = GetMySqlConnection();
+			var mconn = GetMySqlConnection(mySqlDbName);
 			var mcmd = mconn.CreateCommand();
+
+			var style = new UnderscoreStyle(CasingStyle.LowerCase);
 
 			var t1 = Stopwatch.StartNew();
 			while (reader.Read())
@@ -282,18 +288,20 @@ namespace Sylvan.Tools.DataMigrate
 				using var dr = dc.ExecuteReader();
 
 				var sw = new StringWriter();
-				CreateTable(sw, tableName, dr);
+				var mapping = CreateTable(sw, style, tableName, dr);
 
 				var str = sw.ToString();
 				mcmd.CommandText = str;
-				mcmd.ExecuteNonQuery();
+				//mcmd.ExecuteNonQuery();
 
 				Console.Write("writing " + tableName);
 
 				var t2 = Stopwatch.StartNew();
 				var bc = new MySqlBulkCopy(mconn);
+				bc.ColumnMappings.AddRange(mapping);
 				bc.BulkCopyTimeout = 0;
-				bc.DestinationTableName = tableName;
+				bc.DestinationTableName = style.Convert(tableName);
+				
 				bc.WriteToServer(dr);
 				t2.Stop();
 				Console.WriteLine(t2.Elapsed.ToString());
@@ -302,13 +310,17 @@ namespace Sylvan.Tools.DataMigrate
 			Console.WriteLine(t1.Elapsed.ToString());
 		}
 
-		static void CreateTable(TextWriter writer, string table, IDbColumnSchemaGenerator schema)
+		static List<MySqlBulkCopyColumnMapping> CreateTable(TextWriter writer, IdentifierStyle style, string srcTableName, IDbColumnSchemaGenerator schema)
 		{
 			var cols = schema.GetColumnSchema();
 
-			writer.WriteLine("create table " + table + "(");
+			var mapping = new List<MySqlBulkCopyColumnMapping>();
+
+			var name = style.Convert(srcTableName);
+			writer.WriteLine("create table " + name + "(");
 
 			bool first = true;
+			int ordinal = 0;
 			foreach (var col in cols)
 			{
 				if (first == true)
@@ -321,7 +333,9 @@ namespace Sylvan.Tools.DataMigrate
 				}
 
 				writer.Write("  ");
-				writer.Write(col.ColumnName);
+				var columnName = style.Convert(col.ColumnName);
+				mapping.Add(new MySqlBulkCopyColumnMapping(ordinal++, columnName));
+				writer.Write(columnName);
 				writer.Write(" ");
 				switch (Type.GetTypeCode(col.DataType))
 				{
@@ -401,6 +415,8 @@ namespace Sylvan.Tools.DataMigrate
 			writer.WriteLine();
 			writer.WriteLine(")");
 			writer.WriteLine();
+
+			return mapping;
 		}
 
 		static bool IsFixed(DbColumn col)

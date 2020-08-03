@@ -1,4 +1,5 @@
-﻿using Xunit;
+﻿using System.Data.Common;
+using Xunit;
 
 namespace Sylvan.Data.Csv
 {
@@ -8,7 +9,7 @@ namespace Sylvan.Data.Csv
 		public void Test1()
 		{
 			var data = TestData.GetTestDataReader();
-			var schema = new CsvSchema(data);
+			var schema = new CsvSchema(data.GetColumnSchema());
 			var spec = schema.GetSchemaSpecification(true);
 
 		}

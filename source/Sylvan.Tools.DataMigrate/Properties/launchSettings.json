@@ -2,7 +2,8 @@
   "profiles": {
     "Sylvan.Tools.DataMigrate": {
       "commandName": "Project",
-      "commandLineArgs": "--source foo --sourceProvider Microsoft.Data.SqlClient --destination bar --destinationProvider MySqlConnector"
+      //"commandLineArgs": "--source foo --sourceProvider Microsoft.Data.SqlClient --destination bar --destinationProvider MySqlConnector"
+      "commandLineArgs": "scdev scdev"
     }
   }
 }

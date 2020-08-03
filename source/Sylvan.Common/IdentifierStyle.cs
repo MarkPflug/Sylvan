@@ -296,6 +296,6 @@ namespace Sylvan
 
 	public sealed class QuotedIdentifierStyle : SeparatedStyle
 	{
-		public QuotedIdentifierStyle(CasingStyle style, char separator = '_') : base(style, separator, '\"') { }
+		public QuotedIdentifierStyle(CasingStyle style, char separator = '_', char quote = '\"') : base(style, separator, quote) { }
 	}
 }
