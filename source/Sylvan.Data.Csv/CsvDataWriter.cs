@@ -40,6 +40,27 @@ namespace Sylvan.Data.Csv
 		/// <summary>
 		/// Creates a new CsvDataWriter.
 		/// </summary>
+		/// <param name="path">The path of the file to write.</param>
+		/// <param name="options">The options used to configure the writer, or null to use the defaults.</param>
+		public CsvDataWriter(string path, CsvWriterOptions? options = null)
+		{
+			if (options?.OwnsWriter == false) throw new CsvConfigurationException();
+			var writer = File.CreateText(path);
+			if (options != null)
+			{
+				options.Validate();
+			}
+			else
+			{
+				options = CsvWriterOptions.Default;
+			}
+
+			this.writer = new CsvWriter(writer, options);
+		}
+
+		/// <summary>
+		/// Creates a new CsvDataWriter.
+		/// </summary>
 		/// <param name="writer">The TextWriter to receive the delimited data.</param>
 		/// <param name="options">The options used to configure the writer, or null to use the defaults.</param>
 		public CsvDataWriter(TextWriter writer, CsvWriterOptions? options = null)
@@ -103,7 +124,7 @@ namespace Sylvan.Data.Csv
 
 						if (allowNull && await reader.IsDBNullAsync(i))
 						{
-							await writer.WriteFieldAsync("");
+							await writer.WriteFieldAsync();
 							continue;
 						}
 						int intVal;
@@ -147,7 +168,7 @@ namespace Sylvan.Data.Csv
 								break;
 							case TypeCode.Empty:
 							case TypeCode.DBNull:
-								await writer.WriteFieldAsync("");
+								await writer.WriteFieldAsync();
 								break;
 							default:
 								if (type == typeof(byte[]))
@@ -172,7 +193,7 @@ namespace Sylvan.Data.Csv
 									await writer.WriteFieldAsync(guid);
 									break;
 								}
-								str = reader.GetValue(i)?.ToString() ?? "";
+								str = reader.GetValue(i)?.ToString();
 							str:
 								await writer.WriteFieldAsync(str);
 								break;
@@ -231,10 +252,9 @@ namespace Sylvan.Data.Csv
 
 						if (allowNull && reader.IsDBNull(i)) // TODO: async?
 						{
-							writer.WriteField("");
+							writer.WriteField();
 							continue;
 						}
-
 
 						var typeCode = fieldTypes[i].typeCode;
 						int intVal;
@@ -278,7 +298,7 @@ namespace Sylvan.Data.Csv
 								break;
 							case TypeCode.Empty:
 							case TypeCode.DBNull:
-								writer.WriteField("");
+								writer.WriteField();
 								break;
 							default:
 								var type = fieldTypes[i].type;
@@ -305,7 +325,7 @@ namespace Sylvan.Data.Csv
 									break;
 								}
 
-								str = reader.GetValue(i)?.ToString() ?? "";
+								str = reader.GetValue(i)?.ToString();
 							str:
 								writer.WriteField(str);
 								break;
@@ -320,13 +340,8 @@ namespace Sylvan.Data.Csv
 				writer.EndRecord();
 			}
 			// flush any pending data on the way out.
-			((IDisposable)this.writer).Dispose();
+			this.writer.Flush();
 		}
-
-		//void Close()
-		//{
-		//	writer.Flush();
-		//}
 
 		private void Dispose(bool disposing)
 		{

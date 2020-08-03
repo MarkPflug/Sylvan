@@ -1,6 +1,8 @@
 # Sylvan.Data.Csv Release Notes
 _0.6.0_
-Refactor schema provider implementations into a separate package.
+Add CsvSchema implementation.
+Add CsvDataReader/CsvWriter constructor convenience overloads for filenames.
+Add ability to specify true/false strings for CsvDataReader boolean values.
 
 _0.5.0_
 Adds support for reading/writing binary data as base64 encoded strings.

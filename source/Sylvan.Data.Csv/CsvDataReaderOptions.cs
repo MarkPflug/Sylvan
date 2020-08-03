@@ -30,7 +30,20 @@ namespace Sylvan.Data.Csv
 			this.Culture = CultureInfo.InvariantCulture;
 			this.Schema = null;
 			this.OwnsReader = true;
+
+			this.TrueString = bool.TrueString;
+			this.FalseString = bool.FalseString;
 		}
+
+		/// <summary>
+		/// The string which represents true values when reading boolean. Defaults to string.TrueString.
+		/// </summary>
+		public string TrueString { get; set; }
+
+		/// <summary>
+		/// The string which represents false values when reading boolean. Defaults to string.FalseString.
+		/// </summary>
+		public string FalseString { get; set; }
 
 		/// <summary>
 		/// Specifies if the CSV data contains a header row with column names. Defaults to true.
@@ -87,7 +100,9 @@ namespace Sylvan.Data.Csv
 			var invalid =
 				char.IsLetterOrDigit(Delimiter) ||
 				Delimiter == Quote ||
-				BufferSize < MinBufferSize;
+				BufferSize < MinBufferSize ||
+				StringComparer.OrdinalIgnoreCase.Equals(TrueString, FalseString);
+				;
 			if (invalid)
 				throw new CsvConfigurationException();
 		}

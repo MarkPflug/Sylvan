@@ -14,9 +14,9 @@ namespace Sylvan.Data
 	/// </summary>
 	public sealed class Schema : IDbColumnSchemaGenerator
 	{
-		static readonly Lazy<Dictionary<string, DbType>> ColumnTypeMap = new Lazy<Dictionary<string, DbType>>(MapInit);
+		static readonly Lazy<Dictionary<string, DbType>> ColumnTypeMap = new Lazy<Dictionary<string, DbType>>(InitializeTypeMap);
 
-		static Dictionary<string, DbType> MapInit()
+		static Dictionary<string, DbType> InitializeTypeMap()
 		{
 			var map = new Dictionary<string, DbType>(StringComparer.OrdinalIgnoreCase);
 			var values = Enum.GetValues(typeof(DbType));
@@ -24,6 +24,9 @@ namespace Sylvan.Data
 			{
 				map.Add(type.ToString(), type);
 			}
+			map.Add("int", DbType.Int32);
+			map.Add("long", DbType.Int64);
+			map.Add("float", DbType.Single);
 			return map;
 		}
 

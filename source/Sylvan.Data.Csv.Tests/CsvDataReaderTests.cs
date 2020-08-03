@@ -533,5 +533,59 @@ namespace Sylvan.Data.Csv
 			Assert.False(csv.IsClosed);
 			Assert.Equal(-1, csv.RecordsAffected);
 		}
+
+		[Fact]
+		public void Boolean1()
+		{
+			using var tr = new StringReader("Bool\nT\nF\nX\n");
+			var opts = new CsvDataReaderOptions()
+			{
+				TrueString = "t",
+				FalseString = "f",
+			};
+			var csv = CsvDataReader.Create(tr, opts);
+			Assert.True(csv.Read());
+			Assert.True(csv.GetBoolean(0));
+			Assert.True(csv.Read());
+			Assert.False(csv.GetBoolean(0));
+			Assert.True(csv.Read());
+			Assert.Throws<FormatException>(() => csv.GetBoolean(0));
+		}
+
+		[Fact]
+		public void Boolean2()
+		{
+			using var tr = new StringReader("Bool\nT\nF\nX\n");
+			var opts = new CsvDataReaderOptions()
+			{
+				TrueString = "t",
+				FalseString = null,
+			};
+			var csv = CsvDataReader.Create(tr, opts);
+			Assert.True(csv.Read());
+			Assert.True(csv.GetBoolean(0));
+			Assert.True(csv.Read());
+			Assert.False(csv.GetBoolean(0));
+			Assert.True(csv.Read());
+			Assert.False(csv.GetBoolean(0));
+		}
+
+		[Fact]
+		public void Boolean3()
+		{
+			using var tr = new StringReader("Bool\nT\nF\nX\n");
+			var opts = new CsvDataReaderOptions()
+			{
+				TrueString = null,
+				FalseString = "f",
+			};
+			var csv = CsvDataReader.Create(tr, opts);
+			Assert.True(csv.Read());
+			Assert.True(csv.GetBoolean(0));
+			Assert.True(csv.Read());
+			Assert.False(csv.GetBoolean(0));
+			Assert.True(csv.Read());
+			Assert.True(csv.GetBoolean(0));
+		}
 	}
 }
