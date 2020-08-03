@@ -5,7 +5,7 @@ using System.IO;
 using System.Text;
 
 namespace Sylvan.IO
-{
+{	
 	/// <summary>
 	/// A memory-backed <see cref="TextWriter"/> implementation.
 	/// </summary>
@@ -13,7 +13,8 @@ namespace Sylvan.IO
 	{
 		const int DefaultBlockShift = 12; // default to 4k blocks
 		const int InitialBlockCount = 8;
-		
+
+		readonly ArrayPool<char> bufferPool;
 		readonly int blockShift;
 		readonly int blockSize;
 		readonly int blockMask;
@@ -21,27 +22,31 @@ namespace Sylvan.IO
 
 		int length;
 		int position;
-
-		readonly ArrayPool<char> bufferPool;
-
 		char[]?[] blocks;
 
 		public override Encoding Encoding => Encoding.Unicode;
 
 		/// <summary>
-		/// Creates a BlockMemoryStream using the default <see cref="BlockMemoryStreamFactory"/
+		/// Creates a BlockMemoryStream using the shared array pool.
 		/// </summary>
 		public StringBuffer() : this(ArrayPool<char>.Shared)
 		{
 		}
 
+		/// <summary>
+		/// Creates a PooledMemoryStream.
+		/// </summary>
+		/// <param name="bufferPool">The <see cref="ArrayPool{T}"/> to use.</param>
+		/// <param name="blockShift">The size of the buffer to use expressed 1 &lt;&lt; blockShift. (Valid values 6 - 24)</param>
+		/// <param name="clearOnReturn">A boolean indicating whether to clear the buffers after use.</param>
+
 		public StringBuffer(ArrayPool<char> bufferPool, int blockShift = DefaultBlockShift, bool clearOnReturn = false)
 		{
 			this.bufferPool = bufferPool;
+			this.blocks = new char[]?[InitialBlockCount];
 			this.blockShift = blockShift;
 			this.blockSize = 1 << blockShift;
 			this.blockMask = blockSize - 1;
-			this.blocks = new char[]?[InitialBlockCount];
 			this.clearOnReturn = clearOnReturn;
 		}
 
@@ -75,8 +80,6 @@ namespace Sylvan.IO
 			var count = buffer.Length;
 
 			var shift = blockShift;
-			
-			var blockSize = this.blockSize;
 
 			var endLength = this.position + count;
 			var reqBlockCount = (endLength + (int)blockMask) >> shift;
@@ -162,25 +165,22 @@ namespace Sylvan.IO
 		unsafe string BuildString()
 		{
 			var length = this.length;
-			var shift = this.blockShift;
-			var size = this.blockSize;
-			var mask = this.blockMask;
 
 			var str = new string('\0', this.length);
 			fixed(char* p = str)
 			{
 				Span<char> span = new Span<char>(p, this.length);
 
-				var c = length >> shift;
+				var c = length >> blockShift;
 				for (int i = 0; i < c; i++)
 				{
 					var block = this.blocks[i];
 					if (block != null)
 						block.CopyTo(span);
-					span = span.Slice(size);
+					span = span.Slice(blockSize);
 				}
 
-				var rem = length & mask;
+				var rem = length & blockMask;
 				if (rem > 0)
 				{
 					ReadOnlySpan<char> block = this.blocks[c];
@@ -189,14 +189,15 @@ namespace Sylvan.IO
 			}
 			return str;
 		}
-#endif
+		
+		#endif
 
 		protected override void Dispose(bool disposing)
 		{
 			foreach (var block in this.blocks)
 			{
 				if (block != null)
-					bufferPool.Return(block, clearOnReturn);
+					this.bufferPool.Return(block, this.clearOnReturn);
 			}
 		}
 	}

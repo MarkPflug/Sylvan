@@ -3,7 +3,10 @@ using System.Collections.Generic;
 
 namespace Sylvan.IO
 {
-	// boyer moore search
+	
+	/// <summary>
+	/// Implements a boyer-moore search algorithm to find sequences of bytes.
+	/// </summary>
 	public sealed class BytePattern
 	{
 		readonly int[] pos;
@@ -11,8 +14,14 @@ namespace Sylvan.IO
 		readonly byte[] pattern;
 		readonly int len;
 
+		/// <summary>
+		/// Gets the length of the pattern.
+		/// </summary>
 		public int Length => len;
 
+		/// <summary>
+		/// Constructs a new BytePattern.
+		/// </summary>
 		public BytePattern(byte[] pattern)
 		{
 			if (pattern == null) throw new ArgumentNullException(nameof(pattern));
@@ -81,6 +90,9 @@ namespace Sylvan.IO
 			}
 		}
 
+		/// <summary>
+		/// Enumerates all instances of a pattern in an input array.
+		/// </summary>
 		public IEnumerable<int> SearchAll(byte[] data)
 		{
 			if (data == null) throw new ArgumentNullException(nameof(data));
@@ -88,6 +100,12 @@ namespace Sylvan.IO
 			return SearchAll(data, 0, data.Length);
 		}
 
+		/// <summary>
+		/// Enumerates all instances of a pattern in a section of an input array.
+		/// </summary>
+		/// <param name="data">The array to search within.</param>
+		/// <param name="startIdx">The index from which to start the search.</param>
+		/// <param name="endIdx">The index beyond which no match can start.</param>
 		public IEnumerable<int> SearchAll(byte[] data, int startIdx, int endIdx)
 		{
 			while(startIdx >= 0)
@@ -99,6 +117,12 @@ namespace Sylvan.IO
 			}
 		}
 
+		/// <summary>
+		/// Finds the index of the next pattern match.
+		/// </summary>
+		/// <param name="data">The array to search.</param>
+		/// <param name="offset">The offset from which to start the search.</param>
+		/// <returns>The index, or -1 if no match is found.</returns>
 		public int Search(byte[] data, int offset)
 		{
 			if (data == null) throw new ArgumentNullException(nameof(data));
@@ -106,6 +130,13 @@ namespace Sylvan.IO
 			return Search(data, offset, data.Length);
 		}
 
+		/// <summary>
+		/// Finds the index of the next pattern match.
+		/// </summary>
+		/// <param name="data">The array to search.</param>
+		/// <param name="offset">The offset from which to start the search.</param>
+		/// <param name="endIdx">The index beyond which no match can start.</param>
+		/// <returns>The index, or -1 if no match is found.</returns>
 		public int Search(byte[] data, int offset, int endIdx)
 		{
 			if (data == null) throw new ArgumentNullException(nameof(data));
