@@ -50,7 +50,7 @@ namespace Sylvan.Data.Csv
 			this.ordinalMap.Add(ordinal, type);
 		}
 
-		DbColumn? ICsvSchemaProvider.GetColumn(string? name, int ordinal)
+		DbColumn ICsvSchemaProvider.GetColumn(string name, int ordinal)
 		{
 			Type type;
 			if ((name != null && nameMap.TryGetValue(name, out type)) || ordinalMap.TryGetValue(ordinal, out type))

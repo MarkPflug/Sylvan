@@ -8,7 +8,7 @@ namespace Sylvan.Data.Csv
 		public void Test1()
 		{
 			var data = TestData.GetTestDataReader();
-			var schema = new CsvSchema(data);
+			var schema = new Schema(data);
 			var spec = schema.GetSchemaSpecification(true);
 
 		}
@@ -17,7 +17,7 @@ namespace Sylvan.Data.Csv
 		[Fact]
 		public void ParseTest1()
 		{
-			var spec = CsvSchema.TryParse("A:Int,B:String?");
+			var spec = Schema.TryParse("A:Int,B:String?");
 			Assert.NotNull(spec);
 		}
 	}

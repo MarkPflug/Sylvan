@@ -33,7 +33,7 @@
     
   <Target Name="InitializeSourceControlInformation" BeforeTargets="PackValidations">
     <Exec 
-      Command="git describe --long --always --dirty --exclude=* --abbrev=8"
+      Command="git describe --long --always --dirty --exclude=*"
       ConsoleToMsBuild="True"
       IgnoreExitCode="False"
       >
