@@ -27,7 +27,7 @@ namespace Sylvan.Data.Csv
 		readonly int bufferSize;
 		int pos;
 		int fieldIdx;
-		bool defaultCulture;
+		readonly bool invariantCulture;
 		readonly bool ownsWriter;
 
 		/// <summary>
@@ -55,7 +55,7 @@ namespace Sylvan.Data.Csv
 			this.escape = options.Escape;
 			this.newLine = options.NewLine;
 			this.culture = options.Culture;
-			this.defaultCulture = this.culture == CultureInfo.InvariantCulture;
+			this.invariantCulture = this.culture == CultureInfo.InvariantCulture;
 			this.prepareBuffer = new char[0x100];
 			this.bufferSize = options.BufferSize;
 			this.writeBuffer = new char[bufferSize];
@@ -210,7 +210,7 @@ namespace Sylvan.Data.Csv
 
 		WriteResult WriteValueOptimistic(int value)
 		{
-			if (defaultCulture)
+			if (invariantCulture)
 			{
 				return WriteValueInvariant(value);
 			}
@@ -219,7 +219,7 @@ namespace Sylvan.Data.Csv
 
 		WriteResult WriteValue(int value)
 		{
-			if (defaultCulture)
+			if (invariantCulture)
 			{
 				return WriteValueInvariant(value);
 			}
@@ -245,7 +245,7 @@ namespace Sylvan.Data.Csv
 
 		WriteResult WriteValueOptimistic(long value)
 		{
-			if (defaultCulture)
+			if (invariantCulture)
 			{
 				return WriteValueInvariant(value);
 			}
@@ -254,7 +254,7 @@ namespace Sylvan.Data.Csv
 
 		WriteResult WriteValue(long value)
 		{
-			if (defaultCulture)
+			if (invariantCulture)
 			{
 				return WriteValueInvariant(value);
 			}
@@ -296,7 +296,7 @@ namespace Sylvan.Data.Csv
 
 		WriteResult WriteValueOptimistic(DateTime value)
 		{
-			if (defaultCulture)
+			if (invariantCulture)
 			{
 				return WriteValueInvariant(value);
 			}
@@ -305,7 +305,7 @@ namespace Sylvan.Data.Csv
 
 		WriteResult WriteValue(DateTime value)
 		{
-			if (defaultCulture)
+			if (invariantCulture)
 			{
 				return WriteValueInvariant(value);
 			}
@@ -331,7 +331,7 @@ namespace Sylvan.Data.Csv
 
 		WriteResult WriteValueOptimistic(float value)
 		{
-			if (defaultCulture)
+			if (invariantCulture)
 			{
 				return WriteValueInvariant(value);
 			}
@@ -340,7 +340,7 @@ namespace Sylvan.Data.Csv
 
 		WriteResult WriteValue(float value)
 		{
-			if (defaultCulture)
+			if (invariantCulture)
 			{
 				return WriteValueInvariant(value);
 			}
@@ -366,7 +366,7 @@ namespace Sylvan.Data.Csv
 
 		WriteResult WriteValueOptimistic(double value)
 		{
-			if (defaultCulture && delimiter != '.')
+			if (invariantCulture && delimiter != '.')
 			{
 				return WriteValueInvariant(value);
 			}
@@ -375,7 +375,7 @@ namespace Sylvan.Data.Csv
 
 		WriteResult WriteValue(double value)
 		{
-			if (defaultCulture)
+			if (invariantCulture)
 			{
 				return WriteValueInvariant(value);
 			}
@@ -539,6 +539,15 @@ namespace Sylvan.Data.Csv
 		}
 
 		/// <summary>
+		/// Asynchronously writes an empty field to the current record.
+		/// </summary>
+		/// <returns>A task representing the asynchronous operation.</returns>
+		public Task WriteFieldAsync()
+		{
+			return WriteFieldAsync((string?)null);
+		}
+
+		/// <summary>
 		/// Asynchronously writes a value to the current record.
 		/// </summary>
 		/// <param name="value">The value to write.</param>
@@ -548,18 +557,11 @@ namespace Sylvan.Data.Csv
 			bool optimistic = true;
 			if (fieldIdx > 0)
 			{
-				while (true)
+				if (pos + 1 >= bufferSize)
 				{
-					if (pos + 1 < bufferSize)
-					{
-						writeBuffer[pos++] = delimiter;
-						break;
-					}
-					else
-					{
-						await FlushBufferAsync();
-					}
+					await FlushBufferAsync();
 				}
+				writeBuffer[pos++] = delimiter;
 			}
 			fieldIdx++;
 #if NETSTANDARD2_1
@@ -759,6 +761,14 @@ namespace Sylvan.Data.Csv
 		}
 
 		/// <summary>
+		/// Asynchronously writes an empty field to the current record.
+		/// </summary>
+		public void WriteField()
+		{
+			WriteField((string?)null);
+		}
+
+		/// <summary>
 		/// Writes a value to the current record.
 		/// </summary>
 		/// <param name="value">The value to write.</param>
@@ -767,18 +777,11 @@ namespace Sylvan.Data.Csv
 			bool optimistic = true;
 			if (fieldIdx > 0)
 			{
-				while (true)
+				if (pos + 1 >= bufferSize)
 				{
-					if (pos + 1 < bufferSize)
-					{
-						writeBuffer[pos++] = delimiter;
-						break;
-					}
-					else
-					{
-						FlushBuffer();
-					}
+					FlushBuffer();
 				}
+				writeBuffer[pos++] = delimiter;
 			}
 			fieldIdx++;
 #if NETSTANDARD2_1

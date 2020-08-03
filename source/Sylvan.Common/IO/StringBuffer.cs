@@ -22,7 +22,6 @@ namespace Sylvan.IO
 
 		int length;
 		int position;
-
 		char[]?[] blocks;
 
 		public override Encoding Encoding => Encoding.Unicode;

@@ -1,6 +1,11 @@
 # Sylvan.Data.Csv Release Notes
+_0.6.0_
+Add CsvSchema implementation.
+Add CsvDataReader/CsvWriter constructor convenience overloads for filenames.
+Add ability to specify true/false strings for CsvDataReader boolean values.
+
 _0.5.0_
-Adds support for reading/writeing binary data as base64 encoded strings.
+Adds support for reading/writing binary data as base64 encoded strings.
 
 _0.4.5_
 Fix bug where schema provided headers aren't used when HasHeaders=false. HasHeaders is only meant to indicate if headers are present in the data file.

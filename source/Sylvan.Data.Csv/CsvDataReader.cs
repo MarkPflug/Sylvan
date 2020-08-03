@@ -97,18 +97,29 @@ namespace Sylvan.Data.Csv
 		int curFieldCount; // fields in current row
 
 		int rowNumber;
-		int lineNumber;
-
+		
 		readonly char[] buffer;
 		byte[]? scratch;
 		FieldInfo[] fieldInfos;
 
 		bool atEndOfText;
+		readonly string trueString, falseString;
 		readonly bool hasHeaders;
 		readonly Dictionary<string, int> headerMap;
 
 		CsvColumn[] columns;
 		State state;
+
+		/// <summary>
+		/// Creates a new CsvDataReader.
+		/// </summary>
+		/// <param name="filename">The name of a file containing CSV data.</param>
+		/// <param name="options">The options to configure the reader, or null to use the default options.</param>
+		/// <returns>A CsvDataReader instance.</returns>
+		public static CsvDataReader Create(string filename, CsvDataReaderOptions? options = null)
+		{
+			return CreateAsync(filename, options).GetAwaiter().GetResult();
+		}
 
 		/// <summary>
 		/// Creates a new CsvDataReader.
@@ -119,6 +130,24 @@ namespace Sylvan.Data.Csv
 		public static CsvDataReader Create(TextReader reader, CsvDataReaderOptions? options = null)
 		{
 			return CreateAsync(reader, options).GetAwaiter().GetResult();
+		}
+
+		/// <summary>
+		/// Creates a new CsvDataReader asynchronously.                                                                                          
+		/// </summary>
+		/// <param name="filename">The name of a file containing CSV data.</param>
+		/// <param name="options">The options to configure the reader, or null to use the default options.</param>
+		/// <returns>A task representing the asynchronous creation of a CsvDataReader instance.</returns>
+		public static async Task<CsvDataReader> CreateAsync(string filename, CsvDataReaderOptions? options = null)
+		{
+			if (filename == null) throw new ArgumentNullException(nameof(filename));
+			// TextReader must be owned when we open it.
+			if (options?.OwnsReader == false) throw new CsvConfigurationException();
+
+			var reader = File.OpenText(filename);
+			var csv = new CsvDataReader(reader, options);
+			await csv.InitializeAsync(options?.Schema);
+			return csv;
 		}
 
 		/// <summary>
@@ -147,12 +176,12 @@ namespace Sylvan.Data.Csv
 			this.delimiter = options.Delimiter;
 			this.quote = options.Quote;
 			this.escape = options.Escape;
-
+			this.trueString = options.TrueString;
+			this.falseString = options.FalseString;
 			this.recordStart = 0;
 			this.bufferEnd = 0;
 			this.idx = 0;
 			this.rowNumber = 0;
-			this.lineNumber = 0;
 			this.fieldInfos = new FieldInfo[16];
 			this.headerMap = new Dictionary<string, int>(options.HeaderComparer);
 			this.columns = Array.Empty<CsvColumn>();
@@ -163,7 +192,6 @@ namespace Sylvan.Data.Csv
 		async Task InitializeAsync(ICsvSchemaProvider? schema)
 		{
 			state = State.Initializing;
-			this.lineNumber = 1;
 			// if the user specified that there are headers
 			// read them, and use them to determine fieldCount.
 			if (hasHeaders)
@@ -407,7 +435,6 @@ namespace Sylvan.Data.Csv
 
 		ReadResult ConsumeLineEnd(ref int idx)
 		{
-			lineNumber++;
 			var c = buffer[idx++];
 			if (c == '\r')
 			{
@@ -433,7 +460,6 @@ namespace Sylvan.Data.Csv
 					}
 					// the next buffer might contain a \n
 					// that we need to consume.
-					lineNumber--;
 					return ReadResult.Incomplete;
 				}
 			}
@@ -494,11 +520,36 @@ namespace Sylvan.Data.Csv
 		/// <inheritdoc/>
 		public override bool GetBoolean(int ordinal)
 		{
+			// three cases:
+			// true and false both not null. Any other value raises error.
+			// true not null, false null. True string true, anything else false.
+			// false not null, false null. True string true, anything else false.
+			// both true and false is not allowed, options validation will prevent it.
 #if NETSTANDARD2_1
-			return bool.Parse(this.GetFieldSpan(ordinal));
+			var span = this.GetFieldSpan(ordinal);
+			if (trueString != null && span.Equals(this.trueString.AsSpan(), StringComparison.OrdinalIgnoreCase))
+			{
+				return true;
+			}
+			if (falseString != null && span.Equals(this.falseString.AsSpan(), StringComparison.OrdinalIgnoreCase))
+			{
+				return false;
+			}
 #else
-			return bool.Parse(this.GetString(ordinal));
+			var str = this.GetString(ordinal);
+			if (trueString != null && str.Equals(this.trueString, StringComparison.OrdinalIgnoreCase))
+			{
+				return true;
+			}
+			if (falseString != null && str.Equals(this.falseString, StringComparison.OrdinalIgnoreCase))
+			{
+				return false;
+			}
 #endif
+			if (falseString == null) return false;
+			if (trueString == null) return true;
+			
+			throw new FormatException();
 		}
 
 		/// <inheritdoc/>
@@ -734,10 +785,10 @@ namespace Sylvan.Data.Csv
 		/// <inheritdoc/>
 		public override string GetName(int ordinal)
 		{
-			if (ordinal < 0 || ordinal >= fieldCount) 
+			if (ordinal < 0 || ordinal >= fieldCount)
 				throw new IndexOutOfRangeException();
 
-			return columns[ordinal].ColumnName ?? "";
+			return columns[ordinal].ColumnName ?? string.Empty;
 		}
 
 		/// <inheritdoc/>
@@ -846,7 +897,7 @@ namespace Sylvan.Data.Csv
 			if ((uint)ordinal >= fieldCount)
 				throw new ArgumentOutOfRangeException(nameof(ordinal));
 
-			if (columns[ordinal].AllowDBNull == true && this.IsDBNull(ordinal))
+			if (columns[ordinal].AllowDBNull != false && this.IsDBNull(ordinal))
 			{
 				return null;
 			}
@@ -921,15 +972,27 @@ namespace Sylvan.Data.Csv
 			var col = columns[ordinal];
 			if (col.DataType == typeof(string))
 			{
-				// empty string fields will be treated as empty string, not null.
-				return false;
+				if (col.AllowDBNull == false)
+				{
+					return false;
+				}
 			}
 			// now pay the cost of determining if the thing is null.
+			return IsNull(ordinal);
+		}
+
+		bool IsNull(int ordinal)
+		{
 			ref var fi = ref fieldInfos[ordinal];
-			var startIdx = recordStart + (ordinal == 0 ? 0 : this.fieldInfos[ordinal - 1].endIdx + 1);
-			var endIdx = recordStart + fi.endIdx;
-			var isEmpty = endIdx - startIdx - (fi.isQuoted != QuoteState.Unquoted ? 2 : 0) - fi.escapeCount == 0;
-			return isEmpty;
+			if (fi.isQuoted == QuoteState.Unquoted)
+			{
+				var startIdx = recordStart + (ordinal == 0 ? 0 : this.fieldInfos[ordinal - 1].endIdx + 1);
+				var endIdx = recordStart + fi.endIdx;
+				var isEmpty = endIdx - startIdx == 0;
+				return isEmpty;
+			}
+			// never consider quoted fields as null
+			return false;
 		}
 
 		/// <inheritdoc/>
@@ -1020,8 +1083,8 @@ namespace Sylvan.Data.Csv
 				this.DataTypeName = schema?.DataTypeName ?? this.DataType.Name;
 
 				// by default, we don't consider string types to be nullable,
-				// an empty field for a string means "" not null.
-				this.AllowDBNull = schema?.AllowDBNull ?? this.DataType.IsValueType;
+				// an empty field for a string means "", not null.
+				this.AllowDBNull = schema == null ? false : schema?.AllowDBNull;
 
 				this.ColumnSize = schema?.ColumnSize ?? int.MaxValue;
 
