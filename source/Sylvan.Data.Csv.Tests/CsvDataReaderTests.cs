@@ -22,30 +22,27 @@ namespace Sylvan.Data.Csv
 		[Fact]
 		public async Task Simple()
 		{
-			using (var reader = File.OpenText("Data\\Simple.csv"))
-			{
-				var csv = await CsvDataReader.CreateAsync(reader);
-				Assert.Equal(4, csv.FieldCount);
-				Assert.True(csv.HasRows);
-				Assert.Equal(0, csv.RowNumber);
-				Assert.Equal("Id", csv.GetName(0));
-				Assert.Equal("Name", csv.GetName(1));
-				Assert.Equal("Value", csv.GetName(2));
-				Assert.Equal("Date", csv.GetName(3));
-				Assert.True(await csv.ReadAsync());
-				Assert.Equal(1, csv.RowNumber);
-				Assert.Equal("1", csv[0]);
-				Assert.Equal("John", csv[1]);
-				Assert.Equal("Low", csv[2]);
-				Assert.Equal("2000-11-11", csv[3]);
-				Assert.True(await csv.ReadAsync());
-				Assert.Equal(2, csv.RowNumber);
-				Assert.Equal("2", csv[0]);
-				Assert.Equal("Jane", csv[1]);
-				Assert.Equal("High", csv[2]);
-				Assert.Equal("1989-03-14", csv[3]);
-				Assert.False(await csv.ReadAsync());
-			}
+			using var csv = await CsvDataReader.CreateAsync("Data\\Simple.csv");
+			Assert.Equal(4, csv.FieldCount);
+			Assert.True(csv.HasRows);
+			Assert.Equal(0, csv.RowNumber);
+			Assert.Equal("Id", csv.GetName(0));
+			Assert.Equal("Name", csv.GetName(1));
+			Assert.Equal("Value", csv.GetName(2));
+			Assert.Equal("Date", csv.GetName(3));
+			Assert.True(await csv.ReadAsync());
+			Assert.Equal(1, csv.RowNumber);
+			Assert.Equal("1", csv[0]);
+			Assert.Equal("John", csv[1]);
+			Assert.Equal("Low", csv[2]);
+			Assert.Equal("2000-11-11", csv[3]);
+			Assert.True(await csv.ReadAsync());
+			Assert.Equal(2, csv.RowNumber);
+			Assert.Equal("2", csv[0]);
+			Assert.Equal("Jane", csv[1]);
+			Assert.Equal("High", csv[2]);
+			Assert.Equal("1989-03-14", csv[3]);
+			Assert.False(await csv.ReadAsync());
 		}
 
 		const string BinaryValue1 = "Hello, world!";
@@ -195,10 +192,11 @@ namespace Sylvan.Data.Csv
 		public async Task NoHeadersWithSchema()
 		{
 			var schema = new ExcelHeaders();
-			var opts = 
-				new CsvDataReaderOptions {
+			var opts =
+				new CsvDataReaderOptions
+				{
 					HasHeaders = false,
-					Schema = schema 
+					Schema = schema
 				};
 
 			using (var reader = File.OpenText("Data\\DataOnly.csv"))
@@ -234,7 +232,8 @@ namespace Sylvan.Data.Csv
 		[InlineData("Id,Name,Value,Date\r\n")]
 		public async Task HeadersOnly(string data)
 		{
-			using (var reader = new StringReader(data)) { 
+			using (var reader = new StringReader(data))
+			{
 				var csv = await CsvDataReader.CreateAsync(reader);
 				Assert.Equal(4, csv.FieldCount);
 				Assert.False(csv.HasRows);
@@ -497,7 +496,7 @@ namespace Sylvan.Data.Csv
 			{
 				var idx = 0;
 				int len;
-				while ((len = (int) csv.GetChars(1, idx, buf, 0, buf.Length)) != 0)
+				while ((len = (int)csv.GetChars(1, idx, buf, 0, buf.Length)) != 0)
 				{
 					idx += len;
 				}
