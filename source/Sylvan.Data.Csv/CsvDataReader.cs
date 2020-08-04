@@ -321,14 +321,12 @@ namespace Sylvan.Data.Csv
 									continue;
 								}
 								else
+								if (escape == quote)
 								{
-									if (escape == quote)
-									{
-										idx--;
-										closeQuoteIdx = idx;
-										// the quote (escape) we just saw was a the closing quote
-										break;
-									}
+									idx--;
+									closeQuoteIdx = idx;
+									// the quote (escape) we just saw was a the closing quote
+									break;
 								}
 							}
 							else
@@ -813,12 +811,15 @@ namespace Sylvan.Data.Csv
 		}
 
 #if NETSTANDARD2_1
+				
 		ReadOnlySpan<char> GetFieldSpan(int ordinal)
 		{
 			var (b, o, l) = GetField(ordinal);
 			return b.AsSpan().Slice(o, l);
 		}
+
 #endif
+
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		(char[] buffer, int offset, int len) GetField(int ordinal)
 		{
@@ -840,55 +841,59 @@ namespace Sylvan.Data.Csv
 				}
 				else
 				{
-					bool inQuote = true; // we start inside the quotes
-
-					var eLen = len - fi.escapeCount;
-					// if there is room in the buffer before the current record
-					// we'll use that as scratch space to unescape the value
-					var temp = buffer;
-					if (recordStart < eLen)
-					{
-						// otherwise we'll allocate a buffer
-						temp = new char[eLen];
-					}
-
-					int i = 0;
-					int d = 0;
-					while (d < len)
-					{
-						var c = buffer[offset + i++];
-						if (inQuote)
-						{
-							if (c == escape)
-							{
-								c = buffer[offset + i++];
-								if (c != quote && c != escape)
-								{
-									if (quote == escape)
-									{
-										// the escape we just saw was actually the closing quote
-										// the remainder of the field will be added verbatim
-										inQuote = false;
-									}
-								}
-							}
-							else
-							if (c == quote)
-							{
-								// we've found the broken closing quote
-								// skip it.
-								inQuote = false;
-								continue;
-							}
-						}
-						temp[d++] = c;
-					}
-					buffer = temp;
-					offset = 0;
-					len = eLen;
+					return PrepareField(offset, len, fi.escapeCount);
 				}
 			}
 			return (buffer, offset, len);
+		}
+
+		(char[] buffer, int offset, int len) PrepareField(int offset, int len, int escapeCount)
+		{
+
+			bool inQuote = true; // we start inside the quotes
+
+			var eLen = len - escapeCount;
+			// if there is room in the buffer before the current record
+			// we'll use that as scratch space to unescape the value
+			var temp = buffer;
+			if (recordStart < eLen)
+			{
+				// otherwise we'll allocate a buffer
+				temp = new char[eLen];
+			}
+
+			int i = 0;
+			int d = 0;
+			while (d < len)
+			{
+				var c = buffer[offset + i++];
+				if (inQuote)
+				{
+					if (c == escape)
+					{
+						c = buffer[offset + i++];
+						if (c != quote && c != escape)
+						{
+							if (quote == escape)
+							{
+								// the escape we just saw was actually the closing quote
+								// the remainder of the field will be added verbatim
+								inQuote = false;
+							}
+						}
+					}
+					else
+					if (c == quote)
+					{
+						// we've found the broken closing quote
+						// skip it.
+						inQuote = false;
+						continue;
+					}
+				}
+				temp[d++] = c;
+			}
+			return (temp, 0, eLen);
 		}
 
 		/// <inheritdoc/>

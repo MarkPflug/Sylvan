@@ -116,35 +116,35 @@ namespace Sylvan.Data.Csv
 			}
 		}
 
-		[Benchmark]
-		public void NLightCsv()
-		{
-			TextWriter tw = TextWriter.Null;
-			var items = TestData.GetTestObjects();
-			var csv = new NLight.IO.Text.DelimitedRecordWriter(tw);
-			csv.WriteField("Id");
-			csv.WriteField("Name");
-			csv.WriteField("Date");
-			csv.WriteField("IsActive");
-			for (int i = 0; i < ValueCount; i++)
-			{
-				csv.WriteField("Value" + i);
-			}
-			csv.WriteRecordEnd();
+		//[Benchmark]
+		//public void NLightCsv()
+		//{
+		//	TextWriter tw = TextWriter.Null;
+		//	var items = TestData.GetTestObjects();
+		//	var csv = new NLight.IO.Text.DelimitedRecordWriter(tw);
+		//	csv.WriteField("Id");
+		//	csv.WriteField("Name");
+		//	csv.WriteField("Date");
+		//	csv.WriteField("IsActive");
+		//	for (int i = 0; i < ValueCount; i++)
+		//	{
+		//		csv.WriteField("Value" + i);
+		//	}
+		//	csv.WriteRecordEnd();
 
-			foreach (var item in items)
-			{
-				csv.WriteField(item.Id);
-				csv.WriteField(item.Name);
-				csv.WriteField(item.Date);
-				csv.WriteField(item.IsActive);
-				for (int i = 0; i < ValueCount; i++)
-				{
-					csv.WriteField(item.DataSet[i]);
-				}
-				csv.WriteRecordEnd();
-			}
-		}
+		//	foreach (var item in items)
+		//	{
+		//		csv.WriteField(item.Id);
+		//		csv.WriteField(item.Name);
+		//		csv.WriteField(item.Date);
+		//		csv.WriteField(item.IsActive);
+		//		for (int i = 0; i < ValueCount; i++)
+		//		{
+		//			csv.WriteField(item.DataSet[i]);
+		//		}
+		//		csv.WriteRecordEnd();
+		//	}
+		//}
 
 		[Benchmark]
 		public void NReco()

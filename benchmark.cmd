@@ -1,1 +1,1 @@
-dotnet benchmark bin\release\netcoreapp3.1\Sylvan.Benchmarks.dll
+bin\release\netcoreapp3.1\Sylvan.Benchmarks.exe
