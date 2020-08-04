@@ -12,7 +12,7 @@ namespace Sylvan.Tools
 {
 	class SystemInfoTool
 	{
-
+		const string DateFormat = "yyyy-MM-dd HH:mm:ss";
 		
 		public static void Main()
 		{
@@ -46,7 +46,7 @@ namespace Sylvan.Tools
 			iw.Value("OSPlatform", Environment.Is64BitOperatingSystem ? "64" : "32");
 			
 			var tickCount = Environment.TickCount64;
-			iw.Value("SystemStarted", DateTime.Now.AddMilliseconds(-tickCount).ToString("u") + " (local)");
+			iw.Value("SystemStarted", DateTime.Now.AddMilliseconds(-tickCount).ToString(DateFormat) + " (local)");
 			iw.Value("SystemUpTime", TimeSpan.FromMilliseconds(tickCount).ToString(@"d\.hh\:mm\:ss\.fff"));
 
 			iw.Header("Memory");
@@ -116,8 +116,8 @@ namespace Sylvan.Tools
 				iw.Value(specialFolder.Name, specialFolder.Path, maxSpecialFolderNameWith);
 
 			iw.Header("Time");
-			iw.Value("UTC Time", DateTime.UtcNow.ToString("u"));
-			iw.Value("Local Time", DateTime.Now.ToString("u"));
+			iw.Value("UTC Time", DateTime.UtcNow.ToString(DateFormat) + " (UTC)");
+			iw.Value("Local Time", DateTime.Now.ToString(DateFormat) + " (local)");
 			iw.Value("TimeZone", TimeZoneInfo.Local.StandardName);
 
 
