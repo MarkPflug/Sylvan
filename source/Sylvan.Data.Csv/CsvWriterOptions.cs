@@ -13,7 +13,7 @@ namespace Sylvan.Data.Csv
 		const char DefaultDelimiter = ',';
 		const char DefaultQuote = '"';
 		const char DefaultEscape = '"';
-		const int DefaultBufferSize = 0x8000;
+		const int DefaultBufferSize = 0x4000;
 		const int MinBufferSize = 0x80;
 
 		/// <summary>
@@ -21,8 +21,6 @@ namespace Sylvan.Data.Csv
 		/// </summary>
 		public CsvWriterOptions()
 		{
-			this.TrueString = bool.TrueString;
-			this.FalseString = bool.FalseString;
 			this.Delimiter = DefaultDelimiter;
 			this.Quote = DefaultQuote;
 			this.Escape = DefaultEscape;
@@ -30,6 +28,9 @@ namespace Sylvan.Data.Csv
 			this.BufferSize = DefaultBufferSize;
 			this.Culture = CultureInfo.InvariantCulture;
 			this.OwnsWriter = true;
+			this.TrueString = bool.TrueString;
+			this.FalseString = bool.FalseString;
+			this.DateFormat = "yyyy-MM-dd HH:mm:ss.FFFFFFF";
 		}
 
 		/// <summary>
@@ -41,6 +42,11 @@ namespace Sylvan.Data.Csv
 		/// The string to write for boolean false values. The default is "False".
 		/// </summary>
 		public string FalseString { get; set; }
+
+		/// <summary>
+		/// The format string used when writing DateTime values. The default is null.
+		/// </summary>
+		public string DateFormat { get; set; }
 
 		/// <summary>
 		/// The delimiter to use between fields. The default is ','.
@@ -84,7 +90,8 @@ namespace Sylvan.Data.Csv
 				BufferSize < MinBufferSize ||
 				char.IsLetterOrDigit(Delimiter) ||
 				Quote == Delimiter ||
-				(NewLine != "\r" && NewLine != "\n" && NewLine != "\r\n");
+				(NewLine != "\r" && NewLine != "\n" && NewLine != "\r\n") ||
+				TrueString == FalseString;
 			if (invalid)
 				throw new CsvConfigurationException();
 		}

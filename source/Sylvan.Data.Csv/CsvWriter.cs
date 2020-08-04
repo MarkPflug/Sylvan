@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Data.Common;
 using System.Globalization;
 using System.IO;
 using System.Threading.Tasks;
@@ -17,6 +18,7 @@ namespace Sylvan.Data.Csv
 		readonly TextWriter writer;
 		readonly string trueString;
 		readonly string falseString;
+		readonly string dateTimeFormat;
 		readonly char delimiter;
 		readonly char quote;
 		readonly char escape;
@@ -50,6 +52,7 @@ namespace Sylvan.Data.Csv
 			this.writer = writer;
 			this.trueString = options.TrueString;
 			this.falseString = options.FalseString;
+			this.dateTimeFormat = options.DateFormat;
 			this.delimiter = options.Delimiter;
 			this.quote = options.Quote;
 			this.escape = options.Escape;
@@ -266,7 +269,8 @@ namespace Sylvan.Data.Csv
 		{
 #if NETSTANDARD2_1
 			var span = writeBuffer.AsSpan()[pos..bufferSize];
-			if (value.TryFormat(span, out int c, provider: culture))
+			
+			if (value.TryFormat(span, out int c, this.dateTimeFormat.AsSpan(), culture))
 			{
 				pos += c;
 				return WriteResult.Okay;

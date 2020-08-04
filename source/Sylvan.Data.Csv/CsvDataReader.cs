@@ -103,7 +103,8 @@ namespace Sylvan.Data.Csv
 		FieldInfo[] fieldInfos;
 
 		bool atEndOfText;
-		readonly string trueString, falseString;
+		readonly string? dateFormat;
+		readonly string? trueString, falseString;
 		readonly bool hasHeaders;
 		readonly Dictionary<string, int> headerMap;
 
@@ -176,6 +177,7 @@ namespace Sylvan.Data.Csv
 			this.delimiter = options.Delimiter;
 			this.quote = options.Quote;
 			this.escape = options.Escape;
+			this.dateFormat = options.DateFormat;
 			this.trueString = options.TrueString;
 			this.falseString = options.FalseString;
 			this.recordStart = 0;
@@ -687,9 +689,16 @@ namespace Sylvan.Data.Csv
 		public override DateTime GetDateTime(int ordinal)
 		{
 #if NETSTANDARD2_1
+			if(this.dateFormat != null && DateTime.TryParseExact(this.GetFieldSpan(ordinal), this.dateFormat.AsSpan(), culture, DateTimeStyles.None, out var dt)) {
+				return dt;
+			} 
 			return DateTime.Parse(this.GetFieldSpan(ordinal), culture);
 #else
-			return DateTime.Parse(this.GetString(ordinal), culture);
+			var dateStr = this.GetString(ordinal);
+			if (this.dateFormat != null && DateTime.TryParseExact(dateStr, this.dateFormat, culture, DateTimeStyles.None, out var dt)) {
+				return dt;
+			}
+			return DateTime.Parse(dateStr, culture);
 #endif
 		}
 

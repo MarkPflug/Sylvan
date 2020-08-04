@@ -13,7 +13,7 @@ namespace Sylvan.Data.Csv
 		const char DefaultDelimiter = ',';
 		const char DefaultQuote = '"';
 		const char DefaultEscape = '"';
-		const int DefaultBufferSize = 0x10000;
+		const int DefaultBufferSize = 0x4000;
 		const int MinBufferSize = 0x80;
 
 		/// <summary>
@@ -33,17 +33,23 @@ namespace Sylvan.Data.Csv
 
 			this.TrueString = bool.TrueString;
 			this.FalseString = bool.FalseString;
+			this.DateFormat = null;
 		}
 
 		/// <summary>
 		/// The string which represents true values when reading boolean. Defaults to string.TrueString.
 		/// </summary>
-		public string TrueString { get; set; }
+		public string? TrueString { get; set; }
 
 		/// <summary>
 		/// The string which represents false values when reading boolean. Defaults to string.FalseString.
 		/// </summary>
-		public string FalseString { get; set; }
+		public string? FalseString { get; set; }
+
+		/// <summary>
+		/// The format string to use to parse dates. Defaults to null, in which case standard date parsing rules apply.
+		/// </summary>
+		public string? DateFormat { get; set; }
 
 		/// <summary>
 		/// Specifies if the CSV data contains a header row with column names. Defaults to true.
