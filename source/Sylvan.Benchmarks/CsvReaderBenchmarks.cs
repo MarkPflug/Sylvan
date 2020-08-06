@@ -31,6 +31,20 @@ namespace Sylvan.Data.Csv
 			}
 		}
 
+		[Benchmark]
+		public void FastCsvParser()
+		{
+			var s = TestData.GetUtf8Stream();
+			var csv = new CsvParser.CsvReader(s, System.Text.Encoding.UTF8);
+			while (csv.MoveNext()) {
+				var row = csv.Current;
+				for (int i = 0; i < row.Count; i++)
+				{
+					var str = row[i];
+				}
+			} 
+		}			
+
 		// BenchmarkDotnet refuses to load this assembly, not sure why
 		//[Benchmark]
 		//public void Lumenworks()
@@ -134,6 +148,22 @@ namespace Sylvan.Data.Csv
 				}
 			}
 		}
+
+		[Benchmark]
+		public void FSharpData()
+		{
+			var tr = TestData.GetTextReader();
+			var csv = FSharp.Data.CsvFile.Load(tr);
+
+			foreach(var row in csv.Rows)
+			{
+				for (int i = 0; i < row.Columns.Length; i++)
+				{
+					var s = row.Columns[i];
+				}
+			}			
+		}
+
 
 		[Benchmark]
 		public void NReco()
