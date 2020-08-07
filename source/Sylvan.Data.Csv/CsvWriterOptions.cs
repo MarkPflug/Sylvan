@@ -30,7 +30,7 @@ namespace Sylvan.Data.Csv
 			this.OwnsWriter = true;
 			this.TrueString = bool.TrueString;
 			this.FalseString = bool.FalseString;
-			this.DateFormat = "yyyy-MM-dd HH:mm:ss.FFFFFFF";
+			this.DateFormat = "yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'FFFFFFF";
 		}
 
 		/// <summary>
@@ -44,7 +44,7 @@ namespace Sylvan.Data.Csv
 		public string FalseString { get; set; }
 
 		/// <summary>
-		/// The format string used when writing DateTime values. The default is null.
+		/// The format string used when writing DateTime values. The default is \"yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'FFFFFFF\".
 		/// </summary>
 		public string DateFormat { get; set; }
 
