@@ -864,12 +864,12 @@ namespace Sylvan.Data.Csv
 
 			int i = 0;
 			int d = 0;
-			while (d < len)
+			while (d < eLen)
 			{
 				var c = buffer[offset + i++];
 				if (inQuote)
 				{
-					if (c == escape)
+					if (c == escape && i + 1 < len)
 					{
 						c = buffer[offset + i++];
 						if (c != quote && c != escape)

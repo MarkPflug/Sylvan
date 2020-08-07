@@ -155,6 +155,19 @@ namespace Sylvan.Data.Csv
 				Assert.False(await csv.ReadAsync());
 			}
 		}
+
+		[Fact]
+		public void Quoted2()
+		{
+			var reader = new StringReader("a,b,c\n1,\"\"\"2\"\", (two)\",3");
+			var csv = CsvDataReader.Create(reader);
+			Assert.Equal(3, csv.FieldCount);
+			csv.Read();
+			Assert.Equal("1", csv.GetString(0));
+			Assert.Equal("\"2\", (two)", csv.GetString(1));
+			Assert.Equal("3", csv.GetString(2));
+		}
+
 		[Fact]
 		public void MissingHeaders()
 		{
