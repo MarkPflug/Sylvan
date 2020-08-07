@@ -8,7 +8,12 @@
     <Nullable>enable</Nullable>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
+  <PropertyGroup Condition="$(TargetFramework) == 'netstandard2.1'">
+    <DedupeStrings>True</DedupeStrings>
+    <DefineConstants>DEDUPE_STRINGS</DefineConstants>
+  </PropertyGroup>
   <ItemGroup>
     <Compile Include="../Sylvan.Data/SchemaTable.cs" />
+    <Compile Condition="$(DedupeStrings) == 'True'" Include="../Sylvan.Common/StringPool.cs" />
   </ItemGroup>
 </Project>

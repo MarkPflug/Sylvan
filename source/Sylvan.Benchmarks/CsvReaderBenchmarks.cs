@@ -1,5 +1,6 @@
 ﻿using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Jobs;
+using FlatFiles;
 using Microsoft.VisualBasic.FileIO;
 using System;
 using System.Data;
@@ -202,6 +203,21 @@ namespace Sylvan.Data.Csv
 		{
 			using var tr = TestData.GetTextReader();
 			using var dr = await CsvDataReader.CreateAsync(tr);
+			while (await dr.ReadAsync())
+			{
+				for (int i = 0; i < dr.FieldCount; i++)
+				{
+					var s = dr.GetString(i);
+				}
+			}
+		}
+
+		[Benchmark]
+		public async Task SylvanDeDupe()
+		{
+			using var tr = TestData.GetTextReader();
+			var opts = new CsvDataReaderOptions { PoolStrings = true };
+			using var dr = await CsvDataReader.CreateAsync(tr, opts);
 			while (await dr.ReadAsync())
 			{
 				for (int i = 0; i < dr.FieldCount; i++)

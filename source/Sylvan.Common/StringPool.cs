@@ -4,13 +4,12 @@ using System.Runtime.CompilerServices;
 
 namespace Sylvan
 {
-	public interface IStringPool
+	sealed partial class StringPool
 	{
-		string GetString(ReadOnlySpan<char> str);
-	}
+		// This is a greatly-simplified HashSet<string> that only allows additions.
+		// and accepts ReadOnlySpan<char> instead of string.
 
-	sealed partial class StringPool : IStringPool
-	{
+		// An extremely simple, and hopefully fast, hash algorithm.
 		static uint GetHashCode(ReadOnlySpan<char> str)
 		{
 			uint hash = 0;
@@ -21,32 +20,39 @@ namespace Sylvan
 			return hash;
 		}
 
+		bool checkIntern;
 		int[] buckets;
 		Entry[] entries;
 
+#if TARGET_64BIT
+        ulong fastModMultiplier;
+#endif
 		int count;
-		int freeList;
-		int freeCount;
+		public StringPool() : this(32, false)
+		{
 
-		const int StartOfFreeList = -3;
+		}
 
-		public StringPool(int capacity)
+		public StringPool(int capacity) : this(capacity, false)
+		{
+
+		}
+
+		public StringPool(int capacity, bool checkIntern)
 		{
 			int size = GetPrime(capacity);
 			this.buckets = new int[size];
 			this.entries = new Entry[size];
+			this.checkIntern = checkIntern;
 
-			// Assign member variables after both arrays allocated to guard against corruption from OOM if second fails
-			freeList = -1;
 #if TARGET_64BIT
-            fastModMultiplier = HashHelpers.GetFastModMultiplier((uint)size);
+            this.fastModMultiplier = GetFastModMultiplier((uint)size);
 #endif
 		}
 
 		public string GetString(ReadOnlySpan<char> str)
 		{
 			var entries = this.entries;
-
 			var hashCode = GetHashCode(str);
 
 			uint collisionCount = 0;
@@ -70,44 +76,32 @@ namespace Sylvan
 				}
 			}
 
-			int index;
-			if (this.freeCount > 0)
+			int count = this.count;
+			if (count == entries.Length)
 			{
-				index = this.freeList;
-				//Debug.Assert((StartOfFreeList - entries[_freeList].next) >= -1, "shouldn't overflow because `next` cannot underflow");
-				this.freeList = StartOfFreeList - entries[this.freeList].next;
-				this.freeCount--;
+				entries = Resize();
+				bucket = ref GetBucket(hashCode);
 			}
-			else
-			{
-				int count = this.count;
-				if (count == entries.Length)
-				{
-					Resize();
-					bucket = ref GetBucket(hashCode);
-				}
-				index = count;
-				this.count = count + 1;
-				entries = this.entries;
-			}
+			int index = count;
+			this.count = count + 1;
 
 			var stringValue = str.ToString();
+			if (checkIntern)
+				stringValue = string.IsInterned(stringValue);
 			ref Entry entry = ref entries![index];
 			entry.hashCode = hashCode;
 			entry.next = bucket - 1; // Value in _buckets is 1-based
 			entry.str = stringValue;
-			bucket = index + 1;		
+
+			bucket = index + 1; // bucket is a ref
 
 			return stringValue;
 		}
 
-		void Resize()
+		Entry[] Resize()
 		{
-			Resize(ExpandPrime(this.count));
-		}
+			var newSize = ExpandPrime(this.count);
 
-		void Resize(int newSize)
-		{
 			Debug.Assert(newSize >= this.entries.Length);
 
 			var entries = new Entry[newSize];
@@ -118,7 +112,7 @@ namespace Sylvan
 			// Assign member variables after both arrays allocated to guard against corruption from OOM if second fails
 			this.buckets = new int[newSize];
 #if TARGET_64BIT
-            _fastModMultiplier = GetFastModMultiplier((uint)newSize);
+            this.fastModMultiplier = GetFastModMultiplier((uint)newSize);
 #endif
 			for (int i = 0; i < count; i++)
 			{
@@ -131,6 +125,7 @@ namespace Sylvan
 			}
 
 			this.entries = entries;
+			return entries;
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -176,7 +171,7 @@ namespace Sylvan
 		// h1(key) + i*h2(key), 0 <= i < size.  h2 and the size must be relatively prime.
 		// We prefer the low computation costs of higher prime numbers over the increased
 		// memory allocation of a fixed prime number i.e. when right sizing a HashSet.
-		private static readonly int[] s_primes =
+		static readonly int[] Primes =
 		{
 			3, 7, 11, 17, 23, 29, 37, 47, 59, 71, 89, 107, 131, 163, 197, 239, 293, 353, 431, 521, 631, 761, 919,
 			1103, 1327, 1597, 1931, 2333, 2801, 3371, 4049, 4861, 5839, 7013, 8419, 10103, 12143, 14591,
@@ -204,7 +199,7 @@ namespace Sylvan
 		{
 			if (min < 0) throw new ArgumentOutOfRangeException(nameof(min));
 
-			foreach (int prime in s_primes)
+			foreach (int prime in Primes)
 			{
 				if (prime >= min)
 					return prime;

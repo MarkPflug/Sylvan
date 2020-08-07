@@ -83,6 +83,10 @@ namespace Sylvan.Data.Csv
 		readonly char escape;
 		readonly bool ownsReader;
 
+#if DEDUPE_STRINGS
+		readonly bool poolStrings;
+		readonly StringPool? stringPool;
+#endif
 		readonly CultureInfo culture;
 
 		readonly TextReader reader;
@@ -189,6 +193,13 @@ namespace Sylvan.Data.Csv
 			this.columns = Array.Empty<CsvColumn>();
 			this.culture = options.Culture;
 			this.ownsReader = options.OwnsReader;
+#if DEDUPE_STRINGS
+			this.poolStrings = options.PoolStrings;
+			this.stringPool = 
+				poolStrings
+				? new StringPool()
+				: null;
+#endif
 		}
 
 		async Task InitializeAsync(ICsvSchemaProvider? schema)
@@ -814,7 +825,19 @@ namespace Sylvan.Data.Csv
 			if (ordinal >= 0 && ordinal < curFieldCount)
 			{
 				var (b, o, l) = GetField(ordinal);
-				return l == 0 ? string.Empty : new string(b, o, l);
+				
+				if (l == 0) return string.Empty;
+
+#if DEDUPE_STRINGS
+
+				return
+					this.stringPool != null
+					? stringPool.GetString(b.AsSpan().Slice(o, l))
+					: new string(b, o, l);
+			
+#else
+				return new string(b, o, l);
+#endif
 			}
 			return string.Empty;
 		}

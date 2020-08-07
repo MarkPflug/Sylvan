@@ -34,7 +34,19 @@ namespace Sylvan.Data.Csv
 			this.TrueString = bool.TrueString;
 			this.FalseString = bool.FalseString;
 			this.DateFormat = null;
+#if DEDUPE_STRINGS
+			this.PoolStrings = false;
+#endif
 		}
+
+#if DEDUPE_STRINGS
+
+		/// <summary>
+		/// Specifies whether to de-dupe strings when reading from the csv data. Defaults to false.
+		/// </summary>
+		public bool PoolStrings { get; set; }
+
+#endif
 
 		/// <summary>
 		/// The string which represents true values when reading boolean. Defaults to string.TrueString.
