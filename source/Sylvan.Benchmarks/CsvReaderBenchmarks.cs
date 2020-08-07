@@ -14,6 +14,8 @@ namespace Sylvan.Data.Csv
 	[MemoryDiagnoser]
 	public class CsvReaderBenchmarks
 	{
+		const int BufferSize = 0x4000;
+
 		[Benchmark(Baseline = true)]
 		public void CsvHelper()
 		{
@@ -25,6 +27,36 @@ namespace Sylvan.Data.Csv
 				for (int i = 0; i < dr.FieldCount; i++)
 				{
 					var s = dr.GetString(i);
+				}
+			}
+		}
+
+		[Benchmark]
+		public void FastCsvParser()
+		{
+			var s = TestData.GetUtf8Stream();
+			var csv = new CsvParser.CsvReader(s, System.Text.Encoding.UTF8);
+			while (csv.MoveNext())
+			{
+				var row = csv.Current;
+				for (int i = 0; i < row.Count; i++)
+				{
+					var str = row[i];
+				}
+			}
+		}
+
+		[Benchmark]
+		public void CsvBySteve()
+		{
+			var s = TestData.GetUtf8Stream();
+			var rows = global::Csv.CsvReader.ReadFromStream(s);
+
+			foreach (var row in rows)
+			{
+				for (int i = 0; i < row.ColumnCount; i++)
+				{
+					var str = row[i];
 				}
 			}
 		}
@@ -62,19 +94,19 @@ namespace Sylvan.Data.Csv
 			}
 		}
 
-		[Benchmark]
-		public void NLightCsv()
-		{
-			var tr = TestData.GetTextReader();
-			var dr = (IDataReader)new NLight.IO.Text.DelimitedRecordReader(tr, 0x10000);
-			while (dr.Read())
-			{
-				for (int i = 0; i < dr.FieldCount; i++)
-				{
-					var s = dr.GetString(i);
-				}
-			}
-		}
+		//[Benchmark]
+		//public void NLightCsv()
+		//{
+		//	var tr = TestData.GetTextReader();
+		//	var dr = (IDataReader)new NLight.IO.Text.DelimitedRecordReader(tr, 0x10000);
+		//	while (dr.Read())
+		//	{
+		//		for (int i = 0; i < dr.FieldCount; i++)
+		//		{
+		//			var s = dr.GetString(i);
+		//		}
+		//	}
+		//}
 
 		[Benchmark]
 		public void VisualBasic()
@@ -134,11 +166,27 @@ namespace Sylvan.Data.Csv
 		}
 
 		[Benchmark]
+		public void FSharpData()
+		{
+			var tr = TestData.GetTextReader();
+			var csv = FSharp.Data.CsvFile.Load(tr);
+
+			foreach (var row in csv.Rows)
+			{
+				for (int i = 0; i < row.Columns.Length; i++)
+				{
+					var s = row.Columns[i];
+				}
+			}
+		}
+
+
+		[Benchmark]
 		public void NReco()
 		{
 			var tr = TestData.GetTextReader();
 			var dr = new NReco.Csv.CsvReader(tr);
-			dr.BufferSize = 0x10000;
+			dr.BufferSize = BufferSize;
 			dr.Read(); // read the headers
 			while (dr.Read())
 			{
@@ -201,9 +249,9 @@ namespace Sylvan.Data.Csv
 		[Benchmark]
 		public void NRecoSelect()
 		{
-			var tr = TestData.GetTextReader();
+			using var tr = TestData.GetTextReader();
 			var dr = new NReco.Csv.CsvReader(tr);
-			dr.BufferSize = 0x10000;
+			dr.BufferSize = BufferSize;
 			dr.Read(); // read the headers
 			while (dr.Read())
 			{
@@ -214,11 +262,11 @@ namespace Sylvan.Data.Csv
 		}
 
 		[Benchmark]
-		public async Task SylvanSelect()
+		public void SylvanSelect()
 		{
-			var tr = TestData.GetTextReader();
-			var dr = await CsvDataReader.CreateAsync(tr);
-			while (await dr.ReadAsync())
+			using var tr = TestData.GetTextReader();
+			using var dr = CsvDataReader.Create(tr);
+			while (dr.Read())
 			{
 				var id = dr.GetInt32(0);
 				var name = dr.GetString(10);

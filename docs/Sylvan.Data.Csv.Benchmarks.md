@@ -18,17 +18,21 @@ Runtime=.NET Core 3.1
 
 These benchmarks use a large-ish, 3254 rows by 85 columns, CSV file.
 
-|       Method |       Mean | Ratio |    Allocated |
-|------------- |-----------:|------:|-------------:|
-|    CsvHelper |  23.693 ms |  1.00 |  27257.70 KB |
-|  NaiveBroken |   4.673 ms |  0.19 |  11266.88 KB |
-|    NLightCsv |  13.910 ms |  0.58 |   7323.29 KB |
-|  VisualBasic | 105.455 ms |  4.38 | 187061.38 KB |
-|     OleDbCsv | 167.427 ms |  6.96 |   7811.07 KB |
-|        NReco |   6.491 ms |  0.27 |   7310.72 KB |
-|       Sylvan |   6.033 ms |  0.25 |   7319.43 KB |
-|  NRecoSelect |   2.732 ms |  0.11 |    567.14 KB |
-| SylvanSelect |   2.796 ms |  0.12 |    372.31 KB |
+|        Method |       Mean | Ratio |    Allocated |
+|-------------- |-----------:|------:|-------------:|
+|     CsvHelper |  22.640 ms |  1.00 |  27257.75 KB |
+|   NaiveBroken |   4.535 ms |  0.20 |  11266.87 KB |
+|    FSharpData |  14.490 ms |  0.64 |  62950.06 KB |
+|   VisualBasic | 103.258 ms |  4.56 | 187061.14 KB |
+|      OleDbCsv | 189.672 ms |  8.38 |   7811.05 KB |
+| FastCsvParser |   9.868 ms |  0.44 |   7548.92 KB |
+|    CsvBySteve | 170.566 ms |  7.54 |  90645.21 KB |
+|  FlatFilesCsv |  32.634 ms |  1.44 |   22545.5 KB |
+|         NReco |   6.221 ms |  0.27 |   7214.94 KB |
+|        Sylvan |   5.815 ms |  0.26 |    7228.6 KB |
+|  SylvanSchema |   6.477 ms |  0.29 |    857.77 KB |
+|   NRecoSelect |   2.683 ms |  0.12 |    471.01 KB |
+|  SylvanSelect |   2.768 ms |  0.12 |    281.51 KB |
 
 
 ## CSV Writing
@@ -58,12 +62,8 @@ This measures the naive approach of using `TextReader.ReadLine` and `string.Spli
 
 Likewise, the writing test is performed by writing commas and newlines, but ignoring escaping.
 
-### NLightCsv
-Sébastian Lorion's [NLight](https://github.com/slorion/nlight) library contains a high-performance CSV parser. Sébastian is also the author of the [Lumenworks CSV](https://www.codeproject.com/Articles/9258/A-Fast-CSV-Reader) parser, which has been around for 15 years now. Lumenworks has been my go-to for CSV parsing for many years.
-
-NLight appears to be as feature rich as Lumenworks, and is also a bit faster.
-
-BenchmarkDotnet, unfortunatley, doesn't seem to cooperate with the Lumenworks library for some reason, so it isn't included in the results, but I've found it ot be faster than CsvHelper, but slower than Nlight.
+### FSharp.Data
+The FSharp.Data library works perfectly well with C# of course, it also happens to be pretty fast.
 
 ### VisualBasic
 This is `TextFieldParser` included in the Microsoft.VisualBasic library that ships with dotNET. I include this, because it is the only option included as part of the framework libraries.
@@ -71,17 +71,33 @@ This is `TextFieldParser` included in the Microsoft.VisualBasic library that shi
 ### OleDbCsv
 This benchmark uses the MS Access database driver via OleDb (Windows only, requires a separate install). 
 It does do something that no other parser appears to support: it will try to detect the data types of the columns in the CSV file. 
-My understanding is that this is done by analyzing the first N rows of the CSV. That comes at the cost of being the slowest CSV parser, by far. 
-I've had negative experiences with this feature mis-detecting a column type, when the errant values appear later in a file; the result is usually an exception at runtime.
+My understanding is that this is done by analyzing the first N rows of the CSV. That comes at the cost of being one of the slowest CSV parsers tested. 
+I've had negative experiences with this feature mis-detecting a column type, when the errant values appear later in a file; the result is usually an exception being thrown.
 I suspect the memory metric is misrepresented, because it uses an unmanaged driver so it might not be detectable by the BenchmarkDotNet memory analyzer.
 
+### FastCsvParser
+As the name suggests, it is pretty fast.
+
+### CsvBySteve
+This is the `Csv` nuget package, by "Steve".
+
+### FlatFilesCsv
+The csv parser from the `FlatFiles` nuget package.
+
 ### NReco
-Vitaliy Fedorchenko's [NReco.Csv](https://github.com/nreco/csv) was the first CSV library that I found that was close to the performance of Sylvan.Data.Csv. In fact, when I first benchmarked it, it beat Sylvan, which encouraged me to optimize one last hot spot to take the lead. It uses an incredibly similar strategy for parsing to the one I'd used for Sylvan.
+Vitaliy Fedorchenko's [NReco.Csv](https://github.com/nreco/csv) is an extremely fast CSV parser. 
+It uses a very similar technique to Sylvan to attain the performance it does.
 
 ### Sylvan
 The Sylvan.Data.Csv library, is currently the fastest available CSV parser for dotNET that I'm aware of.
 
 Sylvan offers two CSV writing APIs: `CsvWriter` which offers raw writing capabilities similar to other libraries, and `CsvDataWriter` which writes `DbDataReader` data to a `CsvWriter`.
+
+### SylvanSchema
+This measures using the Sylvan CsvDataReader with a provided schema. 
+The schema allows parsing primitive values directly out of the text buffer.
+This adds a slight amount of time to parse the primitive values, but this is time which would be spent in `Parse` methods anyway if consuming only strings.
+This also reduces allocations, since it avoid producing intermediate strings.
 
 ### *Select
 The approach that Sylvan and NReco use for processing CSV make them even more efficient when reading only a subset of the columns in a file. These benchmarks measures reading only 3 of the 85 columns.
