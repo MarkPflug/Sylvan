@@ -46,7 +46,7 @@ namespace Sylvan.Data.Csv
 		/// <summary>
 		/// The format string used when writing DateTime values. The default is \"yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'FFFFFFF\".
 		/// </summary>
-		public string DateFormat { get; set; }
+		public string? DateFormat { get; set; }
 
 		/// <summary>
 		/// The delimiter to use between fields. The default is ','.

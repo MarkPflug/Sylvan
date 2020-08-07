@@ -18,7 +18,7 @@ namespace Sylvan.Data.Csv
 		readonly TextWriter writer;
 		readonly string trueString;
 		readonly string falseString;
-		readonly string dateTimeFormat;
+		readonly string? dateTimeFormat;
 		readonly char delimiter;
 		readonly char quote;
 		readonly char escape;
@@ -277,7 +277,11 @@ namespace Sylvan.Data.Csv
 			}
 			return WriteResult.NeedsFlush;
 #else
-			var str = value.ToString(culture);
+			var str =
+				dateTimeFormat == null
+				? value.ToString(culture)
+				: value.ToString(dateTimeFormat, culture);
+
 			return WriteValue(str);
 #endif
 		}
@@ -313,7 +317,11 @@ namespace Sylvan.Data.Csv
 			{
 				return WriteValueInvariant(value);
 			}
-			var str = value.ToString(culture);
+			var str =
+				this.dateTimeFormat == null
+				? value.ToString(culture)
+				: value.ToString(dateTimeFormat, culture);
+				
 			return WriteValue(str);
 		}
 
