@@ -18,6 +18,8 @@ namespace Sylvan.Data.Csv
 	/// </summary>
 	public sealed class CsvDataReader : DbDataReader, IDbColumnSchemaGenerator
 	{
+		static readonly char[] AutoDetectDelimiters = new[] { ',', '\t', ';', '|' };
+
 		struct Enumerator : IEnumerator
 		{
 			readonly CsvDataReader reader;
@@ -78,38 +80,32 @@ namespace Sylvan.Data.Csv
 			Incomplete,
 		}
 
-		readonly char delimiter;
+		readonly TextReader reader;
+		bool hasRows;
+		readonly char[] buffer;
+		int idx;		
+		int bufferEnd;
+		int recordStart;
+		bool atEndOfText;
+		State state;
+		int fieldCount; // fields in the header (or firstRow)
+		int curFieldCount; // fields in current row
+		int rowNumber;
+		byte[]? scratch;
+		FieldInfo[] fieldInfos;
+		readonly Dictionary<string, int> headerMap;
+		CsvColumn[] columns;
+
+		// options:
+		char delimiter;
 		readonly char quote;
 		readonly char escape;
 		readonly bool ownsReader;
-
+		bool autoDetectDelimiter;
 		readonly CultureInfo culture;
-
-		readonly TextReader reader;
-		bool hasRows;
-
-		int recordStart;
-		int bufferEnd;
-		int idx;
-
-		int fieldCount; // fields in the header (or firstRow)
-
-		int curFieldCount; // fields in current row
-
-		int rowNumber;
-		
-		readonly char[] buffer;
-		byte[]? scratch;
-		FieldInfo[] fieldInfos;
-
-		bool atEndOfText;
 		readonly string? dateFormat;
 		readonly string? trueString, falseString;
 		readonly bool hasHeaders;
-		readonly Dictionary<string, int> headerMap;
-
-		CsvColumn[] columns;
-		State state;
 
 		/// <summary>
 		/// Creates a new CsvDataReader.
@@ -189,11 +185,18 @@ namespace Sylvan.Data.Csv
 			this.columns = Array.Empty<CsvColumn>();
 			this.culture = options.Culture;
 			this.ownsReader = options.OwnsReader;
+			this.autoDetectDelimiter = options.AutoDetect;
 		}
 
 		async Task InitializeAsync(ICsvSchemaProvider? schema)
 		{
 			state = State.Initializing;
+			if (autoDetectDelimiter)
+			{
+				await FillBufferAsync();
+				var c = DetectDelimiter();
+				this.delimiter = c;
+			}
 			// if the user specified that there are headers
 			// read them, and use them to determine fieldCount.
 			if (hasHeaders)
@@ -212,6 +215,37 @@ namespace Sylvan.Data.Csv
 			// and support calling HasRows before Read is first called.
 			this.hasRows = await NextRecordAsync();
 			InitializeSchema(schema);
+		}
+
+		char DetectDelimiter()
+		{
+			int[] counts = new int[AutoDetectDelimiters.Length];
+			for (int i = 0; i < bufferEnd; i++)
+			{
+				var c = buffer[i];
+				for(int d = 0; d < AutoDetectDelimiters.Length; d++)
+				{
+					if(c == AutoDetectDelimiters[d])
+					{
+						counts[d]++;
+					}
+					if (c == '\n' || c == '\r')
+						goto done;
+
+				}
+			}
+		done:
+			int maxIdx = 0;
+			int maxCount = 0;
+			for (int i = 0; i < counts.Length; i++)
+			{
+				if (counts[i] > maxCount)
+				{
+					maxCount = counts[i];
+					maxIdx = i;
+				}
+			}
+			return AutoDetectDelimiters[maxIdx];
 		}
 
 		void InitializeSchema(ICsvSchemaProvider? schema)
@@ -548,7 +582,7 @@ namespace Sylvan.Data.Csv
 #endif
 			if (falseString == null) return false;
 			if (trueString == null) return true;
-			
+
 			throw new FormatException();
 		}
 
@@ -693,7 +727,8 @@ namespace Sylvan.Data.Csv
 			return DateTime.Parse(this.GetFieldSpan(ordinal), culture);
 #else
 			var dateStr = this.GetString(ordinal);
-			if (this.dateFormat != null && DateTime.TryParseExact(dateStr, this.dateFormat, culture, DateTimeStyles.None, out var dt)) {
+			if (this.dateFormat != null && DateTime.TryParseExact(dateStr, this.dateFormat, culture, DateTimeStyles.None, out var dt))
+			{
 				return dt;
 			}
 			return DateTime.Parse(dateStr, culture);

@@ -1,4 +1,8 @@
 # Sylvan.Data.Csv Release Notes
+_0.6.3_
+
+- Add AutoDetect delimiter feature.
+
 _0.6.2_
 
 - Fix a bug introduced in 0.6.1 refactoring.
