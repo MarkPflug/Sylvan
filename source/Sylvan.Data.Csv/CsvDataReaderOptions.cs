@@ -38,19 +38,13 @@ namespace Sylvan.Data.Csv
 			this.DateFormat = null;
 
 			this.AutoDetect = true;
-#if DEDUPE_STRINGS
 			this.StringPool = null;
-#endif
 		}
-
-#if DEDUPE_STRINGS
 
 		/// <summary>
 		/// A string poll that allows de-duping strings.
 		/// </summary>
 		public IStringPool? StringPool { get; set; }
-
-#endif
 
 		/// <summary>
 		/// Enables auto detecting the delimiter used in the CSV data. Defaults to true.
@@ -146,7 +140,6 @@ namespace Sylvan.Data.Csv
 				Delimiter == Quote ||
 				BufferSize < MinBufferSize ||
 				StringComparer.OrdinalIgnoreCase.Equals(TrueString, FalseString);
-			;
 			if (invalid)
 				throw new CsvConfigurationException();
 		}

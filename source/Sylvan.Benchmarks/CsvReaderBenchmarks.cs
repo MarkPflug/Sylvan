@@ -242,7 +242,7 @@ namespace Sylvan.Data.Csv
 		public async Task SylvanDeDupe()
 		{
 			using var tr = TestData.GetTextReader();
-			var pool = new Csv::Sylvan.StringPool();
+			var pool = new Csv::Sylvan.StringPoolFast();
 			var opts = new CsvDataReaderOptions { StringPool = pool };
 			using var dr = await CsvDataReader.CreateAsync(tr, opts);
 			while (await dr.ReadAsync())

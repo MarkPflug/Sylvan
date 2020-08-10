@@ -1,6 +1,5 @@
 ﻿using System;
 
-#if DEDUPE_STRINGS
 
 namespace Sylvan.Data.Csv
 {
@@ -12,9 +11,7 @@ namespace Sylvan.Data.Csv
 		/// <summary>
 		/// 
 		/// </summary>
-		/// <param name="str"></param>
-		/// <returns></returns>
-		public string? GetString(ReadOnlySpan<char> str);
+		string? GetString(char[] buffer, int offset, int length);
 	}
 }
 
@@ -37,4 +34,3 @@ namespace Sylvan
 	}
 }
 
-#endif

@@ -106,9 +106,7 @@ namespace Sylvan.Data.Csv
 		readonly string? dateFormat;
 		readonly string? trueString, falseString;
 		readonly bool hasHeaders;
-#if DEDUPE_STRINGS
 		readonly IStringPool? stringPool;
-#endif
 
 		/// <summary>
 		/// Creates a new CsvDataReader.
@@ -189,9 +187,7 @@ namespace Sylvan.Data.Csv
 			this.culture = options.Culture;
 			this.ownsReader = options.OwnsReader;
 			this.autoDetectDelimiter = options.AutoDetect;
-#if DEDUPE_STRINGS
 			this.stringPool = options.StringPool;
-#endif
 		}
 
 		async Task InitializeAsync(ICsvSchemaProvider? schema)
@@ -859,19 +855,14 @@ namespace Sylvan.Data.Csv
 
 				if (l == 0) return string.Empty;
 
-#if DEDUPE_STRINGS
 				if (stringPool == null)
 				{
 					return new string(b, o, l);
 					
 				} else
 				{
-					return stringPool?.GetString(b.AsSpan().Slice(o, l)) ?? new string(b, o, l);
+					return stringPool.GetString(b, o, l) ?? new string(b, o, l);
 				}
-			
-#else
-				return new string(b, o, l);
-#endif
 			}
 			return string.Empty;
 		}

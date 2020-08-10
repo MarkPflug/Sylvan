@@ -14,9 +14,7 @@ namespace Sylvan
 		/// <summary>
 		/// Gets or adds a string that is equal to the given span.
 		/// </summary>
-		/// <param name="str">The sequence of characters.</param>
-		/// <returns>A string, or null.</returns>
-		string? GetString(ReadOnlySpan<char> str);
+		string? GetString(char[] buffer, int offset, int length);
 	}
 
 	/// <summary>

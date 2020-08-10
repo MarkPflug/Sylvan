@@ -10,12 +10,13 @@ namespace Sylvan
 		// and accepts ReadOnlySpan<char> instead of string.
 
 		// An extremely simple, and hopefully fast, hash algorithm.
-		static uint GetHashCode(ReadOnlySpan<char> str)
+		static uint GetHashCode(char[] buffer, int offset, int length)
 		{
 			uint hash = 0;
-			for (int i = 0; i < str.Length; i++)
+			var o = offset;
+			for (int i = 0; i < length; i++)
 			{
-				hash = hash * 31 + str[i];
+				hash = hash * 31 + buffer[offset++];
 			}
 			return hash;
 		}
@@ -68,12 +69,13 @@ namespace Sylvan
 		/// <summary>
 		/// 
 		/// </summary>
-		/// <param name="str"></param>
-		/// <returns></returns>
-		public string GetString(ReadOnlySpan<char> str)
+		public string? GetString(char[] buffer, int offset, int length)
 		{
+			if (buffer == null) throw new ArgumentNullException(nameof(buffer));
+			if (length == 0) return string.Empty;
+
 			var entries = this.entries;
-			var hashCode = GetHashCode(str);
+			var hashCode = GetHashCode(buffer, offset, length);
 
 			uint collisionCount = 0;
 			ref int bucket = ref GetBucket(hashCode);
@@ -82,7 +84,7 @@ namespace Sylvan
 			while ((uint)i < (uint)entries.Length)
 			{
 				ref var e = ref entries[i];
-				if (e.hashCode == hashCode && MemoryExtensions.Equals(str, e.str.AsSpan(), StringComparison.Ordinal))
+				if (e.hashCode == hashCode && MemoryExtensions.Equals(buffer.AsSpan().Slice(offset, length), e.str.AsSpan(), StringComparison.Ordinal))
 				{
 					return e.str;
 				}
@@ -92,7 +94,8 @@ namespace Sylvan
 				collisionCount++;
 				if (collisionCount > (uint)entries.Length)
 				{
-					throw new InvalidOperationException();
+					// protects against malicious inputs
+					return null;
 				}
 			}
 
@@ -105,7 +108,7 @@ namespace Sylvan
 			int index = count;
 			this.count = count + 1;
 
-			var stringValue = str.ToString();
+			var stringValue = new string(buffer, offset, length);
 			if (checkIntern)
 				stringValue = string.IsInterned(stringValue);
 			ref Entry entry = ref entries![index];
