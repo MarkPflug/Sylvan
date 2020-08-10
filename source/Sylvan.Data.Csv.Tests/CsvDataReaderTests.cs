@@ -621,11 +621,7 @@ namespace Sylvan.Data.Csv
 		public void AutoDetect1()
 		{
 			using var tr = new StringReader("A;B;C;D;E\n1;2;3;4;5\n");
-			var opts = new CsvDataReaderOptions()
-			{
-				AutoDetectDelimiter = true
-			};
-			var csv = CsvDataReader.Create(tr, opts);
+			var csv = CsvDataReader.Create(tr);
 			Assert.Equal(5, csv.FieldCount);
 			Assert.Equal("A", csv.GetName(0));
 			Assert.Equal("D", csv.GetName(3));
@@ -635,11 +631,7 @@ namespace Sylvan.Data.Csv
 		public void AutoDetect2()
 		{
 			using var tr = new StringReader("A|B,(b)|C|D|E\n1|2|3|4|5\n");
-			var opts = new CsvDataReaderOptions()
-			{
-				AutoDetectDelimiter = true
-			};
-			var csv = CsvDataReader.Create(tr, opts);
+			var csv = CsvDataReader.Create(tr);
 			Assert.Equal(5, csv.FieldCount);
 			Assert.Equal("A", csv.GetName(0));
 			Assert.Equal("D", csv.GetName(3));

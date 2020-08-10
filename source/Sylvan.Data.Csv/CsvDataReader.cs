@@ -18,7 +18,7 @@ namespace Sylvan.Data.Csv
 	/// </summary>
 	public sealed class CsvDataReader : DbDataReader, IDbColumnSchemaGenerator
 	{
-		static readonly char[] AutoDetectDelimiters = new[] { ',', '\t', ';', ':', '|' };
+		static readonly char[] AutoDetectDelimiters = new[] { ',', '\t', ';', '|' };
 
 		struct Enumerator : IEnumerator
 		{
@@ -80,40 +80,32 @@ namespace Sylvan.Data.Csv
 			Incomplete,
 		}
 
+		readonly TextReader reader;
+		bool hasRows;
+		readonly char[] buffer;
+		int idx;		
+		int bufferEnd;
+		int recordStart;
+		bool atEndOfText;
+		State state;
+		int fieldCount; // fields in the header (or firstRow)
+		int curFieldCount; // fields in current row
+		int rowNumber;
+		byte[]? scratch;
+		FieldInfo[] fieldInfos;
+		readonly Dictionary<string, int> headerMap;
+		CsvColumn[] columns;
+
+		// options:
 		char delimiter;
 		readonly char quote;
 		readonly char escape;
 		readonly bool ownsReader;
-
 		bool autoDetectDelimiter;
-
 		readonly CultureInfo culture;
-
-		readonly TextReader reader;
-		bool hasRows;
-
-		int recordStart;
-		int bufferEnd;
-		int idx;
-
-		int fieldCount; // fields in the header (or firstRow)
-
-		int curFieldCount; // fields in current row
-
-		int rowNumber;
-
-		readonly char[] buffer;
-		byte[]? scratch;
-		FieldInfo[] fieldInfos;
-
-		bool atEndOfText;
 		readonly string? dateFormat;
 		readonly string? trueString, falseString;
 		readonly bool hasHeaders;
-		readonly Dictionary<string, int> headerMap;
-
-		CsvColumn[] columns;
-		State state;
 
 		/// <summary>
 		/// Creates a new CsvDataReader.
@@ -193,7 +185,7 @@ namespace Sylvan.Data.Csv
 			this.columns = Array.Empty<CsvColumn>();
 			this.culture = options.Culture;
 			this.ownsReader = options.OwnsReader;
-			this.autoDetectDelimiter = options.AutoDetectDelimiter;
+			this.autoDetectDelimiter = options.AutoDetect;
 		}
 
 		async Task InitializeAsync(ICsvSchemaProvider? schema)
@@ -231,26 +223,15 @@ namespace Sylvan.Data.Csv
 			for (int i = 0; i < bufferEnd; i++)
 			{
 				var c = buffer[i];
-				switch (c)
+				for(int d = 0; d < AutoDetectDelimiters.Length; d++)
 				{
-					case ',':
-						counts[0]++;
-						break;
-					case '\t':
-						counts[1]++;
-						break;
-					case ';':
-						counts[2]++;
-						break;
-					case ':':
-						counts[3]++;
-						break;
-					case '|':
-						counts[4]++;
-						break;
-					case '\n':
-					case '\r':
+					if(c == AutoDetectDelimiters[d])
+					{
+						counts[d]++;
+					}
+					if (c == '\n' || c == '\r')
 						goto done;
+
 				}
 			}
 		done:
