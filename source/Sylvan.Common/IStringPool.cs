@@ -25,4 +25,11 @@ namespace Sylvan
 	public partial class StringPool : IStringPool
 	{
 	}
+
+	/// <summary>
+	/// An IStringPool implementation.
+	/// </summary>
+	public partial class StringPoolFast : IStringPool
+	{
+	}
 }

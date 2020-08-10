@@ -15,5 +15,6 @@
   <ItemGroup>
     <Compile Include="../Sylvan.Data/SchemaTable.cs" />
     <Compile Condition="$(DedupeStrings) == 'True'" Include="../Sylvan.Common/StringPool.cs" />
+    <Compile Condition="$(DedupeStrings) == 'True'" Include="../Sylvan.Common/StringPoolFast.cs" />
   </ItemGroup>
 </Project>

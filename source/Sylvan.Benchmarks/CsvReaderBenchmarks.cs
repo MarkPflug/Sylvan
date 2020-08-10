@@ -1,21 +1,28 @@
-﻿using BenchmarkDotNet.Attributes;
+﻿extern alias Csv;
+
+using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Jobs;
 using FlatFiles;
 using Microsoft.VisualBasic.FileIO;
 using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Data.OleDb;
 using System.Globalization;
 using System.IO;
 using System.Threading.Tasks;
+using CsvDataReader = Csv::Sylvan.Data.Csv.CsvDataReader;
+using CsvDataReaderOptions = Csv::Sylvan.Data.Csv.CsvDataReaderOptions;
 
 namespace Sylvan.Data.Csv
 {
-	[SimpleJob(RuntimeMoniker.NetCoreApp31)]
+	[SimpleJob]
 	[MemoryDiagnoser]
 	public class CsvReaderBenchmarks
 	{
 		const int BufferSize = 0x4000;
+
+			
 
 		[Benchmark(Baseline = true)]
 		public void CsvHelper()
@@ -32,7 +39,7 @@ namespace Sylvan.Data.Csv
 			}
 		}
 
-		[Benchmark]
+		//[Benchmark]
 		public void FastCsvParser()
 		{
 			var s = TestData.GetUtf8Stream();
@@ -47,7 +54,7 @@ namespace Sylvan.Data.Csv
 			}
 		}
 
-		[Benchmark]
+		//[Benchmark]
 		public void CsvBySteve()
 		{
 			var s = TestData.GetUtf8Stream();
@@ -80,7 +87,7 @@ namespace Sylvan.Data.Csv
 		//	}
 		//}
 
-		[Benchmark]
+		//[Benchmark]
 		public void NaiveBroken()
 		{
 			var tr = TestData.GetTextReader();
@@ -109,7 +116,7 @@ namespace Sylvan.Data.Csv
 		//	}
 		//}
 
-		[Benchmark]
+		//[Benchmark]
 		public void VisualBasic()
 		{
 			var tr = TestData.GetTextReader();
@@ -126,7 +133,7 @@ namespace Sylvan.Data.Csv
 			}
 		}
 
-		[Benchmark]
+		//[Benchmark]
 		public void OleDbCsv()
 		{
 			//Requires: https://www.microsoft.com/en-us/download/details.aspx?id=54920
@@ -150,7 +157,7 @@ namespace Sylvan.Data.Csv
 			}
 		}
 
-		[Benchmark]
+		//[Benchmark]
 		public void FlatFilesCsv()
 		{
 			var tr = TestData.GetTextReader();
@@ -166,7 +173,7 @@ namespace Sylvan.Data.Csv
 			}
 		}
 
-		[Benchmark]
+		//[Benchmark]
 		public void FSharpData()
 		{
 			var tr = TestData.GetTextReader();
@@ -213,10 +220,30 @@ namespace Sylvan.Data.Csv
 		}
 
 		[Benchmark]
+		public async Task SylvanShare()
+		{
+			using var tr = TestData.GetTextReader();
+			using var dr = await CsvDataReader.CreateAsync(tr);
+			var hs = new HashSet<string>();
+			while (await dr.ReadAsync())
+			{
+				for (int i = 0; i < dr.FieldCount; i++)
+				{
+					var s = dr.GetString(i);
+					hs.Add(s);
+					
+				}
+			}
+		}
+
+#if NETCOREAPP3_1
+
+		[Benchmark]
 		public async Task SylvanDeDupe()
 		{
 			using var tr = TestData.GetTextReader();
-			var opts = new CsvDataReaderOptions { PoolStrings = true };
+			var pool = new Csv::Sylvan.StringPool();
+			var opts = new CsvDataReaderOptions { StringPool = pool };
 			using var dr = await CsvDataReader.CreateAsync(tr, opts);
 			while (await dr.ReadAsync())
 			{
@@ -227,18 +254,36 @@ namespace Sylvan.Data.Csv
 			}
 		}
 
+#endif
+
 		[Benchmark]
-		public async Task SylvanSchema()
+		public void SylvanSchema()
 		{
 			using var tr = TestData.GetTextReader();
-			using var dr = await CsvDataReader.CreateAsync(tr, new CsvDataReaderOptions { Schema = TestData.TestDataSchema });
+			using var dr = CsvDataReader.Create(tr, new CsvDataReaderOptions { Schema = TestData.TestDataSchema });
+			ProcessData(dr);
+		}
+
+#if NETCOREAPP3_1
+		[Benchmark]
+		public void SylvanSchemaDeDupe()
+		{
+			var pool = new Csv::Sylvan.StringPoolFast();
+			using var tr = TestData.GetTextReader();
+			using var dr = CsvDataReader.Create(tr, new CsvDataReaderOptions { Schema = TestData.TestDataSchema, StringPool = pool });
+			ProcessData(dr);
+		}
+
+#endif
+		static void ProcessData(CsvDataReader dr)
+		{
 			var types = new TypeCode[dr.FieldCount];
 
 			for (int i = 0; i < types.Length; i++)
 			{
 				types[i] = Type.GetTypeCode(dr.GetFieldType(i));
 			}
-			while (await dr.ReadAsync())
+			while (dr.Read())
 			{
 				for (int i = 0; i < dr.FieldCount; i++)
 				{
@@ -262,7 +307,7 @@ namespace Sylvan.Data.Csv
 			}
 		}
 
-		[Benchmark]
+		//[Benchmark]
 		public void NRecoSelect()
 		{
 			using var tr = TestData.GetTextReader();
@@ -277,7 +322,7 @@ namespace Sylvan.Data.Csv
 			}
 		}
 
-		[Benchmark]
+		//[Benchmark]
 		public void SylvanSelect()
 		{
 			using var tr = TestData.GetTextReader();

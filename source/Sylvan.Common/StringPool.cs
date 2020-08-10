@@ -28,28 +28,62 @@ namespace Sylvan
         ulong fastModMultiplier;
 #endif
 		int count;
+		long size;
+		int maxLen;
+
+		/// <summary>
+		/// Gets the number of strings in the pool.
+		/// </summary>
+		public int Count => count;
+
+		/// <summary>
+		/// Gets the total length of the strings in the pool.
+		/// </summary>
+		public long Size => size;
+
+		/// <summary>
+		/// Gets the length of the longest string in the pool;
+		/// </summary>
+		public int MaxLength => maxLen;
+
+		/// <summary>
+		/// 
+		/// </summary>
 		public StringPool() : this(32, false)
 		{
 
 		}
-
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="capacity"></param>
 		public StringPool(int capacity) : this(capacity, false)
 		{
 
 		}
-
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="capacity"></param>
+		/// <param name="checkIntern"></param>
 		public StringPool(int capacity, bool checkIntern)
 		{
 			int size = GetPrime(capacity);
 			this.buckets = new int[size];
 			this.entries = new Entry[size];
 			this.checkIntern = checkIntern;
+			this.maxLen = 0;
 
 #if TARGET_64BIT
             this.fastModMultiplier = GetFastModMultiplier((uint)size);
 #endif
 		}
 
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="str"></param>
+		/// <returns></returns>
 		public string GetString(ReadOnlySpan<char> str)
 		{
 			var entries = this.entries;
@@ -94,6 +128,8 @@ namespace Sylvan
 			entry.str = stringValue;
 
 			bucket = index + 1; // bucket is a ref
+
+			this.size += stringValue.Length;
 
 			return stringValue;
 		}
@@ -151,12 +187,10 @@ namespace Sylvan
 			public string str;
 		}
 
-		public const uint HashCollisionThreshold = 100;
-
 		// This is the maximum prime smaller than Array.MaxArrayLength
-		public const int MaxPrimeArrayLength = 0x7FEFFFFD;
+		const int MaxPrimeArrayLength = 0x7FEFFFFD;
 
-		public const int HashPrime = 101;
+		const int HashPrime = 101;
 
 		// Table of prime numbers to use as hash table sizes.
 		// A typical resize algorithm would pick the smallest prime number in this array
@@ -180,7 +214,7 @@ namespace Sylvan
 			1674319, 2009191, 2411033, 2893249, 3471899, 4166287, 4999559, 5999471, 7199369
 		};
 
-		public static bool IsPrime(int candidate)
+		static bool IsPrime(int candidate)
 		{
 			if ((candidate & 1) != 0)
 			{
@@ -195,7 +229,7 @@ namespace Sylvan
 			return candidate == 2;
 		}
 
-		public static int GetPrime(int min)
+		static int GetPrime(int min)
 		{
 			if (min < 0) throw new ArgumentOutOfRangeException(nameof(min));
 
@@ -215,7 +249,7 @@ namespace Sylvan
 		}
 
 		// Returns size of hashtable to grow to.
-		public static int ExpandPrime(int oldSize)
+		static int ExpandPrime(int oldSize)
 		{
 			int newSize = 2 * oldSize;
 
@@ -232,13 +266,13 @@ namespace Sylvan
 
 		/// <summary>Returns approximate reciprocal of the divisor: ceil(2**64 / divisor).</summary>
 		/// <remarks>This should only be used on 64-bit.</remarks>
-		public static ulong GetFastModMultiplier(uint divisor) =>
+		static ulong GetFastModMultiplier(uint divisor) =>
 			ulong.MaxValue / divisor + 1;
 
 		/// <summary>Performs a mod operation using the multiplier pre-computed with <see cref="GetFastModMultiplier"/>.</summary>
 		/// <remarks>This should only be used on 64-bit.</remarks>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static uint FastMod(uint value, uint divisor, ulong multiplier)
+		static uint FastMod(uint value, uint divisor, ulong multiplier)
 		{
 			// We use modified Daniel Lemire's fastmod algorithm (https://github.com/dotnet/runtime/pull/406),
 			// which allows to avoid the long multiplication if the divisor is less than 2**31.

@@ -1,15 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netcoreapp3.1;net462</TargetFrameworks>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <!--<TargetFramework>net50</TargetFramework>-->
     <OutputType>exe</OutputType>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
@@ -33,7 +27,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Sylvan.Common\Sylvan.Common.csproj" />
-    <ProjectReference Include="..\Sylvan.Data.Csv\Sylvan.Data.Csv.csproj" />
+    <ProjectReference Include="..\Sylvan.Data.Csv\Sylvan.Data.Csv.csproj">
+      <Aliases>Csv</Aliases>
+    </ProjectReference>
     <ProjectReference Include="..\Sylvan.Data\Sylvan.Data.csproj" />
   </ItemGroup>
 

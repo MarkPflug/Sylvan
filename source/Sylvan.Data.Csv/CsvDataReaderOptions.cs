@@ -35,16 +35,16 @@ namespace Sylvan.Data.Csv
 			this.FalseString = bool.FalseString;
 			this.DateFormat = null;
 #if DEDUPE_STRINGS
-			this.PoolStrings = false;
+			this.StringPool = null;
 #endif
 		}
 
 #if DEDUPE_STRINGS
 
 		/// <summary>
-		/// Specifies whether to de-dupe strings when reading from the csv data. Defaults to false.
+		/// A string poll that allows de-duping strings.
 		/// </summary>
-		public bool PoolStrings { get; set; }
+		public IStringPool? StringPool { get; set; }
 
 #endif
 

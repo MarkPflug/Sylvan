@@ -84,8 +84,7 @@ namespace Sylvan.Data.Csv
 		readonly bool ownsReader;
 
 #if DEDUPE_STRINGS
-		readonly bool poolStrings;
-		readonly StringPool? stringPool;
+		readonly IStringPool? stringPool;
 #endif
 		readonly CultureInfo culture;
 
@@ -101,7 +100,7 @@ namespace Sylvan.Data.Csv
 		int curFieldCount; // fields in current row
 
 		int rowNumber;
-		
+
 		readonly char[] buffer;
 		byte[]? scratch;
 		FieldInfo[] fieldInfos;
@@ -194,11 +193,7 @@ namespace Sylvan.Data.Csv
 			this.culture = options.Culture;
 			this.ownsReader = options.OwnsReader;
 #if DEDUPE_STRINGS
-			this.poolStrings = options.PoolStrings;
-			this.stringPool = 
-				poolStrings
-				? new StringPool()
-				: null;
+			this.stringPool = options.StringPool;
 #endif
 		}
 
@@ -222,13 +217,14 @@ namespace Sylvan.Data.Csv
 			// read the first row of data to determine fieldCount (if there were no headers)
 			// and support calling HasRows before Read is first called.
 			this.hasRows = await NextRecordAsync();
-			InitializeSchema(schema);
+			if (hasHeaders == false)
+			{
+				InitializeSchema(schema);
+			}
 		}
 
 		void InitializeSchema(ICsvSchemaProvider? schema)
 		{
-			if (state != State.Initializing) return;
-
 			columns = new CsvColumn[this.fieldCount];
 			for (int i = 0; i < this.fieldCount; i++)
 			{
@@ -559,7 +555,7 @@ namespace Sylvan.Data.Csv
 #endif
 			if (falseString == null) return false;
 			if (trueString == null) return true;
-			
+
 			throw new FormatException();
 		}
 
@@ -704,7 +700,8 @@ namespace Sylvan.Data.Csv
 			return DateTime.Parse(this.GetFieldSpan(ordinal), culture);
 #else
 			var dateStr = this.GetString(ordinal);
-			if (this.dateFormat != null && DateTime.TryParseExact(dateStr, this.dateFormat, culture, DateTimeStyles.None, out var dt)) {
+			if (this.dateFormat != null && DateTime.TryParseExact(dateStr, this.dateFormat, culture, DateTimeStyles.None, out var dt))
+			{
 				return dt;
 			}
 			return DateTime.Parse(dateStr, culture);
@@ -820,20 +817,24 @@ namespace Sylvan.Data.Csv
 		}
 
 		/// <inheritdoc/>
+		//[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public override string GetString(int ordinal)
 		{
 			if (ordinal >= 0 && ordinal < curFieldCount)
 			{
 				var (b, o, l) = GetField(ordinal);
-				
+
 				if (l == 0) return string.Empty;
 
 #if DEDUPE_STRINGS
-
-				return
-					this.stringPool != null
-					? stringPool.GetString(b.AsSpan().Slice(o, l))
-					: new string(b, o, l);
+				if (stringPool == null)
+				{
+					return new string(b, o, l);
+					
+				} else
+				{
+					return stringPool?.GetString(b.AsSpan().Slice(o, l)) ?? new string(b, o, l);
+				}
 			
 #else
 				return new string(b, o, l);
