@@ -1,13 +1,10 @@
-﻿extern alias Csv;
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
-using Csv::Sylvan.Data.Csv;
 
 namespace Sylvan.Data.Csv
 {

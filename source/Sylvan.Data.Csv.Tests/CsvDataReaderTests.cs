@@ -617,37 +617,34 @@ namespace Sylvan.Data.Csv
 			Assert.Equal(new DateTime(2020, 8, 5), csv.GetDateTime(0));
 		}
 
-#if NETCOREAPP3_1
 
-		[Fact]
-		public void DeDupeString()
-		{
-			using var tr = new StringReader("Name\nABC\nABC\nBCD\nBCD\n");
-			var opts = new CsvDataReaderOptions()
-			{
-				PoolStrings = true
-			};
-			var csv = CsvDataReader.Create(tr, opts);
-			Assert.True(csv.Read());
-			var str1 = csv.GetString(0);
-			Assert.Equal("ABC", str1);
-			Assert.True(csv.Read());
-			var str2 = csv.GetString(0);
-			Assert.Equal("ABC", str2);
-			Assert.Same(str1, str2);
+		//[Fact]
+		//public void DeDupeString()
+		//{
+		//	using var tr = new StringReader("Name\nABC\nABC\nBCD\nBCD\n");
+		//	var opts = new CsvDataReaderOptions()
+		//	{
+		//		PoolStrings = true
+		//	};
+		//	var csv = CsvDataReader.Create(tr, opts);
+		//	Assert.True(csv.Read());
+		//	var str1 = csv.GetString(0);
+		//	Assert.Equal("ABC", str1);
+		//	Assert.True(csv.Read());
+		//	var str2 = csv.GetString(0);
+		//	Assert.Equal("ABC", str2);
+		//	Assert.Same(str1, str2);
 
-			Assert.True(csv.Read());
-			str1 = csv.GetString(0);
-			Assert.Equal("BCD", str1);
-			Assert.True(csv.Read());
-			str2 = csv.GetString(0);
-			Assert.Equal("BCD", str2);
-			Assert.Same(str2, str2);
-		}
+		//	Assert.True(csv.Read());
+		//	str1 = csv.GetString(0);
+		//	Assert.Equal("BCD", str1);
+		//	Assert.True(csv.Read());
+		//	str2 = csv.GetString(0);
+		//	Assert.Equal("BCD", str2);
+		//	Assert.Same(str2, str2);
+		//}
 
-#endif
-		
-	}
+	
 
 		[Fact]
 		public void AutoDetect1()
@@ -667,6 +664,17 @@ namespace Sylvan.Data.Csv
 			Assert.Equal(5, csv.FieldCount);
 			Assert.Equal("A", csv.GetName(0));
 			Assert.Equal("D", csv.GetName(3));
+		}
+
+		[Fact]
+		public void Overread()
+		{
+			using var tr = new StringReader("a,b,c\n1,2,3\n4,5\n,6,7,8\n");
+			var csv = CsvDataReader.Create(tr);
+			Assert.True(csv.Read());
+			Assert.True(csv.Read());
+			var str = csv.GetString(2);
+			Assert.Equal("", str);
 		}
 	}
 }

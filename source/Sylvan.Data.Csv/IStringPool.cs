@@ -15,22 +15,22 @@ namespace Sylvan.Data.Csv
 	}
 }
 
-namespace Sylvan
-{
-	/// <summary>
-	/// 
-	/// </summary>
-	public partial class StringPool : Sylvan.Data.Csv.IStringPool
-	{
+//namespace Sylvan
+//{
+//	/// <summary>
+//	/// 
+//	/// </summary>
+//	public partial class StringPool : Sylvan.Data.Csv.IStringPool
+//	{
 
-	}
+//	}
 
-	/// <summary>
-	/// 
-	/// </summary>
-	public partial class StringPoolFast : Sylvan.Data.Csv.IStringPool
-	{
+//	/// <summary>
+//	/// 
+//	/// </summary>
+//	public partial class StringPoolFast : Sylvan.Data.Csv.IStringPool
+//	{
 
-	}
-}
+//	}
+//}
 

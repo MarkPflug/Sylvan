@@ -83,7 +83,7 @@ namespace Sylvan.Data.Csv
 		readonly TextReader reader;
 		bool hasRows;
 		readonly char[] buffer;
-		int idx;		
+		int idx;
 		int bufferEnd;
 		int recordStart;
 		bool atEndOfText;
@@ -228,9 +228,9 @@ namespace Sylvan.Data.Csv
 			for (int i = 0; i < bufferEnd; i++)
 			{
 				var c = buffer[i];
-				for(int d = 0; d < AutoDetectDelimiters.Length; d++)
+				for (int d = 0; d < AutoDetectDelimiters.Length; d++)
 				{
-					if(c == AutoDetectDelimiters[d])
+					if (c == AutoDetectDelimiters[d])
 					{
 						counts[d]++;
 					}
@@ -846,25 +846,28 @@ namespace Sylvan.Data.Csv
 			throw new IndexOutOfRangeException();
 		}
 
+		void ThrowOutOfRange()
+		{
+			throw new ArgumentOutOfRangeException("ordinal");
+
+		}
 		/// <inheritdoc/>
 		public override string GetString(int ordinal)
 		{
-			if (ordinal >= 0 && ordinal < curFieldCount)
+			if ((uint)ordinal < curFieldCount)
 			{
 				var (b, o, l) = GetField(ordinal);
-
-				if (l == 0) return string.Empty;
-
-				if (stringPool == null)
-				{
-					return new string(b, o, l);
-					
-				} else
-				{
-					return stringPool.GetString(b, o, l) ?? new string(b, o, l);
-				}
+				//if (l == 0) return string.Empty;
+				return stringPool?.GetString(b, o, l) ?? (l == 0 ? string.Empty : new string(b, o, l));
 			}
-			return string.Empty;
+			else
+			{
+				if ((uint)ordinal >= fieldCount)
+				{
+					ThrowOutOfRange();
+				}
+				return string.Empty;
+			}
 		}
 
 #if NETSTANDARD2_1

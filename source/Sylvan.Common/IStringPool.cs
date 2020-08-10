@@ -1,13 +1,11 @@
-﻿using System;
-
-namespace Sylvan
+﻿namespace Sylvan
 {
 	/// <summary>
 	/// Allows de-duplication of strings.
 	/// </summary>
 	/// <remarks>
-	/// This is intended to allow de-duplication of strings when
-	/// reading from external buffers, such as databases, json, serialized input, etc.
+	/// This is intended to allow de-duplication of strings when 
+	/// reading from buffers, such as files, databases, json, serialized input, etc.
 	/// </remarks>
 	public interface IStringPool
 	{

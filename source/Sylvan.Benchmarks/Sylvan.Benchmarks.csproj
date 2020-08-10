@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFrameworks>netcoreapp3.1;net50;net462</TargetFrameworks>
     <!--<TargetFramework>net50</TargetFramework>-->
     <OutputType>exe</OutputType>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -27,9 +27,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Sylvan.Common\Sylvan.Common.csproj" />
-    <ProjectReference Include="..\Sylvan.Data.Csv\Sylvan.Data.Csv.csproj">
-      <Aliases>Csv</Aliases>
-    </ProjectReference>
+    <ProjectReference Include="..\Sylvan.Data.Csv\Sylvan.Data.Csv.csproj"/>
     <ProjectReference Include="..\Sylvan.Data\Sylvan.Data.csproj" />
   </ItemGroup>
 

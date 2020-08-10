@@ -16,7 +16,7 @@
 
   <ItemGroup>
     <Compile Include="../Sylvan.Data/SchemaTable.cs" />
-    <Compile Include="../Sylvan.Common/StringPool.cs" />
-    <Compile Include="../Sylvan.Common/StringPoolFast.cs" />
+    <!--<Compile Include="../Sylvan.Common/StringPool.cs" />
+    <Compile Include="../Sylvan.Common/StringPoolFast.cs" />-->
   </ItemGroup>
 </Project>
