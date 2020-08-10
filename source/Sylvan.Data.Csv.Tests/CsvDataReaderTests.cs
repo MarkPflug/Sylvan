@@ -616,5 +616,34 @@ namespace Sylvan.Data.Csv
 			Assert.True(csv.Read());
 			Assert.Equal(new DateTime(2020, 8, 5), csv.GetDateTime(0));
 		}
+
+		[Fact]
+		public void AutoDetect1()
+		{
+			using var tr = new StringReader("A;B;C;D;E\n1;2;3;4;5\n");
+			var opts = new CsvDataReaderOptions()
+			{
+				AutoDetectDelimiter = true
+			};
+			var csv = CsvDataReader.Create(tr, opts);
+			Assert.Equal(5, csv.FieldCount);
+			Assert.Equal("A", csv.GetName(0));
+			Assert.Equal("D", csv.GetName(3));
+		}
+
+		[Fact]
+		public void AutoDetect2()
+		{
+			using var tr = new StringReader("A|B,(b)|C|D|E\n1|2|3|4|5\n");
+			var opts = new CsvDataReaderOptions()
+			{
+				AutoDetectDelimiter = true
+			};
+			var csv = CsvDataReader.Create(tr, opts);
+			Assert.Equal(5, csv.FieldCount);
+			Assert.Equal("A", csv.GetName(0));
+			Assert.Equal("D", csv.GetName(3));
+		}
 	}
 }
+

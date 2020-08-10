@@ -34,7 +34,14 @@ namespace Sylvan.Data.Csv
 			this.TrueString = bool.TrueString;
 			this.FalseString = bool.FalseString;
 			this.DateFormat = null;
+
+			this.AutoDetectDelimiter = false;
 		}
+
+		/// <summary>
+		/// Enables auto detecting the delimiter used in the CSV data. Defaults to false.
+		/// </summary>
+		public bool AutoDetectDelimiter { get; set; }
 
 		/// <summary>
 		/// The string which represents true values when reading boolean. Defaults to string.TrueString.
