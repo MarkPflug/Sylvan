@@ -648,6 +648,25 @@ namespace Sylvan.Data.Csv
 #endif
 		
 	}
+
+		[Fact]
+		public void AutoDetect1()
+		{
+			using var tr = new StringReader("A;B;C;D;E\n1;2;3;4;5\n");
+			var csv = CsvDataReader.Create(tr);
+			Assert.Equal(5, csv.FieldCount);
+			Assert.Equal("A", csv.GetName(0));
+			Assert.Equal("D", csv.GetName(3));
+		}
+
+		[Fact]
+		public void AutoDetect2()
+		{
+			using var tr = new StringReader("A|B,(b)|C|D|E\n1|2|3|4|5\n");
+			var csv = CsvDataReader.Create(tr);
+			Assert.Equal(5, csv.FieldCount);
+			Assert.Equal("A", csv.GetName(0));
+			Assert.Equal("D", csv.GetName(3));
+		}
+	}
 }
-
-
