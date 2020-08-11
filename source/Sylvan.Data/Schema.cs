@@ -5,6 +5,7 @@ using System.Data;
 using System.Data.Common;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Text.RegularExpressions;
 
 namespace Sylvan.Data
@@ -20,7 +21,7 @@ namespace Sylvan.Data
 		{
 			var map = new Dictionary<string, DbType>(StringComparer.OrdinalIgnoreCase);
 			var values = Enum.GetValues(typeof(DbType));
-			foreach(DbType type in values)
+			foreach (DbType type in values)
 			{
 				map.Add(type.ToString(), type);
 			}
@@ -110,12 +111,12 @@ namespace Sylvan.Data
 		{
 			public DbType DbType { get; }
 
-			public SchemaColumn(string name, DbType type, bool allowNull)
+			public SchemaColumn(string name, DbType type, bool allowNull, int size = -1)
 			{
 				this.DbType = type;
 				this.ColumnName = name;
 				this.AllowDBNull = allowNull;
-				this.ColumnSize = null;
+				this.ColumnSize = size < 0 ? (int?)null : size;
 				this.DataType = GetDataType(type);
 				this.DataTypeName = type.ToString();
 			}
@@ -155,7 +156,7 @@ namespace Sylvan.Data
 			/// </summary>
 			public Builder AddColumn(string name, DbType type, bool allowNull = true, int size = -1)
 			{
-				var col = new SchemaColumn(name, type, allowNull);
+				var col = new SchemaColumn(name, type, allowNull, size);
 				this.columns.Add(col);
 				return this;
 			}
@@ -209,7 +210,7 @@ namespace Sylvan.Data
 
 		static readonly Regex ColSpecRegex =
 			new Regex(
-				@"^(?<BaseName>[^\>]+\>)?(?<Name>[^\:]+)?(?::(?<Type>[a-z]+)(\[\d+\])?(?<AllowNull>\?)?)$",
+				@"^(?<BaseName>[^\>]+\>)?(?<Name>[^\:]+)?(?::(?<Type>[a-z0-9]+)(\[(?<Size>\d+)\])?(?<AllowNull>\?)?)$",
 				RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant
 			);
 
@@ -235,12 +236,15 @@ namespace Sylvan.Data
 				var match = ColSpecRegex.Match(colSpec);
 				if (match.Success)
 				{
-					var name = match.Groups["Name"].Value;
+					var name = WebUtility.UrlDecode(match.Groups["Name"].Value);
 					var typeName = match.Groups["Type"].Value;
 					var allowNull = match.Groups["AllowNull"].Success;
+					var sg = match.Groups["Size"];
+					var size = sg.Success ? int.Parse(sg.Value) : (int?)null;
 					if (map.TryGetValue(typeName, out var type))
 					{
-						builder.AddColumn(name, type, allowNull);
+						builder.AddColumn(name, type, allowNull, size ?? -1);
+
 						continue;
 					}
 				}
@@ -263,21 +267,29 @@ namespace Sylvan.Data
 		public string GetSchemaSpecification(bool multiline = false)
 		{
 			var w = new StringWriter();
+			bool first = true;
 			foreach (var col in this.columns)
 			{
+				if (first)
+				{
+					first = false;
+				}
+				else
+				{
+					w.Write(",");
+					if (multiline)
+					{
+						w.WriteLine();
+					}
+				}
+
 				if (col.BaseColumnName != null && col.BaseColumnName != col.ColumnName)
 				{
-					w.Write(System.Net.WebUtility.UrlEncode(col.BaseColumnName));
+					w.Write(WebUtility.UrlEncode(col.BaseColumnName));
 					w.Write(">");
 				}
-				w.Write(System.Net.WebUtility.UrlEncode(col.ColumnName));
+				w.Write(WebUtility.UrlEncode(col.ColumnName));
 				WriteType(w, col);
-
-				w.Write(",");
-				if (multiline)
-				{
-					w.WriteLine();
-				}
 			}
 
 			return w.ToString();
