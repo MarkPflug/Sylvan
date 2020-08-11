@@ -31,7 +31,7 @@ namespace Sylvan.Data.Csv
 			}
 		}
 
-		[Benchmark]
+		//[Benchmark]
 		public void FastCsvParser()
 		{
 			var s = TestData.GetUtf8Stream();
@@ -46,7 +46,7 @@ namespace Sylvan.Data.Csv
 			}
 		}
 
-		[Benchmark]
+		//[Benchmark]
 		public void CsvBySteve()
 		{
 			var s = TestData.GetUtf8Stream();
@@ -79,7 +79,7 @@ namespace Sylvan.Data.Csv
 		//	}
 		//}
 
-		[Benchmark]
+		//[Benchmark]
 		public void NaiveBroken()
 		{
 			var tr = TestData.GetTextReader();
@@ -108,7 +108,7 @@ namespace Sylvan.Data.Csv
 		//	}
 		//}
 
-		[Benchmark]
+		//[Benchmark]
 		public void VisualBasic()
 		{
 			var tr = TestData.GetTextReader();
@@ -125,7 +125,7 @@ namespace Sylvan.Data.Csv
 			}
 		}
 
-		[Benchmark]
+		//[Benchmark]
 		public void OleDbCsv()
 		{
 			//Requires: https://www.microsoft.com/en-us/download/details.aspx?id=54920
@@ -149,7 +149,7 @@ namespace Sylvan.Data.Csv
 			}
 		}
 
-		[Benchmark]
+		//[Benchmark]
 		public void FlatFilesCsv()
 		{
 			var tr = TestData.GetTextReader();
@@ -165,7 +165,7 @@ namespace Sylvan.Data.Csv
 			}
 		}
 
-		[Benchmark]
+		//[Benchmark]
 		public void FSharpData()
 		{
 			var tr = TestData.GetTextReader();
@@ -246,7 +246,7 @@ namespace Sylvan.Data.Csv
 			}
 		}
 
-		[Benchmark]
+		//[Benchmark]
 		public void NRecoSelect()
 		{
 			using var tr = TestData.GetTextReader();
@@ -261,7 +261,7 @@ namespace Sylvan.Data.Csv
 			}
 		}
 
-		[Benchmark]
+		//[Benchmark]
 		public void SylvanSelect()
 		{
 			using var tr = TestData.GetTextReader();
