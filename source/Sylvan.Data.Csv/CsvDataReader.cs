@@ -83,7 +83,7 @@ namespace Sylvan.Data.Csv
 		readonly TextReader reader;
 		bool hasRows;
 		readonly char[] buffer;
-		int idx;		
+		int idx;
 		int bufferEnd;
 		int recordStart;
 		bool atEndOfText;
@@ -223,9 +223,9 @@ namespace Sylvan.Data.Csv
 			for (int i = 0; i < bufferEnd; i++)
 			{
 				var c = buffer[i];
-				for(int d = 0; d < AutoDetectDelimiters.Length; d++)
+				for (int d = 0; d < AutoDetectDelimiters.Length; d++)
 				{
-					if(c == AutoDetectDelimiters[d])
+					if (c == AutoDetectDelimiters[d])
 					{
 						counts[d]++;
 					}
@@ -721,9 +721,10 @@ namespace Sylvan.Data.Csv
 		public override DateTime GetDateTime(int ordinal)
 		{
 #if NETSTANDARD2_1
-			if(this.dateFormat != null && DateTime.TryParseExact(this.GetFieldSpan(ordinal), this.dateFormat.AsSpan(), culture, DateTimeStyles.None, out var dt)) {
+			if (this.dateFormat != null && DateTime.TryParseExact(this.GetFieldSpan(ordinal), this.dateFormat.AsSpan(), culture, DateTimeStyles.None, out var dt))
+			{
 				return dt;
-			} 
+			}
 			return DateTime.Parse(this.GetFieldSpan(ordinal), culture);
 #else
 			var dateStr = this.GetString(ordinal);
@@ -843,19 +844,28 @@ namespace Sylvan.Data.Csv
 			throw new IndexOutOfRangeException();
 		}
 
+		void ThrowIfOutOrRange(int ordinal)
+		{
+			if ((uint)ordinal >= (uint)fieldCount)
+			{
+				throw new ArgumentOutOfRangeException(nameof(ordinal));
+			}
+		}
+
 		/// <inheritdoc/>
 		public override string GetString(int ordinal)
 		{
-			if (ordinal >= 0 && ordinal < curFieldCount)
+			if ((uint)ordinal < (uint)curFieldCount)
 			{
 				var (b, o, l) = GetField(ordinal);
 				return l == 0 ? string.Empty : new string(b, o, l);
 			}
+			ThrowIfOutOrRange(ordinal);
 			return string.Empty;
 		}
 
 #if NETSTANDARD2_1
-				
+
 		ReadOnlySpan<char> GetFieldSpan(int ordinal)
 		{
 			var (b, o, l) = GetField(ordinal);
@@ -943,8 +953,7 @@ namespace Sylvan.Data.Csv
 		/// <inheritdoc/>
 		public override object? GetValue(int ordinal)
 		{
-			if ((uint)ordinal >= fieldCount)
-				throw new ArgumentOutOfRangeException(nameof(ordinal));
+			ThrowIfOutOrRange(ordinal);
 
 			if (columns[ordinal].AllowDBNull != false && this.IsDBNull(ordinal))
 			{
@@ -1012,9 +1021,9 @@ namespace Sylvan.Data.Csv
 		/// <inheritdoc/>
 		public override bool IsDBNull(int ordinal)
 		{
-			if (((uint)ordinal) >= fieldCount)
-				throw new ArgumentOutOfRangeException(nameof(ordinal));
-			if (ordinal >= curFieldCount)
+			ThrowIfOutOrRange(ordinal);
+
+			if ((uint)ordinal >= (uint)curFieldCount)
 			{
 				return true;
 			}
