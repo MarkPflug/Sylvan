@@ -125,7 +125,21 @@ namespace Sylvan.Data
 
 		public static DbDataReader GetTestData(int count = 10)
 		{
-			return ObjectDataReader.Create(GetTestObjects(count, 10));
+			var dr =
+				ObjectDataReader
+				.Create(GetTestObjects(count, 10))
+				.AddColumn("Id", i => i.Id)
+				.AddColumn("Name", i => i.Name)
+				.AddColumn("Date", i => i.Date)
+				.AddColumn("IsActive", i => i.IsActive);
+
+			for(int i = 0; i < 10; i++)
+			{
+				var x = i;
+				dr.AddColumn("Data" + i, r => r.DataSet[x]);
+			}
+
+			return dr;
 		}
 
 		public const int DefaultRecordCount = 100000;

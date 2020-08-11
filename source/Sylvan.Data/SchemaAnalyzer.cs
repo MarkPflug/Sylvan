@@ -39,7 +39,8 @@ namespace Sylvan.Data
 			public int GetSize(int maxLen)
 			{
 				var size = 1;
-				while (size < maxLen) {
+				while (size < maxLen)
+				{
 					size = size * 2;
 				}
 				return size;
@@ -55,7 +56,7 @@ namespace Sylvan.Data
 				if (maxLen > 1000) return ushort.MaxValue;
 
 				var size = 0;
-				for(int i = 0; i < Sizes.Length; i++)
+				for (int i = 0; i < Sizes.Length; i++)
 				{
 					size = Sizes[i];
 					if (size > maxLen)
@@ -213,6 +214,15 @@ namespace Sylvan.Data
 					};
 			}
 
+			public static ColumnSchema CreateBoolean(int ordinal, string? name, bool isNullable)
+			{
+				return
+					new ColumnSchema(ordinal, name, isNullable, false)
+					{
+						DataType = typeof(bool)
+					};
+			}
+
 			public static ColumnSchema CreateInt(int ordinal, string? name, bool isNullable, bool isUnique, Type type)
 			{
 
@@ -269,7 +279,7 @@ namespace Sylvan.Data
 				this.type = dr.GetFieldType(ordinal);
 
 
-				
+
 
 				type = dr.GetFieldType(ordinal);
 				var typeCode = Type.GetTypeCode(type);
@@ -322,7 +332,7 @@ namespace Sylvan.Data
 				stringLenMin = int.MaxValue;
 				stringLenTotal = 0;
 				isAscii = true;
-				
+
 
 				this.valueCount = new Dictionary<string, int>();
 			}
@@ -344,6 +354,7 @@ namespace Sylvan.Data
 
 			int count;
 			int nullCount;
+			int emptyStringCount;
 
 			long intMin, intMax;
 			double floatMin, floatMax;
@@ -404,7 +415,7 @@ namespace Sylvan.Data
 					case TypeCode.String:
 						stringValue = dr.GetString(ordinal);
 
-						if (isFloat || isInt || isDate || isDateTime || isGuid)
+						if (isBoolean || isFloat || isInt || isDate || isDateTime || isGuid)
 						{
 							if (string.IsNullOrEmpty(stringValue))
 							{
@@ -412,12 +423,30 @@ namespace Sylvan.Data
 							}
 							else
 							{
+								if (isBoolean)
+								{
+									if (bool.TryParse(stringValue, out var b))
+									{
+
+									}
+									else
+									{
+										if (stringValue == "0" || stringValue == "1")
+										{
+
+										}
+										else
+										{
+											isBoolean = false;
+										}
+									}
+								}
 								if (isFloat)
 								{
 									if (double.TryParse(stringValue, out var f))
 									{
 										floatValue = f;
-										
+
 									}
 									else
 									{
@@ -439,7 +468,7 @@ namespace Sylvan.Data
 								{
 									if (DateTime.TryParse(stringValue, out var d))
 									{
-										dateValue = d;										
+										dateValue = d;
 									}
 									else
 									{
@@ -478,19 +507,19 @@ namespace Sylvan.Data
 					var val = floatValue.Value;
 					floatMin = Math.Min(floatMin, val);
 					floatMax = Math.Max(floatMax, val);
-					if(val != Math.Round(val))
+					if (val != Math.Round(val))
 					{
 						floatHasFractionalPart = true;
-					}					
+					}
 				}
 
-				if(isInt && intValue.HasValue)
+				if (isInt && intValue.HasValue)
 				{
 					intMin = Math.Min(intMin, intValue.Value);
 					intMax = Math.Max(intMax, intValue.Value);
 				}
 
-				if(isDateTime && dateValue.HasValue)
+				if (isDateTime && dateValue.HasValue)
 				{
 					var val = dateValue.Value;
 					dateMin = val < dateMin ? val : dateMin;
@@ -509,9 +538,10 @@ namespace Sylvan.Data
 					stringLenMax = Math.Max(stringLenMax, len);
 					stringLenMin = Math.Min(stringLenMin, len);
 					stringLenTotal += len;
-
 					if (len == 0)
-						nullCount++;
+					{
+						emptyStringCount++;
+					}
 
 					if (isAscii)
 					{
@@ -535,10 +565,6 @@ namespace Sylvan.Data
 						this.valueCount[stringValue] = 1;
 					}
 				}
-				else
-				{
-					nullCount++;
-				}
 			}
 
 			const int DefaultStringSize = 128;
@@ -549,6 +575,11 @@ namespace Sylvan.Data
 				{
 					// never saw any values, so no determination could be made
 					return ColumnSchema.CreateText(this.ordinal, name, true);
+				}
+
+				if (this.isBoolean)
+				{
+					return ColumnSchema.CreateBoolean(this.ordinal, name, isNullable);
 				}
 
 				if (this.isDate || this.isDateTime)

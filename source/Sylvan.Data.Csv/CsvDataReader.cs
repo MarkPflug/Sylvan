@@ -554,11 +554,12 @@ namespace Sylvan.Data.Csv
 		/// <inheritdoc/>
 		public override bool GetBoolean(int ordinal)
 		{
-			// three cases:
+			// four cases:
 			// true and false both not null. Any other value raises error.
 			// true not null, false null. True string true, anything else false.
 			// false not null, false null. True string true, anything else false.
-			// both true and false is not allowed, options validation will prevent it.
+			// both null. 
+
 #if NETSTANDARD2_1
 			var span = this.GetFieldSpan(ordinal);
 			if (trueString != null && span.Equals(this.trueString.AsSpan(), StringComparison.OrdinalIgnoreCase))
@@ -568,6 +569,17 @@ namespace Sylvan.Data.Csv
 			if (falseString != null && span.Equals(this.falseString.AsSpan(), StringComparison.OrdinalIgnoreCase))
 			{
 				return false;
+			}
+			if (falseString == null && trueString == null)
+			{
+				if (bool.TryParse(span, out bool b))
+				{
+					return b;
+				}
+				if (int.TryParse(span, out int v))
+				{
+					return v != 0;
+				}
 			}
 #else
 			var str = this.GetString(ordinal);
@@ -579,9 +591,21 @@ namespace Sylvan.Data.Csv
 			{
 				return false;
 			}
+			if (falseString == null && trueString == null)
+			{
+				if (bool.TryParse(str, out bool b))
+				{
+					return b;
+				}
+				if (int.TryParse(str, out int v))
+				{
+					return v != 0;
+				}
+			}
 #endif
-			if (falseString == null) return false;
-			if (trueString == null) return true;
+
+			if (falseString == null && trueString != null) return false;
+			if (trueString == null && falseString != null) return true;
 
 			throw new FormatException();
 		}
@@ -844,7 +868,7 @@ namespace Sylvan.Data.Csv
 			throw new IndexOutOfRangeException();
 		}
 
-		void ThrowIfOutOrRange(int ordinal)
+		void ThrowIfOutOfRange(int ordinal)
 		{
 			if ((uint)ordinal >= (uint)fieldCount)
 			{
@@ -860,7 +884,7 @@ namespace Sylvan.Data.Csv
 				var (b, o, l) = GetField(ordinal);
 				return l == 0 ? string.Empty : new string(b, o, l);
 			}
-			ThrowIfOutOrRange(ordinal);
+			ThrowIfOutOfRange(ordinal);
 			return string.Empty;
 		}
 
@@ -953,7 +977,7 @@ namespace Sylvan.Data.Csv
 		/// <inheritdoc/>
 		public override object? GetValue(int ordinal)
 		{
-			ThrowIfOutOrRange(ordinal);
+			ThrowIfOutOfRange(ordinal);
 
 			if (columns[ordinal].AllowDBNull != false && this.IsDBNull(ordinal))
 			{
@@ -1021,7 +1045,7 @@ namespace Sylvan.Data.Csv
 		/// <inheritdoc/>
 		public override bool IsDBNull(int ordinal)
 		{
-			ThrowIfOutOrRange(ordinal);
+			ThrowIfOutOfRange(ordinal);
 
 			if ((uint)ordinal >= (uint)curFieldCount)
 			{
