@@ -17,8 +17,11 @@ namespace Sylvan.Data.Csv
 	public class CsvReaderBenchmarks
 	{
 		const int BufferSize = 0x4000;
-
-
+		readonly IStringPool pool;
+		public CsvReaderBenchmarks()
+		{
+			this.pool = new StringPoolAdapter(new StringPool());
+		}
 
 		[Benchmark(Baseline = true)]
 		public void CsvHelper()
@@ -232,13 +235,11 @@ namespace Sylvan.Data.Csv
 			}
 		}
 
-#if NETCOREAPP3_1
-
 		[Benchmark]
 		public async Task SylvanDeDupe()
 		{
 			using var tr = TestData.GetTextReader();
-			var pool = new StringPoolFast();
+			var pool = new StringPool();
 			var opts = new CsvDataReaderOptions { StringPool = new StringPoolAdapter(pool) };
 			using var dr = await CsvDataReader.CreateAsync(tr, opts);
 			while (await dr.ReadAsync())
@@ -250,7 +251,20 @@ namespace Sylvan.Data.Csv
 			}
 		}
 
-#endif
+		[Benchmark]
+		public async Task SylvanDeDupeReuse()
+		{
+			using var tr = TestData.GetTextReader();
+			var opts = new CsvDataReaderOptions { StringPool = pool };
+			using var dr = await CsvDataReader.CreateAsync(tr, opts);
+			while (await dr.ReadAsync())
+			{
+				for (int i = 0; i < dr.FieldCount; i++)
+				{
+					var s = dr.GetString(i);
+				}
+			}
+		}
 
 		[Benchmark]
 		public async Task SylvanSchema()
@@ -263,7 +277,7 @@ namespace Sylvan.Data.Csv
 		[Benchmark]
 		public void SylvanSchemaDeDupe()
 		{
-			var pool = new StringPoolFast();
+			var pool = new StringPool();
 			using var tr = TestData.GetTextReader();
 			using var dr = CsvDataReader.Create(tr, new CsvDataReaderOptions { Schema = TestData.TestDataSchema, StringPool = new StringPoolAdapter(pool) });
 			ProcessData(dr);

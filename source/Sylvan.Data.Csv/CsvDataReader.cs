@@ -861,8 +861,15 @@ namespace Sylvan.Data.Csv
 			if ((uint)ordinal < (uint)curFieldCount)
 			{
 				var (b, o, l) = GetField(ordinal);
-				//if (l == 0) return string.Empty;
-				return stringPool?.GetString(b, o, l) ?? (l == 0 ? string.Empty : new string(b, o, l));
+				if (l == 0) return string.Empty;
+				if (stringPool == null)
+				{
+					return new string(b, o, l);
+				}
+				else
+				{
+					return stringPool.GetString(b, o, l) ?? new string(b, o, l);
+				}
 			}
 			ThrowIfOutOrRange(ordinal);
 			return string.Empty;

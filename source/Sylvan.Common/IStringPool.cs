@@ -25,7 +25,7 @@
 	/// <summary>
 	/// An IStringPool implementation.
 	/// </summary>
-	public partial class StringPoolFast : IStringPool
+	public partial class StringPool : IStringPool
 	{
 	}
 }
