@@ -667,14 +667,20 @@ namespace Sylvan.Data.Csv
 		}
 
 		[Fact]
-		public void Overread()
+		public void MissingFieldTest()
 		{
-			using var tr = new StringReader("a,b,c\n1,2,3\n4,5\n,6,7,8\n");
+			using var tr = new StringReader("a,b,c\n1,2,3\n4,5\n6,7,8\n");
 			var csv = CsvDataReader.Create(tr);
 			Assert.True(csv.Read());
 			Assert.True(csv.Read());
-			var str = csv.GetString(2);
-			Assert.Equal("", str);
+			Assert.Equal("4", csv.GetString(0));
+			Assert.Equal("5", csv.GetString(1));
+			Assert.Equal("", csv.GetString(2));
+			Assert.False(csv.IsDBNull(0));
+			Assert.False(csv.IsDBNull(1));
+			Assert.True(csv.IsDBNull(2));
+			Assert.Throws<ArgumentOutOfRangeException>(() => csv.GetString(-1));
+			Assert.Throws<ArgumentOutOfRangeException>(() => csv.GetString(3));
 		}
 	}
 }
