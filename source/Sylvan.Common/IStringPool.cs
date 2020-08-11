@@ -14,18 +14,4 @@
 		/// </summary>
 		string? GetString(char[] buffer, int offset, int length);
 	}
-
-	/// <summary>
-	/// An IStringPool implementation.
-	/// </summary>
-	public partial class StringPool : IStringPool
-	{
-	}
-
-	/// <summary>
-	/// An IStringPool implementation.
-	/// </summary>
-	public partial class StringPool : IStringPool
-	{
-	}
 }
