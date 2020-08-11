@@ -172,7 +172,8 @@ namespace Sylvan.Data
 
 		public override IEnumerator GetEnumerator()
 		{
-			throw new NotImplementedException();
+			while (this.Read())
+				yield return this;
 		}
 
 		public override float GetFloat(int ordinal)

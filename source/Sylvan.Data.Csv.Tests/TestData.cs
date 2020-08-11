@@ -5,6 +5,7 @@ using System.Data.Common;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Text;
 
 namespace Sylvan.Data.Csv
 {
@@ -30,6 +31,7 @@ namespace Sylvan.Data.Csv
 		const string DataFileName = "Data.csv";
 
 		static string CachedData;
+		static byte[] CachedUtfData;
 
 		static void CacheData()
 		{
@@ -40,6 +42,7 @@ namespace Sylvan.Data.Csv
 				iStream.CopyTo(oStream);
 			}
 			CachedData = File.ReadAllText(DataFileName);
+			CachedUtfData = Encoding.UTF8.GetBytes(CachedData);
 		}
 
 		static TestData()
@@ -60,6 +63,11 @@ namespace Sylvan.Data.Csv
 		public static TextReader GetTextReader()
 		{
 			return new StringReader(CachedData);
+		}
+
+		public static Stream GetUtf8Stream()
+		{
+			return new MemoryStream(CachedUtfData);
 		}
 
 		public static DbDataReader GetData()

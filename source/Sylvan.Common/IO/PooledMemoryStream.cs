@@ -18,6 +18,8 @@ namespace Sylvan.IO
 	{
 		const int DefaultBlockShift = 12; // default to 4k blocks
 		const int InitialBlockCount = 8;
+		
+		readonly ArrayPool<byte> bufferPool;
 		readonly int blockShift;
 		readonly int blockSize;
 		readonly int blockMask;
@@ -26,7 +28,6 @@ namespace Sylvan.IO
 		long length;
 		long position;
 		
-		readonly ArrayPool<byte> bufferPool;
 
 		byte[]?[] blocks;
 
@@ -56,14 +57,15 @@ namespace Sylvan.IO
 			this.clearOnReturn = clearOnReturn;
 		}
 
+		/// <inheritdoc/>
 		public override bool CanRead => true;
-
+		/// <inheritdoc/>
 		public override bool CanSeek => true;
-
+		/// <inheritdoc/>
 		public override bool CanWrite => true;
-
+		/// <inheritdoc/>
 		public override long Length => length;
-
+		/// <inheritdoc/>
 		public override long Position
 		{
 			get
@@ -76,11 +78,12 @@ namespace Sylvan.IO
 			}
 		}
 
+		/// <inheritdoc/>
 		public override void Flush()
 		{
 		}
 
-
+		/// <inheritdoc/>
 		public override int Read(byte[] buffer, int offset, int count)
 		{
 			if (buffer == null) throw new ArgumentNullException(nameof(buffer));
@@ -117,6 +120,7 @@ namespace Sylvan.IO
 			return len;
 		}
 
+		/// <inheritdoc/>
 		public override long Seek(long offset, SeekOrigin origin)
 		{
 			long pos = 0;
@@ -138,6 +142,7 @@ namespace Sylvan.IO
 			return pos;
 		}
 
+		/// <inheritdoc/>
 		public override void SetLength(long value)
 		{
 			if (value < 0) throw new ArgumentOutOfRangeException(nameof(value));
@@ -163,6 +168,7 @@ namespace Sylvan.IO
 			this.length = value;
 		}
 
+		/// <inheritdoc/>
 		public override void Write(byte[] buffer, int offset, int count)
 		{
 			if (buffer == null)
@@ -218,6 +224,7 @@ namespace Sylvan.IO
 				this.length = this.position;
 		}
 
+		/// <inheritdoc/>
 		public override async Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
 		{
 			if (destination == null) throw new ArgumentNullException(nameof(destination));
@@ -236,6 +243,7 @@ namespace Sylvan.IO
 			}
 		}
 
+		/// <inheritdoc/>
 		protected override void Dispose(bool disposing)
 		{
 			base.Dispose(disposing);

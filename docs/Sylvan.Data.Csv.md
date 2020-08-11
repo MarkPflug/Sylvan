@@ -23,8 +23,7 @@ Here is a [brief description](Sylvan.Data.Csv.Design.md) of the strategies used 
 #### CSV Reader Example
 
 ```C#
-using var tr = File.OpenText("demo.csv");
-var csv = await Sylvan.Data.Csv.CsvDataReader.CreateAsync(tr);
+using var csv = await Sylvan.Data.Csv.CsvDataReader.CreateAsync("demo.csv");
 
 // It is possible to inspect whether any data is available before calling Read for
 // the first time. HasRows, Headers and FieldCount are all available at this point.
@@ -44,8 +43,7 @@ while(await csv.ReadAsync())
  // query a table from SqlServer, MySql, etc
 DbDataReader dr = await GetDataAsync();
 
-using var tw = File.CreateText("data.csv");
-var csvWriter = new CsvDataWriter(tw);
+using var csvWriter = new CsvDataWriter("data.csv");
 await csvWriter.WriteAsync(dr);
 
 ```

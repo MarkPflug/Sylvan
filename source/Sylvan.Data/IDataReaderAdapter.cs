@@ -77,7 +77,8 @@ namespace Sylvan.Data
 
 		public override IEnumerator GetEnumerator()
 		{
-			throw new NotSupportedException();
+			while (this.Read())
+				yield return this;
 		}
 
 		public override Type GetFieldType(int ordinal)

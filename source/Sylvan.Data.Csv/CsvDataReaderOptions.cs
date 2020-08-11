@@ -13,8 +13,10 @@ namespace Sylvan.Data.Csv
 		const char DefaultDelimiter = ',';
 		const char DefaultQuote = '"';
 		const char DefaultEscape = '"';
-		const int DefaultBufferSize = 0x10000;
+		const int DefaultBufferSize = 0x4000;
 		const int MinBufferSize = 0x80;
+
+		char delimiter;
 
 		/// <summary>
 		/// Creates a CsvDataReaderOptions with the default values.
@@ -22,7 +24,7 @@ namespace Sylvan.Data.Csv
 		public CsvDataReaderOptions()
 		{
 			this.HasHeaders = true;
-			this.Delimiter = DefaultDelimiter;
+			this.delimiter = DefaultDelimiter;
 			this.Quote = DefaultQuote;
 			this.Escape = DefaultEscape;
 			this.BufferSize = DefaultBufferSize;
@@ -30,7 +32,36 @@ namespace Sylvan.Data.Csv
 			this.Culture = CultureInfo.InvariantCulture;
 			this.Schema = null;
 			this.OwnsReader = true;
+
+			this.TrueString = bool.TrueString;
+			this.FalseString = bool.FalseString;
+			this.DateFormat = null;
+
+			this.AutoDetect = true;
 		}
+
+		/// <summary>
+		/// Enables auto detecting the delimiter used in the CSV data. Defaults to true.
+		/// </summary>
+		/// <remarks>
+		/// Will attempt to detect the following delimiters: comma, tab, semicolon, or vertical-bar.
+		/// </remarks>
+		public bool AutoDetect { get; set; }
+
+		/// <summary>
+		/// The string which represents true values when reading boolean. Defaults to string.TrueString.
+		/// </summary>
+		public string? TrueString { get; set; }
+
+		/// <summary>
+		/// The string which represents false values when reading boolean. Defaults to string.FalseString.
+		/// </summary>
+		public string? FalseString { get; set; }
+
+		/// <summary>
+		/// The format string to use to parse dates. Defaults to null, in which case standard date parsing rules apply.
+		/// </summary>
+		public string? DateFormat { get; set; }
 
 		/// <summary>
 		/// Specifies if the CSV data contains a header row with column names. Defaults to true.
@@ -38,9 +69,23 @@ namespace Sylvan.Data.Csv
 		public bool HasHeaders { get; set; }
 
 		/// <summary>
-		/// Specifies the field delimiter. Defaults to ','.
+		/// Specifies the field delimiter. By default, uses autodetect.
 		/// </summary>
-		public char Delimiter { get; set; }
+		/// <remarks>
+		/// Setting the delimiter will disable auto-detection.
+		/// </remarks>
+		public char Delimiter
+		{
+			get
+			{
+				return this.delimiter;
+			}
+			set
+			{
+				this.delimiter = value;
+				this.AutoDetect = false;
+			}
+		}
 
 		/// <summary>
 		/// Specifies the character used for quoting fields. Defaults to '"'.
@@ -87,7 +132,9 @@ namespace Sylvan.Data.Csv
 			var invalid =
 				char.IsLetterOrDigit(Delimiter) ||
 				Delimiter == Quote ||
-				BufferSize < MinBufferSize;
+				BufferSize < MinBufferSize ||
+				StringComparer.OrdinalIgnoreCase.Equals(TrueString, FalseString);
+			;
 			if (invalid)
 				throw new CsvConfigurationException();
 		}

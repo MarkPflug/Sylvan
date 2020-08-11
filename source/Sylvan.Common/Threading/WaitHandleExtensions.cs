@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 namespace Sylvan.Threading
 {
 	// https://thomaslevesque.com/2015/06/04/async-and-cancellation-support-for-wait-handles/
-	public static class WaitHandleExtensions
+	static class WaitHandleExtensions
 	{
 		public static async Task<bool> WaitOneAsync(this WaitHandle handle, int millisecondsTimeout, CancellationToken cancellationToken)
 		{

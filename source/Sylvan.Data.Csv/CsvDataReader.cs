@@ -18,6 +18,8 @@ namespace Sylvan.Data.Csv
 	/// </summary>
 	public sealed class CsvDataReader : DbDataReader, IDbColumnSchemaGenerator
 	{
+		static readonly char[] AutoDetectDelimiters = new[] { ',', '\t', ';', '|' };
+
 		struct Enumerator : IEnumerator
 		{
 			readonly CsvDataReader reader;
@@ -78,37 +80,32 @@ namespace Sylvan.Data.Csv
 			Incomplete,
 		}
 
-		readonly char delimiter;
+		readonly TextReader reader;
+		bool hasRows;
+		readonly char[] buffer;
+		int idx;
+		int bufferEnd;
+		int recordStart;
+		bool atEndOfText;
+		State state;
+		int fieldCount; // fields in the header (or firstRow)
+		int curFieldCount; // fields in current row
+		int rowNumber;
+		byte[]? scratch;
+		FieldInfo[] fieldInfos;
+		readonly Dictionary<string, int> headerMap;
+		CsvColumn[] columns;
+
+		// options:
+		char delimiter;
 		readonly char quote;
 		readonly char escape;
 		readonly bool ownsReader;
-
+		bool autoDetectDelimiter;
 		readonly CultureInfo culture;
-
-		readonly TextReader reader;
-		bool hasRows;
-
-		int recordStart;
-		int bufferEnd;
-		int idx;
-
-		int fieldCount; // fields in the header (or firstRow)
-
-		int curFieldCount; // fields in current row
-
-		int rowNumber;
-		int lineNumber;
-
-		readonly char[] buffer;
-		byte[]? scratch;
-		FieldInfo[] fieldInfos;
-
-		bool atEndOfText;
+		readonly string? dateFormat;
+		readonly string? trueString, falseString;
 		readonly bool hasHeaders;
-		readonly Dictionary<string, int> headerMap;
-
-		CsvColumn[] columns;
-		State state;
 
 		/// <summary>
 		/// Creates a new CsvDataReader.
@@ -142,7 +139,7 @@ namespace Sylvan.Data.Csv
 		{
 			if (filename == null) throw new ArgumentNullException(nameof(filename));
 			// TextReader must be owned when we open it.
-			if (options?.OwnsReader == false) throw new InvalidOperationException();
+			if (options?.OwnsReader == false) throw new CsvConfigurationException();
 
 			var reader = File.OpenText(filename);
 			var csv = new CsvDataReader(reader, options);
@@ -176,23 +173,30 @@ namespace Sylvan.Data.Csv
 			this.delimiter = options.Delimiter;
 			this.quote = options.Quote;
 			this.escape = options.Escape;
-
+			this.dateFormat = options.DateFormat;
+			this.trueString = options.TrueString;
+			this.falseString = options.FalseString;
 			this.recordStart = 0;
 			this.bufferEnd = 0;
 			this.idx = 0;
 			this.rowNumber = 0;
-			this.lineNumber = 0;
 			this.fieldInfos = new FieldInfo[16];
 			this.headerMap = new Dictionary<string, int>(options.HeaderComparer);
 			this.columns = Array.Empty<CsvColumn>();
 			this.culture = options.Culture;
 			this.ownsReader = options.OwnsReader;
+			this.autoDetectDelimiter = options.AutoDetect;
 		}
 
 		async Task InitializeAsync(ICsvSchemaProvider? schema)
 		{
 			state = State.Initializing;
-			this.lineNumber = 1;
+			if (autoDetectDelimiter)
+			{
+				await FillBufferAsync();
+				var c = DetectDelimiter();
+				this.delimiter = c;
+			}
 			// if the user specified that there are headers
 			// read them, and use them to determine fieldCount.
 			if (hasHeaders)
@@ -211,6 +215,37 @@ namespace Sylvan.Data.Csv
 			// and support calling HasRows before Read is first called.
 			this.hasRows = await NextRecordAsync();
 			InitializeSchema(schema);
+		}
+
+		char DetectDelimiter()
+		{
+			int[] counts = new int[AutoDetectDelimiters.Length];
+			for (int i = 0; i < bufferEnd; i++)
+			{
+				var c = buffer[i];
+				for (int d = 0; d < AutoDetectDelimiters.Length; d++)
+				{
+					if (c == AutoDetectDelimiters[d])
+					{
+						counts[d]++;
+					}
+					if (c == '\n' || c == '\r')
+						goto done;
+
+				}
+			}
+		done:
+			int maxIdx = 0;
+			int maxCount = 0;
+			for (int i = 0; i < counts.Length; i++)
+			{
+				if (counts[i] > maxCount)
+				{
+					maxCount = counts[i];
+					maxIdx = i;
+				}
+			}
+			return AutoDetectDelimiters[maxIdx];
 		}
 
 		void InitializeSchema(ICsvSchemaProvider? schema)
@@ -322,14 +357,12 @@ namespace Sylvan.Data.Csv
 									continue;
 								}
 								else
+								if (escape == quote)
 								{
-									if (escape == quote)
-									{
-										idx--;
-										closeQuoteIdx = idx;
-										// the quote (escape) we just saw was a the closing quote
-										break;
-									}
+									idx--;
+									closeQuoteIdx = idx;
+									// the quote (escape) we just saw was a the closing quote
+									break;
 								}
 							}
 							else
@@ -436,7 +469,6 @@ namespace Sylvan.Data.Csv
 
 		ReadResult ConsumeLineEnd(ref int idx)
 		{
-			lineNumber++;
 			var c = buffer[idx++];
 			if (c == '\r')
 			{
@@ -462,7 +494,6 @@ namespace Sylvan.Data.Csv
 					}
 					// the next buffer might contain a \n
 					// that we need to consume.
-					lineNumber--;
 					return ReadResult.Incomplete;
 				}
 			}
@@ -523,11 +554,36 @@ namespace Sylvan.Data.Csv
 		/// <inheritdoc/>
 		public override bool GetBoolean(int ordinal)
 		{
+			// three cases:
+			// true and false both not null. Any other value raises error.
+			// true not null, false null. True string true, anything else false.
+			// false not null, false null. True string true, anything else false.
+			// both true and false is not allowed, options validation will prevent it.
 #if NETSTANDARD2_1
-			return bool.Parse(this.GetFieldSpan(ordinal));
+			var span = this.GetFieldSpan(ordinal);
+			if (trueString != null && span.Equals(this.trueString.AsSpan(), StringComparison.OrdinalIgnoreCase))
+			{
+				return true;
+			}
+			if (falseString != null && span.Equals(this.falseString.AsSpan(), StringComparison.OrdinalIgnoreCase))
+			{
+				return false;
+			}
 #else
-			return bool.Parse(this.GetString(ordinal));
+			var str = this.GetString(ordinal);
+			if (trueString != null && str.Equals(this.trueString, StringComparison.OrdinalIgnoreCase))
+			{
+				return true;
+			}
+			if (falseString != null && str.Equals(this.falseString, StringComparison.OrdinalIgnoreCase))
+			{
+				return false;
+			}
 #endif
+			if (falseString == null) return false;
+			if (trueString == null) return true;
+
+			throw new FormatException();
 		}
 
 		/// <inheritdoc/>
@@ -665,9 +721,18 @@ namespace Sylvan.Data.Csv
 		public override DateTime GetDateTime(int ordinal)
 		{
 #if NETSTANDARD2_1
+			if (this.dateFormat != null && DateTime.TryParseExact(this.GetFieldSpan(ordinal), this.dateFormat.AsSpan(), culture, DateTimeStyles.None, out var dt))
+			{
+				return dt;
+			}
 			return DateTime.Parse(this.GetFieldSpan(ordinal), culture);
 #else
-			return DateTime.Parse(this.GetString(ordinal), culture);
+			var dateStr = this.GetString(ordinal);
+			if (this.dateFormat != null && DateTime.TryParseExact(dateStr, this.dateFormat, culture, DateTimeStyles.None, out var dt))
+			{
+				return dt;
+			}
+			return DateTime.Parse(dateStr, culture);
 #endif
 		}
 
@@ -766,7 +831,7 @@ namespace Sylvan.Data.Csv
 			if (ordinal < 0 || ordinal >= fieldCount)
 				throw new IndexOutOfRangeException();
 
-			return columns[ordinal].ColumnName ?? "";
+			return columns[ordinal].ColumnName ?? string.Empty;
 		}
 
 		/// <inheritdoc/>
@@ -779,24 +844,36 @@ namespace Sylvan.Data.Csv
 			throw new IndexOutOfRangeException();
 		}
 
+		void ThrowIfOutOrRange(int ordinal)
+		{
+			if ((uint)ordinal >= (uint)fieldCount)
+			{
+				throw new ArgumentOutOfRangeException(nameof(ordinal));
+			}
+		}
+
 		/// <inheritdoc/>
 		public override string GetString(int ordinal)
 		{
-			if (ordinal >= 0 && ordinal < curFieldCount)
+			if ((uint)ordinal < (uint)curFieldCount)
 			{
 				var (b, o, l) = GetField(ordinal);
 				return l == 0 ? string.Empty : new string(b, o, l);
 			}
+			ThrowIfOutOrRange(ordinal);
 			return string.Empty;
 		}
 
 #if NETSTANDARD2_1
+
 		ReadOnlySpan<char> GetFieldSpan(int ordinal)
 		{
 			var (b, o, l) = GetField(ordinal);
 			return b.AsSpan().Slice(o, l);
 		}
+
 #endif
+
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		(char[] buffer, int offset, int len) GetField(int ordinal)
 		{
@@ -818,64 +895,67 @@ namespace Sylvan.Data.Csv
 				}
 				else
 				{
-					bool inQuote = true; // we start inside the quotes
-
-					var eLen = len - fi.escapeCount;
-					// if there is room in the buffer before the current record
-					// we'll use that as scratch space to unescape the value
-					var temp = buffer;
-					if (recordStart < eLen)
-					{
-						// otherwise we'll allocate a buffer
-						temp = new char[eLen];
-					}
-
-					int i = 0;
-					int d = 0;
-					while (d < len)
-					{
-						var c = buffer[offset + i++];
-						if (inQuote)
-						{
-							if (c == escape)
-							{
-								c = buffer[offset + i++];
-								if (c != quote && c != escape)
-								{
-									if (quote == escape)
-									{
-										// the escape we just saw was actually the closing quote
-										// the remainder of the field will be added verbatim
-										inQuote = false;
-									}
-								}
-							}
-							else
-							if (c == quote)
-							{
-								// we've found the broken closing quote
-								// skip it.
-								inQuote = false;
-								continue;
-							}
-						}
-						temp[d++] = c;
-					}
-					buffer = temp;
-					offset = 0;
-					len = eLen;
+					return PrepareField(offset, len, fi.escapeCount);
 				}
 			}
 			return (buffer, offset, len);
 		}
 
+		(char[] buffer, int offset, int len) PrepareField(int offset, int len, int escapeCount)
+		{
+
+			bool inQuote = true; // we start inside the quotes
+
+			var eLen = len - escapeCount;
+			// if there is room in the buffer before the current record
+			// we'll use that as scratch space to unescape the value
+			var temp = buffer;
+			if (recordStart < eLen)
+			{
+				// otherwise we'll allocate a buffer
+				temp = new char[eLen];
+			}
+
+			int i = 0;
+			int d = 0;
+			while (d < eLen)
+			{
+				var c = buffer[offset + i++];
+				if (inQuote)
+				{
+					if (c == escape && i + 1 < len)
+					{
+						c = buffer[offset + i++];
+						if (c != quote && c != escape)
+						{
+							if (quote == escape)
+							{
+								// the escape we just saw was actually the closing quote
+								// the remainder of the field will be added verbatim
+								inQuote = false;
+							}
+						}
+					}
+					else
+					if (c == quote)
+					{
+						// we've found the broken closing quote
+						// skip it.
+						inQuote = false;
+						continue;
+					}
+				}
+				temp[d++] = c;
+			}
+			return (temp, 0, eLen);
+		}
+
 		/// <inheritdoc/>
 		public override object? GetValue(int ordinal)
 		{
-			if ((uint)ordinal >= fieldCount)
-				throw new ArgumentOutOfRangeException(nameof(ordinal));
+			ThrowIfOutOrRange(ordinal);
 
-			if (columns[ordinal].AllowDBNull == true && this.IsDBNull(ordinal))
+			if (columns[ordinal].AllowDBNull != false && this.IsDBNull(ordinal))
 			{
 				return null;
 			}
@@ -941,24 +1021,36 @@ namespace Sylvan.Data.Csv
 		/// <inheritdoc/>
 		public override bool IsDBNull(int ordinal)
 		{
-			if (((uint)ordinal) >= fieldCount)
-				throw new ArgumentOutOfRangeException(nameof(ordinal));
-			if (ordinal >= curFieldCount)
+			ThrowIfOutOrRange(ordinal);
+
+			if ((uint)ordinal >= (uint)curFieldCount)
 			{
 				return true;
 			}
 			var col = columns[ordinal];
 			if (col.DataType == typeof(string))
 			{
-				// empty string fields will be treated as empty string, not null.
-				return false;
+				if (col.AllowDBNull == false)
+				{
+					return false;
+				}
 			}
 			// now pay the cost of determining if the thing is null.
+			return IsNull(ordinal);
+		}
+
+		bool IsNull(int ordinal)
+		{
 			ref var fi = ref fieldInfos[ordinal];
-			var startIdx = recordStart + (ordinal == 0 ? 0 : this.fieldInfos[ordinal - 1].endIdx + 1);
-			var endIdx = recordStart + fi.endIdx;
-			var isEmpty = endIdx - startIdx - (fi.isQuoted != QuoteState.Unquoted ? 2 : 0) - fi.escapeCount == 0;
-			return isEmpty;
+			if (fi.isQuoted == QuoteState.Unquoted)
+			{
+				var startIdx = recordStart + (ordinal == 0 ? 0 : this.fieldInfos[ordinal - 1].endIdx + 1);
+				var endIdx = recordStart + fi.endIdx;
+				var isEmpty = endIdx - startIdx == 0;
+				return isEmpty;
+			}
+			// never consider quoted fields as null
+			return false;
 		}
 
 		/// <inheritdoc/>
@@ -1049,8 +1141,8 @@ namespace Sylvan.Data.Csv
 				this.DataTypeName = schema?.DataTypeName ?? this.DataType.Name;
 
 				// by default, we don't consider string types to be nullable,
-				// an empty field for a string means "" not null.
-				this.AllowDBNull = schema?.AllowDBNull ?? this.DataType.IsValueType;
+				// an empty field for a string means "", not null.
+				this.AllowDBNull = schema == null ? false : schema?.AllowDBNull;
 
 				this.ColumnSize = schema?.ColumnSize ?? int.MaxValue;
 

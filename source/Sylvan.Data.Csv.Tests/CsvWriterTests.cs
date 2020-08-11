@@ -103,7 +103,7 @@ namespace Sylvan.Data.Csv
 			Assert.Equal("SGVsbG8sIGNzdiE=,00000000-0000-0000-0000-000000000000\r\n", str);
 		}
 
-		const string DataResult = "True,AQIDBAU=,06/12/2020 12:15:15,1234.5,5432.25,00000000-0000-0000-0000-000000000000,9876,\"Value, with comma\",Value no comma\r\n";
+		const string DataResult = "True,AQIDBAU=,2020-06-12T12:15:15,1234.5,5432.25,00000000-0000-0000-0000-000000000000,9876,\"Value, with comma\",Value no comma\r\n";
 
 		[Fact]
 		public void WriteData()

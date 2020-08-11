@@ -1,7 +1,7 @@
 <Project>
   <PropertyGroup>
     <PackageTags Condition="$(MSBuildProjectName.StartsWith('Sylvan.Tools.'))">$(PackageTags);global;tool</PackageTags>
-    <PackageTags>$(PackageTags);dotnet;.NET;Sylvan</PackageTags>
+    <PackageTags>$(PackageTags);.NET;Sylvan</PackageTags>
   </PropertyGroup>
   <Target Name="PrepareNupkg" BeforeTargets="ResolvePackageAssets">
     <!-- the package folder must exist before nuget restore runs -->
@@ -26,20 +26,23 @@
     <!--<PackageReference Include="Microsoft.CodeAnalysis.FxCopAnalyzers" Version="3.0.0" PrivateAssets="all"/>-->
   </ItemGroup>
 
+  <ItemGroup>
+    <!--<PackageReference Include="Microsoft.CodeAnalysis.FxCopAnalyzers" Version="3.0.0" PrivateAssets="all"/>-->
+  </ItemGroup>
+
    <Target Name="PackValidations" BeforeTargets="GenerateNuspec">
     <!-- Attempt to prevent myself from accidentally releaseing a debug build. -->
     <Error Condition="$(Configuration) != 'Release'" Text="Attempting to pack a debug build."/>
     <Error Condition="$(SourceRevisionId.Contains('-dirty'))" Text="Attempting to pack from a dirty repository."/>
   </Target>
-
+    
   <Target Name="InitializeSourceControlInformation" BeforeTargets="PackValidations">
-    <Exec
-      Command="git describe --long --always --dirty --exclude=* --abbrev=8"
+    <Exec 
+      Command="git describe --long --always --dirty --exclude=*"
       ConsoleToMsBuild="True"
       IgnoreExitCode="False"
-      >      
+      >
       <Output PropertyName="SourceRevisionId" TaskParameter="ConsoleOutput"/>
     </Exec>
   </Target>
-
 </Project>

@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Threading.Tasks;
 using Xunit;
@@ -33,6 +34,30 @@ namespace Sylvan.Data.Csv
 			using var csv = new CsvDataWriter(sw);
 			await csv.WriteAsync(dr);
 			var str = sw.ToString();
+		}
+
+		[Fact]
+		public void WriteDate()
+		{
+			var sw = new StringWriter();
+			using (var csv = new CsvWriter(sw))
+			{
+				csv.WriteField(new DateTime(2020, 8, 7, 7, 45, 22));
+			}
+			var str = sw.ToString();
+			Assert.Equal("2020-08-07T07:45:22", str);
+		}
+
+		[Fact]
+		public void WriteDateCustom()
+		{
+			var sw = new StringWriter();
+			using (var csv = new CsvWriter(sw, new CsvWriterOptions { DateFormat = "yyyyMMdd" }))
+			{
+				csv.WriteField(new DateTime(2020, 8, 7, 7, 45, 22));
+			}
+			var str = sw.ToString();
+			Assert.Equal("20200807", str);
 		}
 
 		class TypedObject
