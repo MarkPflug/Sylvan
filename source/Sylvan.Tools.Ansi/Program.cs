@@ -48,7 +48,7 @@ namespace Sylvan.Tools.Ansi
 			// given an image, this will draw "pixels" by drawing block characters '▀' /u2580
 			// where the top half is foreground, and the bottom half is background.
 			// Each pass draws two rows of the bitmap, which produces a pixel that is nearly square.
-			// if the top and bottom cell are the same, draw a solic block instead, to avoid setting the color twice.
+			// if the top and bottom cell are the same, draw a solid block instead, to avoid setting the color twice.
 
 			//var str = new StringWriter();
 			//var vvt = new VirtualTerminalWriter(str);
@@ -116,12 +116,7 @@ namespace Sylvan.Tools.Ansi
 
 		bool Near(int l, int r)
 		{
-			var isnear = (uint)(l + opts.Threshold - r) <= opts.Threshold * 2;
-			if (isnear)
-			{
-				return true;
-			}
-			return false;
+			return (uint)(l + opts.Threshold - r) <= opts.Threshold * 2;
 		}
 	}
 }

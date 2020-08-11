@@ -13,7 +13,7 @@ namespace Sylvan.Tools.CsvSchemaBuilder
 	class Program
 	{
 		// TOOD: resourceify this?
-		const string CommonHeaders = "id,name,code,type,kind,class,date,address,zip,city,state,country,amount,value,text,description,price,quantity";
+		const string CommonHeaders = "id,name,code,type,kind,class,date,address,zip,city,state,country,amount,value,text,description,price,quantity,phone,email";
 		
 		static void View(DbDataReader dr, int code)
 		{
