@@ -194,6 +194,7 @@ namespace Sylvan.IO
 
 		protected override void Dispose(bool disposing)
 		{
+			base.Dispose(disposing);
 			foreach (var block in this.blocks)
 			{
 				if (block != null)

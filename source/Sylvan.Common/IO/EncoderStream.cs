@@ -46,7 +46,11 @@ namespace Sylvan.IO
 
 		public override async Task FlushAsync(CancellationToken cancel)
 		{
+#if NETSTANDARD2_1
+			await this.stream.WriteAsync(this.buffer.AsMemory().Slice(0, bufferIdx), cancel).ConfigureAwait(false);
+#else
 			await this.stream.WriteAsync(this.buffer, 0, bufferIdx, cancel).ConfigureAwait(false);
+#endif
 			bufferIdx = 0;
 		}
 
@@ -125,6 +129,7 @@ namespace Sylvan.IO
 
 		protected override void Dispose(bool disposing)
 		{
+			base.Dispose(disposing);
 			this.Close();
 			if (this.ownsStream)
 				this.stream.Dispose();

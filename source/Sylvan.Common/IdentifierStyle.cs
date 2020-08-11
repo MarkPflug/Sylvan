@@ -30,7 +30,7 @@ namespace Sylvan
 		/// </summary>
 		public abstract string Convert(string str);
 
-		internal string Separated(string str, CasingStyle segmentStyle, char separator = '\0', char quote = '\0')
+		internal static string Separated(string str, CasingStyle segmentStyle, char separator = '\0', char quote = '\0')
 		{
 			if (str == null) throw new ArgumentNullException(nameof(str));
 
