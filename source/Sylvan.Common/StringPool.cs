@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
 namespace Sylvan
@@ -27,11 +28,32 @@ namespace Sylvan
 			return hash;
 		}
 
+		IEnumerable<(string str, int count)> GetUsage()
+		{
+			for (int i = 0; i < this.buckets.Length; i++)
+			{
+				var b = buckets[i];
+				if (b != 0)
+				{
+					var idx = b - 1;
+					while ((uint)idx < entries.Length)
+					{
+						var e = this.entries[idx];
+						yield return (e.str, e.count);
+						idx = e.next;
+					}
+				}
+			}
+		}
+
 		readonly int stringSizeLimit;
 		int[] buckets;
 		Entry[] entries;
 
 		int count;
+		long uniqueLen;
+		long dupeLen;
+		long skipLen;
 
 		/// <summary>
 		/// Creates a new StringPool instance.
@@ -70,7 +92,11 @@ namespace Sylvan
 		{
 			if (buffer == null) throw new ArgumentNullException(nameof(buffer));
 			if (length == 0) return string.Empty;
-			if (length > stringSizeLimit) return null;
+			if (length > stringSizeLimit)
+			{
+				this.skipLen += length;
+				return null;
+			}
 
 			var entries = this.entries;
 			var hashCode = GetHashCode(buffer, offset, length);
@@ -85,6 +111,7 @@ namespace Sylvan
 				if (e.hashCode == hashCode && MemoryExtensions.Equals(buffer.AsSpan().Slice(offset, length), e.str.AsSpan(), StringComparison.Ordinal))
 				{
 					e.count++;
+					this.dupeLen += length;
 					return e.str;
 				}
 
@@ -110,6 +137,7 @@ namespace Sylvan
 			var stringValue = new string(buffer, offset, length);
 
 			ref Entry entry = ref entries![index];
+			this.uniqueLen += length;
 			entry.hashCode = hashCode;
 			entry.count = 1;
 			entry.next = bucket - 1;
