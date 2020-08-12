@@ -279,8 +279,6 @@ namespace Sylvan.Data
 				this.type = dr.GetFieldType(ordinal);
 
 
-
-
 				type = dr.GetFieldType(ordinal);
 				var typeCode = Type.GetTypeCode(type);
 

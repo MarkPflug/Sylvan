@@ -5,7 +5,9 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Reflection;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +17,34 @@ namespace Sylvan.BuildTools.Data.Tests
 	{
 		public MsBuildFixture()
 		{
-			MSBuildLocator.RegisterDefaults();
+			var vs = MSBuildLocator.RegisterDefaults();
+			AppDomain.CurrentDomain.AssemblyResolve += CurrentDomain_AssemblyResolve;
+			AppDomain.CurrentDomain.AssemblyLoad += CurrentDomain_AssemblyLoad;
+
+		}
+
+		private void CurrentDomain_AssemblyLoad(object sender, AssemblyLoadEventArgs args)
+		{
+			if(args.LoadedAssembly.GetName().Name == "Microsoft.Build.Framework")
+			{
+				this.sdkPath = System.IO.Path.GetDirectoryName(args.LoadedAssembly.Location);
+			}
+		}
+
+		string sdkPath;
+
+		private System.Reflection.Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)
+		{
+			if (args.Name != null && sdkPath != null)
+			{
+				var name = new AssemblyName(args.Name).Name;
+				var file = Path.Combine(sdkPath, name + ".dll");
+				if (File.Exists(file))
+				{
+					return Assembly.LoadFrom(file);
+				}
+			}
+			return null;
 		}
 
 		public void Dispose()
@@ -48,16 +77,12 @@ namespace Sylvan.BuildTools.Data.Tests
 			this.logger = new XUnitTestLogger(o);
 		}
 
-		string GetOutput(string exePath, string args)
+		(int, string) GetOutput(string exePath, string args = "")
 		{
-			if (Environment.OSVersion.Platform == PlatformID.Unix)
+			var psi = new ProcessStartInfo()
 			{
-				args = $"{exePath} {args}";
-				exePath = "mono";
-			}
-
-			var psi = new ProcessStartInfo(exePath, args)
-			{
+				FileName = "dotnet",
+				Arguments = exePath + " " + args,
 				UseShellExecute = false,
 				RedirectStandardOutput = true,
 				CreateNoWindow = true,
@@ -65,7 +90,8 @@ namespace Sylvan.BuildTools.Data.Tests
 			var proc = Process.Start(psi);
 			var text = proc.StandardOutput.ReadToEnd();
 			proc.WaitForExit();
-			return text;
+			var exitCode = proc.ExitCode;
+			return (exitCode, text);
 		}
 
 		void LogProps(Project proj)
@@ -84,15 +110,14 @@ namespace Sylvan.BuildTools.Data.Tests
 		{
 			var pc = new ProjectCollection(gp);
 			var proj = pc.LoadProject(projFile);
-			var restored = proj.Build("Restore", new[] { logger });
-			if (!restored)
-			{
-				LogProps(proj);
-			}
-			Assert.True(restored, "Failed to restore packages");
-			var result = proj.Build(logger);
+			var success = proj.Build("Restore", new[] { logger });
+			//if (!success) LogProps(proj);
+			Assert.True(success, "Failed to restore packages");
+			success = proj.Build(logger);
+			if (!success) LogProps(proj);
+
 			var outputPath = proj.GetPropertyValue("TargetPath");
-			Assert.True(result, "Build failed");
+			Assert.True(success, "Build failed");
 			return outputPath;
 		}
 
@@ -100,6 +125,8 @@ namespace Sylvan.BuildTools.Data.Tests
 		public void BuildTest()
 		{
 			var exepath = BuildProject("Data/Test1/Test1.csproj");
+			var (exitcode, output) = GetOutput(exepath);
+			Assert.Equal(0, exitcode);
 		}
 	}
 }

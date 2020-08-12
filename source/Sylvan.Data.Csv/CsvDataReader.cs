@@ -744,15 +744,17 @@ namespace Sylvan.Data.Csv
 		/// <inheritdoc/>
 		public override DateTime GetDateTime(int ordinal)
 		{
-#if NETSTANDARD2_1
-			if (this.dateFormat != null && DateTime.TryParseExact(this.GetFieldSpan(ordinal), this.dateFormat.AsSpan(), culture, DateTimeStyles.None, out var dt))
+			var format = columns[ordinal].Format ?? this.dateFormat;
+
+#if NETSTANDARD2_1		
+			if (format != null && DateTime.TryParseExact(this.GetFieldSpan(ordinal), format.AsSpan(), culture, DateTimeStyles.None, out var dt))
 			{
 				return dt;
 			}
 			return DateTime.Parse(this.GetFieldSpan(ordinal), culture);
 #else
 			var dateStr = this.GetString(ordinal);
-			if (this.dateFormat != null && DateTime.TryParseExact(dateStr, this.dateFormat, culture, DateTimeStyles.None, out var dt))
+			if (format != null && DateTime.TryParseExact(dateStr, format, culture, DateTimeStyles.None, out var dt))
 			{
 				return dt;
 			}
@@ -1154,6 +1156,8 @@ namespace Sylvan.Data.Csv
 
 		class CsvColumn : DbColumn
 		{
+			public string? Format { get; }
+
 			public CsvColumn(string? name, int ordinal, DbColumn? schema = null)
 			{
 				// non-overridable
@@ -1186,6 +1190,22 @@ namespace Sylvan.Data.Csv
 				this.BaseColumnName = schema?.BaseColumnName ?? name; // default in the orignal header name if they chose to remap it.
 				this.BaseCatalogName = schema?.BaseCatalogName;
 				this.UdtAssemblyQualifiedName = schema?.UdtAssemblyQualifiedName;
+				this.Format = schema?[nameof(Format)] as string;
+			}
+
+			/// <inheritdoc/>
+			public override object? this[string property]
+			{
+				get
+				{
+					switch (property)
+					{
+						case nameof(Format):
+							return Format;
+						default:
+							return base[property];
+					}
+				}
 			}
 		}
 

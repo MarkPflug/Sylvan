@@ -4,11 +4,10 @@
     <TargetFramework>netstandard2.0</TargetFramework>
 
     <VersionPrefix>0.1.0</VersionPrefix>
-    <VersionSuffix>B0005</VersionSuffix>
+    <VersionSuffix>B0009</VersionSuffix>
     <Description>CSV data access build tools.</Description>
     <NoPackageAnalysis>true</NoPackageAnalysis>
-    <BuildOutputTargetFolder>build</BuildOutputTargetFolder>
-    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <BuildOutputTargetFolder>build</BuildOutputTargetFolder>    
     <PackageTags>csv;buildtools</PackageTags>
     <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
   </PropertyGroup>

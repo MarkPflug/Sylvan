@@ -35,6 +35,8 @@
   <ItemGroup>
     <None Remove="Data\Directory.Build.props" />
     <None Remove="Data\Directory.Build.targets" />
+    <None Remove="Data\Test1\NoHeaders.csv" />
+    <None Remove="Data\Test1\obj\Counties.csv" />
     <None Remove="Data\Test1\States.csv" />
     <None Remove="Data\Test1\Test.csv" />
   </ItemGroup>

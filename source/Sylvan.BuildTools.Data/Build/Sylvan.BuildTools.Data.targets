@@ -21,15 +21,21 @@
       $(CoreCompileDependsOn)
     </CoreCompileDependsOn>
 
-    <SylvanDataCodeGenerationRoot>$([System.IO.Path]::Combine($(MSBuildProjectDirectory), $(IntermediateOutputPath),'Sylvan'))</SylvanDataCodeGenerationRoot>
+    <SylvanDataCodeGenerationRoot>$([System.IO.Path]::Combine($(MSBuildProjectDirectory), $(IntermediateOutputPath), 'Sylvan'))\</SylvanDataCodeGenerationRoot>
   </PropertyGroup>
 
   <ItemGroup>
+    <SylvanData 
+      Include="**/*.csv" 
+      Exclude="@(SylvanData);$(DefaultItemExcludes)"/>
+  </ItemGroup>
+  
+  <ItemGroup>
     
     <SylvanData Update="@(SylvanData)">
-      <Schema Condition="Exists('%(Identity).schema')">%(Identity).schema</Schema>
-      <GeneratedSchema>$(SylvanDataCodeGenerationRoot)%(Identity).schema</GeneratedSchema>
-      <GeneratedCode>$(SylvanDataCodeGenerationRoot)%(Identity).g.cs</GeneratedCode>
+      <Schema Condition="Exists('%(Filename)%(Extension).schema')">%(Filename)%(Extension).schema</Schema>
+      <GeneratedSchema>$(SylvanDataCodeGenerationRoot)%(Filename)%(Extension).schema</GeneratedSchema>
+      <GeneratedCode>$(SylvanDataCodeGenerationRoot)%(Filename)%(Extension).g.cs</GeneratedCode>
     </SylvanData>
 
     <Compile Include="@(SylvanData->'%(GeneratedCode)')">
@@ -37,7 +43,7 @@
     </Compile>
     
   </ItemGroup>
-
+  
   <Target
     Name="SylvanDataGenerateSchema"
 		BeforeTargets="SylvanDataCodeGen"
@@ -45,7 +51,7 @@
     Outputs="%(SylvanData.GeneratedSchema)"
     >
 
-    <MakeDir Directories="$(SylvanDataCodeGenerationRoot)"/>
+    <MakeDir Directories="$(SylvanDataCodeGenerationRoot)%(SylvanData.RecursiveDir)"/>
     <SylvanDataGenerateSchema InputFiles="@(SylvanData)">
 
     </SylvanDataGenerateSchema>
@@ -57,14 +63,15 @@
     <Delete Files="%(SylvanData.GeneratedSchema);%(SylvanData.GeneratedCode)"/>
   </Target>
 
+  <!---->
+
   <Target
 		Name="SylvanDataCodeGen"
-		Condition="'@(SylvanData)' != ''"
-		Inputs="%(SylvanData.GeneratedSchema);%(SylvanData.Schema)"
-		Outputs="%(SylvanData.GeneratedCode)"
+    Condition="'@(SylvanData)' != ''"
+    Inputs="%(SylvanData.GeneratedSchema);%(SylvanData.Schema)"
+    Outputs="%(SylvanData.GeneratedCode)"
 	>
-    <MakeDir Directories="$(SylvanDataCodeGenerationRoot)"/>
-
+    <MakeDir Directories="$(SylvanDataCodeGenerationRoot)%(SylvanData.RecursiveDir)"/>
     <SylvanDataCodeGen
 			InputFiles="@(SylvanData)"
 		/>

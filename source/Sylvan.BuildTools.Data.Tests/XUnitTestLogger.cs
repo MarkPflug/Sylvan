@@ -26,6 +26,24 @@ namespace Sylvan
 			eventSource.ProjectStarted += EventSource_ProjectStarted;
 			eventSource.MessageRaised += EventSource_MessageRaised;
 			eventSource.ErrorRaised += EventSource_ErrorRaised;
+			eventSource.WarningRaised += EventSource_WarningRaised;
+			eventSource.TargetStarted += EventSource_TargetStarted;
+			eventSource.TargetFinished += EventSource_TargetFinished;
+		}
+
+		private void EventSource_TargetFinished(object sender, TargetFinishedEventArgs e)
+		{
+			o.WriteLine("Target ending: " + e.TargetName);
+		}
+
+		private void EventSource_TargetStarted(object sender, TargetStartedEventArgs e)
+		{
+			o.WriteLine("Target starting: " + e.TargetName);
+		}
+
+		private void EventSource_WarningRaised(object sender, BuildWarningEventArgs e)
+		{
+			o.WriteLine(e.Message + " " + e.File + "(" + e.LineNumber + "," + e.ColumnNumber + ")");
 		}
 
 		private void EventSource_ErrorRaised(object sender, BuildErrorEventArgs e)
@@ -35,10 +53,7 @@ namespace Sylvan
 
 		private void EventSource_MessageRaised(object sender, BuildMessageEventArgs e)
 		{
-			if (e.Message.StartsWith("DEBUG:"))
-			{
-				o.WriteLine(e.Message);
-			}
+			o.WriteLine(e.Message);
 		}
 
 		private void EventSource_ProjectStarted(object sender, ProjectStartedEventArgs e)

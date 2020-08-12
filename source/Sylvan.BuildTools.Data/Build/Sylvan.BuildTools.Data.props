@@ -13,9 +13,5 @@
       <Generator>MSBuild:SylvanDataCodeGen</Generator>
     </SylvanData>
   </ItemDefinitionGroup>
-
-  <ItemGroup>
-    <SylvanData Include="**/*.csv" Exclude="obj\**\*"/>   
-  </ItemGroup>
   
 </Project>

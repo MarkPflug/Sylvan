@@ -653,5 +653,17 @@ namespace Sylvan.Data.Csv
 			Assert.Throws<ArgumentOutOfRangeException>(() => csv.GetString(-1));
 			Assert.Throws<ArgumentOutOfRangeException>(() => csv.GetString(3));
 		}
+
+		[Fact]
+		public void CustomFormatTest()
+		{
+			var schema = Schema.TryParse("Name,Date:DateTime{yyyyMMdd}");
+			var csvSchema = new CsvSchema(schema.GetColumnSchema());
+			using var tr = new StringReader("Test,20200812");
+			var csv = CsvDataReader.Create(tr, new CsvDataReaderOptions { Schema = csvSchema, HasHeaders = false});
+			Assert.True(csv.Read());
+			Assert.Equal("Test", csv.GetString(0));
+			Assert.Equal(new DateTime(2020, 8, 12), csv.GetDateTime(1));
+		}
 	}
 }
