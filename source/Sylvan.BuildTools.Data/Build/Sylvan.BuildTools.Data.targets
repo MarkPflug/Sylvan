@@ -1,0 +1,73 @@
+﻿<Project>
+
+  <UsingTask
+    AssemblyFile="$(SylvanDataTaskAssembly)"
+    TaskName="SylvanDataGenerateSchema"/>
+
+  <UsingTask
+    AssemblyFile="$(SylvanDataTaskAssembly)"
+     TaskName="SylvanDataCodeGen"/>
+
+  <ItemGroup>
+    <!--<PropertyPageSchema Include="$(MSBuildThisFileDirectory)Sylvan.BuildTools.Data.xaml" />
+    <PropertyPageSchema Include="$(MSBuildThisFileDirectory)Sylvan.BuildTools.Data.ContentType.xaml" />-->
+  </ItemGroup>
+
+  <PropertyGroup>
+
+    <CoreCompileDependsOn>
+      SylvanDataGenerateSchema;
+      SylvanDataCodeGen;
+      $(CoreCompileDependsOn)
+    </CoreCompileDependsOn>
+
+    <SylvanDataCodeGenerationRoot>$([System.IO.Path]::Combine($(MSBuildProjectDirectory), $(IntermediateOutputPath),'Sylvan'))</SylvanDataCodeGenerationRoot>
+  </PropertyGroup>
+
+  <ItemGroup>
+    
+    <SylvanData Update="@(SylvanData)">
+      <Schema Condition="Exists('%(Identity).schema')">%(Identity).schema</Schema>
+      <GeneratedSchema>$(SylvanDataCodeGenerationRoot)%(Identity).schema</GeneratedSchema>
+      <GeneratedCode>$(SylvanDataCodeGenerationRoot)%(Identity).g.cs</GeneratedCode>
+    </SylvanData>
+
+    <Compile Include="@(SylvanData->'%(GeneratedCode)')">
+      <Visible>false</Visible>
+    </Compile>
+    
+  </ItemGroup>
+
+  <Target
+    Name="SylvanDataGenerateSchema"
+		BeforeTargets="SylvanDataCodeGen"
+    Inputs="@(SylvanData)"
+    Outputs="%(SylvanData.GeneratedSchema)"
+    >
+
+    <MakeDir Directories="$(SylvanDataCodeGenerationRoot)"/>
+    <SylvanDataGenerateSchema InputFiles="@(SylvanData)">
+
+    </SylvanDataGenerateSchema>
+  </Target>
+
+  <Target
+    Name="CleanSylvanData"
+    BeforeTargets="Clean">
+    <Delete Files="%(SylvanData.GeneratedSchema);%(SylvanData.GeneratedCode)"/>
+  </Target>
+
+  <Target
+		Name="SylvanDataCodeGen"
+		Condition="'@(SylvanData)' != ''"
+		Inputs="%(SylvanData.GeneratedSchema);%(SylvanData.Schema)"
+		Outputs="%(SylvanData.GeneratedCode)"
+	>
+    <MakeDir Directories="$(SylvanDataCodeGenerationRoot)"/>
+
+    <SylvanDataCodeGen
+			InputFiles="@(SylvanData)"
+		/>
+
+  </Target>
+</Project>

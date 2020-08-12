@@ -1,0 +1,3 @@
+﻿<Project>
+  <Import Project="$(CodeGenTestRoot)Sylvan.BuildTools.Data.targets"/>
+</Project>

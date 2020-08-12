@@ -1,0 +1,21 @@
+﻿<Project>
+
+  <PropertyGroup>
+    <SylvanDataTaskAssembly Condition="'$(SylvanDataTaskAssembly)' == ''">$(MSBuildThisFileDirectory)Sylvan.BuildTools.Data.dll</SylvanDataTaskAssembly>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AvailableItemName Include="SylvanData"/>
+  </ItemGroup>
+
+  <ItemDefinitionGroup>
+    <SylvanData>
+      <Generator>MSBuild:SylvanDataCodeGen</Generator>
+    </SylvanData>
+  </ItemDefinitionGroup>
+
+  <ItemGroup>
+    <SylvanData Include="**/*.csv" Exclude="obj\**\*"/>   
+  </ItemGroup>
+  
+</Project>
