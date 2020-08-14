@@ -88,11 +88,12 @@ namespace Sylvan.BuildTools.Data
 					sw.WriteLine("public static IEnumerable<" + typeName + "Record> Read() { return Read(FileName, DefaultOptions); }");
 
 					sw.WriteLine("public static IEnumerable<" + typeName + "Record> Read(string filename, CsvDataReaderOptions opts) {");
-					sw.WriteLine("var binder = new DataBinder<" + typeName + "Record>(ColumnSchema);");
+					sw.WriteLine("var binder = new CompiledDataBinder<" + typeName + "Record>(ColumnSchema);");
 					sw.WriteLine("var csv = CsvDataReader.Create(filename, opts);");
 
 					sw.WriteLine("while(csv.Read()) {");
-					sw.WriteLine("var item = binder.Bind(csv);");
+					sw.WriteLine("var item = new " + typeName + "Record();");
+					sw.WriteLine("binder.Bind(csv, item);");
 					sw.WriteLine("yield return item;");
 					sw.WriteLine("}");
 

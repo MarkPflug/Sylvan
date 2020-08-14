@@ -19,7 +19,7 @@ namespace Sylvan.Data
 		[ColumnOrdinal(0)]
 		public int Id { get; private set; }
 		public string Name { get; private set; }
-		public DateTime Date { get; private set; }
+		public DateTime? Date { get; private set; }
 	}
 
 	public class DataBinderTests
@@ -64,6 +64,23 @@ namespace Sylvan.Data
 		{
 			var schema = BuildSchema();
 			var binder = new ReflectionDataBinder<MyDataRecord>(schema);
+
+			var csvData = "Id,Name,Date\n1,Test,2020-08-12\n";
+			var tr = new StringReader(csvData);
+			var opts = new CsvDataReaderOptions() { Schema = new CsvSchema(schema) };
+			DbDataReader data = CsvDataReader.Create(tr, opts);
+
+			while (data.Read())
+			{
+				var item = binder.Bind(data);
+			}
+		}
+
+		[Fact]
+		public void Test2()
+		{
+			var schema = BuildSchema();
+			var binder = new CompiledDataBinder<MyDataRecord>(schema);
 
 			var csvData = "Id,Name,Date\n1,Test,2020-08-12\n";
 			var tr = new StringReader(csvData);
