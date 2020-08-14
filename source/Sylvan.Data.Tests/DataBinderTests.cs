@@ -1,4 +1,5 @@
-﻿using Sylvan.Data.Csv;
+﻿using Sylvan.Benchmarks;
+using Sylvan.Data.Csv;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -42,10 +43,22 @@ namespace Sylvan.Data
 		}
 
 		[Fact]
+		public void BenchReflection()
+		{
+			new DataBinderBenchmarks().Reflection();
+		}
+
+		[Fact]
+		public void BenchCompiled()
+		{
+			new DataBinderBenchmarks().Compiled();
+		}
+
+		[Fact]
 		public void Test1()
 		{
 			var schema = BuildSchema();
-			var binder = new DataBinder<MyDataRecord>(schema);
+			var binder = new ReflectionDataBinder<MyDataRecord>(schema);
 
 			var csvData = "Id,Name,Date\n1,Test,2020-08-12\n";
 			var tr = new StringReader(csvData);
@@ -167,7 +180,7 @@ namespace Sylvan.Data
 			f = lf.Compile();
 			sw.Stop();
 
-			var binder = new DataBinder<MyDataRecord>(schema);
+			var binder = new ReflectionDataBinder<MyDataRecord>(schema);
 
 			var csvData = "Id,Name,Date\n1,Test,2020-08-12\n";
 			var tr = new StringReader(csvData);

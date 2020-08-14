@@ -47,7 +47,7 @@
   <Target
     Name="SylvanDataGenerateSchema"
 		BeforeTargets="SylvanDataCodeGen"
-    Inputs="@(SylvanData)"
+    Inputs="@(SylvanData);$(MSBuildProjectFile)"
     Outputs="%(SylvanData.GeneratedSchema)"
     >
 
@@ -63,12 +63,10 @@
     <Delete Files="%(SylvanData.GeneratedSchema);%(SylvanData.GeneratedCode)"/>
   </Target>
 
-  <!---->
-
   <Target
 		Name="SylvanDataCodeGen"
     Condition="'@(SylvanData)' != ''"
-    Inputs="%(SylvanData.GeneratedSchema);%(SylvanData.Schema)"
+    Inputs="%(SylvanData.GeneratedSchema);%(SylvanData.Schema);$(MSBuildProjectFile)"
     Outputs="%(SylvanData.GeneratedCode)"
 	>
     <MakeDir Directories="$(SylvanDataCodeGenerationRoot)%(SylvanData.RecursiveDir)"/>

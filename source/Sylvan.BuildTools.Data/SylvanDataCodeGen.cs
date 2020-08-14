@@ -4,7 +4,9 @@ using Sylvan.Data;
 using Sylvan.Data.Csv;
 using System;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.IO;
+using System.Linq;
 
 namespace Sylvan.BuildTools.Data
 {
@@ -45,18 +47,61 @@ namespace Sylvan.BuildTools.Data
 					var sw = new StringWriter();
 					var typeName = pc.Convert(file.GetMetadata("filename"));
 					sw.WriteLine("// File: " + file.ItemSpec);
-					sw.WriteLine("class " + typeName + "{");
-					foreach (var col in schema.GetColumnSchema())
+					sw.WriteLine("using System;");
+					sw.WriteLine("using Sylvan.Data.Csv;");
+					sw.WriteLine("using Sylvan.Data;");
+					sw.WriteLine("using System.Collections.Generic;");
+					sw.WriteLine("using System.Collections.ObjectModel;");
+					sw.WriteLine("using System.Data.Common;");
+
+					sw.WriteLine("class " + typeName + "Record {");
+					var colSchema = schema.GetColumnSchema();
+					foreach (var col in colSchema)
 					{
 						var dt = col.DataType;
 						var fullName = dt.FullName;
+						sw.WriteLine("[ColumnOrdinal(" + col.ColumnOrdinal + ")]");
+						if(!string.IsNullOrEmpty(col.ColumnName))
+							sw.WriteLine("[ColumnName(\"" + col.ColumnName + "\")]");
+
 						var memberName = string.IsNullOrWhiteSpace(col.ColumnName) ? "Column" + (col.ColumnOrdinal + 1) : pc.Convert(col.ColumnName);
 						sw.WriteLine("public " + fullName + (col.AllowDBNull == true && dt.IsValueType ? "?" : "") + " " + memberName + " { get; set; }");
 
 					}
 					sw.WriteLine("}");
 
-					File.WriteAllText(codeFile, sw.ToString());
+					var hasHeaders = colSchema.All(c => !string.IsNullOrEmpty(c.ColumnName));
+
+					sw.WriteLine("class " + typeName + "Set {");
+					sw.WriteLine("const string FileName = @\"" + file.ItemSpec + "\";");
+					sw.WriteLine("const string SchemaSpec = \"" + schema.GetSchemaSpecification() + "\";");
+					sw.WriteLine("static readonly ReadOnlyCollection<DbColumn> ColumnSchema = Sylvan.Data.Schema.TryParse(SchemaSpec).GetColumnSchema();");
+					sw.WriteLine("static readonly ICsvSchemaProvider SchemaProvider = new CsvSchema(ColumnSchema);");
+
+
+					sw.WriteLine("static readonly CsvDataReaderOptions DefaultOptions = new CsvDataReaderOptions {");
+					sw.WriteLine("HasHeaders = " + (hasHeaders ? "true" : "false") + ",");
+					sw.WriteLine("Schema = SchemaProvider,");					
+
+					sw.WriteLine("};");
+
+					sw.WriteLine("public static IEnumerable<" + typeName + "Record> Read() { return Read(FileName, DefaultOptions); }");
+
+					sw.WriteLine("public static IEnumerable<" + typeName + "Record> Read(string filename, CsvDataReaderOptions opts) {");
+					sw.WriteLine("var binder = new DataBinder<" + typeName + "Record>(ColumnSchema);");
+					sw.WriteLine("var csv = CsvDataReader.Create(filename, opts);");
+
+					sw.WriteLine("while(csv.Read()) {");
+					sw.WriteLine("var item = binder.Bind(csv);");
+					sw.WriteLine("yield return item;");
+					sw.WriteLine("}");
+
+					sw.WriteLine("}");
+
+					sw.WriteLine("}");
+
+					var code = sw.ToString();
+					File.WriteAllText(codeFile, code);
 				}
 			}
 			return success;
