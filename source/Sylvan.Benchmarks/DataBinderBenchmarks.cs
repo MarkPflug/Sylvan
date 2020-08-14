@@ -3,13 +3,12 @@ using Sylvan.Data;
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Runtime.InteropServices.WindowsRuntime;
 
 namespace Sylvan.Benchmarks
 {
+	[MemoryDiagnoser]
 	public class DataBinderBenchmarks
 	{
-
 		class TestRecord : IDataRecord
 		{
 			public object this[int i] => throw new NotImplementedException();
@@ -172,27 +171,39 @@ namespace Sylvan.Benchmarks
 		{
 			var schema = Schema.TryParse("B:Boolean,D:DateTime,V:Double,G:Guid,I:Int32,S:String");
 			this.record = new TestRecord();
+			this.item = new Record();
 			this.compiled = new CompiledDataBinder<Record>(schema.GetColumnSchema());
 			this.reflection = new ReflectionDataBinder<Record>(schema.GetColumnSchema());
+			this.direct = new ReflectionDirectDataBinder<Record>(schema.GetColumnSchema());
 		}
+
+		Record item;
 		IDataRecord record;
-		DataBinder<Record> compiled, reflection;
+		DataBinder<Record> compiled, reflection, direct;
 
 		[Benchmark(Baseline = true)]
 		public void Reflection()
 		{
-			for (int i = 0; i < Count; i++)
-			{
-				var r = reflection.Bind(record);
-			}
+			Bench(reflection, record, item);
+		}
+
+		[Benchmark]
+		public void DirectReflection()
+		{
+			Bench(direct, record, item);
 		}
 
 		[Benchmark]
 		public void Compiled()
 		{
+			Bench(compiled, record, item);
+		}
+
+		static void Bench(DataBinder<Record> binder, IDataRecord record, Record item)
+		{
 			for (int i = 0; i < Count; i++)
 			{
-				var r = compiled.Bind(record);
+				binder.Bind(record, item);
 			}
 		}
 	}

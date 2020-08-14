@@ -14,7 +14,6 @@ using Xunit;
 
 namespace Sylvan.Data
 {
-
 	class MyDataRecord
 	{
 		[ColumnOrdinal(0)]
@@ -49,6 +48,12 @@ namespace Sylvan.Data
 		}
 
 		[Fact]
+		public void BenchDirectReflection()
+		{
+			new DataBinderBenchmarks().DirectReflection();
+		}
+
+		[Fact]
 		public void BenchCompiled()
 		{
 			new DataBinderBenchmarks().Compiled();
@@ -69,7 +74,6 @@ namespace Sylvan.Data
 			{
 				var item = binder.Bind(data);
 			}
-
 		}
 
 		[Fact]

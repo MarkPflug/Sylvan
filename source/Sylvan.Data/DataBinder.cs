@@ -32,14 +32,23 @@ namespace Sylvan.Data
 	public abstract class DataBinder<T> where T : class, new()
 	{
 
-		public abstract T Bind(IDataRecord record);
+		public T Bind(IDataRecord record)
+		{
+			var t = new T();
+			Bind(record, t);
+			return t;
+		}
+
+		public abstract void Bind(IDataRecord record, T item);
 
 	}
 
 	public sealed class CompiledDataBinder<T> : DataBinder<T> where T : class, new()
 	{
-		Func<IDataRecord, T> f;
-		public CompiledDataBinder(ReadOnlyCollection<DbColumn> schema) {
+		Action<IDataRecord, T> f;
+
+		public CompiledDataBinder(ReadOnlyCollection<DbColumn> schema)
+		{
 
 			var ordinalMap =
 				schema
@@ -51,18 +60,18 @@ namespace Sylvan.Data
 
 			var targetType = typeof(T);
 
-			//var method = new DynamicMethod("Bind", targetType, new Type[] { drType }, true);
-			var param = Expression.Parameter(drType);
+			var recordParam = Expression.Parameter(drType);
+			var itemParam = Expression.Parameter(targetType);
 			var localsMap = new Dictionary<Type, ParameterExpression>();
 			var locals = new List<ParameterExpression>();
 
 			var bodyExpressions = new List<Expression>();
 
-			var targetLocal = Expression.Variable(targetType);
-			locals.Add(targetLocal);
-			var init = Expression.Assign(targetLocal, Expression.New(targetType.GetConstructor(Array.Empty<Type>())));
-			bodyExpressions.Add(targetLocal);
-			bodyExpressions.Add(init);
+			//var targetLocal = Expression.Variable(targetType);
+			//locals.Add(targetLocal);
+			//var init = Expression.Assign(targetLocal, Expression.New(targetType.GetConstructor(Array.Empty<Type>())));
+			//bodyExpressions.Add(targetLocal);
+			//bodyExpressions.Add(init);
 
 			var isDbNullMethod = drType.GetMethod("IsDBNull");
 
@@ -87,12 +96,6 @@ namespace Sylvan.Data
 				var setter = property.GetSetMethod(true);
 				var paramType = setter.GetParameters()[0].ParameterType;
 
-				//if (!localsMap.TryGetValue(paramType, out var local))
-				//{
-				//	local = Expression.Variable(paramType);
-				//	localsMap.Add(paramType, local);
-				//}
-
 				MethodInfo getter;
 
 				switch (Type.GetTypeCode(col.DataType))
@@ -110,7 +113,7 @@ namespace Sylvan.Data
 						getter = drType.GetMethod("GetDouble");
 						break;
 					default:
-						if(col.DataType == typeof(Guid))
+						if (col.DataType == typeof(Guid))
 						{
 							getter = drType.GetMethod("GetGuid");
 							break;
@@ -120,13 +123,13 @@ namespace Sylvan.Data
 
 				var ordinalExpr = Expression.Constant(ordinal, typeof(int));
 				Expression expr;
-				var assign = Expression.Call(targetLocal, setter, Expression.Call(param, getter, ordinalExpr));
+				var assign = Expression.Call(itemParam, setter, Expression.Call(recordParam, getter, ordinalExpr));
 
 				if (col.AllowDBNull != false)
 				{
 					expr =
 						Expression.IfThen(
-							Expression.Not(Expression.Call(param, isDbNullMethod, ordinalExpr)),
+							Expression.Not(Expression.Call(recordParam, isDbNullMethod, ordinalExpr)),
 							assign
 						);
 				}
@@ -136,22 +139,22 @@ namespace Sylvan.Data
 				}
 				bodyExpressions.Add(expr);
 			}
-			bodyExpressions.Add(targetLocal);
+			//.bodyExpressions.Add(itemParam);
 
 			var body = Expression.Block(locals, bodyExpressions);
 
-			var lf = Expression.Lambda<Func<IDataRecord, T>>(body, param);
+			var lf = Expression.Lambda<Action<IDataRecord, T>>(body, recordParam, itemParam);
 			this.f = lf.Compile();
 		}
 
-		public override T Bind(IDataRecord record)
+		public override void Bind(IDataRecord record, T item)
 		{
-			return f(record);
+			f(record, item);
 		}
 	}
 
-	public sealed  class ReflectionDataBinder<T> : DataBinder<T> where T : class, new()
-	{ 
+	public sealed class ReflectionDataBinder<T> : DataBinder<T> where T : class, new()
+	{
 		readonly ReadOnlyCollection<DbColumn> schema;
 		readonly DbColumn[] columns;
 
@@ -165,13 +168,11 @@ namespace Sylvan.Data
 				.Range(0, schema.Count)
 				.Select(i => schema.FirstOrDefault(c => c.ColumnOrdinal == i))
 				.ToArray();
-			
+
 		}
 
-		public override T Bind(IDataRecord record)
+		public override void Bind(IDataRecord record, T item)
 		{
-			var item = new T();
-
 			var type = typeof(T);
 
 			var args = new object?[1];
@@ -197,11 +198,114 @@ namespace Sylvan.Data
 				if (!isNull)
 				{
 					args[0] = record.GetValue(ordinal);
-					setter.Invoke(item,  args);
+					setter.Invoke(item, args);
 				}
 			}
+		}
+	}
 
-			return item;
+
+	public sealed class ReflectionDirectDataBinder<T> : DataBinder<T> where T : class, new()
+	{
+		readonly ReadOnlyCollection<DbColumn> schema;
+		readonly DbColumn[] columns;
+
+		readonly object?[] args = new object?[1];
+		readonly Type type;
+
+		readonly Action<IDataRecord, T>[] propBinders;
+
+		public ReflectionDirectDataBinder(ReadOnlyCollection<DbColumn> schema)
+		{
+			this.type = typeof(T);
+			this.schema = schema;
+
+			this.columns = schema.ToArray();
+			var ordinalMap =
+				this.columns
+				.Where(c => !string.IsNullOrEmpty(c.ColumnName))
+				.ToDictionary(c => c.ColumnName, c => c.ColumnOrdinal ?? -1);
+
+			var propBinderList = new List<Action<IDataRecord, T>>();
+
+			foreach (var property in type.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
+			{
+				args[0] = null;
+				var columnOrdinal = property.GetCustomAttribute<ColumnOrdinalAttribute>()?.Ordinal;
+				var columnName = property.GetCustomAttribute<ColumnNameAttribute>()?.Name ?? property.Name;
+
+				var setter = property.GetSetMethod(true);
+
+				var paramType = setter.GetParameters()[0].ParameterType;
+				var ordinal =
+					columnName != null
+					? (ordinalMap.TryGetValue(columnName, out int o) ? o : -1)
+					: columnOrdinal ?? -1;
+				if (ordinal == -1) throw new Exception("Binding failure");
+
+				var col = columns[ordinal];
+
+
+				var type = col.DataType;
+				var typeCode = Type.GetTypeCode(type);
+				Func<IDataRecord, object> selector;
+
+				switch (typeCode)
+				{
+					case TypeCode.Int32:
+						selector = r => r.GetInt32(ordinal);
+						break;
+					case TypeCode.DateTime:
+						selector = r => r.GetDateTime(ordinal);
+						break;
+					case TypeCode.String:
+						selector = r => r.GetString(ordinal);
+						break;
+					case TypeCode.Double:
+						selector = r => r.GetDouble(ordinal);
+						break;
+					default:
+						if (col.DataType == typeof(Guid))
+						{
+							selector = r => r.GetGuid(ordinal);
+							break;
+						}
+						continue;
+				}
+
+				Action<IDataRecord, T>? propBinder = null;
+				if (col.AllowDBNull != false)
+				{
+					propBinder = (r, i) =>
+					{
+						if (r.IsDBNull(ordinal) == false)
+						{
+							var val = selector(r);
+							args[0] = val;
+							setter.Invoke(i, args);
+						}
+					};
+				}
+				else
+				{
+					propBinder = (r, i) =>
+					{
+						var val = selector(r);
+						args[0] = val;
+						setter.Invoke(i, args);
+					};
+				}
+				propBinderList.Add(propBinder);
+			}
+			this.propBinders = propBinderList.ToArray();
+		}
+
+		public override void Bind(IDataRecord record, T item)
+		{
+			foreach (var pb in propBinders)
+			{
+				pb(record, item);
+			}
 		}
 	}
 }
