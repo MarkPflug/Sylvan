@@ -101,7 +101,7 @@ namespace Sylvan.Data.Csv
 		readonly char quote;
 		readonly char escape;
 		readonly bool ownsReader;
-		bool autoDetectDelimiter;
+		readonly bool autoDetectDelimiter;
 		readonly CultureInfo culture;
 		readonly string? dateFormat;
 		readonly string? trueString, falseString;
@@ -216,25 +216,23 @@ namespace Sylvan.Data.Csv
 			this.hasRows = await NextRecordAsync();
 			InitializeSchema(schema);
 		}
-
+		
 		char DetectDelimiter()
 		{
 			int[] counts = new int[AutoDetectDelimiters.Length];
 			for (int i = 0; i < bufferEnd; i++)
 			{
 				var c = buffer[i];
+				if (c == '\n' || c == '\r')
+					break;
 				for (int d = 0; d < AutoDetectDelimiters.Length; d++)
 				{
 					if (c == AutoDetectDelimiters[d])
 					{
 						counts[d]++;
 					}
-					if (c == '\n' || c == '\r')
-						goto done;
-
 				}
 			}
-		done:
 			int maxIdx = 0;
 			int maxCount = 0;
 			for (int i = 0; i < counts.Length; i++)
@@ -988,7 +986,7 @@ namespace Sylvan.Data.Csv
 				default:
 					if (type == typeof(byte[]))
 					{
-						var (b, o, l) = this.GetField(ordinal);
+						var (_, _, l) = this.GetField(ordinal);
 						var dataLen = l / 4 * 3;
 						var buffer = new byte[dataLen];
 						var len = GetBytes(ordinal, 0, buffer, 0, dataLen);
