@@ -83,7 +83,7 @@ namespace Sylvan.Data.Csv
 		readonly TextReader reader;
 		bool hasRows;
 		readonly char[] buffer;
-		int idx;		
+		int idx;
 		int bufferEnd;
 		int recordStart;
 		bool atEndOfText;
@@ -101,11 +101,12 @@ namespace Sylvan.Data.Csv
 		readonly char quote;
 		readonly char escape;
 		readonly bool ownsReader;
-		bool autoDetectDelimiter;
+		readonly bool autoDetectDelimiter;
 		readonly CultureInfo culture;
 		readonly string? dateFormat;
 		readonly string? trueString, falseString;
 		readonly bool hasHeaders;
+		readonly StringFactory stringFactory;
 
 		/// <summary>
 		/// Creates a new CsvDataReader.
@@ -186,6 +187,7 @@ namespace Sylvan.Data.Csv
 			this.culture = options.Culture;
 			this.ownsReader = options.OwnsReader;
 			this.autoDetectDelimiter = options.AutoDetect;
+			this.stringFactory = options.StringFactory ?? new StringFactory((char[] b, int o, int l) => new string(b, o, l));
 		}
 
 		async Task InitializeAsync(ICsvSchemaProvider? schema)
@@ -214,27 +216,28 @@ namespace Sylvan.Data.Csv
 			// read the first row of data to determine fieldCount (if there were no headers)
 			// and support calling HasRows before Read is first called.
 			this.hasRows = await NextRecordAsync();
-			InitializeSchema(schema);
+			if (hasHeaders == false)
+			{
+				InitializeSchema(schema);
+			}
 		}
-
+		
 		char DetectDelimiter()
 		{
 			int[] counts = new int[AutoDetectDelimiters.Length];
 			for (int i = 0; i < bufferEnd; i++)
 			{
 				var c = buffer[i];
-				for(int d = 0; d < AutoDetectDelimiters.Length; d++)
+				if (c == '\n' || c == '\r')
+					break;
+				for (int d = 0; d < AutoDetectDelimiters.Length; d++)
 				{
-					if(c == AutoDetectDelimiters[d])
+					if (c == AutoDetectDelimiters[d])
 					{
 						counts[d]++;
 					}
-					if (c == '\n' || c == '\r')
-						goto done;
-
 				}
 			}
-		done:
 			int maxIdx = 0;
 			int maxCount = 0;
 			for (int i = 0; i < counts.Length; i++)
@@ -250,8 +253,6 @@ namespace Sylvan.Data.Csv
 
 		void InitializeSchema(ICsvSchemaProvider? schema)
 		{
-			if (state != State.Initializing) return;
-
 			columns = new CsvColumn[this.fieldCount];
 			for (int i = 0; i < this.fieldCount; i++)
 			{
@@ -318,6 +319,7 @@ namespace Sylvan.Data.Csv
 		// returns True if there are more in record (hit delimiter), 
 		// False if last in record (hit eol/eof), 
 		// or Incomplete if we exhausted the buffer before finding the end of the record.
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		ReadResult ReadField(int fieldIdx)
 		{
 			char c;
@@ -461,7 +463,8 @@ namespace Sylvan.Data.Csv
 
 			return ReadResult.Incomplete;
 		}
-
+		
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		static bool IsEndOfLine(char c)
 		{
 			return c == '\r' || c == '\n';
@@ -721,9 +724,10 @@ namespace Sylvan.Data.Csv
 		public override DateTime GetDateTime(int ordinal)
 		{
 #if NETSTANDARD2_1
-			if(this.dateFormat != null && DateTime.TryParseExact(this.GetFieldSpan(ordinal), this.dateFormat.AsSpan(), culture, DateTimeStyles.None, out var dt)) {
+			if (this.dateFormat != null && DateTime.TryParseExact(this.GetFieldSpan(ordinal), this.dateFormat.AsSpan(), culture, DateTimeStyles.None, out var dt))
+			{
 				return dt;
-			} 
+			}
 			return DateTime.Parse(this.GetFieldSpan(ordinal), culture);
 #else
 			var dateStr = this.GetString(ordinal);
@@ -843,19 +847,29 @@ namespace Sylvan.Data.Csv
 			throw new IndexOutOfRangeException();
 		}
 
+		void ThrowIfOutOrRange(int ordinal)
+		{
+			if ((uint)ordinal >= (uint)fieldCount)
+			{
+				throw new ArgumentOutOfRangeException(nameof(ordinal));
+			}
+		}
+
 		/// <inheritdoc/>
 		public override string GetString(int ordinal)
 		{
-			if (ordinal >= 0 && ordinal < curFieldCount)
+			if ((uint)ordinal < (uint)curFieldCount)
 			{
 				var (b, o, l) = GetField(ordinal);
-				return l == 0 ? string.Empty : new string(b, o, l);
+				if (l == 0) return string.Empty;
+				return stringFactory.Invoke(b, o, l);
 			}
+			ThrowIfOutOrRange(ordinal);
 			return string.Empty;
 		}
 
 #if NETSTANDARD2_1
-				
+
 		ReadOnlySpan<char> GetFieldSpan(int ordinal)
 		{
 			var (b, o, l) = GetField(ordinal);
@@ -943,8 +957,7 @@ namespace Sylvan.Data.Csv
 		/// <inheritdoc/>
 		public override object? GetValue(int ordinal)
 		{
-			if ((uint)ordinal >= fieldCount)
-				throw new ArgumentOutOfRangeException(nameof(ordinal));
+			ThrowIfOutOrRange(ordinal);
 
 			if (columns[ordinal].AllowDBNull != false && this.IsDBNull(ordinal))
 			{
@@ -979,7 +992,7 @@ namespace Sylvan.Data.Csv
 				default:
 					if (type == typeof(byte[]))
 					{
-						var (b, o, l) = this.GetField(ordinal);
+						var (_, _, l) = this.GetField(ordinal);
 						var dataLen = l / 4 * 3;
 						var buffer = new byte[dataLen];
 						var len = GetBytes(ordinal, 0, buffer, 0, dataLen);
@@ -1012,9 +1025,9 @@ namespace Sylvan.Data.Csv
 		/// <inheritdoc/>
 		public override bool IsDBNull(int ordinal)
 		{
-			if (((uint)ordinal) >= fieldCount)
-				throw new ArgumentOutOfRangeException(nameof(ordinal));
-			if (ordinal >= curFieldCount)
+			ThrowIfOutOrRange(ordinal);
+
+			if ((uint)ordinal >= (uint)curFieldCount)
 			{
 				return true;
 			}

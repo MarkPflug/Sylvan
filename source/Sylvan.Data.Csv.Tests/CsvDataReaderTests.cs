@@ -617,6 +617,35 @@ namespace Sylvan.Data.Csv
 			Assert.Equal(new DateTime(2020, 8, 5), csv.GetDateTime(0));
 		}
 
+
+		//[Fact]
+		//public void DeDupeString()
+		//{
+		//	using var tr = new StringReader("Name\nABC\nABC\nBCD\nBCD\n");
+		//	var opts = new CsvDataReaderOptions()
+		//	{
+		//		PoolStrings = true
+		//	};
+		//	var csv = CsvDataReader.Create(tr, opts);
+		//	Assert.True(csv.Read());
+		//	var str1 = csv.GetString(0);
+		//	Assert.Equal("ABC", str1);
+		//	Assert.True(csv.Read());
+		//	var str2 = csv.GetString(0);
+		//	Assert.Equal("ABC", str2);
+		//	Assert.Same(str1, str2);
+
+		//	Assert.True(csv.Read());
+		//	str1 = csv.GetString(0);
+		//	Assert.Equal("BCD", str1);
+		//	Assert.True(csv.Read());
+		//	str2 = csv.GetString(0);
+		//	Assert.Equal("BCD", str2);
+		//	Assert.Same(str2, str2);
+		//}
+
+	
+
 		[Fact]
 		public void AutoDetect1()
 		{
@@ -636,6 +665,22 @@ namespace Sylvan.Data.Csv
 			Assert.Equal("A", csv.GetName(0));
 			Assert.Equal("D", csv.GetName(3));
 		}
+
+		[Fact]
+		public void MissingFieldTest()
+		{
+			using var tr = new StringReader("a,b,c\n1,2,3\n4,5\n6,7,8\n");
+			var csv = CsvDataReader.Create(tr);
+			Assert.True(csv.Read());
+			Assert.True(csv.Read());
+			Assert.Equal("4", csv.GetString(0));
+			Assert.Equal("5", csv.GetString(1));
+			Assert.Equal("", csv.GetString(2));
+			Assert.False(csv.IsDBNull(0));
+			Assert.False(csv.IsDBNull(1));
+			Assert.True(csv.IsDBNull(2));
+			Assert.Throws<ArgumentOutOfRangeException>(() => csv.GetString(-1));
+			Assert.Throws<ArgumentOutOfRangeException>(() => csv.GetString(3));
+		}
 	}
 }
-
