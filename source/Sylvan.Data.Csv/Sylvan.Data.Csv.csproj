@@ -2,13 +2,17 @@
 
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0;netstandard2.1</TargetFrameworks>
-    <Version>0.6.3</Version>
+    <VersionPrefix>0.6.4</VersionPrefix>
+    <VersionSuffix>B0001</VersionSuffix>
     <Description>A .NET library for reading and writing delimited CSV data.</Description>
     <PackageTags>csv;delimited;datareader;async</PackageTags>    
     <Nullable>enable</Nullable>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
+
   <ItemGroup>
     <Compile Include="../Sylvan.Data/SchemaTable.cs" />
+    <!--<Compile Include="../Sylvan.Common/StringPool.cs" />
+    <Compile Include="../Sylvan.Common/StringPoolFast.cs" />-->
   </ItemGroup>
 </Project>

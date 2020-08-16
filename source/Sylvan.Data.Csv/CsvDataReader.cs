@@ -106,6 +106,7 @@ namespace Sylvan.Data.Csv
 		readonly string? dateFormat;
 		readonly string? trueString, falseString;
 		readonly bool hasHeaders;
+		readonly StringFactory stringFactory;
 
 		/// <summary>
 		/// Creates a new CsvDataReader.
@@ -186,6 +187,7 @@ namespace Sylvan.Data.Csv
 			this.culture = options.Culture;
 			this.ownsReader = options.OwnsReader;
 			this.autoDetectDelimiter = options.AutoDetect;
+			this.stringFactory = options.StringFactory ?? new StringFactory((char[] b, int o, int l) => new string(b, o, l));
 		}
 
 		async Task InitializeAsync(ICsvSchemaProvider? schema)
@@ -214,7 +216,10 @@ namespace Sylvan.Data.Csv
 			// read the first row of data to determine fieldCount (if there were no headers)
 			// and support calling HasRows before Read is first called.
 			this.hasRows = await NextRecordAsync();
-			InitializeSchema(schema);
+			if (hasHeaders == false)
+			{
+				InitializeSchema(schema);
+			}
 		}
 		
 		char DetectDelimiter()
@@ -248,8 +253,6 @@ namespace Sylvan.Data.Csv
 
 		void InitializeSchema(ICsvSchemaProvider? schema)
 		{
-			if (state != State.Initializing) return;
-
 			columns = new CsvColumn[this.fieldCount];
 			for (int i = 0; i < this.fieldCount; i++)
 			{
@@ -858,7 +861,8 @@ namespace Sylvan.Data.Csv
 			if ((uint)ordinal < (uint)curFieldCount)
 			{
 				var (b, o, l) = GetField(ordinal);
-				return l == 0 ? string.Empty : new string(b, o, l);
+				if (l == 0) return string.Empty;
+				return stringFactory.Invoke(b, o, l);
 			}
 			ThrowIfOutOrRange(ordinal);
 			return string.Empty;
