@@ -48,12 +48,6 @@ namespace Sylvan.Data
 		}
 
 		[Fact]
-		public void BenchDirectReflection()
-		{
-			new DataBinderBenchmarks().DirectReflection();
-		}
-
-		[Fact]
 		public void BenchCompiled()
 		{
 			new DataBinderBenchmarks().Compiled();

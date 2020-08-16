@@ -174,23 +174,16 @@ namespace Sylvan.Benchmarks
 			this.item = new Record();
 			this.compiled = new CompiledDataBinder<Record>(schema.GetColumnSchema());
 			this.reflection = new ReflectionDataBinder<Record>(schema.GetColumnSchema());
-			this.direct = new ReflectionDirectDataBinder<Record>(schema.GetColumnSchema());
 		}
 
 		Record item;
 		IDataRecord record;
-		DataBinder<Record> compiled, reflection, direct;
+		DataBinder<Record> compiled, reflection;
 
 		[Benchmark(Baseline = true)]
 		public void Reflection()
 		{
 			Bench(reflection, record, item);
-		}
-
-		[Benchmark]
-		public void DirectReflection()
-		{
-			Bench(direct, record, item);
 		}
 
 		[Benchmark]
