@@ -10,9 +10,9 @@ namespace Sylvan.Data.Csv
 {
 	static class TestData
 	{
-		//const string DataSetUrl = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/f7c2384622806d5297d16c314a7bc0b9cde24937/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_US.csv";
+		const string DataSetUrl = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/f7c2384622806d5297d16c314a7bc0b9cde24937/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_US.csv";
 
-		const string DataSetUrl = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/cf8b8bedd39a840c1c2df9a763a44632e512ed68/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_US.csv";
+		//const string DataSetUrl = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/cf8b8bedd39a840c1c2df9a763a44632e512ed68/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_US.csv";
 		const string DataFileName = "Data.csv";
 
 		static string CachedData;

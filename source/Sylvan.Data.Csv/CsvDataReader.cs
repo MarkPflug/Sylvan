@@ -106,7 +106,7 @@ namespace Sylvan.Data.Csv
 		readonly string? dateFormat;
 		readonly string? trueString, falseString;
 		readonly bool hasHeaders;
-		readonly IStringPool? stringPool;
+		readonly StringFactory stringFactory;
 
 		/// <summary>
 		/// Creates a new CsvDataReader.
@@ -187,7 +187,7 @@ namespace Sylvan.Data.Csv
 			this.culture = options.Culture;
 			this.ownsReader = options.OwnsReader;
 			this.autoDetectDelimiter = options.AutoDetect;
-			this.stringPool = options.StringPool;
+			this.stringFactory = options.StringFactory ?? new StringFactory((char[] b, int o, int l) => new string(b, o, l));
 		}
 
 		async Task InitializeAsync(ICsvSchemaProvider? schema)
@@ -862,14 +862,7 @@ namespace Sylvan.Data.Csv
 			{
 				var (b, o, l) = GetField(ordinal);
 				if (l == 0) return string.Empty;
-				if (stringPool == null)
-				{
-					return new string(b, o, l);
-				}
-				else
-				{
-					return stringPool.GetString(b, o, l) ?? new string(b, o, l);
-				}
+				return stringFactory.Invoke(b, o, l);
 			}
 			ThrowIfOutOrRange(ordinal);
 			return string.Empty;

@@ -1,17 +1,17 @@
 ﻿namespace Sylvan
 {
 	/// <summary>
-	/// Allows de-duplication of strings.
+	/// An interface that allows de-duplication of strings upon construction.
 	/// </summary>
 	/// <remarks>
 	/// This is intended to allow de-duplication of strings when 
 	/// reading from buffers, such as files, databases, json, serialized input, etc.
 	/// </remarks>
-	public interface IStringPool
+	public interface IStringFactory
 	{
 		/// <summary>
-		/// Gets or adds a string that is equal to the given span.
+		/// Gets a string that contains the contents of the buffer.
 		/// </summary>
-		string? GetString(char[] buffer, int offset, int length);
+		string GetString(char[] buffer, int offset, int length);
 	}
 }

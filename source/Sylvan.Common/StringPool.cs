@@ -5,9 +5,9 @@ using System.Runtime.CompilerServices;
 namespace Sylvan
 {
 	/// <summary>
-	/// An IStringPool implementation.
+	/// An IStringFactory implementation that provides string de-duping capabilities..
 	/// </summary>
-	public sealed partial class StringPool : IStringPool
+	public sealed partial class StringPool : IStringFactory
 	{
 		const int DefaultCapacity = 64;
 		const int DefaultSizeLimit = 32;
@@ -47,7 +47,7 @@ namespace Sylvan
 		}
 
 		readonly int stringSizeLimit;
-		int[] buckets;
+		int[] buckets; // contains index into entries offset by -1. So that 0 (default) means empty bucket.
 		Entry[] entries;
 
 		int count;
@@ -66,8 +66,7 @@ namespace Sylvan
 		/// <param name="stringSizeLimit">The size limit beyond which strings will not be pooled.</param>
 		/// <remarks>
 		/// The <paramref name="stringSizeLimit"/> prevents pooling strings beyond a certain size. 
-		/// Longer strings have a higher likelihood of being unique, and carry extra cost for identifying uniqueness.
-		/// This limit allows not spending time identifying duplicates for such strings.
+		/// Longer strings are typically less likely to be duplicated, and and carry extra cost for identifying uniqueness.
 		/// </remarks>
 		public StringPool(int stringSizeLimit)
 		{
@@ -88,14 +87,14 @@ namespace Sylvan
 		/// <summary>
 		/// Gets a string containing the characters in the input buffer.
 		/// </summary>
-		public string? GetString(char[] buffer, int offset, int length)
+		public string GetString(char[] buffer, int offset, int length)
 		{
 			if (buffer == null) throw new ArgumentNullException(nameof(buffer));
 			if (length == 0) return string.Empty;
 			if (length > stringSizeLimit)
 			{
 				this.skipLen += length;
-				return null;
+				return new string(buffer, offset, length);
 			}
 
 			var entries = this.entries;
@@ -103,7 +102,7 @@ namespace Sylvan
 
 			uint collisionCount = 0;
 			ref int bucket = ref GetBucket(hashCode);
-			int i = bucket - 1; // Value in _buckets is 1-based
+			int i = bucket - 1;
 
 			while ((uint)i < (uint)entries.Length)
 			{
@@ -121,7 +120,8 @@ namespace Sylvan
 				if (collisionCount > CollisionLimit)
 				{
 					// protects against malicious inputs
-					return null;
+					// too many collisions give up and let the caller create the string.					
+					return new string(buffer, offset, length);
 				}
 			}
 
