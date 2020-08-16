@@ -1,4 +1,8 @@
 # Sylvan.Data.Csv Release Notes
+_0.6.4_
+
+- Add support for optional string de-duping.
+
 _0.6.3_
 
 - Add AutoDetect delimiter feature.

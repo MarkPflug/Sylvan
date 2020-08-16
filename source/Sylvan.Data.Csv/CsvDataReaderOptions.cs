@@ -4,6 +4,14 @@ using System.Globalization;
 namespace Sylvan.Data.Csv
 {
 	/// <summary>
+	/// A function that can be used to de-dupe strings during construction directly from internal buffers.
+	/// </summary>
+	/// <remarks>
+	/// The Sylvan.Common library can provide an implementation of this method via the Sylvan.StringPool type.
+	/// </remarks>
+	public delegate string StringFactory(char[] buffer, int offset, int length);
+
+	/// <summary>
 	/// Options for configuring a CsvDataReader.
 	/// </summary>
 	public sealed class CsvDataReaderOptions
@@ -38,7 +46,13 @@ namespace Sylvan.Data.Csv
 			this.DateFormat = null;
 
 			this.AutoDetect = true;
+			this.StringFactory = null;
 		}
+
+		/// <summary>
+		/// A string factory function which can de-dupe strings on construction. Defaults to null.
+		/// </summary>
+		public StringFactory? StringFactory { get; set; }
 
 		/// <summary>
 		/// Enables auto detecting the delimiter used in the CSV data. Defaults to true.
@@ -134,7 +148,6 @@ namespace Sylvan.Data.Csv
 				Delimiter == Quote ||
 				BufferSize < MinBufferSize ||
 				StringComparer.OrdinalIgnoreCase.Equals(TrueString, FalseString);
-			;
 			if (invalid)
 				throw new CsvConfigurationException();
 		}
