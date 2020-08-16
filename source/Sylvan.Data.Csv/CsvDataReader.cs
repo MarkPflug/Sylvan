@@ -101,7 +101,7 @@ namespace Sylvan.Data.Csv
 		readonly char quote;
 		readonly char escape;
 		readonly bool ownsReader;
-		bool autoDetectDelimiter;
+		readonly bool autoDetectDelimiter;
 		readonly CultureInfo culture;
 		readonly string? dateFormat;
 		readonly string? trueString, falseString;
@@ -221,25 +221,23 @@ namespace Sylvan.Data.Csv
 				InitializeSchema(schema);
 			}
 		}
-
+		
 		char DetectDelimiter()
 		{
 			int[] counts = new int[AutoDetectDelimiters.Length];
 			for (int i = 0; i < bufferEnd; i++)
 			{
 				var c = buffer[i];
+				if (c == '\n' || c == '\r')
+					break;
 				for (int d = 0; d < AutoDetectDelimiters.Length; d++)
 				{
 					if (c == AutoDetectDelimiters[d])
 					{
 						counts[d]++;
 					}
-					if (c == '\n' || c == '\r')
-						goto done;
-
 				}
 			}
-		done:
 			int maxIdx = 0;
 			int maxCount = 0;
 			for (int i = 0; i < counts.Length; i++)
@@ -321,6 +319,7 @@ namespace Sylvan.Data.Csv
 		// returns True if there are more in record (hit delimiter), 
 		// False if last in record (hit eol/eof), 
 		// or Incomplete if we exhausted the buffer before finding the end of the record.
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		ReadResult ReadField(int fieldIdx)
 		{
 			char c;
@@ -464,7 +463,8 @@ namespace Sylvan.Data.Csv
 
 			return ReadResult.Incomplete;
 		}
-
+		
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		static bool IsEndOfLine(char c)
 		{
 			return c == '\r' || c == '\n';
@@ -999,7 +999,7 @@ namespace Sylvan.Data.Csv
 				default:
 					if (type == typeof(byte[]))
 					{
-						var (b, o, l) = this.GetField(ordinal);
+						var (_, _, l) = this.GetField(ordinal);
 						var dataLen = l / 4 * 3;
 						var buffer = new byte[dataLen];
 						var len = GetBytes(ordinal, 0, buffer, 0, dataLen);
