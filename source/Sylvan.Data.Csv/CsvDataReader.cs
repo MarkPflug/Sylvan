@@ -316,6 +316,7 @@ namespace Sylvan.Data.Csv
 		// returns True if there are more in record (hit delimiter), 
 		// False if last in record (hit eol/eof), 
 		// or Incomplete if we exhausted the buffer before finding the end of the record.
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		ReadResult ReadField(int fieldIdx)
 		{
 			char c;
@@ -459,7 +460,8 @@ namespace Sylvan.Data.Csv
 
 			return ReadResult.Incomplete;
 		}
-
+		
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		static bool IsEndOfLine(char c)
 		{
 			return c == '\r' || c == '\n';
