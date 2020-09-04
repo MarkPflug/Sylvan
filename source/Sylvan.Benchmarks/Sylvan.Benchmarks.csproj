@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netcoreapp3.1;net50;net462</TargetFrameworks>
+    <TargetFrameworks>netcoreapp3.1;net462</TargetFrameworks>
     <!--<TargetFramework>net50</TargetFramework>-->
     <OutputType>exe</OutputType>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -19,6 +19,9 @@
     <!--<PackageReference Include="NLight" Version="2.1.1" />-->
     <PackageReference Include="NReco.Csv" Version="1.0.0" />
     <PackageReference Include="System.Data.OleDb" Version="4.7.0" />
+    <PackageReference Include="CsvTextFieldParser" Version="1.2.2-preview" />
+  
+   
   </ItemGroup>
 
   <ItemGroup>

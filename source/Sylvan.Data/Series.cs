@@ -14,9 +14,6 @@ namespace Sylvan.Data
 		}
 	}
 
-
-
-
 	public class Series<TK, TV> where TK : IComparable
 	{
 		TK[] keys;

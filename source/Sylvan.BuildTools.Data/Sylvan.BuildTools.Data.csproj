@@ -39,6 +39,4 @@
       <Content Include="@(UserRuntimeAssembly)" PackagePath="build"/>
     </ItemGroup>
   </Target>
-
-
 </Project>

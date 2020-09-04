@@ -39,6 +39,18 @@ namespace Sylvan.Data.Csv
 			}
 		}
 
+
+		[Benchmark]
+		public void CsvTextFieldParser()
+		{
+			var tr = TestData.GetTextReader();
+			var csv = new NotVisualBasic.FileIO.CsvTextFieldParser(tr);			
+			while(!csv.EndOfData)
+			{
+				var fields = csv.ReadFields();
+			}
+		}
+
 		//[Benchmark]
 		public void FastCsvParser()
 		{
