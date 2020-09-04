@@ -617,6 +617,35 @@ namespace Sylvan.Data.Csv
 			Assert.Equal(new DateTime(2020, 8, 5), csv.GetDateTime(0));
 		}
 
+
+		//[Fact]
+		//public void DeDupeString()
+		//{
+		//	using var tr = new StringReader("Name\nABC\nABC\nBCD\nBCD\n");
+		//	var opts = new CsvDataReaderOptions()
+		//	{
+		//		PoolStrings = true
+		//	};
+		//	var csv = CsvDataReader.Create(tr, opts);
+		//	Assert.True(csv.Read());
+		//	var str1 = csv.GetString(0);
+		//	Assert.Equal("ABC", str1);
+		//	Assert.True(csv.Read());
+		//	var str2 = csv.GetString(0);
+		//	Assert.Equal("ABC", str2);
+		//	Assert.Same(str1, str2);
+
+		//	Assert.True(csv.Read());
+		//	str1 = csv.GetString(0);
+		//	Assert.Equal("BCD", str1);
+		//	Assert.True(csv.Read());
+		//	str2 = csv.GetString(0);
+		//	Assert.Equal("BCD", str2);
+		//	Assert.Same(str2, str2);
+		//}
+
+	
+
 		[Fact]
 		public void AutoDetect1()
 		{

@@ -86,8 +86,8 @@ namespace Sylvan.Data
 		public static readonly IColumnSizeStrategy Programmer = new ProgrammerNumberColumnSizer();
 		public static readonly IColumnSizeStrategy Human = new HumanNumberColumnSizer();
 
-		public static readonly IColumnSizeStrategy Size256 = new FixedColumnSizer(0x100);
-		public static readonly IColumnSizeStrategy Size1024 = new FixedColumnSizer(0x800);
+		public static readonly IColumnSizeStrategy Size256 = new FixedColumnSizer(256);
+		public static readonly IColumnSizeStrategy Size1024 = new FixedColumnSizer(1024);
 	}
 
 	public interface IColumnSizeStrategy
