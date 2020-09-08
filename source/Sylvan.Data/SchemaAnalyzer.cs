@@ -196,7 +196,7 @@ namespace Sylvan.Data
 					{
 						SeriesHeaderFormat = headerFormat,
 						IsIntegerSeries = st == SeriesType.Integer,
-						IsDateSeries = st == SeriesType.Date,						
+						IsDateSeries = st == SeriesType.Date,
 						DataType = type,
 						DataTypeName = n,
 						NumericPrecision = p,
@@ -746,7 +746,7 @@ namespace Sylvan.Data
 						types &= col.GetColType();
 					}
 					var type = ColumnInfo.GetType(types);
-					var columnSchema = ColumnSchema.CreateSeries(idx, allowNull, type, series.type, prefix + "{0}");
+					var columnSchema = ColumnSchema.CreateSeries(idx, allowNull, type, series.type, prefix + "{" + series.type + "}");
 					i = series.seriesEnd;
 					schema.Add(columnSchema);
 					continue;
@@ -773,6 +773,8 @@ namespace Sylvan.Data
 			public int step;
 			public int seriesStart;
 			public int seriesEnd;
+
+			public int Length => seriesEnd - seriesStart + 1;
 		}
 
 		SeriesInfo? DetectSeries(ColumnInfo[] cols)
@@ -808,11 +810,12 @@ namespace Sylvan.Data
 				if (i > 0 && s.type != SeriesType.None)
 				{
 					var prev = series[i - 1];
+					var start = series[prev.seriesStart];
 					var step = s.value - prev.value;
 					if (prev.type == s.type && StringComparer.InvariantCultureIgnoreCase.Equals(prev.prefix, s.prefix))
 					{
 						s.seriesStart = prev.seriesStart;
-						ss = ss ?? prev;
+						ss = ss == null ? start : ss != start && start.Length > ss.Length ? start : ss;
 						s.step = step;
 						series[s.seriesStart].seriesEnd = i;
 					}

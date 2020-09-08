@@ -11,9 +11,7 @@ namespace Sylvan.Data.Csv
 			var data = TestData.GetTestDataReader();
 			var schema = new Schema(data);
 			var spec = schema.GetSchemaSpecification(true);
-
 		}
-
 
 		[Fact]
 		public void ParseTest1()

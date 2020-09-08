@@ -38,19 +38,16 @@ namespace Sylvan.Data.Csv
 		}
 
 		[Fact]
-		public void TestDateSeries()
+		public void DateSeriesTest()
 		{
-			var data = "Name,08/12/20,08/13/20,08/14/20\r\nTest,1,2,3";
-			var csv = CsvDataReader.Create(new StringReader(data));
+			var data = TestData.GetTextReader();
+			var csv = CsvDataReader.Create(data);
 			var a = new SchemaAnalyzer();
 			var result = a.Analyze(csv);
 
 			var schema = result.GetSchema();
-			Assert.Equal(2, schema.Count);
-			Assert.Equal("Name", schema[0].ColumnName);
-			Assert.Null(schema[1].ColumnName);
-			Assert.Equal(typeof(int), schema[1].DataType);
-
+			var col = schema[11];
+			Assert.NotNull(col);
 		}
 	}
 }
