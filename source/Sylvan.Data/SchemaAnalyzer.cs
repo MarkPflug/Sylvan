@@ -4,8 +4,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Data.Common;
 using System.Diagnostics;
-using System.Linq;
-using System.Numerics;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using static Sylvan.Data.SchemaAnalyzer;
@@ -110,8 +108,6 @@ namespace Sylvan.Data
 			this.sizer = options.ColumnSizer;
 		}
 
-
-
 		public AnalysisResult Analyze(DbDataReader dataReader)
 		{
 			return AnalyzeAsync(dataReader).GetAwaiter().GetResult();
@@ -142,7 +138,7 @@ namespace Sylvan.Data
 		internal class ColumnSchema : DbColumn
 		{
 			public bool IsIntegerSeries { get; private set; }
-			public string? IntegerSeriesFormat { get; private set; }
+			public string? SeriesHeaderFormat { get; private set; }
 
 			public bool IsDateSeries { get; private set; }
 
@@ -157,8 +153,8 @@ namespace Sylvan.Data
 							return IsIntegerSeries;
 						case nameof(IsDateSeries):
 							return IsDateSeries;
-						case nameof(IntegerSeriesFormat):
-							return IntegerSeriesFormat;
+						case nameof(SeriesHeaderFormat):
+							return SeriesHeaderFormat;
 						default:
 							return base[property];
 					}
@@ -191,15 +187,15 @@ namespace Sylvan.Data
 					: (3, 1, "byte");
 			}
 
-			internal static ColumnSchema CreateSeries(int ordinal, string? name, bool isNullable, Type type, SeriesType st, string headerFormat)
+			internal static ColumnSchema CreateSeries(int ordinal, bool isNullable, Type type, SeriesType st, string headerFormat)
 			{
 				var (p, s, n) = GetTypeInfo(type);
 
 				var cs =
-					new ColumnSchema(ordinal, name, isNullable, false)
+					new ColumnSchema(ordinal, null, isNullable, false)
 					{
+						SeriesHeaderFormat = headerFormat,
 						IsIntegerSeries = st == SeriesType.Integer,
-						IntegerSeriesFormat = st == SeriesType.Integer ? headerFormat : null,
 						IsDateSeries = st == SeriesType.Date,						
 						DataType = type,
 						DataTypeName = n,
@@ -259,14 +255,7 @@ namespace Sylvan.Data
 			public static ColumnSchema CreateInt(int ordinal, string? name, bool isNullable, bool isUnique, Type type)
 			{
 
-				var (p, s, n) =
-					(type == typeof(long))
-					? (19, 8, "long")
-					: (type == typeof(int))
-					? (18, 4, "int")
-					: (type == typeof(short))
-					? (5, 2, "short")
-					: (3, 1, "byte");
+				var (p, s, n) = GetTypeInfo(type);
 
 				return
 					new ColumnSchema(ordinal, name, isNullable, isUnique)
@@ -757,7 +746,7 @@ namespace Sylvan.Data
 						types &= col.GetColType();
 					}
 					var type = ColumnInfo.GetType(types);
-					var columnSchema = ColumnSchema.CreateSeries(idx, "*", allowNull, type, series.type, prefix + "{0}");
+					var columnSchema = ColumnSchema.CreateSeries(idx, allowNull, type, series.type, prefix + "{0}");
 					i = series.seriesEnd;
 					schema.Add(columnSchema);
 					continue;

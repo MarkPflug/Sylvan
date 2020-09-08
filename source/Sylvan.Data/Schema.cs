@@ -109,16 +109,55 @@ namespace Sylvan.Data
 
 		class SchemaColumn : DbColumn
 		{
+			const string SeriesSymbol = "*";
 			public DbType DbType { get; }
 
-			public SchemaColumn(string name, DbType type, bool allowNull, int size = -1)
+			public int? SeriesOrdinal { get; }
+			public string? SeriesHeaderFormat { get; }
+
+			public bool? IsDateSeries { get; }
+			public bool? IsIntegerSeries { get; }
+
+			public override object? this[string property]
+			{
+				get
+				{
+					switch (property)
+					{
+						case nameof(DbType):
+							return this.DbType;
+						case nameof(SeriesOrdinal):
+							return this.SeriesOrdinal;
+						case nameof(SeriesHeaderFormat):
+							return this.SeriesHeaderFormat;
+						case nameof(IsDateSeries):
+							return this.IsDateSeries;
+						case nameof(IsIntegerSeries):
+							return this.IsIntegerSeries;
+						default:
+							return base[property];
+					}
+				}
+			}
+
+			public SchemaColumn(string? baseName, string name, DbType type, bool allowNull, int size = -1)
 			{
 				this.DbType = type;
-				this.ColumnName = name;
+
+				bool isSeries = name == SeriesSymbol;
+
+				this.SeriesOrdinal = isSeries ? 0 : (int?)null;
+				this.BaseColumnName = isSeries ? null : baseName;
+				this.ColumnName = isSeries ? null : name;
+				this.SeriesHeaderFormat = isSeries ? baseName : null;
+				this.IsDateSeries = isSeries ? name.IndexOf("{Date}", StringComparison.OrdinalIgnoreCase) >= 0 : (bool?)null;
+				this.IsIntegerSeries = isSeries ? name.IndexOf("{Integer}", StringComparison.OrdinalIgnoreCase) >= 0 : (bool?)null;
+
 				this.AllowDBNull = allowNull;
 				this.ColumnSize = size < 0 ? (int?)null : size;
 				this.DataType = GetDataType(type);
 				this.DataTypeName = type.ToString();
+
 			}
 
 			public SchemaColumn(DbColumn col)
@@ -154,9 +193,9 @@ namespace Sylvan.Data
 			/// <summary>
 			/// Adds a column
 			/// </summary>
-			public Builder AddColumn(string name, DbType type, bool allowNull = true, int size = -1)
+			public Builder AddColumn(string baseName, string name, DbType type, bool allowNull = true, int size = -1)
 			{
-				var col = new SchemaColumn(name, type, allowNull, size);
+				var col = new SchemaColumn(baseName, name, type, allowNull, size);
 				this.columns.Add(col);
 				return this;
 			}
@@ -210,7 +249,7 @@ namespace Sylvan.Data
 
 		static readonly Regex ColSpecRegex =
 			new Regex(
-				@"^(?<BaseName>[^\>]+\>)?(?<Name>[^\:]+)?(?::(?<Type>[a-z0-9]+)(\[(?<Size>\d+)\])?(?<AllowNull>\?)?)$",
+				@"^((?<BaseName>[^\>]+)\>)?(?<Name>[^\:]+)?(?::(?<Type>[a-z0-9]+)(\[(?<Size>\d+)\])?(?<AllowNull>\?)?)$",
 				RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant
 			);
 
@@ -236,6 +275,7 @@ namespace Sylvan.Data
 				var match = ColSpecRegex.Match(colSpec);
 				if (match.Success)
 				{
+					var baseName = WebUtility.UrlDecode(match.Groups["BaseName"].Value);
 					var name = WebUtility.UrlDecode(match.Groups["Name"].Value);
 					var typeName = match.Groups["Type"].Value;
 					var allowNull = match.Groups["AllowNull"].Success;
@@ -243,7 +283,7 @@ namespace Sylvan.Data
 					var size = sg.Success ? int.Parse(sg.Value) : (int?)null;
 					if (map.TryGetValue(typeName, out var type))
 					{
-						builder.AddColumn(name, type, allowNull, size ?? -1);
+						builder.AddColumn(baseName, name, type, allowNull, size ?? -1);
 
 						continue;
 					}
