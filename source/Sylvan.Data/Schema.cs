@@ -289,7 +289,8 @@ namespace Sylvan.Data
 				{
 					var typeGroup = match.Groups["Type"];
 					var formatGroup = match.Groups["Format"];
-					var baseName = WebUtility.UrlDecode(match.Groups["BaseName"].Value);
+					var baseNameGroup = match.Groups["BaseName"];
+					var baseName = baseNameGroup.Success ? baseNameGroup.Value : null;
 					var name = WebUtility.UrlDecode(match.Groups["Name"].Value);
 					DbType type = DbType.String;
 					bool allowNull = true;

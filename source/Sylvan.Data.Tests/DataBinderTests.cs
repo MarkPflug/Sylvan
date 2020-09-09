@@ -164,19 +164,35 @@ namespace Sylvan.Data
 
 				var ordinalExpr = Expression.Constant(ordinal, typeof(int));
 				Expression expr;
-				var assign = Expression.Call(targetLocal, setter, Expression.Call(param, getter, ordinalExpr));
+				
 
 				if (col.AllowDBNull != false)
 				{
+					if(paramType.GetGenericTypeDefinition() == typeof(Nullable<>))
+					{
+						var ga = paramType.GetGenericArguments();
+						var ctor = paramType.GetConstructor(BindingFlags.Public | BindingFlags.Instance, null, ga, null);
+						expr =
+						Expression.Call(targetLocal, setter,
+							Expression.New(
+								ctor,
+								Expression.Call(param, getter, ordinalExpr)
+							)
+						);
+					} else
+					{
+						expr = Expression.Call(targetLocal, setter, Expression.Call(param, getter, ordinalExpr));
+					}
+					
 					expr = 
 						Expression.IfThen(
 							Expression.Not(Expression.Call(param, isDbNullMethod, ordinalExpr)),
-							assign
+							expr
 						);
 				}
 				else
 				{
-					expr = assign;
+					expr = Expression.Call(targetLocal, setter, Expression.Call(param, getter, ordinalExpr));
 				}
 				bodyExpressions.Add(expr);
 			}
