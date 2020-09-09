@@ -23,7 +23,7 @@ namespace Sylvan.Data.Csv
 		[Fact]
 		public void Variadic()
 		{
-			var spec = Schema.TryParse("Id:string,*:int");
+			var spec = Schema.TryParse("Id:string,Cases*:int");
 			var data = "Id,8/12/20,8/13/20,8/14/20\r\nTest,1,2,3\r\nTest2,12345,54321,2343";
 			var schema = new CsvSchema(spec.GetColumnSchema());
 			var csv = CsvDataReader.Create(new StringReader(data), new CsvDataReaderOptions { Schema = schema });

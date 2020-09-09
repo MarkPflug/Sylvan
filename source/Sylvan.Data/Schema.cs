@@ -113,6 +113,7 @@ namespace Sylvan.Data
 			public DbType DbType { get; }
 
 			public int? SeriesOrdinal { get; }
+			public string? SeriesName { get; }
 			public string? SeriesHeaderFormat { get; }
 
 			public bool? IsDateSeries { get; }
@@ -128,6 +129,8 @@ namespace Sylvan.Data
 							return this.DbType;
 						case nameof(SeriesOrdinal):
 							return this.SeriesOrdinal;
+						case nameof(SeriesName):
+							return this.SeriesName;
 						case nameof(SeriesHeaderFormat):
 							return this.SeriesHeaderFormat;
 						case nameof(IsDateSeries):
@@ -144,9 +147,10 @@ namespace Sylvan.Data
 			{
 				this.DbType = type;
 
-				bool isSeries = name == SeriesSymbol;
+				bool isSeries = name.EndsWith(SeriesSymbol);
 
 				this.SeriesOrdinal = isSeries ? 0 : (int?)null;
+				this.SeriesName = isSeries ? name.Substring(0, name.Length - 1) : null;
 				this.BaseColumnName = isSeries ? null : baseName;
 				this.ColumnName = isSeries ? null : name;
 				this.SeriesHeaderFormat = isSeries ? baseName : null;
