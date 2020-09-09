@@ -146,7 +146,7 @@ namespace Sylvan.BuildTools.Data
 					using var csv = CsvDataReader.Create(csvFile, new CsvDataReaderOptions { HasHeaders = hasHeaders });
 					var analyzer = new SchemaAnalyzer(new SchemaAnalyzerOptions { AnalyzeRowCount = 1000 });
 					var result = analyzer.Analyze(csv);
-					var schema = analyzer.GetSchema(result);
+					var schema = result.GetSchema();
 					var spec = new Schema(schema).GetSchemaSpecification(true);
 					File.WriteAllText(generatedSchemaFile, spec);
 				}

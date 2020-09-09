@@ -13,6 +13,8 @@ namespace Sylvan.Data.Csv
 		readonly DbColumn[] schema;
 		readonly Dictionary<string, DbColumn> nameMap;
 
+		readonly DbColumn? seriesColumn;
+
 		/// <summary>
 		/// Creates a new CsvSchemaProvider.
 		/// </summary>
@@ -31,16 +33,42 @@ namespace Sylvan.Data.Csv
 		{
 			this.schema = schema.ToArray();
 			this.nameMap = new Dictionary<string, DbColumn>(headerComparer);
+			foreach (var col in schema)
+			{
+				if (col.ColumnName == "*")
+				{
+					this.seriesColumn = col;
+					continue;
+				}
+
+				if (col.BaseColumnName != null)
+				{
+					nameMap.Add(col.BaseColumnName, col);
+				}
+				else
+				if (col.ColumnName != null)
+				{
+					nameMap.Add(col.ColumnName, col);
+				}
+			}
 		}
 
 		/// <inheritdoc />
 		public virtual DbColumn? GetColumn(string? name, int ordinal)
 		{
 			if (name != null && nameMap.TryGetValue(name, out var col))
+			{
 				return col;
+			}
+
+			if (seriesColumn != null)
+			{
+				return seriesColumn;
+			}
+
 			if (ordinal >= 0 && ordinal < schema.Length)
 				return schema[ordinal];
 			return null;
 		}
-	}	
+	}
 }

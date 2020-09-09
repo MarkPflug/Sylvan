@@ -1,5 +1,4 @@
-﻿using Sylvan.Benchmarks;
-using Sylvan.Data.Csv;
+﻿using Sylvan.Data.Csv;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -41,17 +40,17 @@ namespace Sylvan.Data
 
 		}
 
-		[Fact]
-		public void BenchReflection()
-		{
-			new DataBinderBenchmarks().Reflection();
-		}
+		//[Fact]
+		//public void BenchReflection()
+		//{
+		//	new DataBinderBenchmarks().Reflection();
+		//}
 
-		[Fact]
-		public void BenchCompiled()
-		{
-			new DataBinderBenchmarks().Compiled();
-		}
+		//[Fact]
+		//public void BenchCompiled()
+		//{
+		//	new DataBinderBenchmarks().Compiled();
+		//}
 
 		[Fact]
 		public void Test1()

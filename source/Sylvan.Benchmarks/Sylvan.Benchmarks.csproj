@@ -26,12 +26,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Sylvan.Common\Sylvan.Common.csproj" />
-    <ProjectReference Include="..\Sylvan.Data.Csv\Sylvan.Data.Csv.csproj"/>
+    <ProjectReference Include="..\Sylvan.Data.Csv\Sylvan.Data.Csv.csproj" />
+    <ProjectReference Include="..\Sylvan.Data.Tests\Sylvan.Data.Tests.csproj" />
     <ProjectReference Include="..\Sylvan.Data\Sylvan.Data.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Compile Include="../Sylvan.Data.Tests/TestData.cs"/>
   </ItemGroup>
 
 </Project>

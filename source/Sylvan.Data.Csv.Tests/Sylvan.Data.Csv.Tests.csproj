@@ -19,9 +19,9 @@
     <ProjectReference Include="..\Sylvan.Data\Sylvan.Data.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
+  <!--<ItemGroup>
     <Compile Include="../Sylvan.Data.Tests/TestData.cs"/>
-  </ItemGroup>
+  </ItemGroup>-->
 
   <ItemGroup>
     <None Update="Data\**\*">

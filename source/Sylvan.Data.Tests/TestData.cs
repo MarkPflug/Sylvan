@@ -9,7 +9,7 @@ using System.Text;
 
 namespace Sylvan.Data
 {
-	class TestData
+	public class TestData
 	{
 
 		const string DataSetUrl = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/f7c2384622806d5297d16c314a7bc0b9cde24937/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_US.csv";

@@ -4,8 +4,9 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Data.Common;
 using System.Diagnostics;
-using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using static Sylvan.Data.SchemaAnalyzer;
 
 namespace Sylvan.Data
 {
@@ -86,8 +87,8 @@ namespace Sylvan.Data
 		public static readonly IColumnSizeStrategy Programmer = new ProgrammerNumberColumnSizer();
 		public static readonly IColumnSizeStrategy Human = new HumanNumberColumnSizer();
 
-		public static readonly IColumnSizeStrategy Size256 = new FixedColumnSizer(0x100);
-		public static readonly IColumnSizeStrategy Size1024 = new FixedColumnSizer(0x800);
+		public static readonly IColumnSizeStrategy Size256 = new FixedColumnSizer(256);
+		public static readonly IColumnSizeStrategy Size1024 = new FixedColumnSizer(1024);
 	}
 
 	public interface IColumnSizeStrategy
@@ -105,33 +106,6 @@ namespace Sylvan.Data
 			options ??= SchemaAnalyzerOptions.Default;
 			this.rowCount = options.AnalyzeRowCount;
 			this.sizer = options.ColumnSizer;
-		}
-
-		public ReadOnlyCollection<DbColumn> GetSchema(AnalysisResult result)
-		{
-			var cols = result.Select(c => c.CreateColumnSchema(this)).ToArray();
-			return new ReadOnlyCollection<DbColumn>(cols);
-		}
-
-		public class AnalysisResult : IEnumerable<ColumnInfo>
-		{
-			readonly ColumnInfo[] columns;
-
-			public AnalysisResult(ColumnInfo[] columns)
-			{
-				this.columns = columns;
-			}
-
-			public IEnumerator<ColumnInfo> GetEnumerator()
-			{
-				foreach (var col in columns)
-					yield return col;
-			}
-
-			IEnumerator IEnumerable.GetEnumerator()
-			{
-				return this.GetEnumerator();
-			}
 		}
 
 		public AnalysisResult Analyze(DbDataReader dataReader)
@@ -161,8 +135,32 @@ namespace Sylvan.Data
 			return new AnalysisResult(colInfos);
 		}
 
-		class ColumnSchema : DbColumn
+		internal class ColumnSchema : DbColumn
 		{
+			public bool IsIntegerSeries { get; private set; }
+			public string? SeriesHeaderFormat { get; private set; }
+
+			public bool IsDateSeries { get; private set; }
+
+
+			public override object? this[string property]
+			{
+				get
+				{
+					switch (property)
+					{
+						case nameof(IsIntegerSeries):
+							return IsIntegerSeries;
+						case nameof(IsDateSeries):
+							return IsDateSeries;
+						case nameof(SeriesHeaderFormat):
+							return SeriesHeaderFormat;
+						default:
+							return base[property];
+					}
+				}
+			}
+
 			public override string ToString()
 			{
 				var size = this.DataType == typeof(string) ? "[" + this.ColumnSize + "]" : "";
@@ -175,6 +173,37 @@ namespace Sylvan.Data
 				this.ColumnName = name?.Length > 64 ? name.Substring(0, 64) : name;
 				this.AllowDBNull = isNullable;
 				this.IsUnique = isUnique;
+			}
+
+			static (int precision, int scale, string name) GetTypeInfo(Type type)
+			{
+				return
+					(type == typeof(long))
+					? (19, 8, "long")
+					: (type == typeof(int))
+					? (18, 4, "int")
+					: (type == typeof(short))
+					? (5, 2, "short")
+					: (3, 1, "byte");
+			}
+
+			internal static ColumnSchema CreateSeries(int ordinal, bool isNullable, Type type, SeriesType st, string headerFormat)
+			{
+				var (p, s, n) = GetTypeInfo(type);
+
+				var cs =
+					new ColumnSchema(ordinal, null, isNullable, false)
+					{
+						SeriesHeaderFormat = headerFormat,
+						IsIntegerSeries = st == SeriesType.Integer,
+						IsDateSeries = st == SeriesType.Date,
+						DataType = type,
+						DataTypeName = n,
+						NumericPrecision = p,
+						ColumnSize = s,
+					};
+
+				return cs;
 			}
 
 			public static ColumnSchema CreateString(int ordinal, string? name, bool isNullable, bool isUnique, int length, bool isAscii)
@@ -226,14 +255,7 @@ namespace Sylvan.Data
 			public static ColumnSchema CreateInt(int ordinal, string? name, bool isNullable, bool isUnique, Type type)
 			{
 
-				var (p, s, n) =
-					(type == typeof(long))
-					? (19, 8, "long")
-					: (type == typeof(int))
-					? (18, 4, "int")
-					: (type == typeof(short))
-					? (5, 2, "short")
-					: (3, 1, "byte");
+				var (p, s, n) = GetTypeInfo(type);
 
 				return
 					new ColumnSchema(ordinal, name, isNullable, isUnique)
@@ -277,7 +299,6 @@ namespace Sylvan.Data
 				this.ordinal = ordinal;
 				this.name = dr.GetName(ordinal);
 				this.type = dr.GetFieldType(ordinal);
-
 
 				type = dr.GetFieldType(ordinal);
 				var typeCode = Type.GetTypeCode(type);
@@ -334,6 +355,8 @@ namespace Sylvan.Data
 
 				this.valueCount = new Dictionary<string, int>();
 			}
+
+			public bool AllowDbNull => isNullable;
 
 			public int Ordinal => this.ordinal;
 			public string? Name => this.name;
@@ -429,14 +452,7 @@ namespace Sylvan.Data
 									}
 									else
 									{
-										if (stringValue == "0" || stringValue == "1")
-										{
-
-										}
-										else
-										{
-											isBoolean = false;
-										}
+										isBoolean = false;
 									}
 								}
 								if (isFloat)
@@ -567,7 +583,85 @@ namespace Sylvan.Data
 
 			const int DefaultStringSize = 128;
 
-			internal DbColumn CreateColumnSchema(SchemaAnalyzer analyzer)
+			[Flags]
+			internal enum ColType
+			{
+				None = 0,
+				Boolean = 1,
+				Date = 2,
+				Integer = 4,
+				Long = 8,
+				Float = 16,
+				Double = 32,
+				Decimal = 32,
+				String = 128,
+			}
+
+			static Type[] ColTypes = new[]
+			{
+				typeof(bool),
+				typeof(DateTime),
+				typeof(int),
+				typeof(long),
+				typeof(float),
+				typeof(double),
+				typeof(decimal),
+				typeof(string),
+			};
+
+			internal ColType GetColType()
+			{
+				if (nullCount == count)
+				{
+					// never saw any values, so no determination could be made
+					return ColType.None;
+				}
+
+				if (this.isBoolean)
+				{
+					return ColType.Boolean;
+				}
+
+				if (this.isDate || this.isDateTime)
+				{
+					return ColType.Date;
+				}
+
+				if (this.isInt)
+				{
+					var type =
+						intMin < int.MinValue || intMax > int.MaxValue
+						? ColType.Long | ColType.Float | ColType.Double | ColType.Decimal
+						: ColType.Integer | ColType.Long | ColType.Float | ColType.Double | ColType.Decimal;
+
+					return type;
+				}
+
+				if (this.isFloat)
+				{
+					return
+						floatMin < float.MinValue || floatMax > float.MaxValue
+						? ColType.Double | ColType.Decimal
+						: ColType.Float | ColType.Double | ColType.Decimal;
+				}
+
+				return ColType.String;
+			}
+
+			internal static Type GetType(ColType t)
+			{
+				for (int i = 1; i < 16; i++)
+				{
+					var flag = (ColType)(1 << i);
+					if ((flag & t) == flag)
+					{
+						return ColTypes[i];
+					}
+				}
+				return typeof(string);
+			}
+
+			internal ColumnSchema CreateColumnSchema()
 			{
 				if (nullCount == count)
 				{
@@ -603,9 +697,139 @@ namespace Sylvan.Data
 						: ColumnSchema.CreateFloat(this.ordinal, name, isNullable);
 				}
 
-				var len = analyzer.sizer.GetSize(stringLenMax);
+				var len = stringLenMax;
 				return ColumnSchema.CreateString(this.ordinal, name, isNullable, isUnique, len, isAscii);
 			}
 		}
+	}
+
+	public class AnalysisResult : IEnumerable<ColumnInfo>
+	{
+		readonly ColumnInfo[] columns;
+		//SchemaAnalyzerOptions options;
+
+		internal AnalysisResult(/*SchemaAnalyzerOptions options,*/ ColumnInfo[] columns)
+		{
+			//this.options = options;
+			this.columns = columns;
+		}
+
+		public IEnumerator<ColumnInfo> GetEnumerator()
+		{
+			foreach (var col in columns)
+				yield return col;
+		}
+
+		IEnumerator IEnumerable.GetEnumerator()
+		{
+			return this.GetEnumerator();
+		}
+
+		public ReadOnlyCollection<DbColumn> GetSchema()
+		{
+			var series = DetectSeries(columns);
+			var schema = new List<DbColumn>();
+			for (int i = 0; i < columns.Length; i++)
+			{
+				var col = columns[i];
+
+				if (series?.seriesStart == i)
+				{
+					int idx = i;
+					string? prefix = series.prefix;
+					var types = col.GetColType();
+					var allowNull = false;
+					for (; i <= series.seriesEnd; i++)
+					{
+						col = columns[i];
+						allowNull |= col.AllowDbNull;
+						types &= col.GetColType();
+					}
+					var type = ColumnInfo.GetType(types);
+					var columnSchema = ColumnSchema.CreateSeries(idx, allowNull, type, series.type, prefix + "{" + series.type + "}");
+					i = series.seriesEnd;
+					schema.Add(columnSchema);
+					continue;
+				}
+				var dbCol = col.CreateColumnSchema();
+				schema.Add(dbCol);
+			}
+			return new ReadOnlyCollection<DbColumn>(schema);
+		}
+
+
+
+		class SeriesInfo
+		{
+			public SeriesInfo(int idx)
+			{
+				this.seriesStart = idx;
+				this.seriesEnd = idx;
+			}
+
+			public SeriesType type;
+			public string? prefix;
+			public int value = -1;
+			public int step;
+			public int seriesStart;
+			public int seriesEnd;
+
+			public int Length => seriesEnd - seriesStart + 1;
+		}
+
+		SeriesInfo? DetectSeries(ColumnInfo[] cols)
+		{
+			var series = new SeriesInfo[cols.Length];
+
+			SeriesInfo? ss = null;
+
+			for (int i = 0; i < this.columns.Length; i++)
+			{
+				var s = series[i] = new SeriesInfo(i);
+
+				var col = this.columns[i];
+				var name = col.Name;
+				if (name == null) continue;
+
+				if (DateTime.TryParse(name, out var _))
+				{
+					s.type |= SeriesType.Date;
+				}
+				else
+				{
+					var match = Regex.Match(name, @"\d+$");
+					if (match.Success)
+					{
+						var prefix = name.Substring(0, name.Length - match.Length);
+						s.prefix = prefix;
+						s.value = int.Parse(match.Captures[0].Value);
+						s.type |= SeriesType.Integer;
+					}
+				}
+
+				if (i > 0 && s.type != SeriesType.None)
+				{
+					var prev = series[i - 1];
+					var start = series[prev.seriesStart];
+					var step = s.value - prev.value;
+					if (prev.type == s.type && StringComparer.InvariantCultureIgnoreCase.Equals(prev.prefix, s.prefix))
+					{
+						s.seriesStart = prev.seriesStart;
+						ss = ss == null ? start : ss != start && start.Length > ss.Length ? start : ss;
+						s.step = step;
+						series[s.seriesStart].seriesEnd = i;
+					}
+				}
+			}
+			return ss;
+		}
+	}
+
+	[Flags]
+	enum SeriesType
+	{
+		None = 0,
+		Integer = 1,
+		Date = 2,
 	}
 }
