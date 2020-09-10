@@ -1,4 +1,8 @@
 # Sylvan.Data.Csv Release Notes
+_0.7.0_
+
+- CsvDataWriter returns number of rows written.
+
 _0.6.4_
 
 - Add support for optional string de-duping.
