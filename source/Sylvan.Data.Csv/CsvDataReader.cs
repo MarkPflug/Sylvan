@@ -495,6 +495,7 @@ namespace Sylvan.Data.Csv
 				{
 					return atEndOfText 
 						? ReadResult.True
+						// the next buffer might contain a \n that we need to consume.
 						: ReadResult.Incomplete;
 				}
 			}
