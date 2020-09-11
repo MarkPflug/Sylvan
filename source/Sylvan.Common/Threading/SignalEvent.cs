@@ -71,7 +71,7 @@ namespace Sylvan.Threading
 
 		#region IDisposable Support
 
-		bool disposedValue = false;
+		bool disposedValue;
 
 		void Dispose(bool disposing)
 		{

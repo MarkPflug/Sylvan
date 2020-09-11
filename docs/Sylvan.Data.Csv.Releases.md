@@ -1,4 +1,8 @@
 # Sylvan.Data.Csv Release Notes
+_0.7.1_
+
+- Allow integer columns to be read as boolean.
+
 _0.7.0_
 
 - CsvDataWriter returns number of rows written. I think this is a breaking change for anyone using CsvDataWriter.

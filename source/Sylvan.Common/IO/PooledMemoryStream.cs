@@ -238,7 +238,11 @@ namespace Sylvan.IO
 				var blockOffset = (int)(position & blockMask);
 				var blockCount = blockSize - blockOffset;
 				var blockLen = rem < blockCount ? (int)rem : blockCount;
-				await destination.WriteAsync(block, blockOffset, blockLen).ConfigureAwait(false);
+#if NETSTANDARD2_1
+				await destination.WriteAsync(block.AsMemory().Slice(blockOffset, blockLen), cancellationToken).ConfigureAwait(false);
+#else
+				await destination.WriteAsync(block, blockOffset, blockLen, cancellationToken).ConfigureAwait(false);
+#endif
 				position += blockLen;
 			}
 		}
@@ -246,6 +250,7 @@ namespace Sylvan.IO
 		/// <inheritdoc/>
 		protected override void Dispose(bool disposing)
 		{
+			base.Dispose(disposing);
 			foreach (var block in this.blocks)
 			{
 				if (block != null)

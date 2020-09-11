@@ -53,6 +53,7 @@ namespace Sylvan.Collections
 		public static IEnumerable<T> RecurseDepthFirst<T>(this IEnumerable<T> seq, Func<T, IEnumerable<T>> selector)
 		{
 			if (seq == null) throw new ArgumentNullException(nameof(seq));
+			if (selector == null) throw new ArgumentNullException(nameof(selector));
 
 			var enumStack = new Stack<IEnumerator<T>>();
 
@@ -162,6 +163,7 @@ namespace Sylvan.Collections
 			Func<T, IEnumerable<T>> children
 		)
 		{
+			if (children == null) throw new ArgumentNullException(nameof(children));
 			var seen = new HashSet<T>();
 			var stack = new Stack<T>();
 			stack.Push(root);
@@ -184,6 +186,9 @@ namespace Sylvan.Collections
 		public static IEnumerable<T> OrderByTopological<T, TK>(this IEnumerable<T> seq, Func<T, TK> keySelector, Func<T, IEnumerable<TK>> dependencyKeySelector)
 			where TK : IEquatable<TK>
 		{
+			if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
+			if (dependencyKeySelector == null) throw new ArgumentNullException(nameof(dependencyKeySelector));
+
 			var found = new HashSet<TK>();
 			var items = seq.ToList();
 
