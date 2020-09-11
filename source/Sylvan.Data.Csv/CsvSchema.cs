@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Data.Common;
 using System.Linq;
 
@@ -13,6 +14,7 @@ namespace Sylvan.Data.Csv
 		readonly DbColumn[] schema;
 		readonly Dictionary<string, DbColumn> nameMap;
 
+		const string SeriesOrdinalProperty = "SeriesOrdinal";
 		readonly DbColumn? seriesColumn;
 
 		/// <summary>
@@ -35,8 +37,14 @@ namespace Sylvan.Data.Csv
 			this.nameMap = new Dictionary<string, DbColumn>(headerComparer);
 			foreach (var col in schema)
 			{
-				if (col.ColumnName == "*")
+				int? series = col[SeriesOrdinalProperty] is int i ? i : (int?)null;
+				if (series.HasValue)
 				{
+					if (this.seriesColumn != null)
+					{
+						// Only a single series column is supported.
+						throw new NotSupportedException();
+					}
 					this.seriesColumn = col;
 					continue;
 				}
@@ -69,6 +77,14 @@ namespace Sylvan.Data.Csv
 			if (ordinal >= 0 && ordinal < schema.Length)
 				return schema[ordinal];
 			return null;
+		}
+
+		/// <summary>
+		/// Allows a column schmea to be used in place of CsvSchema.
+		/// </summary>
+		public static implicit operator CsvSchema(ReadOnlyCollection<DbColumn> schema)
+		{
+			return new CsvSchema(schema);
 		}
 	}
 }

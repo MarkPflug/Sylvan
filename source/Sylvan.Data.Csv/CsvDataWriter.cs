@@ -86,7 +86,7 @@ namespace Sylvan.Data.Csv
 		/// <param name="reader">The DbDataReader to be written.</param>
 		/// <param name="cancel">A cancellation token to cancel the asynchronous operation.</param>
 		/// <returns>A task representing the asynchronous write operation.</returns>
-		public async Task WriteAsync(DbDataReader reader, CancellationToken cancel = default)
+		public async Task<int> WriteAsync(DbDataReader reader, CancellationToken cancel = default)
 		{
 			var c = reader.FieldCount;
 			var fieldTypes = new FieldInfo[c];
@@ -211,136 +211,16 @@ namespace Sylvan.Data.Csv
 			}
 			// flush any pending data on the way out.
 			await writer.FlushAsync();
+			return row;
 		}
 
 		/// <summary>
 		/// Writes delimited data to the output.
 		/// </summary>
 		/// <param name="reader">The DbDataReader to be written.</param>
-		public void Write(DbDataReader reader)
+		public long Write(DbDataReader reader)
 		{
-			var c = reader.FieldCount;
-			var fieldTypes = new FieldInfo[c];
-
-			byte[]? dataBuffer = null;
-
-			var schema = (reader as IDbColumnSchemaGenerator)?.GetColumnSchema();
-
-			for (int i = 0; i < c; i++)
-			{
-				var type = reader.GetFieldType(i);
-				var allowNull = schema?[i].AllowDBNull ?? true;
-				fieldTypes[i] = new FieldInfo(allowNull, type);
-			}
-
-			for (int i = 0; i < c; i++)
-			{
-				var header = reader.GetName(i);
-				writer.WriteField(header);
-			}
-			writer.EndRecord();
-			int row = 0;
-			while (reader.Read())
-			{
-				row++;
-				int i = 0; // field
-				try
-				{
-					for (; i < c; i++)
-					{
-						var allowNull = fieldTypes[i].allowNull;
-
-						if (allowNull && reader.IsDBNull(i)) // TODO: async?
-						{
-							writer.WriteField();
-							continue;
-						}
-
-						var typeCode = fieldTypes[i].typeCode;
-						int intVal;
-						string? str;
-
-						switch (typeCode)
-						{
-							case TypeCode.Boolean:
-								var boolVal = reader.GetBoolean(i);
-								writer.WriteField(boolVal);
-								break;
-							case TypeCode.String:
-								str = reader.GetString(i);
-								goto str;
-							case TypeCode.Byte:
-								intVal = reader.GetByte(i);
-								goto intVal;
-							case TypeCode.Int16:
-								intVal = reader.GetInt16(i);
-								goto intVal;
-							case TypeCode.Int32:
-								intVal = reader.GetInt32(i);
-							intVal:
-								writer.WriteField(intVal);
-								break;
-							case TypeCode.Int64:
-								var longVal = reader.GetInt64(i);
-								writer.WriteField(longVal);
-								break;
-							case TypeCode.DateTime:
-								var dateVal = reader.GetDateTime(i);
-								writer.WriteField(dateVal);
-								break;
-							case TypeCode.Single:
-								var floatVal = reader.GetFloat(i);
-								writer.WriteField(floatVal);
-								break;
-							case TypeCode.Double:
-								var doubleVal = reader.GetDouble(i);
-								writer.WriteField(doubleVal);
-								break;
-							case TypeCode.Empty:
-							case TypeCode.DBNull:
-								writer.WriteField();
-								break;
-							default:
-								var type = fieldTypes[i].type;
-								if (type == typeof(byte[]))
-								{
-									if (dataBuffer == null)
-									{
-										dataBuffer = new byte[Base64EncSize];
-									}
-									var idx = 0;
-									writer.StartBinaryFieldAsync().Wait();
-									int len = 0;
-									while ((len = (int)reader.GetBytes(i, idx, dataBuffer, 0, Base64EncSize)) != 0)
-									{
-										writer.ContinueBinaryField(dataBuffer, len);
-										idx += len;
-									}
-									break;
-								}
-								if (type == typeof(Guid))
-								{
-									var guid = reader.GetGuid(i);
-									writer.WriteField(guid);
-									break;
-								}
-
-								str = reader.GetValue(i)?.ToString();
-							str:
-								writer.WriteField(str);
-								break;
-						}
-					}
-				}
-				catch (ArgumentOutOfRangeException e)
-				{
-					throw new CsvRecordTooLargeException(row, i, null, e);
-				}
-
-				writer.EndRecord();
-			}
-			// flush any pending data on the way out.
-			this.writer.Flush();
+			return this.WriteAsync(reader).GetAwaiter().GetResult();			
 		}
 
 		private void Dispose(bool disposing)
