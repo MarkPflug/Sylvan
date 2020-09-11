@@ -20,6 +20,27 @@ namespace Sylvan.Data.Csv
 		}
 
 		[Fact]
+		public void FinalCRTest()
+		{
+			var b = CsvDataReader.Create(new StringReader(@"A,B\r\n1,2\r\n1,\r"));
+			while (b.Read()) ;
+		}
+
+		[Fact]
+		public void MissingFinalFieldTest()
+		{
+			var b = CsvDataReader.Create(new StringReader(@"A,B\r\n1,2\r\n1,"));
+			while (b.Read()) ;
+		}
+
+		[Fact]
+		public void MissingFinalField2Test()
+		{
+			var b = CsvDataReader.Create(new StringReader(@"A,B\r\n1"));
+			while (b.Read()) ;
+		}
+
+		[Fact]
 		public async Task Simple()
 		{
 			using var csv = await CsvDataReader.CreateAsync("Data\\Simple.csv");

@@ -1,4 +1,9 @@
 # Sylvan.Data.Csv Release Notes
+
+_0.7.2_
+
+- Fix a bug when there is an incomplete record, final comma, as the last character in the file.
+
 _0.7.1_
 
 - Allow integer columns to be read as boolean.

@@ -34,6 +34,15 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Build", "Build", "{70EFA271
 		..\Directory.Build.targets = ..\Directory.Build.targets
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Docs", "Docs", "{BF19FE51-6183-4B10-888C-B85E3BFBA9C0}"
+	ProjectSection(SolutionItems) = preProject
+		..\docs\Sylvan.Data.Csv.Benchmarks.md = ..\docs\Sylvan.Data.Csv.Benchmarks.md
+		..\docs\Sylvan.Data.Csv.Design.md = ..\docs\Sylvan.Data.Csv.Design.md
+		..\docs\Sylvan.Data.Csv.md = ..\docs\Sylvan.Data.Csv.md
+		..\docs\Sylvan.Data.Csv.Releases.md = ..\docs\Sylvan.Data.Csv.Releases.md
+		..\docs\Sylvan.Tools.SystemInfo.md = ..\docs\Sylvan.Tools.SystemInfo.md
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

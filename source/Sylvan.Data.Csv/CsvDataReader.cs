@@ -86,7 +86,7 @@ namespace Sylvan.Data.Csv
 		int idx;
 		int bufferEnd;
 		int recordStart;
-		bool atEndOfText;
+		bool atEndOfText; // indicates if the buffer contains the last chunk of data.
 		State state;
 		int fieldCount; // fields in the header (or firstRow)
 		int curFieldCount; // fields in current row
@@ -335,7 +335,9 @@ namespace Sylvan.Data.Csv
 
 			if (idx >= bufferEnd)
 			{
-				return ReadResult.Incomplete;
+				return atEndOfText 
+					? ReadResult.False 
+					: ReadResult.Incomplete;
 			}
 			else
 			{
@@ -491,13 +493,10 @@ namespace Sylvan.Data.Csv
 				}
 				else
 				{
-					if (atEndOfText)
-					{
-						return ReadResult.True;
-					}
-					// the next buffer might contain a \n
-					// that we need to consume.
-					return ReadResult.Incomplete;
+					return atEndOfText 
+						? ReadResult.True
+						// the next buffer might contain a \n that we need to consume.
+						: ReadResult.Incomplete;
 				}
 			}
 			if (c == '\n')
