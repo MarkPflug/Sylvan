@@ -1,4 +1,18 @@
 # Sylvan.Data.Csv Release Notes
+
+_0.7.2_
+
+- Fix a bug when there is an incomplete record, final comma, as the last character in the file.
+
+_0.7.1_
+
+- Allow integer columns to be read as boolean.
+
+_0.7.0_
+
+- CsvDataWriter returns number of rows written. I think this is a breaking change for anyone using CsvDataWriter.
+- Support for column series in CsvSchema.
+
 _0.6.4_
 
 - Add support for optional string de-duping.

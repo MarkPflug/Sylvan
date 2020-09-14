@@ -2,8 +2,7 @@
 
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0;netstandard2.1</TargetFrameworks>
-    <VersionPrefix>0.6.4</VersionPrefix>
-    <VersionSuffix>B0001</VersionSuffix>
+    <VersionPrefix>0.7.2</VersionPrefix>
     <Description>A .NET library for reading and writing delimited CSV data.</Description>
     <PackageTags>csv;delimited;datareader;async</PackageTags>    
     <Nullable>enable</Nullable>

@@ -34,6 +34,15 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Build", "Build", "{70EFA271
 		..\Directory.Build.targets = ..\Directory.Build.targets
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Docs", "Docs", "{BF19FE51-6183-4B10-888C-B85E3BFBA9C0}"
+	ProjectSection(SolutionItems) = preProject
+		..\docs\Sylvan.Data.Csv.Benchmarks.md = ..\docs\Sylvan.Data.Csv.Benchmarks.md
+		..\docs\Sylvan.Data.Csv.Design.md = ..\docs\Sylvan.Data.Csv.Design.md
+		..\docs\Sylvan.Data.Csv.md = ..\docs\Sylvan.Data.Csv.md
+		..\docs\Sylvan.Data.Csv.Releases.md = ..\docs\Sylvan.Data.Csv.Releases.md
+		..\docs\Sylvan.Tools.SystemInfo.md = ..\docs\Sylvan.Tools.SystemInfo.md
+	EndProjectSection
+EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sylvan.BuildTools.Data", "Sylvan.BuildTools.Data\Sylvan.BuildTools.Data.csproj", "{277AE92E-A25E-4C9F-B6FC-5172CA3E283D}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sylvan.BuildTools.Data.Tests", "Sylvan.BuildTools.Data.Tests\Sylvan.BuildTools.Data.Tests.csproj", "{D4616E66-28EF-49E7-8CC5-351D8457312D}"
