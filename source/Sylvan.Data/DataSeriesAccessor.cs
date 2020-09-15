@@ -50,7 +50,6 @@ namespace Sylvan.Data
 		}
 	}
 
-
 	public class DataSeriesColumn<TK>
 	{
 		public DataSeriesColumn(TK key, int ordinal)
@@ -64,15 +63,15 @@ namespace Sylvan.Data
 	}
 
 	/// <summary>
-	/// Supports reading a series of columns from a DbDataReader as an enumerable.
+	/// Reads a series of columns from a DbDataReader as an enumerable.
 	/// </summary>
-	public sealed class DataSeriesReader<TK, TV> where TK : IComparable<TK>
+	public sealed class DataSeriesAccessor<TK, TV> where TK : IComparable<TK>
 	{
-		//bool allowNull;
+		//readonly bool allowNull;
 		readonly DataSeriesColumn<TK>[] cols;
-		IDataAccessor<TV> getter;
+		readonly IDataAccessor<TV> getter;
 
-		IDataAccessor<TV> GetAccessor(Type t)
+		static IDataAccessor<TV> GetAccessor(Type t)
 		{
 			if (t == typeof(int))
 				return (IDataAccessor<TV>)DataAccessor.Int32;
@@ -80,7 +79,7 @@ namespace Sylvan.Data
 			throw new NotSupportedException();
 		}
 
-		public DataSeriesReader(IEnumerable<DataSeriesColumn<TK>> columns)
+		public DataSeriesAccessor(IEnumerable<DataSeriesColumn<TK>> columns)
 		{
 			this.cols = columns.OrderBy(c => c.Key).ToArray();
 			this.getter = GetAccessor(typeof(TV));
