@@ -12,7 +12,6 @@ using System.Threading.Tasks;
 
 namespace Sylvan.Data.Csv
 {
-	[SimpleJob]
 	[MemoryDiagnoser]
 	public class CsvReaderBenchmarks
 	{

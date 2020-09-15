@@ -7,7 +7,6 @@ using System.Text;
 
 namespace Sylvan.Benchmarks
 {
-	[SimpleJob(RuntimeMoniker.NetCoreApp31)]
 	[MemoryDiagnoser]
 	public class Base64Benchmarks
 	{
