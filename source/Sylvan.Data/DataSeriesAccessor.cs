@@ -50,7 +50,7 @@ namespace Sylvan.Data
 		}
 	}
 
-	public class DataSeriesColumn<TK>
+	public sealed class DataSeriesColumn<TK>
 	{
 		public DataSeriesColumn(TK key, int ordinal)
 		{

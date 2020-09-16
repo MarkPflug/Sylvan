@@ -152,15 +152,16 @@ namespace Sylvan.Data
 				this.ColumnOrdinal = ordinal;
 				this.DbType = type;
 
-				bool isSeries = name.EndsWith(SeriesSymbol);
+#warning this feels like the wrong place to deal with series.
+				bool isSeries = name?.EndsWith(SeriesSymbol) == true;
 
 				this.SeriesOrdinal = isSeries ? 0 : (int?)null;
-				this.SeriesName = isSeries ? name.Substring(0, name.Length - 1) : null;
+				this.SeriesName = isSeries ? name?.Substring(0, name.Length - 1) : null;
 				this.BaseColumnName = isSeries ? null : baseName;
 				this.ColumnName = isSeries ? null : name;
 				this.SeriesHeaderFormat = isSeries ? baseName : null;
-				this.IsDateSeries = isSeries ? name.IndexOf("{Date}", StringComparison.OrdinalIgnoreCase) >= 0 : (bool?)null;
-				this.IsIntegerSeries = isSeries ? name.IndexOf("{Integer}", StringComparison.OrdinalIgnoreCase) >= 0 : (bool?)null;
+				this.IsDateSeries = isSeries ? name?.IndexOf("{Date}", StringComparison.OrdinalIgnoreCase) >= 0 : (bool?)null;
+				this.IsIntegerSeries = isSeries ? name?.IndexOf("{Integer}", StringComparison.OrdinalIgnoreCase) >= 0 : (bool?)null;
 
 				this.AllowDBNull = allowNull;
 				this.ColumnSize = size;
