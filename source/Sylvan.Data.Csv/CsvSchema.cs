@@ -49,12 +49,12 @@ namespace Sylvan.Data.Csv
 					continue;
 				}
 
-				if (col.BaseColumnName != null)
+				if (string.IsNullOrEmpty(col.BaseColumnName) == false)
 				{
 					nameMap.Add(col.BaseColumnName, col);
 				}
 				else
-				if (col.ColumnName != null)
+				if (string.IsNullOrEmpty(col.ColumnName) == false)
 				{
 					nameMap.Add(col.ColumnName, col);
 				}
@@ -77,14 +77,6 @@ namespace Sylvan.Data.Csv
 			if (ordinal >= 0 && ordinal < schema.Length)
 				return schema[ordinal];
 			return null;
-		}
-
-		/// <summary>
-		/// Allows a column schmea to be used in place of CsvSchema.
-		/// </summary>
-		public static implicit operator CsvSchema(ReadOnlyCollection<DbColumn> schema)
-		{
-			return new CsvSchema(schema);
 		}
 	}
 }

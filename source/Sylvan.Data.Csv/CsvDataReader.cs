@@ -221,7 +221,7 @@ namespace Sylvan.Data.Csv
 				InitializeSchema(schema);
 			}
 		}
-		
+
 		char DetectDelimiter()
 		{
 			int[] counts = new int[AutoDetectDelimiters.Length];
@@ -335,8 +335,8 @@ namespace Sylvan.Data.Csv
 
 			if (idx >= bufferEnd)
 			{
-				return atEndOfText 
-					? ReadResult.False 
+				return atEndOfText
+					? ReadResult.False
 					: ReadResult.Incomplete;
 			}
 			else
@@ -465,7 +465,7 @@ namespace Sylvan.Data.Csv
 
 			return ReadResult.Incomplete;
 		}
-		
+
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		static bool IsEndOfLine(char c)
 		{
@@ -493,7 +493,7 @@ namespace Sylvan.Data.Csv
 				}
 				else
 				{
-					return atEndOfText 
+					return atEndOfText
 						? ReadResult.True
 						// the next buffer might contain a \n that we need to consume.
 						: ReadResult.Incomplete;
@@ -748,7 +748,7 @@ namespace Sylvan.Data.Csv
 		{
 			var format = columns[ordinal].Format ?? this.dateFormat;
 
-#if NETSTANDARD2_1		
+#if NETSTANDARD2_1
 			if (format != null && DateTime.TryParseExact(this.GetFieldSpan(ordinal), format.AsSpan(), culture, DateTimeStyles.None, out var dt))
 			{
 				return dt;
@@ -1167,7 +1167,9 @@ namespace Sylvan.Data.Csv
 				this.ColumnOrdinal = ordinal;
 				this.IsReadOnly = true; // I don't understand what false would mean here.
 
-				this.ColumnName = schema?.ColumnName ?? name;
+				var colName = schema?.ColumnName;
+
+				this.ColumnName = string.IsNullOrEmpty(colName) ? name : colName;
 				this.DataType = schema?.DataType ?? typeof(string);
 				this.DataTypeName = schema?.DataTypeName ?? this.DataType.Name;
 

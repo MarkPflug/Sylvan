@@ -1,5 +1,4 @@
-﻿using Dapper;
-using Sylvan.Data.Csv;
+﻿using Sylvan.Data.Csv;
 using System;
 using System.Collections.ObjectModel;
 using System.Data;
@@ -80,15 +79,17 @@ namespace Sylvan.Data
 		}
 
 		[Fact]
-		public void Test3()
+		public void TestEnumByValue()
 		{
 			var schema = Schema.TryParse(":int,:string,:int").GetColumnSchema();
-			var binder = new CompiledDataBinder<EnumRecord>(schema);
+			
 
 			var csvData = "Id,Name,Severity\r\n1,Olive,3";
 			var tr = new StringReader(csvData);
-			var opts = new CsvDataReaderOptions();// { Schema = new CsvSchema(schema) };
-			DbDataReader data = CsvDataReader.Create(tr, opts);
+			var opts = new CsvDataReaderOptions() { Schema = new CsvSchema(schema) };
+			var data = CsvDataReader.Create(tr, opts);
+
+			var binder = new CompiledDataBinder<EnumRecord>(data.GetColumnSchema());
 
 			while (data.Read())
 			{
@@ -97,21 +98,21 @@ namespace Sylvan.Data
 		}
 
 		[Fact]
-		public void Dapper()
+		public void TestByName()
 		{
-			//var schema = BuildSchema();
-			var csvData = "Id,Name,Severity\n1,Test,2\n2,Another,Critical";
+			var schema = Schema.TryParse(":int,:string,:string").GetColumnSchema();
+
+			var csvData = "Id,Name,Severity\r\n1,Olive,Warning";
 			var tr = new StringReader(csvData);
-			var opts = new CsvDataReaderOptions();// { Schema = new CsvSchema(schema) };
+			var opts = new CsvDataReaderOptions() { Schema = new CsvSchema(schema) };
 			var data = CsvDataReader.Create(tr, opts);
 
-			var f = data.GetRowParser<EnumRecord>();
+			var binder = new CompiledDataBinder<EnumRecord>(data.GetColumnSchema());
 
 			while (data.Read())
 			{
-				var item = f(data);
+				var item = binder.Bind(data);
 			}
 		}
-
 	}
 }

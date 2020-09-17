@@ -1,21 +1,43 @@
 ﻿using BenchmarkDotNet.Attributes;
+using Dapper;
 using Sylvan.Data;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 
 namespace Sylvan.Benchmarks
 {
 	[MemoryDiagnoser]
 	public class DataBinderBenchmarks
 	{
-		class TestRecord : IDataRecord
+		class TestRecord : IDataReader
 		{
-			public object this[int i] => throw new NotImplementedException();
 
-			public object this[string name] => throw new NotImplementedException();
 
-			public int FieldCount => throw new NotImplementedException();
+			string[] columns;
+			Type[] types;
+			Dictionary<string, int> ordinals;
+
+			public TestRecord()
+			{
+				this.columns = new[] { "B", "D", "V", "G", "I", "S"};
+				this.types = new[] { typeof(bool), typeof(DateTime), typeof(double), typeof(Guid), typeof(int), typeof(string) };
+				this.ordinals = columns.Select((n, i) => new { Name = n, Index = i }).ToDictionary(p => p.Name, p => p.Index);
+
+			}
+
+			public object this[int i] => GetValue(i);
+
+			public object this[string name] => ordinals[name];
+
+			public int FieldCount => columns.Length;
+
+			public int Depth => 1;
+
+			public bool IsClosed => false;
+
+			public int RecordsAffected => throw new NotImplementedException();
 
 			public bool GetBoolean(int i)
 			{
@@ -50,7 +72,7 @@ namespace Sylvan.Benchmarks
 
 			public string GetDataTypeName(int i)
 			{
-				throw new NotImplementedException();
+				return types[i].Name;
 			}
 
 			DateTime date = DateTime.UtcNow;
@@ -73,7 +95,7 @@ namespace Sylvan.Benchmarks
 
 			public Type GetFieldType(int i)
 			{
-				throw new NotImplementedException();
+				return types[i];
 			}
 
 			public float GetFloat(int i)
@@ -106,18 +128,8 @@ namespace Sylvan.Benchmarks
 
 			public string GetName(int i)
 			{
-				throw new NotImplementedException();
+				return columns[i];
 			}
-
-			Dictionary<string, int> ordinals = new Dictionary<string, int>()
-			{
-				{ "B", 0 },
-				{ "D", 1 },
-				{ "V", 2 },
-				{ "G", 3 },
-				{ "I", 4 },
-				{ "S", 5 },
-			};
 
 			public int GetOrdinal(string name)
 			{
@@ -153,9 +165,32 @@ namespace Sylvan.Benchmarks
 			{
 				return false;
 			}
+
+			public void Close()
+			{
+			}
+
+			public DataTable GetSchemaTable()
+			{
+				throw new NotImplementedException();
+			}
+
+			public bool NextResult()
+			{
+				return false;
+			}
+
+			public bool Read()
+			{
+				return true;
+			}
+
+			public void Dispose()
+			{
+			}
 		}
 
-		const int Count = 100000;
+		const int Count = 10000000;
 
 		class Record
 		{
@@ -174,29 +209,69 @@ namespace Sylvan.Benchmarks
 			this.item = new Record();
 			this.compiled = new CompiledDataBinder<Record>(schema.GetColumnSchema());
 			this.reflection = new ReflectionDataBinder<Record>(schema.GetColumnSchema());
+
+			dp = record.GetRowParser<Record>();
+		}
+
+		class ManualBinder : IDataBinder<Record>
+		{
+			public void Bind(IDataRecord record, Record item)
+			{
+				item.B = record.GetBoolean(0);
+				item.D = record.GetDateTime(1);
+				item.V = record.GetDouble(2);
+				item.G = record.GetGuid(3);
+				item.I = record.GetInt32(4);
+				item.S = record.GetString(5);
+			}
 		}
 
 		Record item;
-		IDataRecord record;
-		DataBinder<Record> compiled, reflection;
+		IDataReader record;
+		IDataBinder<Record> compiled, reflection;
+		Func<IDataReader, Record> dp;
 
-		[Benchmark(Baseline = true)]
+		[Benchmark]
 		public void Reflection()
 		{
-			Bench(reflection, record, item);
+			Bench(reflection, record);
 		}
 
 		[Benchmark]
 		public void Compiled()
 		{
-			Bench(compiled, record, item);
+			Bench(compiled, record);
 		}
 
-		static void Bench(DataBinder<Record> binder, IDataRecord record, Record item)
+		[Benchmark(Baseline = true)]
+		public void Manual()
+		{
+			Bench(compiled, record);
+		}
+
+		static void Bench(IDataBinder<Record> binder, IDataRecord record, Record item)
 		{
 			for (int i = 0; i < Count; i++)
 			{
 				binder.Bind(record, item);
+			}
+		}
+
+		static void Bench(IDataBinder<Record> binder, IDataRecord record)
+		{
+			for (int i = 0; i < Count; i++)
+			{
+				var item = new Record();
+				binder.Bind(record, item);
+			}
+		}
+
+		[Benchmark]
+		public void Dapper()
+		{
+			for (int i = 0; i < Count; i++)
+			{
+				dp(record);
 			}
 		}
 	}

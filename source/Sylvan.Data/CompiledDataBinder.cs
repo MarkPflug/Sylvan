@@ -125,7 +125,7 @@ namespace Sylvan.Data
 				var accessorMethod = GetAccessorMethod(col.DataType);
 
 				var ordinalExpr = Expression.Constant(ordinal, typeof(int));
-				var accessorExpr = Expression.Call(recordParam, accessorMethod, ordinalExpr);
+				Expression accessorExpr = Expression.Call(recordParam, accessorMethod, ordinalExpr);
 
 				Expression expr = GetCoerceExpression(accessorExpr, paramType);
 
@@ -137,15 +137,11 @@ namespace Sylvan.Data
 						Expression.Condition(
 							Expression.Call(recordParam, isDbNullMethod, ordinalExpr),
 							Expression.Default(paramType),
-							Expression.New(
-								paramType.GetConstructor(
-									new Type[] { paramType.GetGenericArguments()[0] }
-								),
-								accessorExpr
-							)
+							expr
 						);
-
 				}
+
+
 
 				var setExpr = Expression.Call(itemParam, setter, expr);
 				bodyExpressions.Add(setExpr);
@@ -157,14 +153,14 @@ namespace Sylvan.Data
 			this.f = lf.Compile();
 		}
 
-		static Expression GetCoerceExpression(Expression ex, Type targetType)
+		static Expression GetCoerceExpression(Expression getterExpr, Type targetType)
 		{
-			var sourceType = ex.Type;
+			var sourceType = getterExpr.Type;
 			// Direct binding, this is fairly common.
 			// The code below would end up doing this anyway.
 			if (sourceType == targetType)
 			{
-				return ex;
+				return getterExpr;
 			}
 
 			Expression? expr = null;
@@ -181,7 +177,7 @@ namespace Sylvan.Data
 
 			if (sourceType == targetType)
 			{
-				expr = ex;
+				expr = getterExpr;
 			}
 			else
 			{
@@ -190,17 +186,29 @@ namespace Sylvan.Data
 					var enumBaseType = Enum.GetUnderlyingType(targetType);
 					if (sourceType == enumBaseType)
 					{
-						expr = Expression.Convert(expr, targetType);
+						expr = Expression.Convert(getterExpr, targetType);
 					}
 					else
 					{
-
-
+						if (sourceType == typeof(string))
+						{
+							expr = 
+								Expression.Call(
+									EnumParseMethod.MakeGenericMethod(targetType),
+									getterExpr
+								);
+						}
+						else
+						{
+							throw new NotSupportedException();
+							// not sure what else would be supportable here.
+						}
 					}
 				}
 				else
 				{
-
+					// TODO: handle supportable primitive conversions with casts.
+					// TODO: handle everything else with Convert.ChangeType?
 				}
 			}
 
@@ -211,16 +219,62 @@ namespace Sylvan.Data
 						nullableType!.GetConstructor(
 							new Type[] { underlyingType! }
 						),
-						ex
+						getterExpr
 					);
 			}
 
 			return expr ?? throw new NotSupportedException();
 		}
 
+		
+
+		static MethodInfo EnumParseMethod = GetEnumParseMethod();
+
+
+		static MethodInfo GetEnumParseMethod()
+		{
+			return
+				typeof(EnumParse)
+				.GetMethod("ParseEnum", BindingFlags.NonPublic | BindingFlags.Static);
+		}
+
 		void IDataBinder<T>.Bind(IDataRecord record, T item)
 		{
 			f(record, item);
+		}
+	}
+
+	static class EnumParse
+	{
+		static TE ParseEnum<TE>(string value) where TE : struct, Enum
+		{
+			if (Enum.TryParse(value, true, out TE e))
+			{
+				return e;
+			}
+			else
+			{
+				throw new InvalidEnumDataBinderException(-1, value);
+			}
+		}
+	}
+
+	public class DataBinderException : Exception
+	{
+		public int ColumnOrdinal { get; }
+
+		public DataBinderException(int columnOrdinal)
+		{
+			this.ColumnOrdinal = columnOrdinal;
+		}
+	}
+
+	public class InvalidEnumDataBinderException : DataBinderException
+	{
+		public string Value { get; }
+		public InvalidEnumDataBinderException(int columnOrdinal, string value) : base(columnOrdinal)
+		{
+			this.Value = value;
 		}
 	}
 }
