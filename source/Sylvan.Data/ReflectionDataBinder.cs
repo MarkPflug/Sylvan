@@ -5,7 +5,6 @@ using System.Data;
 using System.Data.Common;
 using System.Linq;
 using System.Reflection;
-using System.Text;
 
 namespace Sylvan.Data
 {
@@ -27,10 +26,29 @@ namespace Sylvan.Data
 			this.schema = schema;
 
 			this.columns = schema.ToArray();
+
 			var ordinalMap =
-				this.columns
+				schema
 				.Where(c => !string.IsNullOrEmpty(c.ColumnName))
-				.ToDictionary(c => c.ColumnName, c => c.ColumnOrdinal ?? -1);
+				.Select((c, i) => new { Column = c, Idx = c.ColumnOrdinal ?? throw new ArgumentException() })
+				.ToDictionary(p => p.Column.ColumnName, p => new { p.Column, p.Idx });
+
+			DbColumn? GetCol(int? idx, string? name)
+			{
+				if (!string.IsNullOrEmpty(name))
+				{
+					// interesting that this needs to be annoted with not-null
+					if (ordinalMap!.TryGetValue(name!, out var c))
+					{
+						return c.Column;
+					}
+				}
+				if (idx != null)
+				{
+					return schema[idx.Value];
+				}
+				return null;
+			}
 
 			var propBinderList = new List<Action<IDataRecord, T>>();
 
@@ -43,14 +61,21 @@ namespace Sylvan.Data
 				var setter = property.GetSetMethod(true);
 
 				var paramType = setter.GetParameters()[0].ParameterType;
-				var ordinal =
-					columnName != null
-					? (ordinalMap.TryGetValue(columnName, out int o) ? o : -1)
-					: columnOrdinal ?? -1;
-				if (ordinal == -1) throw new Exception("Binding failure");
 
-				var col = columns[ordinal];
+				var col = GetCol(columnOrdinal, columnName);
+				if (col == null)
+				{
+					// TODO: potentially add an argument to throw if there is an unbound property?
+					continue;
+				}
 
+				var ordinal = col.ColumnOrdinal ?? columnOrdinal ?? -1;
+
+				if (ordinal < 0)
+				{
+					// this means the column didn't know it's own ordinal, and neither did the property.
+					continue;
+				}
 
 				var type = col.DataType;
 				var typeCode = Type.GetTypeCode(type);

@@ -67,7 +67,7 @@ namespace Sylvan.Data
 				schema
 				.Where(c => !string.IsNullOrEmpty(c.ColumnName))
 				.Select((c, i) => new { Column = c, Idx = c.ColumnOrdinal ?? throw new ArgumentException() })
-				.ToDictionary(p => p.Column.ColumnName, p => (p.Column, p.Idx));
+				.ToDictionary(p => p.Column.ColumnName, p => new { p.Column, p.Idx });
 
 			DbColumn? GetCol(int? idx, string? name)
 			{
