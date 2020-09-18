@@ -18,7 +18,7 @@ namespace Sylvan.Benchmarks
 				.Build();
 		}
 
-		const int Count = 1000;
+		const int Count = 1000000;
 
 		public IEnumerable<TestRecord> GetData()
 		{

@@ -144,10 +144,23 @@ namespace Sylvan.Data
 
 				static bool IsSupported(PropertyInfo prop)
 				{
-					var type = prop.PropertyType;
+					return IsSupported(prop.PropertyType);
+				}
+
+				static bool IsSupported(Type type)
+				{
 					if (type.IsArray) return false;
 					if (type.IsPrimitive) return true;
+					if (type == typeof(DateTime) || type == typeof(Guid)) return true;
 					if (type == typeof(string)) return true;
+
+					var nt = Nullable.GetUnderlyingType(type);
+					if(nt != null)
+					{
+						if (Nullable.GetUnderlyingType(nt) != null) return false;
+						return IsSupported(nt);
+					}
+
 					return false;
 				}
 
