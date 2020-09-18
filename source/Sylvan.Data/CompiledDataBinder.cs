@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Data;
 using System.Data.Common;
+using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -53,14 +54,12 @@ namespace Sylvan.Data
 			throw new NotSupportedException();
 		}
 
-
-
 		public CompiledDataBinder(ReadOnlyCollection<DbColumn> schema)
 		{
 			// A couple notable optimizations:
 			// All access is done via strongly-typed Get[Type] (GetInt32, GetString, etc) methods
-			// This avoids boxing/unboxing values, which would happen with GetValue or indexer property.
-			// If the schema claims a column is not nullable, then we avoid calling IsDBNull, 
+			// This avoids boxing/unboxing values, which would happen with GetValue/indexer property.
+			// If the schema claims a column is not nullable, then avoid calling IsDBNull, 
 			// which can be costly in some scenarios (and is never free).
 
 			var ordinalMap =
@@ -192,7 +191,7 @@ namespace Sylvan.Data
 					{
 						if (sourceType == typeof(string))
 						{
-							expr = 
+							expr =
 								Expression.Call(
 									EnumParseMethod.MakeGenericMethod(targetType),
 									getterExpr
@@ -207,8 +206,29 @@ namespace Sylvan.Data
 				}
 				else
 				{
-					// TODO: handle supportable primitive conversions with casts.
-					// TODO: handle everything else with Convert.ChangeType?
+					if (sourceType.IsValueType && targetType.IsValueType)
+					{
+						// handle primitive conversions with casts.
+						expr = Expression.Convert(getterExpr, targetType);
+					}
+					else
+					{
+						// handle everything else with Convert.ChangeType?
+						expr = Expression.Call(
+							ChangeTypeMethod,
+							getterExpr,
+							Expression.Constant(targetType)
+						);
+
+						if (targetType.IsValueType)
+						{
+							expr = Expression.Unbox(expr, targetType);
+						}
+						else
+						{
+							expr = Expression.Convert(expr, targetType);
+						}
+					}
 				}
 			}
 
@@ -226,17 +246,13 @@ namespace Sylvan.Data
 			return expr ?? throw new NotSupportedException();
 		}
 
-		
+		static MethodInfo EnumParseMethod =
+			typeof(BinderMethods)
+			.GetMethod("ParseEnum", BindingFlags.NonPublic | BindingFlags.Static);
 
-		static MethodInfo EnumParseMethod = GetEnumParseMethod();
-
-
-		static MethodInfo GetEnumParseMethod()
-		{
-			return
-				typeof(EnumParse)
-				.GetMethod("ParseEnum", BindingFlags.NonPublic | BindingFlags.Static);
-		}
+		static MethodInfo ChangeTypeMethod =
+			typeof(BinderMethods)
+			.GetMethod("ChangeType", BindingFlags.NonPublic | BindingFlags.Static);
 
 		void IDataBinder<T>.Bind(IDataRecord record, T item)
 		{
@@ -244,8 +260,13 @@ namespace Sylvan.Data
 		}
 	}
 
-	static class EnumParse
+	static class BinderMethods
 	{
+		static object ChangeType(object value, Type type)
+		{
+			return Convert.ChangeType(value, type, CultureInfo.InvariantCulture);
+		}
+
 		static TE ParseEnum<TE>(string value) where TE : struct, Enum
 		{
 			if (Enum.TryParse(value, true, out TE e))
@@ -254,26 +275,23 @@ namespace Sylvan.Data
 			}
 			else
 			{
-				throw new InvalidEnumDataBinderException(-1, value);
+				throw new InvalidEnumValueDataBinderException(typeof(TE), value);
 			}
 		}
 	}
 
 	public class DataBinderException : Exception
 	{
-		public int ColumnOrdinal { get; }
-
-		public DataBinderException(int columnOrdinal)
-		{
-			this.ColumnOrdinal = columnOrdinal;
-		}
 	}
 
-	public class InvalidEnumDataBinderException : DataBinderException
+	public class InvalidEnumValueDataBinderException : DataBinderException
 	{
 		public string Value { get; }
-		public InvalidEnumDataBinderException(int columnOrdinal, string value) : base(columnOrdinal)
+		public Type EnumType { get; }
+
+		public InvalidEnumValueDataBinderException(Type enumType, string value)
 		{
+			this.EnumType = enumType;
 			this.Value = value;
 		}
 	}

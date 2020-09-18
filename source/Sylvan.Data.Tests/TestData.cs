@@ -123,23 +123,20 @@ namespace Sylvan.Data
 			public double[] DataSet { get; set; }
 		}
 
-		public static DbDataReader GetTestData(int count = 10)
-		{
-			var dr =
-				ObjectDataReader
-				.Create(GetTestObjects(count, 10))
+		static ObjectDataReader.Factory<TestClass> Factory = 
+			ObjectDataReader
+				.BuildFactory<TestClass>()
 				.AddColumn("Id", i => i.Id)
 				.AddColumn("Name", i => i.Name)
 				.AddColumn("Date", i => i.Date)
-				.AddColumn("IsActive", i => i.IsActive);
+				.AddColumn("IsActive", i => i.IsActive)
+				.Repeat((b, i) => b.AddColumn("Data" + i, r => r.DataSet[i]), 10)
+				.Build();
+			
 
-			for(int i = 0; i < 10; i++)
-			{
-				var x = i;
-				dr.AddColumn("Data" + i, r => r.DataSet[x]);
-			}
-
-			return dr;
+		public static DbDataReader GetTestData(int count = 10)
+		{
+			return Factory.Create(GetTestObjects(count, 10));
 		}
 
 		public const int DefaultRecordCount = 100000;
@@ -174,13 +171,16 @@ namespace Sylvan.Data
 				);
 		}
 
+		static ObjectDataReader.Factory<BinaryData> BinaryFactory =
+			ObjectDataReader
+				.BuildFactory<BinaryData>()
+				.AddColumn("Id", d => d.Id)
+				.AddColumn("Data", d => d.Data)				
+				.Build();
+
 		public static DbDataReader GetBinaryData()
 		{
-			var items = GetTestBinary();
-			var reader = ObjectDataReader.Create(items);
-			reader.AddColumn("Id", d => d.Id);
-			reader.AddColumn("Data", d => d.Data);
-			return reader;
+			return BinaryFactory.Create(GetTestBinary());
 		}
 
 		public class BinaryData
@@ -199,19 +199,16 @@ namespace Sylvan.Data
 		public static DbDataReader GetTestDataReader(int recordCount = DefaultRecordCount, int valueCount = DefaultDataValueCount)
 		{
 			var items = GetTestObjects(recordCount, valueCount);
-			var reader = ObjectDataReader.Create(items);
-			reader.AddColumn("Id", d => d.Id);
-			reader.AddColumn("Name", d => d.Name);
-			reader.AddColumn("Date", d => d.Date);
-			reader.AddColumn("IsActive", d => d.IsActive);
-
-			for (int i = 0; i < valueCount; i++)
-			{
-				var idx = 0;
-				reader.AddColumn("Value" + i, d => d.DataSet[idx]);
-			}
-
-			return reader;
+			return
+				ObjectDataReader
+				.BuildFactory<TestClass>()
+				.AddColumn("Id", i => i.Id)
+				.AddColumn("Name", i => i.Name)
+				.AddColumn("Date", i => i.Date)
+				.AddColumn("IsActive", i => i.IsActive)
+				.Repeat((b, i) => b.AddColumn("Data" + i, r => r.DataSet[i]), valueCount)
+				.Build()
+				.Create(items);
 		}
 	}
 }

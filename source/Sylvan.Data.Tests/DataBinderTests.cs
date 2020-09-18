@@ -114,5 +114,23 @@ namespace Sylvan.Data
 				var item = binder.Bind(data);
 			}
 		}
+
+		[Fact]
+		public void TestByA()
+		{
+			var schema = Schema.TryParse(":boolean,:string,:string").GetColumnSchema();
+
+			var csvData = "Id,Name,Severity\r\n1,Olive,Warning";
+			var tr = new StringReader(csvData);
+			var opts = new CsvDataReaderOptions() { Schema = new CsvSchema(schema) };
+			var data = CsvDataReader.Create(tr, opts);
+
+			var binder = new CompiledDataBinder<EnumRecord>(data.GetColumnSchema());
+
+			while (data.Read())
+			{
+				var item = binder.Bind(data);
+			}
+		}
 	}
 }

@@ -281,34 +281,34 @@ namespace Sylvan.Data.Csv
 		[Fact(Skip = "Usage example.")]
 		public void SqlTVPSimple2()
 		{
-			using var csvText = GetData(); // Gets a TextReader over a large-ish CSV dataset
+			//using var csvText = GetData(); // Gets a TextReader over a large-ish CSV dataset
 
-			var conn = GetConnection();
-			conn.Open();
+			//var conn = GetConnection();
+			//conn.Open();
 
-			var data =
-				Enumerable
-				.Range(0, 10)
-				.Select(i => new { Id = i, Name = "name " + i, Code = (i % 2 == 1) ? "" : "OR" });
+			//var data =
+			//	Enumerable
+			//	.Range(0, 10)
+			//	.Select(i => new { Id = i, Name = "name " + i, Code = (i % 2 == 1) ? "" : "OR" });
 
-			var dataReader = ObjectDataReader.Create(data);
-			dataReader.AddColumn("Id", r => r.Id);
-			dataReader.AddColumn("Name", r => r.Name);
-			dataReader.AddColumn("Code", r => r.Code);
+			//var dataReader = ObjectDataReader.Create(data);
+			//dataReader.AddColumn("Id", r => r.Id);
+			//dataReader.AddColumn("Name", r => r.Name);
+			//dataReader.AddColumn("Code", r => r.Code);
 
-			using var cmd = conn.CreateCommand();
-			cmd.CommandText = "InsertSimple2";
-			cmd.CommandType = CommandType.StoredProcedure;
-			var param = new SqlParameter()
-			{
-				ParameterName = "data",
-				SqlDbType = SqlDbType.Structured
-			};
+			//using var cmd = conn.CreateCommand();
+			//cmd.CommandText = "InsertSimple2";
+			//cmd.CommandType = CommandType.StoredProcedure;
+			//var param = new SqlParameter()
+			//{
+			//	ParameterName = "data",
+			//	SqlDbType = SqlDbType.Structured
+			//};
 
-			var paramData = dataReader;
-			param.Value = paramData;
-			cmd.Parameters.Add(param);
-			cmd.ExecuteNonQuery();
+			//var paramData = dataReader;
+			//param.Value = paramData;
+			//cmd.Parameters.Add(param);
+			//cmd.ExecuteNonQuery();
 		}
 
 		[Fact(Skip = "Usage example.")]
@@ -341,33 +341,33 @@ namespace Sylvan.Data.Csv
 		[Fact(Skip = "Usage example.")]
 		public void SqlTVPSimple1()
 		{
-			using var csvText = GetData(); // Gets a TextReader over a large-ish CSV dataset
+			//using var csvText = GetData(); // Gets a TextReader over a large-ish CSV dataset
 
-			var conn = GetConnection();
-			conn.Open();
+			//var conn = GetConnection();
+			//conn.Open();
 
-			var data =
-				Enumerable
-				.Range(0, 10)
-				.Select(i => new { Id = i, Name = "name " + i });
+			//var data =
+			//	Enumerable
+			//	.Range(0, 10)
+			//	.Select(i => new { Id = i, Name = "name " + i });
 
-			var dataReader = ObjectDataReader.Create(data);
-			dataReader.AddColumn("Id", r => r.Id);
-			dataReader.AddColumn("Name", r => r.Name);
+			//var dataReader = ObjectDataReader.Create(data);
+			//dataReader.AddColumn("Id", r => r.Id);
+			//dataReader.AddColumn("Name", r => r.Name);
 
-			using var cmd = conn.CreateCommand();
-			cmd.CommandText = "InsertSimple1";
-			cmd.CommandType = CommandType.StoredProcedure;
-			var param = new SqlParameter()
-			{
-				ParameterName = "data",
-				SqlDbType = SqlDbType.Structured
-			};
+			//using var cmd = conn.CreateCommand();
+			//cmd.CommandText = "InsertSimple1";
+			//cmd.CommandType = CommandType.StoredProcedure;
+			//var param = new SqlParameter()
+			//{
+			//	ParameterName = "data",
+			//	SqlDbType = SqlDbType.Structured
+			//};
 
-			var paramData = dataReader;
-			param.Value = paramData;
-			cmd.Parameters.Add(param);
-			cmd.ExecuteNonQuery();
+			//var paramData = dataReader;
+			//param.Value = paramData;
+			//cmd.Parameters.Add(param);
+			//cmd.ExecuteNonQuery();
 		}
 	}
 }

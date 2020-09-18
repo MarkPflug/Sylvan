@@ -17,7 +17,7 @@ namespace Sylvan.Data
 		/// </example>
 		public static DbDataReader AsDataReader<T>(this IEnumerable<T> seq)
 		{
-			return new ObjectDataReader<T>(seq.GetEnumerator());
+			return new ObjectDataReader<T>(seq);
 		}
 
 		//public static DbDataReader Transform(this DbDataReader reader, Action<TransformBuilder> transform)

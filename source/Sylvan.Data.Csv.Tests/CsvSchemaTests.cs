@@ -9,9 +9,9 @@ namespace Sylvan.Data.Csv
 		[Fact]
 		public void Test1()
 		{
-			var data = TestData.GetTestDataReader();
-			var schema = new Schema(data);
-			var spec = schema.GetSchemaSpecification(true);
+			//var data = TestData.GetTestDataReader();
+			//var schema = new Schema(data);
+			//var spec = schema.GetSchemaSpecification(true);
 		}
 
 		[Fact]

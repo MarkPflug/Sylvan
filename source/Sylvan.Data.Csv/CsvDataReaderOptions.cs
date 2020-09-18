@@ -41,8 +41,8 @@ namespace Sylvan.Data.Csv
 			this.Schema = null;
 			this.OwnsReader = true;
 
-			this.TrueString = bool.TrueString;
-			this.FalseString = bool.FalseString;
+			this.TrueString = null;
+			this.FalseString = null;
 			this.DateFormat = null;
 
 			this.AutoDetect = true;
@@ -63,12 +63,12 @@ namespace Sylvan.Data.Csv
 		public bool AutoDetect { get; set; }
 
 		/// <summary>
-		/// The string which represents true values when reading boolean. Defaults to string.TrueString.
+		/// The string which represents true values when reading boolean. Defaults to null.
 		/// </summary>
 		public string? TrueString { get; set; }
 
 		/// <summary>
-		/// The string which represents false values when reading boolean. Defaults to string.FalseString.
+		/// The string which represents false values when reading boolean. Defaults to null.
 		/// </summary>
 		public string? FalseString { get; set; }
 
@@ -147,7 +147,7 @@ namespace Sylvan.Data.Csv
 				char.IsLetterOrDigit(Delimiter) ||
 				Delimiter == Quote ||
 				BufferSize < MinBufferSize ||
-				StringComparer.OrdinalIgnoreCase.Equals(TrueString, FalseString);
+				(StringComparer.OrdinalIgnoreCase.Equals(TrueString, FalseString) && TrueString != null);
 			if (invalid)
 				throw new CsvConfigurationException();
 		}

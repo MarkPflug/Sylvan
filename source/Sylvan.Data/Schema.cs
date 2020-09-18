@@ -31,7 +31,7 @@ namespace Sylvan.Data
 			return map;
 		}
 
-		static Type GetDataType(DbType type)
+		internal static Type GetDataType(DbType type)
 		{
 			switch (type)
 			{
@@ -54,7 +54,7 @@ namespace Sylvan.Data
 			throw new NotSupportedException();
 		}
 
-		static DbType GetColumnType(Type type)
+		internal static DbType GetDbType(Type type)
 		{
 			switch (Type.GetTypeCode(type))
 			{
@@ -172,7 +172,7 @@ namespace Sylvan.Data
 
 			public SchemaColumn(DbColumn col)
 			{
-				this.DbType = GetColumnType(col.DataType);
+				this.DbType = GetDbType(col.DataType);
 				this.ColumnName = col.ColumnName;
 				this.ColumnOrdinal = col.ColumnOrdinal;
 				this.BaseColumnName = col.BaseColumnName;
