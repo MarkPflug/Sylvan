@@ -57,7 +57,7 @@ namespace Sylvan.Data
 
 			while (data.Read())
 			{
-				var item = binder.Bind(data);
+				var item = binder.GetRecord(data);
 			}
 		}
 
@@ -74,7 +74,7 @@ namespace Sylvan.Data
 
 			while (data.Read())
 			{
-				var item = binder.Bind(data);
+				var item = binder.GetRecord(data);
 			}
 		}
 
@@ -93,7 +93,7 @@ namespace Sylvan.Data
 
 			while (data.Read())
 			{
-				var item = binder.Bind(data);
+				var item = binder.GetRecord(data);
 			}
 		}
 
@@ -111,7 +111,7 @@ namespace Sylvan.Data
 
 			while (data.Read())
 			{
-				var item = binder.Bind(data);
+				var item = binder.GetRecord(data);
 			}
 		}
 
@@ -129,7 +129,7 @@ namespace Sylvan.Data
 
 			while (data.Read())
 			{
-				var item = binder.Bind(data);
+				var item = binder.GetRecord(data);
 			}
 		}
 	}

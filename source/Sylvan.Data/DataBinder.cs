@@ -27,7 +27,7 @@ namespace Sylvan.Data
 
 	public static class DataBinderExtensions
 	{
-		public static T Bind<T>(this IDataBinder<T> binder, IDataRecord record) where T : new()
+		public static T GetRecord<T>(this IDataBinder<T> binder, IDataRecord record) where T : new()
 		{
 			var t = new T();
 			binder.Bind(record, t);

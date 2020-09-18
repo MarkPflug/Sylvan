@@ -88,7 +88,7 @@ namespace Sylvan.Data
 				{
 					var addMethods =
 						typeof(Builder)
-						.GetMethods(BindingFlags.Public | BindingFlags.Instance)
+						.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
 						.Where(m => m.Name == "AddColumn")
 						.ToArray();
 
@@ -135,15 +135,25 @@ namespace Sylvan.Data
 					foreach (var prop in t.GetProperties())
 					{
 						var getter = prop.GetGetMethod();
-						if (getter == null) continue;
+						if (getter == null || !IsSupported(prop)) continue;
 						AddProperty(prop);
 					}
 
 					return this;
 				}
 
+				static bool IsSupported(PropertyInfo prop)
+				{
+					var type = prop.PropertyType;
+					if (type.IsArray) return false;
+					if (type.IsPrimitive) return true;
+					if (type == typeof(string)) return true;
+					return false;
+				}
+
 				internal Builder AddProperty(PropertyInfo prop)
 				{
+					var propType = prop.PropertyType;
 					var getter = prop.GetGetMethod();
 					var param = Expression.Parameter(typeof(T));
 					var parameters = new ParameterExpression[] { param };
@@ -151,7 +161,6 @@ namespace Sylvan.Data
 					var selector = expr.Compile();
 					var st = selector.GetType();
 
-					var propType = prop.PropertyType;
 					var baseType = Nullable.GetUnderlyingType(propType);
 					if (baseType == null)
 					{

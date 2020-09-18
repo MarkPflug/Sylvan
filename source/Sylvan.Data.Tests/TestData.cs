@@ -9,6 +9,25 @@ using System.Text;
 
 namespace Sylvan.Data
 {
+
+	public sealed class TestRecord
+	{
+		//public TestClass(int i)
+		//{
+		//	this.Id = i;
+		//	this.Name = "Name" + i;
+		//	this.Date = new DateTime(2020, 01, 01).AddDays(i);
+		//	this.IsActive = i % 2 == 1;
+		//	this.DataSet = Enumerable.Range(0, 10).Select(n => (double)n * i * .3).ToArray();
+		//}
+
+		public int Id { get; set; }
+		public string Name { get; set; }
+		public DateTime Date { get; set; }
+		public bool IsActive { get; set; }
+		public double[] DataSet { get; set; }
+	}
+
 	public class TestData
 	{
 
@@ -105,27 +124,11 @@ namespace Sylvan.Data
 			}
 		}
 
-		public sealed class TestClass
-		{
-			//public TestClass(int i)
-			//{
-			//	this.Id = i;
-			//	this.Name = "Name" + i;
-			//	this.Date = new DateTime(2020, 01, 01).AddDays(i);
-			//	this.IsActive = i % 2 == 1;
-			//	this.DataSet = Enumerable.Range(0, 10).Select(n => (double)n * i * .3).ToArray();
-			//}
+		
 
-			public int Id { get; set; }
-			public string Name { get; set; }
-			public DateTime Date { get; set; }
-			public bool IsActive { get; set; }
-			public double[] DataSet { get; set; }
-		}
-
-		static ObjectDataReader.Factory<TestClass> Factory = 
+		static ObjectDataReader.Factory<TestRecord> Factory = 
 			ObjectDataReader
-				.BuildFactory<TestClass>()
+				.BuildFactory<TestRecord>()
 				.AddColumn("Id", i => i.Id)
 				.AddColumn("Name", i => i.Name)
 				.AddColumn("Date", i => i.Date)
@@ -142,12 +145,12 @@ namespace Sylvan.Data
 		public const int DefaultRecordCount = 100000;
 		public const int DefaultDataValueCount = 20;
 
-		public static IEnumerable<TestClass> GetTestObjects(int recordCount = DefaultRecordCount, int valueCount = DefaultDataValueCount)
+		public static IEnumerable<TestRecord> GetTestObjects(int recordCount = DefaultRecordCount, int valueCount = DefaultDataValueCount)
 		{
 			// We'll reuse the single instance of TestClass. 
 			// We do this so memory usage in benchmarks is a better indicator
 			// of the library, and not just overwhelmed by TestClass allocations.
-			var row = new TestClass();
+			var row = new TestRecord();
 			DateTime startDate = new DateTime(2020, 3, 23, 0, 0, 0, DateTimeKind.Utc);
 			row.DataSet = new double[valueCount];
 			var counter = 1;
@@ -201,7 +204,7 @@ namespace Sylvan.Data
 			var items = GetTestObjects(recordCount, valueCount);
 			return
 				ObjectDataReader
-				.BuildFactory<TestClass>()
+				.BuildFactory<TestRecord>()
 				.AddColumn("Id", i => i.Id)
 				.AddColumn("Name", i => i.Name)
 				.AddColumn("Date", i => i.Date)

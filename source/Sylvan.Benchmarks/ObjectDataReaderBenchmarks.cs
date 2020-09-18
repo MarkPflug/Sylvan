@@ -1,28 +1,69 @@
 ﻿using BenchmarkDotNet.Attributes;
 using Sylvan.Data;
-using System;
 using System.Collections.Generic;
-using System.Text;
-using Xunit.Sdk;
 
 namespace Sylvan.Benchmarks
 {
 	[MemoryDiagnoser]
 	public class ObjectDataReaderBenchmarks
 	{
-
-		ObjectDataReader.Factory<TestClass> Factory;
+		ObjectDataReader.Factory<TestRecord> Factory;
 
 		public ObjectDataReaderBenchmarks()
 		{
-			ObjectDataReader.BuildFactory<TestClass>
+			Factory =
+				ObjectDataReader
+				.BuildFactory<TestRecord>()
+				.AddAllProperties()
+				.Build();
+		}
+
+		const int Count = 1000;
+
+		public IEnumerable<TestRecord> GetData()
+		{
+			return TestData.GetTestObjects(Count, 0);
+		}
+
+		[Benchmark(Baseline = true)]
+		public void ObjectDataReaderFactory()
+		{
+			var dr = Factory.Create(GetData());
+			dr.Process();
 		}
 
 		[Benchmark]
-		public void ObjectDataReader()
+		public void ObjectDataReaderCreate()
 		{
-
+			var dr = GetData().AsDataReader();
+			dr.Process();
 		}
 
+		[Benchmark]
+		public void ObjectDataReaderCreateFast()
+		{
+			var fac = 
+				ObjectDataReader
+				.BuildFactory<TestRecord>()
+				.AddColumn("Id", r => r.Id)
+				.AddColumn("Date", r => r.Date)
+				.AddColumn("IsActive", r => r.IsActive)
+				.AddColumn("Name", r => r.Name)
+				.Build();
+			var dr = fac.Create(GetData());
+			dr.Process();
+		}
+
+		[Benchmark]
+		public void ObjectDataReaderCreateSlow()
+		{
+			var fac =
+				ObjectDataReader
+				.BuildFactory<TestRecord>()
+				.AddAllProperties()
+				.Build();
+			var dr = fac.Create(GetData());
+			dr.Process();
+		}
 	}
 }
