@@ -95,8 +95,9 @@ This implementation is faster and requires fewer allocations than de-duping usin
 
 Record size is the primary limitation. A record must fit entirely within the working buffer.
 
-There is no support for multi-character delimiters. There are plenty of other libraries capable of handling that nonsense.
+There is no support for multi-character delimiters. There are plenty of other libraries capable of handling that nonsense; use one of them if you need that feature.
 
+Comments are not currently supported, and the CSV RFC 4180 makes no mention of comments. Typically, a comment line(s) would appear at the beginning of the file, and can be trivially pre-processed (Peek/ReadLine) before handing the TextReader off to the CsvDataReader.
 
 ## Error Handling
 
