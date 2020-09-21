@@ -60,7 +60,7 @@ namespace Sylvan.Data.Csv
 			this.invariantCulture = this.culture == CultureInfo.InvariantCulture;
 			this.prepareBuffer = new char[0x100];
 			this.bufferSize = options.BufferSize;
-			this.writeBuffer = new char[bufferSize];
+			this.writeBuffer = options.Buffer ?? new char[bufferSize];
 			this.ownsWriter = options.OwnsWriter;
 			this.pos = 0;
 		}

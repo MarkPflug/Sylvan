@@ -153,7 +153,8 @@ namespace Sylvan.Data.Csv
 				char.IsLetterOrDigit(Delimiter) ||
 				Delimiter == Quote ||
 				BufferSize < MinBufferSize ||
-				(StringComparer.OrdinalIgnoreCase.Equals(TrueString, FalseString) && TrueString != null);
+				(StringComparer.OrdinalIgnoreCase.Equals(TrueString, FalseString) && TrueString != null) ||
+				(Buffer != null && Buffer.Length < MinBufferSize);
 			if (invalid)
 				throw new CsvConfigurationException();
 		}
