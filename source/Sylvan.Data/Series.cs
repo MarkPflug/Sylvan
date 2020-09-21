@@ -4,51 +4,62 @@ using System.Linq;
 
 namespace Sylvan.Data
 {
-	sealed class Series
+	public interface ISeries<TK, TV> //: IEnumerable<TV>
+		where TK : IComparable<TK>
 	{
-		double[] values;
+		TK Start { get; }
+		TK End { get; }
 
-		public Series(IEnumerable<double> values)
-		{
-			this.values = values.ToArray();
-		}
+		TV this[TK key] { get; }
 	}
 
-	public class Series<TK, TV> where TK : IComparable
+	sealed class Series<T> : ISeries<int, T>
 	{
-		TK[] keys;
-		TV[] values;
+		public int Start { get; }
+		public int End => Start + values.Length;
 
-		public Series(TK tk, Func<TK, TK> keyIncrementer, TV[] values)
+		readonly T[] values;
+
+		public Series(int start, IEnumerable<T> values)
 		{
-			this.keys = new TK[values.Length];
-			var key = tk;
-			for (int i = 0; i < values.Length; i++)
-			{
-				keys[i] = key;
-				key = keyIncrementer(key);
-			}
-
-			this.values = values;
+			this.Start = start;
+			this.values = values.ToArray();
 		}
 
-		public TV this[TK key]
+		public T this[int key]
 		{
 			get
 			{
-				if (key.CompareTo(keys[0]) < 0 || key.CompareTo(keys[keys.Length - 1]) > 0)
-				{
-					throw new IndexOutOfRangeException();
-				}
-				var idx = Array.BinarySearch(keys, key);
+				if (key < Start || key > End) throw new IndexOutOfRangeException();
+				var idx = key - Start;
 				return values[idx];
 			}
 		}
 	}
 
-	public class DateSeries<T> : Series<DateTime, T>
+	public class DateSeries<T> : ISeries<DateTime, T>
 	{
-		public DateSeries(DateTime startDate, T[] values) : base(startDate, d => d.AddDays(1), values) { }
+		public DateTime Start { get; }
 
+		public DateTime End { get; }
+
+		readonly T[] values;
+
+		public DateSeries(DateTime startDate, IEnumerable<T> values)
+		{
+			this.Start = startDate.Date;
+			this.values = values.ToArray();
+			this.End = Start.AddDays(this.values.Length);
+		}
+
+		public T this[DateTime key]
+		{
+			get
+			{
+				if (key < Start || key > End) throw new IndexOutOfRangeException();
+				var idx = (key - Start).Days;
+				return values[idx];
+			}
+		}
 	}
 }
