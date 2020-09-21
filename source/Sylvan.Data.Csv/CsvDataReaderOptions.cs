@@ -119,6 +119,12 @@ namespace Sylvan.Data.Csv
 		public int BufferSize { get; set; }
 
 		/// <summary>
+		/// The buffer to use when reading records.
+		/// The default is null, in which case the reader will allocate the buffer.
+		/// </summary>
+		public char[]? Buffer { get; set; }
+
+		/// <summary>
 		/// The StringComparer to use when looking up header values.
 		/// Can be used to allow case-insensitive column lookup.
 		/// The default is Ordinal.

@@ -1,16 +1,38 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Data.Common;
 using System.Linq;
 
 namespace Sylvan.Data.Csv
 {
+	sealed class NullableCsvSchema : ICsvSchemaProvider
+	{
+		static NullableStringColumn Column = new NullableStringColumn();
+
+		public DbColumn? GetColumn(string? name, int ordinal)
+		{
+			return Column;
+		}
+
+		class NullableStringColumn : DbColumn
+		{
+			public NullableStringColumn()
+			{
+				this.AllowDBNull = true;
+			}
+		}
+	}
+
 	/// <summary>
 	/// A ICsvSchemaProvider implementation based on an existing schema.
 	/// </summary>
 	public class CsvSchema : ICsvSchemaProvider
 	{
+		/// <summary>
+		/// Gets a ICsvSchemaProvider that treats empty strings as null.
+		/// </summary>
+		public static ICsvSchemaProvider Nullable = new NullableCsvSchema();
+
 		readonly DbColumn[] schema;
 		readonly Dictionary<string, DbColumn> nameMap;
 

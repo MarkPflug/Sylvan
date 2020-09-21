@@ -17,6 +17,7 @@ namespace Sylvan.Data.Csv
 	{
 		const int BufferSize = 0x4000;
 		readonly StringFactory pool;
+		char[] buffer = new char[BufferSize];
 
 		public CsvReaderBenchmarks()
 		{
@@ -220,7 +221,7 @@ namespace Sylvan.Data.Csv
 		public async Task Sylvan()
 		{
 			using var tr = TestData.GetTextReader();
-			using var dr = await CsvDataReader.CreateAsync(tr);
+			using var dr = await CsvDataReader.CreateAsync(tr, new CsvDataReaderOptions() { Buffer = buffer });
 			while (await dr.ReadAsync())
 			{
 				for (int i = 0; i < dr.FieldCount; i++)

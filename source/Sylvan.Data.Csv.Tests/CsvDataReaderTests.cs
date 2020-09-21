@@ -135,7 +135,7 @@ namespace Sylvan.Data.Csv
 				Assert.Equal("John", csv[1]);
 				Assert.False(csv.IsDBNull(2));
 				Assert.Equal("Low", csv[2]);
-				Assert.True(csv.IsDBNull(3));
+				Assert.False(csv.IsDBNull(3));
 				Assert.Equal("", csv[3]);
 			}
 		}
@@ -665,7 +665,7 @@ namespace Sylvan.Data.Csv
 		//	Assert.Same(str2, str2);
 		//}
 
-	
+
 
 		[Fact]
 		public void AutoDetect1()
@@ -699,7 +699,7 @@ namespace Sylvan.Data.Csv
 			Assert.Equal("", csv.GetString(2));
 			Assert.False(csv.IsDBNull(0));
 			Assert.False(csv.IsDBNull(1));
-			Assert.True(csv.IsDBNull(2));
+			Assert.False(csv.IsDBNull(2));
 			Assert.Throws<ArgumentOutOfRangeException>(() => csv.GetString(-1));
 			Assert.Throws<ArgumentOutOfRangeException>(() => csv.GetString(3));
 		}
@@ -710,10 +710,97 @@ namespace Sylvan.Data.Csv
 			var schema = Schema.TryParse("Name,Date:DateTime{yyyyMMdd}");
 			var csvSchema = new CsvSchema(schema.GetColumnSchema());
 			using var tr = new StringReader("Test,20200812");
-			var csv = CsvDataReader.Create(tr, new CsvDataReaderOptions { Schema = csvSchema, HasHeaders = false});
+			var csv = CsvDataReader.Create(tr, new CsvDataReaderOptions { Schema = csvSchema, HasHeaders = false });
 			Assert.True(csv.Read());
 			Assert.Equal("Test", csv.GetString(0));
 			Assert.Equal(new DateTime(2020, 8, 12), csv.GetDateTime(1));
+		}
+
+
+		[Fact]
+		public void EmptyStringTest()
+		{
+			using var tr = new StringReader("Name,Value\r\nTest,");
+			var csv = CsvDataReader.Create(tr);
+			Assert.True(csv.Read());
+			Assert.Equal("Test", csv.GetString(0));
+			Assert.False(csv.IsDBNull(1));
+			Assert.Equal("", csv.GetValue(1));
+		}
+
+		[Fact]
+		public void DbNullTest()
+		{
+			using var tr = new StringReader("Name,Value\r\nTest,");
+			var csv = CsvDataReader.Create(tr, new CsvDataReaderOptions { Schema = CsvSchema.Nullable });
+			Assert.True(csv.Read());
+			Assert.Equal("Test", csv.GetString(0));
+			Assert.True(csv.IsDBNull(1));
+			Assert.Equal(DBNull.Value, csv.GetValue(1));
+		}
+
+		[Fact]
+		public void EmptyString2Test()
+		{
+			using var tr = new StringReader("Name,Value\r\nTest");
+			var csv = CsvDataReader.Create(tr);
+			Assert.True(csv.Read());
+			Assert.Equal("Test", csv.GetString(0));
+			Assert.False(csv.IsDBNull(1));
+			Assert.Equal("", csv.GetValue(1));
+		}
+
+		[Fact]
+		public void DbNull2Test()
+		{
+			using var tr = new StringReader("Name,Value\r\nTest");
+			var csv = CsvDataReader.Create(tr, new CsvDataReaderOptions { Schema = CsvSchema.Nullable });
+			Assert.True(csv.Read());
+			Assert.Equal("Test", csv.GetString(0));
+			Assert.True(csv.IsDBNull(1));
+			Assert.Equal(DBNull.Value, csv.GetValue(1));
+		}
+
+
+		[Fact]
+		public void RowFieldCountTest()
+		{
+			using var tr = new StringReader("Name,Value\r\nTest");
+			var csv = CsvDataReader.Create(tr, new CsvDataReaderOptions { Schema = CsvSchema.Nullable });
+			Assert.True(csv.Read());
+			Assert.Equal("Test", csv.GetString(0));
+			Assert.Equal(2, csv.FieldCount);
+			Assert.Equal(1, csv.RowFieldCount);
+		}
+
+		[Fact]
+		public void RowFieldCount2Test()
+		{
+			using var tr = new StringReader("Name,Value\r\n\r\n");
+			var csv = CsvDataReader.Create(tr, new CsvDataReaderOptions { Schema = CsvSchema.Nullable });
+			Assert.True(csv.Read());
+			Assert.Equal(2, csv.FieldCount);
+			Assert.Equal(1, csv.RowFieldCount);
+		}
+
+		[Fact]
+		public void RowFieldCount3Test()
+		{
+			using var tr = new StringReader("Name,Value\r\n,,\r\n");
+			var csv = CsvDataReader.Create(tr, new CsvDataReaderOptions { Schema = CsvSchema.Nullable });
+			Assert.True(csv.Read());
+			Assert.Equal(2, csv.FieldCount);
+			Assert.Equal(3, csv.RowFieldCount);
+		}
+
+		[Fact]
+		public void BadQuote()
+		{
+			using var tr = new StringReader("Name,Value\r\nA\"\"B,\"And\"more,\r\n");
+			var csv = CsvDataReader.Create(tr, new CsvDataReaderOptions { Schema = CsvSchema.Nullable });
+			Assert.True(csv.Read());
+			Assert.Equal("A\"\"B", csv.GetString(0));
+			Assert.Equal("Andmore", csv.GetString(1));
 		}
 	}
 }

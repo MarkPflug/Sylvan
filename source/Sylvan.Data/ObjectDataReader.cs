@@ -19,6 +19,11 @@ namespace Sylvan.Data
 			return new ObjectDataReader<T>(data);
 		}
 
+		internal static Builder<T> BuildFactory<T>(IEnumerable<T> data)
+		{
+			return new Builder<T>();
+		}
+
 		internal static Builder<T> BuildFactory<T>()
 		{
 			return new Builder<T>();
@@ -108,6 +113,8 @@ namespace Sylvan.Data
 
 				static MethodInfo AddNullableMethod;
 				static MethodInfo AddMethod;
+
+				// bool, short, int, long, single, double, decimal, dateTime, guid, string
 
 				internal Builder AddColumn<T0>(string name, Func<T, T0?> func) where T0 : struct
 				{

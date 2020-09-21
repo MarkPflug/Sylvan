@@ -168,7 +168,7 @@ namespace Sylvan.Data.Csv
 				options.Validate();
 			options ??= CsvDataReaderOptions.Default;
 			this.reader = reader;
-			this.buffer = new char[options.BufferSize];
+			this.buffer = options.Buffer ?? new char[options.BufferSize];
 
 			this.hasHeaders = options.HasHeaders;
 			this.delimiter = options.Delimiter;
@@ -333,14 +333,8 @@ namespace Sylvan.Data.Csv
 			bool last = false;
 			bool complete = false;
 
-			if (idx >= bufferEnd)
-			{
-				return atEndOfText
-					? ReadResult.False
-					: ReadResult.Incomplete;
-			}
-			else
-			{
+			if (idx < bufferEnd)
+			{ 
 				c = buffer[idx];
 				if (c == quote)
 				{
@@ -442,9 +436,9 @@ namespace Sylvan.Data.Csv
 					}
 					fieldCount++;
 				}
+				curFieldCount++;
 				if (fieldIdx < fieldCount)
-				{
-					curFieldCount++;
+				{					
 					ref var fi = ref fieldInfos[fieldIdx];
 					fi.isQuoted =
 						closeQuoteIdx == -1
@@ -537,6 +531,12 @@ namespace Sylvan.Data.Csv
 
 		/// <inheritdoc/>
 		public override int Depth => 0;
+
+		/// <summary>
+		/// Gets the number of fields in the current row.
+		/// This may be different than FieldCount.
+		/// </summary>
+		public int RowFieldCount => this.curFieldCount;
 
 		/// <inheritdoc/>
 		public override int FieldCount => fieldCount;
@@ -980,13 +980,13 @@ namespace Sylvan.Data.Csv
 		}
 
 		/// <inheritdoc/>
-		public override object? GetValue(int ordinal)
+		public override object GetValue(int ordinal)
 		{
 			ThrowIfOutOfRange(ordinal);
 
 			if (columns[ordinal].AllowDBNull != false && this.IsDBNull(ordinal))
 			{
-				return null;
+				return DBNull.Value;
 			}
 			var type = this.GetFieldType(ordinal);
 
@@ -1051,12 +1051,11 @@ namespace Sylvan.Data.Csv
 		public override bool IsDBNull(int ordinal)
 		{
 			ThrowIfOutOfRange(ordinal);
-
-			if ((uint)ordinal >= (uint)curFieldCount)
-			{
-				return true;
-			}
 			var col = columns[ordinal];
+			if((uint)ordinal >= (uint)curFieldCount)
+			{
+				return col.AllowDBNull != false;
+			}
 			if (col.DataType == typeof(string))
 			{
 				if (col.AllowDBNull == false)
@@ -1241,5 +1240,27 @@ namespace Sylvan.Data.Csv
 
 #endif
 
+		/// <summary>
+		/// Copies the raw record data from the buffer.
+		/// </summary>
+		/// <param name="buffer">The buffer to receive the data, or null to query the required size.</param>
+		/// <param name="offset">The offset into the buffer to start writing.</param>
+		/// <returns>The length of the record data.</returns>
+		// TODO: do I want to expose this publicly?
+		private int GetRawRecord(char[]? buffer, int offset)
+		{
+			var len = this.idx - this.recordStart;
+			if (buffer != null)
+			{
+				if (offset < 0 || offset >= buffer.Length)
+					throw new ArgumentOutOfRangeException(nameof(offset));
+
+				if(buffer.Length - offset < len)
+					throw new ArgumentOutOfRangeException(nameof(buffer));
+
+				Array.Copy(this.buffer, this.recordStart, buffer, offset, len);
+			}
+			return len;
+		}
 	}
 }

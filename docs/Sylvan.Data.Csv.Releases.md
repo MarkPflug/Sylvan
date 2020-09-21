@@ -1,4 +1,11 @@
 # Sylvan.Data.Csv Release Notes
+_0.7.3_
+
+- User-allocated buffer, to allow pooling.
+- More consistent default-schema behavior around null/empty. 
+	Technically breaking, but shouldn't affect reasonable code.
+- Nullability annotations aligned with BCL base types.
+- Expose RowFieldCount to allow detecting missing/extra fields.
 
 _0.7.2_
 
