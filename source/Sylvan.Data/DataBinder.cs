@@ -5,6 +5,20 @@ using System.Data.Common;
 
 namespace Sylvan.Data
 {
+
+	[AttributeUsage(AttributeTargets.Property | AttributeTargets.Field)]
+	public sealed class ColumnSeriesAttribute : Attribute
+	{
+		public string? SeriesPattern { get; }
+
+		public ColumnSeriesAttribute() { }
+
+		public ColumnSeriesAttribute(string seriesPattern)
+		{
+			this.SeriesPattern = seriesPattern;
+		}
+	}
+
 	[AttributeUsage(AttributeTargets.Property | AttributeTargets.Field)]
 	public sealed class ColumnOrdinalAttribute : Attribute
 	{

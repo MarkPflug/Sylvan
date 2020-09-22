@@ -6,6 +6,7 @@ using System.Data.Common;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.NetworkInformation;
 using System.Text.RegularExpressions;
 
 namespace Sylvan.Data
@@ -116,8 +117,8 @@ namespace Sylvan.Data
 			public string? SeriesName { get; }
 			public string? SeriesHeaderFormat { get; }
 
-			public bool? IsDateSeries { get; }
-			public bool? IsIntegerSeries { get; }
+			public bool? IsSeries { get; }
+			public Type? SeriesType { get; }
 
 			public override object? this[string property]
 			{
@@ -133,10 +134,10 @@ namespace Sylvan.Data
 							return this.SeriesName;
 						case nameof(SeriesHeaderFormat):
 							return this.SeriesHeaderFormat;
-						case nameof(IsDateSeries):
-							return this.IsDateSeries;
-						case nameof(IsIntegerSeries):
-							return this.IsIntegerSeries;
+						case nameof(IsSeries):
+							return this.IsSeries;
+						case nameof(SeriesType):
+							return this.SeriesType;
 						case nameof(Format):
 							return this.Format;
 						default:
@@ -144,7 +145,7 @@ namespace Sylvan.Data
 					}
 				}
 			}
-						
+
 			public string? Format { get; }
 
 			public SchemaColumn(int? ordinal, string? baseName, string name, DbType type, bool allowNull, int? size = null, string? format = null)
@@ -153,15 +154,28 @@ namespace Sylvan.Data
 				this.DbType = type;
 
 #warning this feels like the wrong place to deal with series.
-				bool isSeries = name?.EndsWith(SeriesSymbol) == true;
 
-				this.SeriesOrdinal = isSeries ? 0 : (int?)null;
-				this.SeriesName = isSeries ? name?.Substring(0, name.Length - 1) : null;
-				this.BaseColumnName = isSeries ? null : baseName;
-				this.ColumnName = isSeries ? null : name;
-				this.SeriesHeaderFormat = isSeries ? baseName : null;
-				this.IsDateSeries = isSeries ? name?.IndexOf("{Date}", StringComparison.OrdinalIgnoreCase) >= 0 : (bool?)null;
-				this.IsIntegerSeries = isSeries ? name?.IndexOf("{Integer}", StringComparison.OrdinalIgnoreCase) >= 0 : (bool?)null;
+				var isSeries = name?.EndsWith(SeriesSymbol) == true;
+				if (isSeries == false)
+				{
+					this.BaseColumnName = baseName;
+					this.ColumnName = name;
+				}
+				else
+				{
+					this.IsSeries = true;
+					this.SeriesOrdinal = 0;
+					this.SeriesName = name?.Substring(0, name.Length - 1);
+					this.SeriesHeaderFormat = baseName;
+					if (name?.IndexOf("{Date}", StringComparison.OrdinalIgnoreCase) >= 0)
+					{
+						this.SeriesType = typeof(DateTime);
+					}
+					if (name?.IndexOf("{Integer}", StringComparison.OrdinalIgnoreCase) >= 0)
+					{
+						this.SeriesType = typeof(int);
+					}
+				}
 
 				this.AllowDBNull = allowNull;
 				this.ColumnSize = size;
@@ -292,9 +306,9 @@ namespace Sylvan.Data
 					var formatGroup = match.Groups["Format"];
 					var baseNameGroup = match.Groups["BaseName"];
 					var baseName = baseNameGroup.Success ? baseNameGroup.Value : null;
-					var name = WebUtility.UrlDecode(match.Groups["Name"].Value);
+					var name = match.Groups["Name"].Value;
 					DbType type = DbType.String;
-					bool allowNull = true;
+					bool allowNull = false;
 					int size = -1;
 					if (typeGroup.Success)
 					{
@@ -312,7 +326,7 @@ namespace Sylvan.Data
 					{
 						format = formatGroup.Value;
 					}
-					
+
 					builder.AddColumn(baseName, name, type, allowNull, size == -1 ? null : (int?)size, format);
 				}
 				else
@@ -353,12 +367,24 @@ namespace Sylvan.Data
 					}
 				}
 
-				if (col.BaseColumnName != null && col.BaseColumnName != col.ColumnName)
+				if (col.IsSeries == true)
 				{
-					w.Write(WebUtility.UrlEncode(col.BaseColumnName));
-					w.Write(">");
+					if(col.SeriesHeaderFormat != null)
+					{
+						w.Write(col.SeriesHeaderFormat);
+						w.Write(">");
+					}
+					w.Write(col.SeriesName + "*");
 				}
-				w.Write(WebUtility.UrlEncode(col.ColumnName));
+				else
+				{
+					if (col.BaseColumnName != null && col.BaseColumnName != col.ColumnName)
+					{
+						w.Write(col.BaseColumnName);
+						w.Write(">");
+					}
+					w.Write(col.ColumnName);
+				}
 				WriteType(w, col);
 			}
 
@@ -367,8 +393,11 @@ namespace Sylvan.Data
 
 		static void WriteType(TextWriter w, SchemaColumn col)
 		{
+			if (col.DataType == typeof(string) && col.AllowDBNull == false && col.ColumnSize == int.MaxValue)
+				return;
+
 			w.Write(":");
-			w.Write(col.DbType.ToString());
+			w.Write(GetTypeName(col.DbType));
 			if (HasLength(col.DbType))
 			{
 				if (col.ColumnSize != null)
@@ -381,6 +410,19 @@ namespace Sylvan.Data
 			if (col.AllowDBNull != false)
 			{
 				w.Write("?");
+			}
+		}
+
+		static string GetTypeName(DbType type)
+		{
+			switch (type)
+			{
+				case DbType.Int32:
+					return "int";
+				case DbType.String:
+					return "string";
+				default:
+					return type.ToString();
 			}
 		}
 

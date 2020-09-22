@@ -6,8 +6,7 @@ class Program
 {
 	public static int Main()
 	{
-		var t = Type.GetType("Counties");
-		Console.WriteLine("test");
+		var t = Type.GetType("Issues");
 		return t == null ? 0 : 1;
 	}
 }

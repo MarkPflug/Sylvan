@@ -95,5 +95,18 @@ namespace Sylvan.Data
 				yield return new KeyValuePair<TK, TV>(c.Key, value);
 			}
 		}
+
+		public int ColumnCount => cols.Length;
+
+		public IEnumerable<TV> GetValues(IDataRecord record)
+		{
+			for (int i = 0; i < cols.Length; i++)
+			{
+				var c = cols[i];
+				var o = c.Ordinal;
+				var value = getter.Get(record, o);
+				yield return value;
+			}
+		}
 	}
 }

@@ -13,7 +13,7 @@ namespace Sylvan.Data
 		TV this[TK key] { get; }
 	}
 
-	sealed class Series<T> : ISeries<int, T>
+	public sealed class Series<T> : ISeries<int, T>
 	{
 		public int Start { get; }
 		public int End => Start + values.Length;
