@@ -30,7 +30,7 @@ namespace Sylvan.Data
 	{
 		Action<IDataRecord, object[], T> f;
 
-		readonly object[] state = Array.Empty<object>();
+		object[] state = Array.Empty<object>();
 
 		static readonly Type drType = typeof(IDataRecord);
 
@@ -151,45 +151,98 @@ namespace Sylvan.Data
 
 				if (isSeries)
 				{
+
+					// var acc = (DataSeriesAccessor<DateTime,int>)state[1];
+					// target.Series = new DateSeries<DateTime>(acc.Minimum, acc.GetValues(reader));
 					var sct = Type.GetTypeCode(schemaCol!.SeriesType);
 					object seriesAccessor = GetDataSeriesAccessor(schemaCol, physicalSchema);
 					stateIdx = state.Count;
-					state.Add(seriesAccessor);					
-				}
+					state.Add(seriesAccessor);
 
-				var ordinal = col.ColumnOrdinal ?? columnOrdinal;
-				if (ordinal == null)
-				{
-					// this means the column didn't know it's own ordinal, and neither did the property.
-					continue;
-				}
+					var setter = property.GetSetMethod(true);
+					var paramType = setter.GetParameters()[0].ParameterType;
 
-				var setter = property.GetSetMethod(true);
-				var paramType = setter.GetParameters()[0].ParameterType;
+					var seriesAccType = seriesAccessor.GetType();
+					var accLocal = Expression.Variable(seriesAccType);
 
-				var accessorMethod = GetAccessorMethod(col.DataType);
 
-				var ordinalExpr = Expression.Constant(ordinal, typeof(int));
-				Expression accessorExpr = Expression.Call(recordParam, accessorMethod, ordinalExpr);
+					var stateIdxExpr = Expression.Constant(stateIdx, typeof(int));
 
-				Expression expr = GetConvertExpression(accessorExpr, paramType);
-
-				if (col.AllowDBNull != false)
-				{
-					// roughly:
-					// item.Property = record.IsDBNull(idx) ? default : Coerce(record.Get[Type](idx));
-					expr =
-						Expression.Condition(
-							Expression.Call(recordParam, isDbNullMethod, ordinalExpr),
-							Expression.Default(paramType),
-							expr
+					var setLocalExpr =
+						Expression.Assign(
+							accLocal,
+							Expression.Convert(
+								Expression.ArrayAccess(
+									stateParam,
+									stateIdxExpr
+								),
+								seriesAccType
+							)
 						);
-				}
+					// TODO: need to handle other series types.
+					var seriesType = typeof(DateSeries<>).MakeGenericType(schemaCol.DataType);
+					var seriesCtor = seriesType.GetConstructor(new Type[] { typeof(DateTime), typeof(IEnumerable<>).MakeGenericType(schemaCol.DataType) });
 
-				var setExpr = Expression.Call(itemParam, setter, expr);
-				bodyExpressions.Add(setExpr);
+					// TODO: this is terrible. Just push this down as a constructor on Series.
+					var ctorExpr =
+						Expression.New(
+							seriesCtor,
+							Expression.Property(
+								accLocal,
+								seriesAccType.GetProperty("Minimum")
+							),
+							Expression.Call(
+								accLocal,
+								seriesAccType.GetMethod("GetValues"),
+								recordParam
+							)
+						);
+					
+					var setExpr = Expression.Call(itemParam, setter, ctorExpr);
+
+					var block = Expression.Block(new ParameterExpression[] { accLocal }, new Expression[] { setLocalExpr, setExpr });
+
+					bodyExpressions.Add(block);
+
+				}
+				else
+				{
+
+					var ordinal = col.ColumnOrdinal ?? columnOrdinal;
+					if (ordinal == null)
+					{
+						// this means the column didn't know it's own ordinal, and neither did the property.
+						continue;
+					}
+
+					var setter = property.GetSetMethod(true);
+					var paramType = setter.GetParameters()[0].ParameterType;
+
+					var accessorMethod = GetAccessorMethod(col.DataType);
+
+					var ordinalExpr = Expression.Constant(ordinal, typeof(int));
+					Expression accessorExpr = Expression.Call(recordParam, accessorMethod, ordinalExpr);
+
+					Expression expr = GetConvertExpression(accessorExpr, paramType);
+
+					if (col.AllowDBNull != false)
+					{
+						// roughly:
+						// item.Property = record.IsDBNull(idx) ? default : Coerce(record.Get[Type](idx));
+						expr =
+							Expression.Condition(
+								Expression.Call(recordParam, isDbNullMethod, ordinalExpr),
+								Expression.Default(paramType),
+								expr
+							);
+					}
+
+					var setExpr = Expression.Call(itemParam, setter, expr);
+					bodyExpressions.Add(setExpr);
+				}
 			}
 
+			this.state = state.ToArray();
 			var body = Expression.Block(locals, bodyExpressions);
 
 			var lf = Expression.Lambda<Action<IDataRecord, object[], T>>(body, recordParam, stateParam, itemParam);

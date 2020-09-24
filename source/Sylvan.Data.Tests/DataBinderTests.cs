@@ -180,7 +180,7 @@ namespace Sylvan.Data
 			
 			var binderFactory = DataBinder<SeriesDateRecord>.CreateFactory(cols);
 
-			var csvData = "Id,Name,2020-09-19,2020-09-20,2020-09-21\n1,Test,7,8,9\n";
+			var csvData = "Id,Name,2020-09-19,2020-09-20,2020-09-21,2020-09-22\n1,Test,7,8,9,10\n";
 			var tr = new StringReader(csvData);
 			var opts = new CsvDataReaderOptions() { Schema = new CsvSchema(cols) };
 			DbDataReader data = CsvDataReader.Create(tr, opts);
