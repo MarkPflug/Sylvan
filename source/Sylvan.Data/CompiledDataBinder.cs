@@ -7,12 +7,30 @@ using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Text.RegularExpressions;
 
 namespace Sylvan.Data
 {
+	sealed class CompiledDataBinderFactory<T> : BinderFactory<T>
+	{
+		ReadOnlyCollection<DbColumn> metaSchema;
+
+		public CompiledDataBinderFactory(ReadOnlyCollection<DbColumn> metaSchema)
+		{
+			this.metaSchema = metaSchema;
+		}
+
+		public override IDataBinder<T> CreateBinder(ReadOnlyCollection<DbColumn> schema)
+		{
+			return new CompiledDataBinder<T>(metaSchema, schema);
+		}
+	}
+
 	sealed class CompiledDataBinder<T> : IDataBinder<T>
 	{
-		Action<IDataRecord, T> f;
+		Action<IDataRecord, object[], T> f;
+
+		readonly object[] state = Array.Empty<object>();
 
 		static readonly Type drType = typeof(IDataRecord);
 
@@ -54,33 +72,48 @@ namespace Sylvan.Data
 			throw new NotSupportedException();
 		}
 
-		public CompiledDataBinder(ReadOnlyCollection<DbColumn> schema)
+		internal CompiledDataBinder(ReadOnlyCollection<DbColumn> physicalSchema) : this(physicalSchema, physicalSchema)
+		{
+		}
+
+		internal CompiledDataBinder(ReadOnlyCollection<DbColumn> logicalSchema, ReadOnlyCollection<DbColumn> physicalSchema)
 		{
 			// A couple notable optimizations:
 			// All access is done via strongly-typed Get[Type] (GetInt32, GetString, etc) methods
 			// This avoids boxing/unboxing values, which would happen with GetValue/indexer property.
 			// If the schema claims a column is not nullable, then avoid calling IsDBNull, 
 			// which can be costly in some scenarios (and is never free).
+			var state = new List<object>();
+			var stateIdx = 0;
 
 			var ordinalMap =
-				schema
+				logicalSchema
 				.Where(c => !string.IsNullOrEmpty(c.ColumnName))
-				.Select((c, i) => new { Column = c, Idx = c.ColumnOrdinal ?? throw new ArgumentException() })
-				.ToDictionary(p => p.Column.ColumnName, p => new { p.Column, p.Idx });
+				.ToDictionary(p => p.ColumnName, p => p);
+
+			var seriesMap =
+				logicalSchema
+				.OfType<Schema.SchemaColumn>()
+				.Where(c => c.IsSeries == true)
+				.ToDictionary(p => p.SeriesName, p => p);
 
 			DbColumn? GetCol(int? idx, string? name)
 			{
 				if (!string.IsNullOrEmpty(name))
 				{
 					// interesting that this needs to be annoted with not-null
-					if (ordinalMap!.TryGetValue(name!, out var c))
+					if (ordinalMap.TryGetValue(name!, out var c))
 					{
-						return c.Column;
+						return c;
+					}
+					if(seriesMap.TryGetValue(name, out var sc))
+					{
+						return sc;
 					}
 				}
 				if (idx != null)
 				{
-					return schema[idx.Value];
+					return physicalSchema[idx.Value];
 				}
 				return null;
 			}
@@ -90,6 +123,7 @@ namespace Sylvan.Data
 			var targetType = typeof(T);
 
 			var recordParam = Expression.Parameter(drType);
+			var stateParam = Expression.Parameter(typeof(object[]));
 			var itemParam = Expression.Parameter(targetType);
 			var localsMap = new Dictionary<Type, ParameterExpression>();
 			var locals = new List<ParameterExpression>();
@@ -110,8 +144,20 @@ namespace Sylvan.Data
 					continue;
 				}
 
-				var ordinal = col.ColumnOrdinal ?? columnOrdinal;
+				// TODO: potentially use the properties dynamically instead of depending on the type here? 
+				// Not of much value probably.
+				var schemaCol = col as Schema.SchemaColumn;
+				var isSeries = schemaCol?.IsSeries == true;
 
+				if (isSeries)
+				{
+					var sct = Type.GetTypeCode(schemaCol!.SeriesType);
+					object seriesAccessor = GetDataSeriesAccessor(schemaCol, physicalSchema);
+					stateIdx = state.Count;
+					state.Add(seriesAccessor);					
+				}
+
+				var ordinal = col.ColumnOrdinal ?? columnOrdinal;
 				if (ordinal == null)
 				{
 					// this means the column didn't know it's own ordinal, and neither did the property.
@@ -126,11 +172,11 @@ namespace Sylvan.Data
 				var ordinalExpr = Expression.Constant(ordinal, typeof(int));
 				Expression accessorExpr = Expression.Call(recordParam, accessorMethod, ordinalExpr);
 
-				Expression expr = GetCoerceExpression(accessorExpr, paramType);
+				Expression expr = GetConvertExpression(accessorExpr, paramType);
 
 				if (col.AllowDBNull != false)
 				{
-					// roughly
+					// roughly:
 					// item.Property = record.IsDBNull(idx) ? default : Coerce(record.Get[Type](idx));
 					expr =
 						Expression.Condition(
@@ -140,19 +186,62 @@ namespace Sylvan.Data
 						);
 				}
 
-
-
 				var setExpr = Expression.Call(itemParam, setter, expr);
 				bodyExpressions.Add(setExpr);
 			}
 
 			var body = Expression.Block(locals, bodyExpressions);
 
-			var lf = Expression.Lambda<Action<IDataRecord, T>>(body, recordParam, itemParam);
+			var lf = Expression.Lambda<Action<IDataRecord, object[], T>>(body, recordParam, stateParam, itemParam);
 			this.f = lf.Compile();
 		}
 
-		static Expression GetCoerceExpression(Expression getterExpr, Type targetType)
+		static object GetDataSeriesAccessor(Schema.SchemaColumn seriesCol, ReadOnlyCollection<DbColumn> physicalSchema)
+		{
+			switch (Type.GetTypeCode(seriesCol.SeriesType))
+			{
+				case TypeCode.Int32:
+					throw new NotImplementedException();
+				case TypeCode.DateTime:
+					return GetDateSeriesAccessor(seriesCol, physicalSchema);
+				default:
+					throw new NotSupportedException();
+			}
+		}
+
+		static object GetDateSeriesAccessor(Schema.SchemaColumn seriesCol, ReadOnlyCollection<DbColumn> physicalSchema)
+		{
+			var fmt = seriesCol.SeriesHeaderFormat ?? "{Date}"; //asdf{Date}qwer => ^asdf(.*)qwer$
+
+			var accessorType = typeof(DataSeriesAccessor<,>).MakeGenericType(typeof(DateTime), seriesCol.DataType);
+			var cols = new List<DataSeriesColumn<DateTime>>();
+			var i = fmt.IndexOf("{Date}", StringComparison.OrdinalIgnoreCase);
+
+			var prefix = fmt.Substring(0, i);
+			var suffix = fmt.Substring(i + "{Date}".Length);
+			var pattern = "^" + Regex.Escape(prefix) + "(.+)" + Regex.Escape(suffix) + "$";
+
+			var regex = new Regex(pattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+			foreach(var col in physicalSchema)
+			{
+				var name = col.ColumnName;
+				var match = regex.Match(name);
+				if (match.Success)
+				{
+					var dateStr = match.Captures[0].Value;
+					DateTime d;
+					if(DateTime.TryParse(dateStr, out d))
+					{
+						var ordinal = col.ColumnOrdinal!.Value;
+						cols.Add(new DataSeriesColumn<DateTime>(name, d, ordinal));
+					}
+				}
+			}
+
+			return Activator.CreateInstance(accessorType, cols);
+		}
+
+		static Expression GetConvertExpression(Expression getterExpr, Type targetType)
 		{
 			var sourceType = getterExpr.Type;
 			// Direct binding, this is fairly common.
@@ -213,20 +302,32 @@ namespace Sylvan.Data
 					}
 					else
 					{
-						// handle everything else with Convert.ChangeType?
-						expr = Expression.Call(
-							ChangeTypeMethod,
-							getterExpr,
-							Expression.Constant(targetType)
-						);
-
-						if (targetType.IsValueType)
+						if (targetType.IsClass && targetType != typeof(string))
 						{
-							expr = Expression.Unbox(expr, targetType);
+							var ctor = targetType.GetConstructor(new Type[] { getterExpr.Type });
+							if (ctor == null)
+							{
+								throw new NotSupportedException();
+							}
+							expr = Expression.New(ctor, getterExpr);
 						}
 						else
 						{
-							expr = Expression.Convert(expr, targetType);
+							// handle everything else with Convert.ChangeType?
+							expr = Expression.Call(
+								ChangeTypeMethod,
+								getterExpr,
+								Expression.Constant(targetType)
+							);
+
+							if (targetType.IsValueType)
+							{
+								expr = Expression.Unbox(expr, targetType);
+							}
+							else
+							{
+								expr = Expression.Convert(expr, targetType);
+							}
 						}
 					}
 				}
@@ -256,7 +357,7 @@ namespace Sylvan.Data
 
 		void IDataBinder<T>.Bind(IDataRecord record, T item)
 		{
-			f(record, item);
+			f(record, this.state, item);
 		}
 	}
 

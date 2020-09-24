@@ -4,7 +4,9 @@ using System.Collections.ObjectModel;
 using System.Data;
 using System.Data.Common;
 using System.IO;
+using System.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Sylvan.Data
 {
@@ -14,6 +16,21 @@ namespace Sylvan.Data
 		public int Id { get; private set; }
 		public string Name { get; private set; }
 		public DateTime? Date { get; private set; }
+	}
+
+	class SeriesRecord
+	{
+		public int Id { get; private set; }
+		public string Name { get; private set; }
+		[ColumnSeries("{Integer}")]
+		public Series<int> Values { get; private set; }
+	}
+
+	class SeriesDateRecord
+	{
+		public int Id { get; set; }
+		public string Name { get; set; }
+		public DateSeries<int> Values { get; set; }
 	}
 
 	enum Severity
@@ -82,7 +99,7 @@ namespace Sylvan.Data
 		public void TestEnumByValue()
 		{
 			var schema = Schema.TryParse(":int,:string,:int").GetColumnSchema();
-			
+
 
 			var csvData = "Id,Name,Severity\r\n1,Olive,3";
 			var tr = new StringReader(csvData);
@@ -131,6 +148,108 @@ namespace Sylvan.Data
 			{
 				var item = binder.GetRecord(data);
 			}
+		}
+
+		[Fact]
+		public void SeriesInt()
+		{
+			var schemaSpec = "Id:int,Name,{Integer}>Values:int";
+			var schema = Schema.TryParse(schemaSpec);
+			var cols = schema.GetColumnSchema();
+			var binderFactory = DataBinder<SeriesRecord>.CreateFactory(cols);
+
+			var csvData = "Id,Name,1,2,3\n1,Test,7,8,9\n";
+			var tr = new StringReader(csvData);
+			var opts = new CsvDataReaderOptions() { Schema = new CsvSchema(cols) };
+			DbDataReader data = CsvDataReader.Create(tr, opts);
+
+			var binder = binderFactory.CreateBinder(data.GetColumnSchema());
+
+			while (data.Read())
+			{
+				var item = binder.GetRecord(data);
+			}
+		}
+
+		[Fact]
+		public void SeriesDate()
+		{
+			var schemaSpec = "Id:int,Name,{Date}>Values*:int";
+			var schema = Schema.TryParse(schemaSpec);
+			var cols = schema.GetColumnSchema();
+			
+			var binderFactory = DataBinder<SeriesDateRecord>.CreateFactory(cols);
+
+			var csvData = "Id,Name,2020-09-19,2020-09-20,2020-09-21\n1,Test,7,8,9\n";
+			var tr = new StringReader(csvData);
+			var opts = new CsvDataReaderOptions() { Schema = new CsvSchema(cols) };
+			DbDataReader data = CsvDataReader.Create(tr, opts);
+			var binder = binderFactory.CreateBinder(data.GetColumnSchema());
+
+			while (data.Read())
+			{
+				var item = binder.GetRecord(data);
+			}
+		}
+
+		[Fact]
+		public void Manual()
+		{
+			var schemaSpec = "Id:int,Name,{Date}>Values*:int";
+			var schema = Schema.TryParse(schemaSpec);
+			var cols = schema.GetColumnSchema();
+
+			var csvData = "Id,Name,2020-09-19,2020-09-20,2020-09-21\n1,Test,7,8,9\n";
+			var tr = new StringReader(csvData);
+			var opts = new CsvDataReaderOptions() { Schema = new CsvSchema(cols) };
+			var data = CsvDataReader.Create(tr, opts);
+			var binder = new ManualBinder(data.GetColumnSchema());
+
+			data.Read();
+			var item = binder.GetRecord(data);
+			Assert.Equal(1, item.Id);
+			Assert.Equal("Test", item.Name);
+			Assert.Equal(new[] { 7, 8, 9 }, item.Values);
+		}
+
+		sealed class ManualBinder : IDataBinder<SeriesDateRecord>
+		{
+			readonly DataSeriesAccessor<DateTime, int> series0;
+			int idIdx;
+			int nameIdx;
+
+			public ManualBinder(ReadOnlyCollection<DbColumn> schema)
+			{
+				idIdx = schema.Single(c => c.ColumnName == "Id").ColumnOrdinal.Value;
+				nameIdx = schema.Single(c => c.ColumnName == "Name").ColumnOrdinal.Value;
+				var seriesCols =
+					schema
+					.Where(c => DateTime.TryParse(c.ColumnName, out _))
+					.Select(c => new DataSeriesColumn<DateTime>(c.ColumnName, DateTime.Parse(c.ColumnName), c.ColumnOrdinal.Value));
+				this.series0 = new DataSeriesAccessor<DateTime, int>(seriesCols);
+			}
+
+			public void Bind(IDataRecord record, SeriesDateRecord item)
+			{
+				item.Id = record.GetInt32(idIdx);
+				item.Name = record.GetString(nameIdx);
+				item.Values = new DateSeries<int>(this.series0.Minimum, this.series0.GetValues(record));
+			}
+		}
+
+		[Fact]
+		public void Experiment()
+		{
+			Action<SeriesDateRecord, string> setter = (r, v) => r.Name = v;
+			Func<int> getter = () => 1;
+
+			Func<int, string> converter = i => i.ToString();
+
+			var binder = BuildBinder(getter, converter, setter);
+		}
+
+		static Action<T> BuildBinder<T, TS, TD>(Func<TS> getter, Func<TS, TD> converter, Action<T, TD> setter) {
+			return (T a) => setter(a, converter(getter()));
 		}
 	}
 }

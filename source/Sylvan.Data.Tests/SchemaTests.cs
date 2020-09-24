@@ -19,11 +19,13 @@ namespace Sylvan.Data
 		[Fact]
 		public void SeriesTest()
 		{
-			var spec = "State:string[2],County:string[32],{Date}>Issues*:int";
+			var spec = "State:string[2],County:string[32],{Date}>Issues*:int?";
 			var s = Schema.TryParse(spec);
 			Assert.NotNull(s);
 			var result = s.GetSchemaSpecification();
 			Assert.Equal(spec, result, true);
-		}
+			var issuesCol = s.GetColumnSchema()[2];
+			Assert.Equal(typeof(int?), issuesCol.DataType);
+		}		
 	}
 }

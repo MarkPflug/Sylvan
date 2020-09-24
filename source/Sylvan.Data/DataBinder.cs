@@ -54,11 +54,21 @@ namespace Sylvan.Data
 		void Bind(IDataRecord record, T item);
 	}
 
+	public abstract class BinderFactory<T>
+	{
+		public abstract IDataBinder<T> CreateBinder(ReadOnlyCollection<DbColumn> schema);
+	}
+		
 	public abstract class DataBinder<T> : IDataBinder<T>
 	{
 		public static IDataBinder<T> Create(ReadOnlyCollection<DbColumn> schema)
 		{
-			return new CompiledDataBinder<T>(schema);
+			return CreateFactory(schema).CreateBinder(schema);
+		}
+
+		public static BinderFactory<T> CreateFactory(ReadOnlyCollection<DbColumn> schema)
+		{
+			return new CompiledDataBinderFactory<T>(schema);
 		}
 
 		public abstract void Bind(IDataRecord record, T item);

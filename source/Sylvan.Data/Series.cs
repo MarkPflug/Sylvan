@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -7,22 +8,22 @@ namespace Sylvan.Data
 	public interface ISeries<TK, TV> //: IEnumerable<TV>
 		where TK : IComparable<TK>
 	{
-		TK Start { get; }
-		TK End { get; }
+		TK Minimum { get; }
+		TK Maximum { get; }
 
 		TV this[TK key] { get; }
 	}
 
 	public sealed class Series<T> : ISeries<int, T>
 	{
-		public int Start { get; }
-		public int End => Start + values.Length;
+		public int Minimum { get; }
+		public int Maximum => Minimum + values.Length;
 
 		readonly T[] values;
 
 		public Series(int start, IEnumerable<T> values)
 		{
-			this.Start = start;
+			this.Minimum = start;
 			this.values = values.ToArray();
 		}
 
@@ -30,36 +31,46 @@ namespace Sylvan.Data
 		{
 			get
 			{
-				if (key < Start || key > End) throw new IndexOutOfRangeException();
-				var idx = key - Start;
+				if (key < Minimum || key > Maximum) throw new IndexOutOfRangeException();
+				var idx = key - Minimum;
 				return values[idx];
 			}
 		}
 	}
 
-	public class DateSeries<T> : ISeries<DateTime, T>
+	public sealed class DateSeries<T> : ISeries<DateTime, T>, IEnumerable<T>
 	{
-		public DateTime Start { get; }
-
-		public DateTime End { get; }
+		public DateTime Minimum { get; }
+		public DateTime Maximum { get; }
 
 		readonly T[] values;
 
 		public DateSeries(DateTime startDate, IEnumerable<T> values)
 		{
-			this.Start = startDate.Date;
+			this.Minimum = startDate.Date;
 			this.values = values.ToArray();
-			this.End = Start.AddDays(this.values.Length);
+			this.Maximum = Minimum.AddDays(this.values.Length);
 		}
 
 		public T this[DateTime key]
 		{
 			get
 			{
-				if (key < Start || key > End) throw new IndexOutOfRangeException();
-				var idx = (key - Start).Days;
+				if (key < Minimum || key > Maximum) throw new IndexOutOfRangeException();
+				var idx = (key - Minimum).Days;
 				return values[idx];
 			}
+		}
+
+		public IEnumerator<T> GetEnumerator()
+		{
+			foreach (var item in values)
+				yield return item;
+		}
+
+		IEnumerator IEnumerable.GetEnumerator()
+		{
+			return this.GetEnumerator();
 		}
 	}
 }

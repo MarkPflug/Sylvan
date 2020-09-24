@@ -108,7 +108,7 @@ namespace Sylvan.Data
 				type == DbType.Binary;
 		}
 
-		class SchemaColumn : DbColumn
+		internal class SchemaColumn : DbColumn
 		{
 			const string SeriesSymbol = "*";
 			public DbType DbType { get; }
@@ -167,11 +167,11 @@ namespace Sylvan.Data
 					this.SeriesOrdinal = 0;
 					this.SeriesName = name?.Substring(0, name.Length - 1);
 					this.SeriesHeaderFormat = baseName;
-					if (name?.IndexOf("{Date}", StringComparison.OrdinalIgnoreCase) >= 0)
+					if (SeriesHeaderFormat?.IndexOf("{Date}", StringComparison.OrdinalIgnoreCase) >= 0)
 					{
 						this.SeriesType = typeof(DateTime);
 					}
-					if (name?.IndexOf("{Integer}", StringComparison.OrdinalIgnoreCase) >= 0)
+					if (SeriesHeaderFormat?.IndexOf("{Integer}", StringComparison.OrdinalIgnoreCase) >= 0)
 					{
 						this.SeriesType = typeof(int);
 					}
@@ -369,7 +369,7 @@ namespace Sylvan.Data
 
 				if (col.IsSeries == true)
 				{
-					if(col.SeriesHeaderFormat != null)
+					if (col.SeriesHeaderFormat != null)
 					{
 						w.Write(col.SeriesHeaderFormat);
 						w.Write(">");
