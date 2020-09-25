@@ -95,7 +95,7 @@ namespace Sylvan.Data
 				logicalSchema
 				.OfType<Schema.SchemaColumn>()
 				.Where(c => c.IsSeries == true)
-				.ToDictionary(p => p.SeriesName, p => p);
+				.ToDictionary(p => string.IsNullOrEmpty(p.SeriesName) ? "Values" : p.SeriesName, p => p);
 
 			DbColumn? GetCol(int? idx, string? name)
 			{

@@ -5,8 +5,6 @@ using System.Data;
 using System.Data.Common;
 using System.IO;
 using System.Linq;
-using System.Net;
-using System.Net.NetworkInformation;
 using System.Text.RegularExpressions;
 
 namespace Sylvan.Data
@@ -231,6 +229,7 @@ namespace Sylvan.Data
 						DataTypeName = n,
 						NumericPrecision = p,
 						ColumnSize = s,
+						DbType = GetDbType(type),
 					};
 
 				return cs;
@@ -250,6 +249,7 @@ namespace Sylvan.Data
 						DataType = typeof(string),
 						DataTypeName = "string",
 						IsLong = false,
+						DbType = DbType.String,
 					};
 			}
 
@@ -266,6 +266,7 @@ namespace Sylvan.Data
 						DataType = typeof(string),
 						DataTypeName = "string",
 						IsLong = true,
+						DbType = DbType.String,
 					};
 			}
 
@@ -280,6 +281,7 @@ namespace Sylvan.Data
 						NumericPrecision = precision,
 						DataType = typeof(DateTime),
 						DataTypeName = precision == null ? "date" : "datetime",
+						DbType = precision == null ? DbType.Date : DbType.DateTime2
 					};
 			}
 
@@ -291,7 +293,8 @@ namespace Sylvan.Data
 						ColumnOrdinal = ordinal,
 						ColumnName = name,
 						AllowDBNull = isNullable,
-						DataType = typeof(bool)
+						DataType = typeof(bool),
+						DbType = DbType.Boolean,
 					};
 			}
 
@@ -310,6 +313,7 @@ namespace Sylvan.Data
 						DataTypeName = n,
 						NumericPrecision = p,
 						ColumnSize = s,
+						DbType = DbType.Int32
 					};
 			}
 
@@ -325,6 +329,7 @@ namespace Sylvan.Data
 						DataTypeName = "float",
 						NumericPrecision = 7,
 						ColumnSize = 4,
+						DbType = DbType.Single,
 					};
 			}
 
@@ -340,6 +345,7 @@ namespace Sylvan.Data
 						DataTypeName = "double",
 						NumericPrecision = 15,
 						ColumnSize = 8,
+						DbType = DbType.Double,
 					};
 			}
 		}

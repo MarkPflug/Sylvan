@@ -14,8 +14,6 @@ namespace Sylvan.Data
 			Assert.Equal(spec, result);
 		}
 
-
-
 		[Fact]
 		public void SeriesTest()
 		{
@@ -25,7 +23,8 @@ namespace Sylvan.Data
 			var result = s.GetSchemaSpecification();
 			Assert.Equal(spec, result, true);
 			var issuesCol = s.GetColumnSchema()[2];
-			Assert.Equal(typeof(int?), issuesCol.DataType);
+			Assert.Equal(typeof(int), issuesCol.DataType);
+			Assert.True(issuesCol.AllowDBNull);
 		}		
 	}
 }

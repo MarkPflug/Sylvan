@@ -10,11 +10,9 @@ namespace Sylvan.Data
 	public class AnalysisResult : IEnumerable<ColumnInfo>
 	{
 		readonly ColumnInfo[] columns;
-		//SchemaAnalyzerOptions options;
 
-		internal AnalysisResult(/*SchemaAnalyzerOptions options,*/ ColumnInfo[] columns)
+		internal AnalysisResult(ColumnInfo[] columns)
 		{
-			//this.options = options;
 			this.columns = columns;
 		}
 

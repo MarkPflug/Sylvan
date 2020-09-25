@@ -334,7 +334,7 @@ namespace Sylvan.Data.Csv
 			bool complete = false;
 
 			if (idx < bufferEnd)
-			{ 
+			{
 				c = buffer[idx];
 				if (c == quote)
 				{
@@ -438,7 +438,7 @@ namespace Sylvan.Data.Csv
 				}
 				curFieldCount++;
 				if (fieldIdx < fieldCount)
-				{					
+				{
 					ref var fi = ref fieldInfos[fieldIdx];
 					fi.isQuoted =
 						closeQuoteIdx == -1
@@ -634,7 +634,10 @@ namespace Sylvan.Data.Csv
 
 			var offset = (int)dataOffset;
 
-			var (b, o, l) = GetField(ordinal);
+			var cs = GetField(ordinal);
+			var b = cs.buffer;
+			var o = cs.offset;
+			var l = cs.length;
 
 			var quadIdx = Math.DivRem(offset, 3, out int rem);
 
@@ -723,10 +726,10 @@ namespace Sylvan.Data.Csv
 		/// <inheritdoc/>
 		public override char GetChar(int ordinal)
 		{
-			var (b, o, l) = GetField(ordinal);
-			if (l == 1)
+			var s = GetField(ordinal);
+			if (s.length == 1)
 			{
-				return b[o];
+				return s.buffer[s.offset];
 			}
 			throw new FormatException();
 		}
@@ -736,10 +739,10 @@ namespace Sylvan.Data.Csv
 		{
 			if (dataOffset > int.MaxValue) throw new ArgumentOutOfRangeException(nameof(dataOffset));
 
-			var (b, o, l) = GetField(ordinal);
-			var len = Math.Min(l - dataOffset, length);
+			var s = GetField(ordinal);
+			var len = Math.Min(s.length - dataOffset, length);
 
-			Array.Copy(b, o, buffer, bufferOffset, len);
+			Array.Copy(s.buffer, s.offset, buffer, bufferOffset, len);
 			return len;
 		}
 
@@ -885,9 +888,10 @@ namespace Sylvan.Data.Csv
 		{
 			if ((uint)ordinal < (uint)curFieldCount)
 			{
-				var (b, o, l) = GetField(ordinal);
+				var s = GetField(ordinal);
+				var l = s.length;
 				if (l == 0) return string.Empty;
-				return stringFactory.Invoke(b, o, l);
+				return stringFactory.Invoke(s.buffer, s.offset, l);
 			}
 			ThrowIfOutOfRange(ordinal);
 			return string.Empty;
@@ -897,14 +901,28 @@ namespace Sylvan.Data.Csv
 
 		ReadOnlySpan<char> GetFieldSpan(int ordinal)
 		{
-			var (b, o, l) = GetField(ordinal);
-			return b.AsSpan().Slice(o, l);
+			var s = GetField(ordinal);
+			return s.buffer.AsSpan().Slice(s.offset, s.length);
 		}
 
 #endif
 
+		readonly struct CharSpan
+		{
+			public CharSpan(char[] buffer, int offset, int length)
+			{
+				this.buffer = buffer;
+				this.offset = offset;
+				this.length = length;
+			}
+
+			public readonly char[] buffer;
+			public readonly int offset;
+			public readonly int length;
+		}
+
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		(char[] buffer, int offset, int len) GetField(int ordinal)
+		CharSpan GetField(int ordinal)
 		{
 			ref var fi = ref this.fieldInfos[ordinal];
 			var startIdx = recordStart + (ordinal == 0 ? 0 : this.fieldInfos[ordinal - 1].endIdx + 1);
@@ -927,10 +945,10 @@ namespace Sylvan.Data.Csv
 					return PrepareField(offset, len, fi.escapeCount);
 				}
 			}
-			return (buffer, offset, len);
+			return new CharSpan(buffer, offset, len);
 		}
 
-		(char[] buffer, int offset, int len) PrepareField(int offset, int len, int escapeCount)
+		CharSpan PrepareField(int offset, int len, int escapeCount)
 		{
 
 			bool inQuote = true; // we start inside the quotes
@@ -976,7 +994,7 @@ namespace Sylvan.Data.Csv
 				}
 				temp[d++] = c;
 			}
-			return (temp, 0, eLen);
+			return new CharSpan(temp, 0, eLen);
 		}
 
 		/// <inheritdoc/>
@@ -1017,7 +1035,7 @@ namespace Sylvan.Data.Csv
 				default:
 					if (type == typeof(byte[]))
 					{
-						var (_, _, l) = this.GetField(ordinal);
+						var l = this.GetField(ordinal).length;
 						var dataLen = l / 4 * 3;
 						var buffer = new byte[dataLen];
 						var len = GetBytes(ordinal, 0, buffer, 0, dataLen);
@@ -1052,7 +1070,7 @@ namespace Sylvan.Data.Csv
 		{
 			ThrowIfOutOfRange(ordinal);
 			var col = columns[ordinal];
-			if((uint)ordinal >= (uint)curFieldCount)
+			if ((uint)ordinal >= (uint)curFieldCount)
 			{
 				return col.AllowDBNull != false;
 			}
@@ -1255,7 +1273,7 @@ namespace Sylvan.Data.Csv
 				if (offset < 0 || offset >= buffer.Length)
 					throw new ArgumentOutOfRangeException(nameof(offset));
 
-				if(buffer.Length - offset < len)
+				if (buffer.Length - offset < len)
 					throw new ArgumentOutOfRangeException(nameof(buffer));
 
 				Array.Copy(this.buffer, this.recordStart, buffer, offset, len);
