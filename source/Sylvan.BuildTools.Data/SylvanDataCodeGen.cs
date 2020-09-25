@@ -71,7 +71,7 @@ namespace Sylvan.BuildTools.Data
 
 							var memberName = 
 								string.IsNullOrWhiteSpace(name) 
-								? "Value" 
+								? "Values" 
 								: pc.Convert(name);
 
 							sw.WriteLine("public Series<" + fullName + (col.AllowDBNull == true && dt.IsValueType ? "?" : "") + "> " + memberName + " { get; set; }");
