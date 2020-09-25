@@ -34,6 +34,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <None Remove="Data\SeriesTest\Issues.csv.schema" />
+	</ItemGroup>
+
+	<ItemGroup>
 	  <None Update="global.json">
 	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	  </None>

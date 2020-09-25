@@ -28,7 +28,7 @@ namespace Sylvan.BuildTools.Data
 			this.logger = new XUnitTestLogger(o);
 		}
 
-		protected (int, string) GetOutput(string exePath, string args = "")
+		protected (int, string, string) GetOutput(string exePath, string args = "")
 		{
 			var psi = new ProcessStartInfo()
 			{
@@ -36,13 +36,15 @@ namespace Sylvan.BuildTools.Data
 				Arguments = exePath + " " + args,
 				UseShellExecute = false,
 				RedirectStandardOutput = true,
+				RedirectStandardError = true,
 				CreateNoWindow = true,
 			};
 			var proc = Process.Start(psi);
 			var text = proc.StandardOutput.ReadToEnd();
+			var err = proc.StandardError.ReadToEnd();
 			proc.WaitForExit();
 			var exitCode = proc.ExitCode;
-			return (exitCode, text);
+			return (exitCode, text, err);
 		}
 
 		protected void LogProps(Project proj)

@@ -74,7 +74,7 @@ namespace Sylvan.BuildTools.Data
 								? "Values" 
 								: pc.Convert(name);
 
-							sw.WriteLine("public Series<" + fullName + (col.AllowDBNull == true && dt.IsValueType ? "?" : "") + "> " + memberName + " { get; set; }");
+							sw.WriteLine("public DateSeries<" + fullName + (col.AllowDBNull == true && dt.IsValueType ? "?" : "") + "> " + memberName + " { get; set; }");
 						}
 						else
 						{
@@ -91,7 +91,7 @@ namespace Sylvan.BuildTools.Data
 					}
 					sw.WriteLine("}");
 
-					var hasHeaders = colSchema.All(c => !string.IsNullOrEmpty(c.ColumnName));
+					//var hasHeaders = colSchema.All(c => !string.IsNullOrEmpty(c.ColumnName));
 
 					sw.WriteLine("class " + typeName + "Set {");
 					sw.WriteLine("const string FileName = @\"" + file.ItemSpec + "\";");
@@ -101,7 +101,7 @@ namespace Sylvan.BuildTools.Data
 
 
 					sw.WriteLine("static readonly CsvDataReaderOptions DefaultOptions = new CsvDataReaderOptions {");
-					sw.WriteLine("HasHeaders = " + (hasHeaders ? "true" : "false") + ",");
+					//sw.WriteLine("HasHeaders = " + (hasHeaders ? "true" : "false") + ",");
 					sw.WriteLine("Schema = SchemaProvider,");
 
 					sw.WriteLine("};");
@@ -109,8 +109,8 @@ namespace Sylvan.BuildTools.Data
 					sw.WriteLine("public static IEnumerable<" + typeName + "Record> Read() { return Read(FileName, DefaultOptions); }");
 
 					sw.WriteLine("public static IEnumerable<" + typeName + "Record> Read(string filename, CsvDataReaderOptions opts) {");
-					sw.WriteLine("var binder = DataBinder<" + typeName + "Record>.Create(ColumnSchema);");
 					sw.WriteLine("var csv = CsvDataReader.Create(filename, opts);");
+					sw.WriteLine("var binder = DataBinder<" + typeName + "Record>.Create(ColumnSchema, csv.GetColumnSchema());");
 
 					sw.WriteLine("while(csv.Read()) {");
 					sw.WriteLine("var item = new " + typeName + "Record();");

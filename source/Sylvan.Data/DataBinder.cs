@@ -5,7 +5,6 @@ using System.Data.Common;
 
 namespace Sylvan.Data
 {
-
 	[AttributeUsage(AttributeTargets.Property | AttributeTargets.Field)]
 	public sealed class ColumnSeriesAttribute : Attribute
 	{
@@ -58,17 +57,22 @@ namespace Sylvan.Data
 	{
 		public abstract IDataBinder<T> CreateBinder(ReadOnlyCollection<DbColumn> schema);
 	}
-		
+
 	public abstract class DataBinder<T> : IDataBinder<T>
 	{
-		public static IDataBinder<T> Create(ReadOnlyCollection<DbColumn> schema)
+		public static IDataBinder<T> Create(ReadOnlyCollection<DbColumn> physicalSchema)
 		{
-			return CreateFactory(schema).CreateBinder(schema);
+			return CreateFactory(physicalSchema).CreateBinder(physicalSchema);
 		}
 
-		public static BinderFactory<T> CreateFactory(ReadOnlyCollection<DbColumn> schema)
+		public static IDataBinder<T> Create(ReadOnlyCollection<DbColumn> logicalSchema, ReadOnlyCollection<DbColumn> physicalSchema)
 		{
-			return new CompiledDataBinderFactory<T>(schema);
+			return CreateFactory(logicalSchema).CreateBinder(physicalSchema);
+		}
+
+		public static BinderFactory<T> CreateFactory(ReadOnlyCollection<DbColumn> logicalSchema)
+		{
+			return new CompiledDataBinderFactory<T>(logicalSchema);
 		}
 
 		public abstract void Bind(IDataRecord record, T item);

@@ -27,7 +27,9 @@
 	<ItemGroup>
 		<SylvanData
 		  Include="**/*.csv"
-		  Exclude="@(SylvanData);$(DefaultItemExcludes)"/>
+		  Exclude="@(SylvanData);$(DefaultItemExcludes)">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</SylvanData>
 	</ItemGroup>
 
 	<ItemGroup>

@@ -13,8 +13,8 @@ namespace Sylvan.BuildTools.Data.Tests
 		public void BuildTest()
 		{
 			var exepath = BuildProject("Data/SeriesTest/Project.csproj");
-			var (exitcode, output) = GetOutput(exepath);
+			var (exitcode, output, err) = GetOutput(exepath);
 			Assert.Equal(0, exitcode);
 		}
 	}
-}
+} 
