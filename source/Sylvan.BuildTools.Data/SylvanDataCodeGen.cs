@@ -53,7 +53,7 @@ namespace Sylvan.BuildTools.Data
 					sw.WriteLine("class " + typeName + "Record {");
 					var colSchema = schema.GetColumnSchema();
 					int unnamedCounter = 1;
-					int unnamedSeriesCounter = 1;
+					//int unnamedSeriesCounter = 1;
 					foreach (var col in colSchema)
 					{
 						if (col["IsSeries"] is true)
@@ -71,7 +71,7 @@ namespace Sylvan.BuildTools.Data
 
 							var memberName = 
 								string.IsNullOrWhiteSpace(name) 
-								? "Series" + (unnamedSeriesCounter++) 
+								? "Value" 
 								: pc.Convert(name);
 
 							sw.WriteLine("public Series<" + fullName + (col.AllowDBNull == true && dt.IsValueType ? "?" : "") + "> " + memberName + " { get; set; }");
