@@ -1,4 +1,8 @@
 # Sylvan.Data.Csv Release Notes
+_0.7.4_
+
+- Remove usage of ValueTuple, which is apparently problematic in some scenarios.
+
 _0.7.3_
 
 - Support user-allocated buffer, to allow pooling.
