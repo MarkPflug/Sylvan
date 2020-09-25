@@ -1,12 +1,8 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Data.Common;
 using System.Diagnostics;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using static Sylvan.Data.SchemaAnalyzer;
 
 namespace Sylvan.Data
 {
@@ -96,7 +92,7 @@ namespace Sylvan.Data
 		int GetSize(int maxLen);
 	}
 
-	public sealed class SchemaAnalyzer
+	public sealed partial class SchemaAnalyzer
 	{
 		int rowCount;
 		IColumnSizeStrategy sizer;
@@ -134,471 +130,315 @@ namespace Sylvan.Data
 
 			return new AnalysisResult(colInfos);
 		}
+	}
 
-		internal class ColumnSchema : DbColumn
+	public sealed class ColumnInfo
+	{
+		internal ColumnInfo(DbDataReader dr, int ordinal)
 		{
-			public bool IsIntegerSeries { get; private set; }
-			public string? SeriesHeaderFormat { get; private set; }
+			this.ordinal = ordinal;
+			this.name = dr.GetName(ordinal);
+			this.type = dr.GetFieldType(ordinal);
 
-			public bool IsDateSeries { get; private set; }
+			type = dr.GetFieldType(ordinal);
+			var typeCode = Type.GetTypeCode(type);
 
-
-			public override object? this[string property]
+			switch (typeCode)
 			{
-				get
-				{
-					switch (property)
+				case TypeCode.Boolean:
+					isBoolean = true;
+					break;
+				case TypeCode.Int16:
+				case TypeCode.Int32:
+				case TypeCode.Int64:
+					isInt = true;
+					break;
+				case TypeCode.Single:
+				case TypeCode.Double:
+					isFloat = true;
+					break;
+				case TypeCode.Decimal:
+					break;
+				case TypeCode.DateTime:
+					isDateTime = isDate = true;
+					break;
+				case TypeCode.String:
+					isBoolean = isInt = isFloat = isDate = isDateTime = isGuid = true;
+					break;
+				default:
+					if (type == typeof(byte[]))
 					{
-						case nameof(IsIntegerSeries):
-							return IsIntegerSeries;
-						case nameof(IsDateSeries):
-							return IsDateSeries;
-						case nameof(SeriesHeaderFormat):
-							return SeriesHeaderFormat;
-						default:
-							return base[property];
+
 					}
+					if (type == typeof(Guid))
+					{
+						isGuid = true;
+					}
+					break;
+			}
+
+			isNullable = false;
+			dateHasFractionalSeconds = false;
+			isUnique = true;
+			intMax = long.MinValue;
+			intMin = long.MaxValue;
+			floatMax = double.MinValue;
+			floatMin = double.MaxValue;
+			floatHasFractionalPart = false;
+			dateMin = DateTime.MaxValue;
+			dateMax = DateTime.MinValue;
+			stringLenMax = 0;
+			stringLenMin = int.MaxValue;
+			stringLenTotal = 0;
+			isAscii = true;
+
+
+			this.valueCount = new Dictionary<string, int>();
+		}
+
+		public bool AllowDbNull => isNullable;
+
+		public int Ordinal => this.ordinal;
+		public string? Name => this.name;
+		Type type;
+
+		bool isAscii;
+		int ordinal;
+		string? name;
+		bool isBoolean, isInt, isFloat, isDate, isDateTime, isGuid;
+		bool dateHasFractionalSeconds;
+#pragma warning disable CS0414
+		bool floatHasFractionalPart;
+#pragma warning restore
+		bool isNullable;
+		bool isUnique;
+
+		int count;
+		int nullCount;
+		int emptyStringCount;
+
+		long intMin, intMax;
+		double floatMin, floatMax;
+		DateTime dateMin, dateMax;
+		int stringLenMax;
+		int stringLenMin;
+		long stringLenTotal;
+
+		Dictionary<string, int> valueCount;
+
+		public void Analyze(DbDataReader dr, int ordinal)
+		{
+			count++;
+			var isNull = dr.IsDBNull(ordinal);
+			if (isNull)
+			{
+				nullCount++;
+				this.isNullable = true;
+				return;
+			}
+
+			bool? boolValue = null;
+			long? intValue = null;
+			double? floatValue = null;
+			decimal? decimalValue = null;
+			DateTime? dateValue = null;
+			string? stringValue = null;
+			Guid? guidValue = null;
+
+			var typeCode = Type.GetTypeCode(type);
+
+			switch (typeCode)
+			{
+				case TypeCode.Boolean:
+					boolValue = dr.GetBoolean(ordinal);
+					break;
+				case TypeCode.Int16:
+					intValue = dr.GetInt16(ordinal);
+					break;
+				case TypeCode.Int32:
+					intValue = dr.GetInt32(ordinal);
+					break;
+				case TypeCode.Int64:
+					intValue = dr.GetInt64(ordinal);
+					break;
+				case TypeCode.Single:
+					floatValue = dr.GetFloat(ordinal);
+					break;
+				case TypeCode.Double:
+					floatValue = dr.GetDouble(ordinal);
+					break;
+				case TypeCode.Decimal:
+					decimalValue = dr.GetDecimal(ordinal);
+					break;
+				case TypeCode.DateTime:
+					dateValue = dr.GetDateTime(ordinal);
+					break;
+				case TypeCode.String:
+					stringValue = dr.GetString(ordinal);
+
+					if (isBoolean || isFloat || isInt || isDate || isDateTime || isGuid)
+					{
+						if (string.IsNullOrEmpty(stringValue))
+						{
+							isNullable = true;
+						}
+						else
+						{
+							if (isBoolean)
+							{
+								if (bool.TryParse(stringValue, out var b))
+								{
+
+								}
+								else
+								{
+									isBoolean = false;
+								}
+							}
+							if (isFloat)
+							{
+								if (double.TryParse(stringValue, out var f))
+								{
+									floatValue = f;
+
+								}
+								else
+								{
+									isFloat = false;
+								}
+							}
+							if (isInt)
+							{
+								if (long.TryParse(stringValue, out var i))
+								{
+									intValue = i;
+								}
+								else
+								{
+									isInt = false;
+								}
+							}
+							if (isDateTime || isDate)
+							{
+								if (DateTime.TryParse(stringValue, out var d))
+								{
+									dateValue = d;
+								}
+								else
+								{
+									isDate = isDateTime = false;
+								}
+							}
+							if (isGuid)
+							{
+								if (Guid.TryParse(stringValue, out var g))
+								{
+									guidValue = g;
+								}
+								else
+								{
+									isGuid = false;
+								}
+							}
+						}
+					}
+
+					break;
+				default:
+					if (type == typeof(byte[]))
+					{
+
+					}
+					if (type == typeof(Guid))
+					{
+						isGuid = true;
+					}
+					break;
+			}
+
+			if (isFloat && floatValue.HasValue)
+			{
+				var val = floatValue.Value;
+				floatMin = Math.Min(floatMin, val);
+				floatMax = Math.Max(floatMax, val);
+				if (val != Math.Round(val))
+				{
+					floatHasFractionalPart = true;
 				}
 			}
 
-			public override string ToString()
+			if (isInt && intValue.HasValue)
 			{
-				var size = this.DataType == typeof(string) ? "[" + this.ColumnSize + "]" : "";
-				return $"{this.ColumnName} {this.DataTypeName}{(this.AllowDBNull == true ? "?" : "")}{size}";
+				intMin = Math.Min(intMin, intValue.Value);
+				intMax = Math.Max(intMax, intValue.Value);
 			}
 
-			ColumnSchema(int ordinal, string? name, bool isNullable, bool isUnique)
+			if (isDateTime && dateValue.HasValue)
 			{
-				this.ColumnOrdinal = ordinal;
-				this.ColumnName = name?.Length > 64 ? name.Substring(0, 64) : name;
-				this.AllowDBNull = isNullable;
-				this.IsUnique = isUnique;
+				var val = dateValue.Value;
+				dateMin = val < dateMin ? val : dateMin;
+				dateMax = val > dateMax ? val : dateMax;
+				if (isDate && val.TimeOfDay != TimeSpan.Zero)
+					isDate = false;
+				if (dateHasFractionalSeconds == false && (val.Ticks % TimeSpan.TicksPerSecond) != 0)
+				{
+					dateHasFractionalSeconds = true;
+				}
 			}
 
-			static (int precision, int scale, string name) GetTypeInfo(Type type)
+			if (stringValue != null)
 			{
-				return
-					(type == typeof(long))
-					? (19, 8, "long")
-					: (type == typeof(int))
-					? (18, 4, "int")
-					: (type == typeof(short))
-					? (5, 2, "short")
-					: (3, 1, "byte");
-			}
+				var len = stringValue.Length;
+				stringLenMax = Math.Max(stringLenMax, len);
+				stringLenMin = Math.Min(stringLenMin, len);
+				stringLenTotal += len;
+				if (len == 0)
+				{
+					emptyStringCount++;
+				}
 
-			internal static ColumnSchema CreateSeries(int ordinal, bool isNullable, Type type, SeriesType st, string headerFormat)
-			{
-				var (p, s, n) = GetTypeInfo(type);
-
-				var cs =
-					new ColumnSchema(ordinal, null, isNullable, false)
+				if (isAscii)
+				{
+					foreach (var c in stringValue)
 					{
-						SeriesHeaderFormat = headerFormat,
-						IsIntegerSeries = st == SeriesType.Integer,
-						IsDateSeries = st == SeriesType.Date,
-						DataType = type,
-						DataTypeName = n,
-						NumericPrecision = p,
-						ColumnSize = s,
-					};
+						if (c >= 128)
+						{
+							isAscii = false;
+							break;
+						}
+					}
+				}
 
-				return cs;
-			}
-
-			public static ColumnSchema CreateString(int ordinal, string? name, bool isNullable, bool isUnique, int length, bool isAscii)
-			{
-				return
-					new ColumnSchema(ordinal, name, isNullable, isUnique)
-					{
-						ColumnSize = length,
-						NumericPrecision = isAscii ? 8 : 16,
-						DataType = typeof(string),
-						DataTypeName = "string",
-						IsLong = false,
-					};
-			}
-
-			public static ColumnSchema CreateText(int ordinal, string? name, bool isNullable)
-			{
-				return
-					new ColumnSchema(ordinal, name, isNullable, false)
-					{
-						ColumnSize = int.MaxValue,
-						NumericPrecision = 16,
-						DataType = typeof(string),
-						DataTypeName = "string",
-						IsLong = true,
-					};
-			}
-
-			public static ColumnSchema CreateDate(int ordinal, string? name, bool isNullable, bool isUnique, int? precision)
-			{
-				return
-					new ColumnSchema(ordinal, name, isNullable, isUnique)
-					{
-						NumericPrecision = precision,
-						DataType = typeof(DateTime),
-						DataTypeName = precision == null ? "date" : "datetime",
-					};
-			}
-
-			public static ColumnSchema CreateBoolean(int ordinal, string? name, bool isNullable)
-			{
-				return
-					new ColumnSchema(ordinal, name, isNullable, false)
-					{
-						DataType = typeof(bool)
-					};
-			}
-
-			public static ColumnSchema CreateInt(int ordinal, string? name, bool isNullable, bool isUnique, Type type)
-			{
-
-				var (p, s, n) = GetTypeInfo(type);
-
-				return
-					new ColumnSchema(ordinal, name, isNullable, isUnique)
-					{
-						DataType = type,
-						DataTypeName = n,
-						NumericPrecision = p,
-						ColumnSize = s,
-					};
-			}
-
-			public static ColumnSchema CreateFloat(int ordinal, string? name, bool isNullable)
-			{
-				return
-					new ColumnSchema(ordinal, name, isNullable, false)
-					{
-						DataType = typeof(float),
-						DataTypeName = "float",
-						NumericPrecision = 7,
-						ColumnSize = 4,
-					};
-			}
-
-			public static ColumnSchema CreateDouble(int ordinal, string? name, bool isNullable)
-			{
-				return
-					new ColumnSchema(ordinal, name, isNullable, false)
-					{
-						DataType = typeof(double),
-						DataTypeName = "double",
-						NumericPrecision = 15,
-						ColumnSize = 8,
-					};
+				if (this.valueCount.TryGetValue(stringValue, out int count))
+				{
+					isUnique = false;
+					this.valueCount[stringValue] = count + 1;
+				}
+				else
+				{
+					this.valueCount[stringValue] = 1;
+				}
 			}
 		}
 
-		public sealed class ColumnInfo
+		const int DefaultStringSize = 128;
+
+		[Flags]
+		internal enum ColType
 		{
-			internal ColumnInfo(DbDataReader dr, int ordinal)
-			{
-				this.ordinal = ordinal;
-				this.name = dr.GetName(ordinal);
-				this.type = dr.GetFieldType(ordinal);
+			None = 0,
+			Boolean = 1,
+			Date = 2,
+			Integer = 4,
+			Long = 8,
+			Float = 16,
+			Double = 32,
+			Decimal = 32,
+			String = 128,
+		}
 
-				type = dr.GetFieldType(ordinal);
-				var typeCode = Type.GetTypeCode(type);
-
-				switch (typeCode)
-				{
-					case TypeCode.Boolean:
-						isBoolean = true;
-						break;
-					case TypeCode.Int16:
-					case TypeCode.Int32:
-					case TypeCode.Int64:
-						isInt = true;
-						break;
-					case TypeCode.Single:
-					case TypeCode.Double:
-						isFloat = true;
-						break;
-					case TypeCode.Decimal:
-						break;
-					case TypeCode.DateTime:
-						isDateTime = isDate = true;
-						break;
-					case TypeCode.String:
-						isBoolean = isInt = isFloat = isDate = isDateTime = isGuid = true;
-						break;
-					default:
-						if (type == typeof(byte[]))
-						{
-
-						}
-						if (type == typeof(Guid))
-						{
-							isGuid = true;
-						}
-						break;
-				}
-
-				isNullable = false;
-				dateHasFractionalSeconds = false;
-				isUnique = true;
-				intMax = long.MinValue;
-				intMin = long.MaxValue;
-				floatMax = double.MinValue;
-				floatMin = double.MaxValue;
-				floatHasFractionalPart = false;
-				dateMin = DateTime.MaxValue;
-				dateMax = DateTime.MinValue;
-				stringLenMax = 0;
-				stringLenMin = int.MaxValue;
-				stringLenTotal = 0;
-				isAscii = true;
-
-
-				this.valueCount = new Dictionary<string, int>();
-			}
-
-			public bool AllowDbNull => isNullable;
-
-			public int Ordinal => this.ordinal;
-			public string? Name => this.name;
-			Type type;
-
-			bool isAscii;
-			int ordinal;
-			string? name;
-			bool isBoolean, isInt, isFloat, isDate, isDateTime, isGuid;
-			bool dateHasFractionalSeconds;
-#pragma warning disable CS0414
-			bool floatHasFractionalPart;
-#pragma warning restore
-			bool isNullable;
-			bool isUnique;
-
-			int count;
-			int nullCount;
-			int emptyStringCount;
-
-			long intMin, intMax;
-			double floatMin, floatMax;
-			DateTime dateMin, dateMax;
-			int stringLenMax;
-			int stringLenMin;
-			long stringLenTotal;
-
-			Dictionary<string, int> valueCount;
-
-			public void Analyze(DbDataReader dr, int ordinal)
-			{
-				count++;
-				var isNull = dr.IsDBNull(ordinal);
-				if (isNull)
-				{
-					nullCount++;
-					this.isNullable = true;
-					return;
-				}
-
-				bool? boolValue = null;
-				long? intValue = null;
-				double? floatValue = null;
-				decimal? decimalValue = null;
-				DateTime? dateValue = null;
-				string? stringValue = null;
-				Guid? guidValue = null;
-
-				var typeCode = Type.GetTypeCode(type);
-
-				switch (typeCode)
-				{
-					case TypeCode.Boolean:
-						boolValue = dr.GetBoolean(ordinal);
-						break;
-					case TypeCode.Int16:
-						intValue = dr.GetInt16(ordinal);
-						break;
-					case TypeCode.Int32:
-						intValue = dr.GetInt32(ordinal);
-						break;
-					case TypeCode.Int64:
-						intValue = dr.GetInt64(ordinal);
-						break;
-					case TypeCode.Single:
-						floatValue = dr.GetFloat(ordinal);
-						break;
-					case TypeCode.Double:
-						floatValue = dr.GetDouble(ordinal);
-						break;
-					case TypeCode.Decimal:
-						decimalValue = dr.GetDecimal(ordinal);
-						break;
-					case TypeCode.DateTime:
-						dateValue = dr.GetDateTime(ordinal);
-						break;
-					case TypeCode.String:
-						stringValue = dr.GetString(ordinal);
-
-						if (isBoolean || isFloat || isInt || isDate || isDateTime || isGuid)
-						{
-							if (string.IsNullOrEmpty(stringValue))
-							{
-								isNullable = true;
-							}
-							else
-							{
-								if (isBoolean)
-								{
-									if (bool.TryParse(stringValue, out var b))
-									{
-
-									}
-									else
-									{
-										isBoolean = false;
-									}
-								}
-								if (isFloat)
-								{
-									if (double.TryParse(stringValue, out var f))
-									{
-										floatValue = f;
-
-									}
-									else
-									{
-										isFloat = false;
-									}
-								}
-								if (isInt)
-								{
-									if (long.TryParse(stringValue, out var i))
-									{
-										intValue = i;
-									}
-									else
-									{
-										isInt = false;
-									}
-								}
-								if (isDateTime || isDate)
-								{
-									if (DateTime.TryParse(stringValue, out var d))
-									{
-										dateValue = d;
-									}
-									else
-									{
-										isDate = isDateTime = false;
-									}
-								}
-								if (isGuid)
-								{
-									if (Guid.TryParse(stringValue, out var g))
-									{
-										guidValue = g;
-									}
-									else
-									{
-										isGuid = false;
-									}
-								}
-							}
-						}
-
-						break;
-					default:
-						if (type == typeof(byte[]))
-						{
-
-						}
-						if (type == typeof(Guid))
-						{
-							isGuid = true;
-						}
-						break;
-				}
-
-				if (isFloat && floatValue.HasValue)
-				{
-					var val = floatValue.Value;
-					floatMin = Math.Min(floatMin, val);
-					floatMax = Math.Max(floatMax, val);
-					if (val != Math.Round(val))
-					{
-						floatHasFractionalPart = true;
-					}
-				}
-
-				if (isInt && intValue.HasValue)
-				{
-					intMin = Math.Min(intMin, intValue.Value);
-					intMax = Math.Max(intMax, intValue.Value);
-				}
-
-				if (isDateTime && dateValue.HasValue)
-				{
-					var val = dateValue.Value;
-					dateMin = val < dateMin ? val : dateMin;
-					dateMax = val > dateMax ? val : dateMax;
-					if (isDate && val.TimeOfDay != TimeSpan.Zero)
-						isDate = false;
-					if (dateHasFractionalSeconds == false && (val.Ticks % TimeSpan.TicksPerSecond) != 0)
-					{
-						dateHasFractionalSeconds = true;
-					}
-				}
-
-				if (stringValue != null)
-				{
-					var len = stringValue.Length;
-					stringLenMax = Math.Max(stringLenMax, len);
-					stringLenMin = Math.Min(stringLenMin, len);
-					stringLenTotal += len;
-					if (len == 0)
-					{
-						emptyStringCount++;
-					}
-
-					if (isAscii)
-					{
-						foreach (var c in stringValue)
-						{
-							if (c >= 128)
-							{
-								isAscii = false;
-								break;
-							}
-						}
-					}
-
-					if (this.valueCount.TryGetValue(stringValue, out int count))
-					{
-						isUnique = false;
-						this.valueCount[stringValue] = count + 1;
-					}
-					else
-					{
-						this.valueCount[stringValue] = 1;
-					}
-				}
-			}
-
-			const int DefaultStringSize = 128;
-
-			[Flags]
-			internal enum ColType
-			{
-				None = 0,
-				Boolean = 1,
-				Date = 2,
-				Integer = 4,
-				Long = 8,
-				Float = 16,
-				Double = 32,
-				Decimal = 32,
-				String = 128,
-			}
-
-			static Type[] ColTypes = new[]
-			{
+		static Type[] ColTypes = new[]
+		{
 				typeof(bool),
 				typeof(DateTime),
 				typeof(int),
@@ -609,221 +449,99 @@ namespace Sylvan.Data
 				typeof(string),
 			};
 
-			internal ColType GetColType()
+		internal ColType GetColType()
+		{
+			if (nullCount == count)
 			{
-				if (nullCount == count)
-				{
-					// never saw any values, so no determination could be made
-					return ColType.None;
-				}
-
-				if (this.isBoolean)
-				{
-					return ColType.Boolean;
-				}
-
-				if (this.isDate || this.isDateTime)
-				{
-					return ColType.Date;
-				}
-
-				if (this.isInt)
-				{
-					var type =
-						intMin < int.MinValue || intMax > int.MaxValue
-						? ColType.Long | ColType.Float | ColType.Double | ColType.Decimal
-						: ColType.Integer | ColType.Long | ColType.Float | ColType.Double | ColType.Decimal;
-
-					return type;
-				}
-
-				if (this.isFloat)
-				{
-					return
-						floatMin < float.MinValue || floatMax > float.MaxValue
-						? ColType.Double | ColType.Decimal
-						: ColType.Float | ColType.Double | ColType.Decimal;
-				}
-
-				return ColType.String;
+				// never saw any values, so no determination could be made
+				return ColType.None;
 			}
 
-			internal static Type GetType(ColType t)
+			if (this.isBoolean)
 			{
-				for (int i = 1; i < 16; i++)
-				{
-					var flag = (ColType)(1 << i);
-					if ((flag & t) == flag)
-					{
-						return ColTypes[i];
-					}
-				}
-				return typeof(string);
+				return ColType.Boolean;
 			}
 
-			internal ColumnSchema CreateColumnSchema()
+			if (this.isDate || this.isDateTime)
 			{
-				if (nullCount == count)
-				{
-					// never saw any values, so no determination could be made
-					return ColumnSchema.CreateText(this.ordinal, name, true);
-				}
-
-				if (this.isBoolean)
-				{
-					return ColumnSchema.CreateBoolean(this.ordinal, name, isNullable);
-				}
-
-				if (this.isDate || this.isDateTime)
-				{
-					int? precision = isDate ? (int?)null : dateHasFractionalSeconds ? 7 : 0;
-					return ColumnSchema.CreateDate(this.ordinal, name, isNullable, isUnique, precision);
-				}
-
-				if (this.isInt)
-				{
-					var type =
-						intMin < int.MinValue || intMax > int.MaxValue
-						? typeof(long)
-						: typeof(int);
-					return ColumnSchema.CreateInt(this.ordinal, name, isNullable, isUnique, type);
-				}
-
-				if (this.isFloat)
-				{
-					return
-						floatMin < float.MinValue || floatMax > float.MaxValue
-						? ColumnSchema.CreateDouble(this.ordinal, name, isNullable)
-						: ColumnSchema.CreateFloat(this.ordinal, name, isNullable);
-				}
-
-				var len = stringLenMax;
-				return ColumnSchema.CreateString(this.ordinal, name, isNullable, isUnique, len, isAscii);
+				return ColType.Date;
 			}
+
+			if (this.isInt)
+			{
+				var type =
+					intMin < int.MinValue || intMax > int.MaxValue
+					? ColType.Long | ColType.Float | ColType.Double | ColType.Decimal
+					: ColType.Integer | ColType.Long | ColType.Float | ColType.Double | ColType.Decimal;
+
+				return type;
+			}
+
+			if (this.isFloat)
+			{
+				return
+					floatMin < float.MinValue || floatMax > float.MaxValue
+					? ColType.Double | ColType.Decimal
+					: ColType.Float | ColType.Double | ColType.Decimal;
+			}
+
+			return ColType.String;
+		}
+
+		internal static Type GetType(ColType t)
+		{
+			for (int i = 1; i < 16; i++)
+			{
+				var flag = (ColType)(1 << i);
+				if ((flag & t) == flag)
+				{
+					return ColTypes[i];
+				}
+			}
+			return typeof(string);
+		}
+
+		internal Schema.SchemaColumn CreateColumnSchema()
+		{
+			if (nullCount == count)
+			{
+				// never saw any values, so no determination could be made
+				return Schema.SchemaColumn.CreateText(this.ordinal, name, true);
+			}
+
+			if (this.isBoolean)
+			{
+				return Schema.SchemaColumn.CreateBoolean(this.ordinal, name, isNullable);
+			}
+
+			if (this.isDate || this.isDateTime)
+			{
+				int? precision = isDate ? (int?)null : dateHasFractionalSeconds ? 7 : 0;
+				return Schema.SchemaColumn.CreateDate(this.ordinal, name, isNullable, isUnique, precision);
+			}
+
+			if (this.isInt)
+			{
+				var type =
+					intMin < int.MinValue || intMax > int.MaxValue
+					? typeof(long)
+					: typeof(int);
+				return Schema.SchemaColumn.CreateInt(this.ordinal, name, isNullable, isUnique, type);
+			}
+
+			if (this.isFloat)
+			{
+				return
+					floatMin < float.MinValue || floatMax > float.MaxValue
+					? Schema.SchemaColumn.CreateDouble(this.ordinal, name, isNullable)
+					: Schema.SchemaColumn.CreateFloat(this.ordinal, name, isNullable);
+			}
+
+			var len = stringLenMax;
+			return Schema.SchemaColumn.CreateString(this.ordinal, name, isNullable, isUnique, len, isAscii);
 		}
 	}
 
-	public class AnalysisResult : IEnumerable<ColumnInfo>
-	{
-		readonly ColumnInfo[] columns;
-		//SchemaAnalyzerOptions options;
-
-		internal AnalysisResult(/*SchemaAnalyzerOptions options,*/ ColumnInfo[] columns)
-		{
-			//this.options = options;
-			this.columns = columns;
-		}
-
-		public IEnumerator<ColumnInfo> GetEnumerator()
-		{
-			foreach (var col in columns)
-				yield return col;
-		}
-
-		IEnumerator IEnumerable.GetEnumerator()
-		{
-			return this.GetEnumerator();
-		}
-
-		public ReadOnlyCollection<DbColumn> GetSchema()
-		{
-			var series = DetectSeries(columns);
-			var schema = new List<DbColumn>();
-			for (int i = 0; i < columns.Length; i++)
-			{
-				var col = columns[i];
-
-				if (series?.seriesStart == i)
-				{
-					int idx = i;
-					string? prefix = series.prefix;
-					var types = col.GetColType();
-					var allowNull = false;
-					for (; i <= series.seriesEnd; i++)
-					{
-						col = columns[i];
-						allowNull |= col.AllowDbNull;
-						types &= col.GetColType();
-					}
-					var type = ColumnInfo.GetType(types);
-					var columnSchema = ColumnSchema.CreateSeries(idx, allowNull, type, series.type, prefix + "{" + series.type + "}");
-					i = series.seriesEnd;
-					schema.Add(columnSchema);
-					continue;
-				}
-				var dbCol = col.CreateColumnSchema();
-				schema.Add(dbCol);
-			}
-			return new ReadOnlyCollection<DbColumn>(schema);
-		}
-
-
-
-		class SeriesInfo
-		{
-			public SeriesInfo(int idx)
-			{
-				this.seriesStart = idx;
-				this.seriesEnd = idx;
-			}
-
-			public SeriesType type;
-			public string? prefix;
-			public int value = -1;
-			public int step;
-			public int seriesStart;
-			public int seriesEnd;
-
-			public int Length => seriesEnd - seriesStart + 1;
-		}
-
-		SeriesInfo? DetectSeries(ColumnInfo[] cols)
-		{
-			var series = new SeriesInfo[cols.Length];
-
-			SeriesInfo? ss = null;
-
-			for (int i = 0; i < this.columns.Length; i++)
-			{
-				var s = series[i] = new SeriesInfo(i);
-
-				var col = this.columns[i];
-				var name = col.Name;
-				if (name == null) continue;
-
-				if (DateTime.TryParse(name, out var _))
-				{
-					s.type |= SeriesType.Date;
-				}
-				else
-				{
-					var match = Regex.Match(name, @"\d+$");
-					if (match.Success)
-					{
-						var prefix = name.Substring(0, name.Length - match.Length);
-						s.prefix = prefix;
-						s.value = int.Parse(match.Captures[0].Value);
-						s.type |= SeriesType.Integer;
-					}
-				}
-
-				if (i > 0 && s.type != SeriesType.None)
-				{
-					var prev = series[i - 1];
-					var start = series[prev.seriesStart];
-					var step = s.value - prev.value;
-					if (prev.type == s.type && StringComparer.InvariantCultureIgnoreCase.Equals(prev.prefix, s.prefix))
-					{
-						s.seriesStart = prev.seriesStart;
-						ss = ss == null ? start : ss != start && start.Length > ss.Length ? start : ss;
-						s.step = step;
-						series[s.seriesStart].seriesEnd = i;
-					}
-				}
-			}
-			return ss;
-		}
-	}
 
 	[Flags]
 	enum SeriesType

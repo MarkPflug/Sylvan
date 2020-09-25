@@ -108,17 +108,17 @@ namespace Sylvan.Data
 				type == DbType.Binary;
 		}
 
-		internal class SchemaColumn : DbColumn
+		internal sealed class SchemaColumn : DbColumn
 		{
 			const string SeriesSymbol = "*";
-			public DbType DbType { get; }
+			public DbType DbType { get; private set; }
 
-			public int? SeriesOrdinal { get; }
-			public string? SeriesName { get; }
-			public string? SeriesHeaderFormat { get; }
+			public int? SeriesOrdinal { get; private set; }
+			public string? SeriesName { get; private set; }
+			public string? SeriesHeaderFormat { get; private set; }
 
-			public bool? IsSeries { get; }
-			public Type? SeriesType { get; }
+			public bool? IsSeries { get; private set; }
+			public Type? SeriesType { get; private set; }
 
 			public override object? this[string property]
 			{
@@ -146,7 +146,7 @@ namespace Sylvan.Data
 				}
 			}
 
-			public string? Format { get; }
+			public string? Format { get; private set; }
 
 			public SchemaColumn(int? ordinal, string? baseName, string name, DbType type, bool allowNull, int? size = null, string? format = null)
 			{
@@ -198,6 +198,149 @@ namespace Sylvan.Data
 				this.NumericPrecision = col.NumericPrecision;
 				this.NumericScale = col.NumericScale;
 				this.Format = col[nameof(Format)] as string;
+			}
+
+			private SchemaColumn() { }
+
+
+			static (int precision, int scale, string name) GetTypeInfo(Type type)
+			{
+				return
+					(type == typeof(long))
+					? (19, 8, "long")
+					: (type == typeof(int))
+					? (18, 4, "int")
+					: (type == typeof(short))
+					? (5, 2, "short")
+					: (3, 1, "byte");
+			}
+
+			internal static SchemaColumn CreateSeries(string seriesName, bool isNullable, Type type, SeriesType st, string headerFormat)
+			{
+				var (p, s, n) = GetTypeInfo(type);
+
+				var cs =
+					new SchemaColumn()
+					{
+						AllowDBNull = isNullable,
+						IsSeries = true,
+						SeriesOrdinal = 0,
+						SeriesHeaderFormat = headerFormat,
+						SeriesType = st == Sylvan.Data.SeriesType.Integer ? typeof(int) : typeof(DateTime),
+						DataType = type,
+						DataTypeName = n,
+						NumericPrecision = p,
+						ColumnSize = s,
+					};
+
+				return cs;
+			}
+
+			public static SchemaColumn CreateString(int ordinal, string? name, bool isNullable, bool isUnique, int length, bool isAscii)
+			{
+				return
+					new SchemaColumn()
+					{
+						ColumnOrdinal = ordinal,
+						ColumnName = name,
+						AllowDBNull = isNullable,
+						IsUnique = isUnique,
+						ColumnSize = length,
+						NumericPrecision = isAscii ? 8 : 16,
+						DataType = typeof(string),
+						DataTypeName = "string",
+						IsLong = false,
+					};
+			}
+
+			public static SchemaColumn CreateText(int ordinal, string? name, bool isNullable)
+			{
+				return
+					new SchemaColumn()
+					{
+						ColumnOrdinal = ordinal,
+						ColumnName = name,
+						AllowDBNull = isNullable,
+						ColumnSize = int.MaxValue,
+						NumericPrecision = 16,
+						DataType = typeof(string),
+						DataTypeName = "string",
+						IsLong = true,
+					};
+			}
+
+			public static SchemaColumn CreateDate(int ordinal, string? name, bool isNullable, bool isUnique, int? precision)
+			{
+				return
+					new SchemaColumn()
+					{
+						ColumnOrdinal = ordinal,
+						ColumnName = name,
+						AllowDBNull = isNullable,
+						NumericPrecision = precision,
+						DataType = typeof(DateTime),
+						DataTypeName = precision == null ? "date" : "datetime",
+					};
+			}
+
+			public static SchemaColumn CreateBoolean(int ordinal, string? name, bool isNullable)
+			{
+				return
+					new SchemaColumn()
+					{
+						ColumnOrdinal = ordinal,
+						ColumnName = name,
+						AllowDBNull = isNullable,
+						DataType = typeof(bool)
+					};
+			}
+
+			public static SchemaColumn CreateInt(int ordinal, string? name, bool isNullable, bool isUnique, Type type)
+			{
+
+				var (p, s, n) = GetTypeInfo(type);
+
+				return
+					new SchemaColumn()
+					{
+						ColumnOrdinal = ordinal,
+						ColumnName = name,
+						AllowDBNull = isNullable,
+						DataType = type,
+						DataTypeName = n,
+						NumericPrecision = p,
+						ColumnSize = s,
+					};
+			}
+
+			public static SchemaColumn CreateFloat(int ordinal, string? name, bool isNullable)
+			{
+				return
+					new SchemaColumn()
+					{
+						ColumnOrdinal = ordinal,
+						ColumnName = name,
+						AllowDBNull = isNullable,
+						DataType = typeof(float),
+						DataTypeName = "float",
+						NumericPrecision = 7,
+						ColumnSize = 4,
+					};
+			}
+
+			public static SchemaColumn CreateDouble(int ordinal, string? name, bool isNullable)
+			{
+				return
+					new SchemaColumn()
+					{
+						ColumnOrdinal = ordinal,
+						ColumnName = name,
+						AllowDBNull = isNullable,
+						DataType = typeof(double),
+						DataTypeName = "double",
+						NumericPrecision = 15,
+						ColumnSize = 8,
+					};
 			}
 		}
 
@@ -269,7 +412,7 @@ namespace Sylvan.Data
 		{
 			this.columns =
 				schema
-				.Select(c => new SchemaColumn(c))
+				.Select(c => c as SchemaColumn ?? new SchemaColumn(c))
 				.ToArray();
 
 		}
