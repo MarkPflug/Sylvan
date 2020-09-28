@@ -1,16 +1,38 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Data.Common;
 using System.Linq;
 
 namespace Sylvan.Data.Csv
 {
+	sealed class NullableCsvSchema : ICsvSchemaProvider
+	{
+		static NullableStringColumn Column = new NullableStringColumn();
+
+		public DbColumn? GetColumn(string? name, int ordinal)
+		{
+			return Column;
+		}
+
+		class NullableStringColumn : DbColumn
+		{
+			public NullableStringColumn()
+			{
+				this.AllowDBNull = true;
+			}
+		}
+	}
+
 	/// <summary>
 	/// A ICsvSchemaProvider implementation based on an existing schema.
 	/// </summary>
 	public class CsvSchema : ICsvSchemaProvider
 	{
+		/// <summary>
+		/// Gets a ICsvSchemaProvider that treats empty strings as null.
+		/// </summary>
+		public static ICsvSchemaProvider Nullable = new NullableCsvSchema();
+
 		readonly DbColumn[] schema;
 		readonly Dictionary<string, DbColumn> nameMap;
 
@@ -49,12 +71,12 @@ namespace Sylvan.Data.Csv
 					continue;
 				}
 
-				if (col.BaseColumnName != null)
+				if (string.IsNullOrEmpty(col.BaseColumnName) == false)
 				{
 					nameMap.Add(col.BaseColumnName, col);
 				}
 				else
-				if (col.ColumnName != null)
+				if (string.IsNullOrEmpty(col.ColumnName) == false)
 				{
 					nameMap.Add(col.ColumnName, col);
 				}
@@ -77,14 +99,6 @@ namespace Sylvan.Data.Csv
 			if (ordinal >= 0 && ordinal < schema.Length)
 				return schema[ordinal];
 			return null;
-		}
-
-		/// <summary>
-		/// Allows a column schmea to be used in place of CsvSchema.
-		/// </summary>
-		public static implicit operator CsvSchema(ReadOnlyCollection<DbColumn> schema)
-		{
-			return new CsvSchema(schema);
 		}
 	}
 }

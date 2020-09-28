@@ -3,57 +3,263 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Data.Common;
+using System.Linq;
+using System.Linq.Expressions;
+using System.Reflection;
 
 namespace Sylvan.Data
 {
 	public static class ObjectDataReader
 	{
-		public static ObjectDataReader<T> Create<T>(IEnumerable<T> data)
+		/// <summary>
+		/// Allows constructing ObjectDataReaders for anonymous types.
+		/// </summary>
+		public static DbDataReader Create<T>(IEnumerable<T> data)
 		{
-			return new ObjectDataReader<T>(data.GetEnumerator());
+			return new ObjectDataReader<T>(data);
+		}
+
+		internal static Builder<T> BuildFactory<T>(IEnumerable<T> data)
+		{
+			return new Builder<T>();
+		}
+
+		internal static Builder<T> BuildFactory<T>()
+		{
+			return new Builder<T>();
+		}
+
+		internal sealed class Builder<T>
+		{
+			ObjectDataReader<T>.Factory.Builder builder;
+
+			public Builder() {
+				this.builder = new ObjectDataReader<T>.Factory.Builder();
+			}
+
+			public Builder<T> AddColumn<T0>(string name, Func<T, T0?> func) where T0 : struct
+			{
+				this.builder.AddColumn(name, func);
+				return this;
+			}
+
+			public Builder<T> AddColumn<T0>(string name, Func<T, T0> func)
+			{
+				this.builder.AddColumn(name, func);
+				return this;
+			}
+
+			public Builder<T> AddAllProperties()
+			{
+				this.builder.AddDefaultColumns();
+				return this;
+			}
+
+			public Factory<T> Build()
+			{
+				return new Factory<T>(this.builder.Build());
+			}
+		}
+
+		internal sealed class Factory<T>
+		{
+			ObjectDataReader<T>.Factory factory;
+
+			internal Factory(ObjectDataReader<T>.Factory factory)
+			{
+				this.factory = factory;
+			}
+			public DbDataReader Create(IEnumerable<T> data)
+			{
+				return factory.Create(data);
+			}
 		}
 	}
 
-	public sealed class ObjectDataReader<T> : DbDataReader, IDbColumnSchemaGenerator
+	sealed class ObjectDataReader<T> : DbDataReader, IDbColumnSchemaGenerator
 	{
-		class ColumnInfo : DbColumn
+		internal sealed class Factory
 		{
-			public object selector;
-			public Func<T, object> valueSelector;
-			public TypeCode typeCode;
+			internal sealed class Builder
+			{
+				List<ColumnInfo> columns;
 
-			public ColumnInfo(int ordinal, string name, Type type, object selector, Func<T, object> valueSelector)
+				internal Builder()
+				{
+					this.columns = new List<ColumnInfo>();
+				}
+
+				static Builder()
+				{
+					var addMethods =
+						typeof(Builder)
+						.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
+						.Where(m => m.Name == "AddColumn")
+						.ToArray();
+
+					AddNullableMethod =
+						addMethods.Single(
+							m =>
+							{
+								var p = m.GetParameters()[1];
+								var t = p.ParameterType.GetGenericArguments()[1];
+								var def = t.IsGenericType ? t.GetGenericTypeDefinition() : null;
+								return def == typeof(Nullable<>);
+							}
+						);
+					AddMethod =
+						addMethods.Single(m => m != AddNullableMethod);
+				}
+
+				static MethodInfo AddNullableMethod;
+				static MethodInfo AddMethod;
+
+				// bool, short, int, long, single, double, decimal, dateTime, guid, string
+
+				internal Builder AddColumn<T0>(string name, Func<T, T0?> func) where T0 : struct
+				{
+					Func<T, T0> selector = item => func(item)!.Value;
+					Func<T, object> valueSelector = item => { var r = func(item); return r.HasValue ? (object)r.Value : DBNull.Value; };
+					Func<T, bool> isNullSelector = item => !func(item).HasValue;
+					this.columns.Add(new ColumnInfo(columns.Count, name, typeof(T0?), selector, valueSelector, isNullSelector));
+					return this;
+				}
+
+				internal Builder AddColumn<T0>(string name, Func<T, T0> func)
+				{
+					Func<T, object> valueSelector = item => { var r = func(item); return (object?)r ?? DBNull.Value; };
+					Func<T, bool> isNullSelector = 
+						typeof(T0).IsValueType 
+						? (Func<T, bool>) (item => false)
+						: (Func<T, bool>) (item => func(item) == null);
+					this.columns.Add(new ColumnInfo(columns.Count, name, typeof(T0), func, valueSelector, isNullSelector));
+					return this;
+				}
+
+				internal Builder AddDefaultColumns()
+				{
+					var t = typeof(T);
+					foreach (var prop in t.GetProperties())
+					{
+						var getter = prop.GetGetMethod();
+						if (getter == null || !IsSupported(prop)) continue;
+						AddProperty(prop);
+					}
+
+					return this;
+				}
+
+				static bool IsSupported(PropertyInfo prop)
+				{
+					return IsSupported(prop.PropertyType);
+				}
+
+				static bool IsSupported(Type type)
+				{
+					if (type.IsArray) return false;
+					if (type.IsPrimitive) return true;
+					if (type == typeof(DateTime) || type == typeof(Guid)) return true;
+					if (type == typeof(string)) return true;
+
+					var nt = Nullable.GetUnderlyingType(type);
+					if(nt != null)
+					{
+						if (Nullable.GetUnderlyingType(nt) != null) return false;
+						return IsSupported(nt);
+					}
+
+					return false;
+				}
+
+				internal Builder AddProperty(PropertyInfo prop)
+				{
+					var propType = prop.PropertyType;
+					var getter = prop.GetGetMethod();
+					var param = Expression.Parameter(typeof(T));
+					var parameters = new ParameterExpression[] { param };
+					var expr = Expression.Lambda(Expression.Call(param, getter), parameters);
+					var selector = expr.Compile();
+					var st = selector.GetType();
+
+					var baseType = Nullable.GetUnderlyingType(propType);
+					if (baseType == null)
+					{
+						AddMethod.MakeGenericMethod(new Type[] { propType }).Invoke(this, new object[] { prop.Name, selector });
+					}
+					else
+					{
+						AddNullableMethod.MakeGenericMethod(new Type[] { baseType }).Invoke(this, new object[] { prop.Name, selector });
+					}
+					return this;
+				}
+
+				internal Factory Build()
+				{
+					return new Factory(this.columns.ToArray());
+				}
+			}
+
+			// A default factory that exposes all properties as columns
+			internal static Lazy<Factory> Default = new Lazy<Factory>(() => new Builder().AddDefaultColumns().Build());
+
+			internal ColumnInfo[] columns;
+
+			internal Factory(ColumnInfo[] columns)
+			{
+				this.columns = columns;
+			}
+
+			public ObjectDataReader<T> Create(IEnumerable<T> data)
+			{
+				return new ObjectDataReader<T>(data.GetEnumerator(), columns);
+			}
+		}
+
+		internal class ColumnInfo : DbColumn
+		{
+			internal object selector;
+			internal Func<T, object> valueSelector;
+			internal Func<T, bool> isNullSelector;
+			internal TypeCode typeCode;
+
+			public ColumnInfo(int ordinal, string name, Type type, object selector, Func<T, object> valueSelector, Func<T, bool> isNullSelector)
 			{
 				this.selector = selector;
 				this.valueSelector = valueSelector;
+				this.isNullSelector = isNullSelector;
 				this.typeCode = Type.GetTypeCode(type);
 				this.ColumnOrdinal = ordinal;
 				this.ColumnName = name;
-				this.DataType = type;
+				var nullableBase = Nullable.GetUnderlyingType(type);
+				if (nullableBase != null)
+				{
+					this.DataType = nullableBase;
+					this.AllowDBNull = true;
+				}
+				else
+				{
+					this.DataType = type;
+					this.AllowDBNull = this.DataType.IsValueType == false;
+				}
 				this.DataTypeName = this.DataType.Name;
-#warning todo: handle Nullable<T>. Unwrap T and set allow null.
-				this.AllowDBNull = this.DataType.IsValueType == false;
 			}
 		}
 
 		readonly IEnumerator<T> enumerator;
-		List<ColumnInfo> columns;
+		readonly ColumnInfo[] columns;
 		bool isClosed;
 
-		public ObjectDataReader(IEnumerator<T> enumerator)
+		public ObjectDataReader(IEnumerable<T> data)
 		{
-			this.enumerator = enumerator;
-			this.columns = new List<ColumnInfo>();
-			this.isClosed = false;
+			this.enumerator = data.GetEnumerator();
+			this.columns = Factory.Default.Value.columns;
 		}
 
-		int c = 0;
-
-		public ObjectDataReader<T> AddColumn<T0>(string name, Func<T, T0> func) 
+		ObjectDataReader(IEnumerator<T> enumerator, ColumnInfo[] columns)
 		{
-			Func<T, object> valueSelector = item => func(item)!;
-			this.columns.Add(new ColumnInfo(c++, name, typeof(T0), func, valueSelector));
-			return this;
+			this.enumerator = enumerator;
+			this.columns = columns;
+			this.isClosed = false;
 		}
 
 		public override bool IsClosed
@@ -88,14 +294,14 @@ namespace Sylvan.Data
 			return this.columns[ordinal].DataType;
 		}
 
-		public override int GetOrdinal(String name)
+		public override int GetOrdinal(string name)
 		{
-			for (int i = 0; i < this.columns.Count; i++)
-				if (String.Compare(columns[i].ColumnName, name, false) == 0)
+			for (int i = 0; i < this.columns.Length; i++)
+				if (string.Compare(columns[i].ColumnName, name, false) == 0)
 					return i;
 
-			for (int i = 0; i < this.columns.Count; i++)
-				if (String.Compare(columns[i].ColumnName, name, true) == 0)
+			for (int i = 0; i < this.columns.Length; i++)
+				if (string.Compare(columns[i].ColumnName, name, true) == 0)
 					return i;
 
 			throw new ArgumentOutOfRangeException(nameof(name));
@@ -221,7 +427,8 @@ namespace Sylvan.Data
 		public override int GetValues(object[] values)
 		{
 			var c = Math.Min(this.FieldCount, values.Length);
-			for (int i = 0; i < c; i++) {
+			for (int i = 0; i < c; i++)
+			{
 				values[i] = GetValue(i);
 			}
 			return c;
@@ -229,13 +436,14 @@ namespace Sylvan.Data
 
 		public override bool IsDBNull(int ordinal)
 		{
-			if (this.columns[ordinal].AllowDBNull == false) return false;
-			return GetValue(ordinal) == null;
+			var col = this.columns[ordinal];
+			if (col.AllowDBNull == false) return false;
+			return col.isNullSelector(enumerator.Current);
 		}
 
 		public ReadOnlyCollection<DbColumn> GetColumnSchema()
 		{
-			return new ReadOnlyCollection<DbColumn>(this.columns.ToArray());
+			return new ReadOnlyCollection<DbColumn>(this.columns);
 		}
 
 		public override System.Data.DataTable GetSchemaTable()
@@ -245,7 +453,7 @@ namespace Sylvan.Data
 
 		public override int FieldCount
 		{
-			get { return this.columns.Count; }
+			get { return this.columns.Length; }
 		}
 
 		public override int Depth => 0;

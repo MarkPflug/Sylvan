@@ -1,0 +1,78 @@
+﻿<Project>
+
+	<UsingTask
+	  AssemblyFile="$(SylvanDataTaskAssembly)"
+	  TaskName="SylvanDataGenerateSchema"/>
+
+	<UsingTask
+	  AssemblyFile="$(SylvanDataTaskAssembly)"
+	   TaskName="SylvanDataCodeGen"/>
+
+	<ItemGroup>
+		<!--<PropertyPageSchema Include="$(MSBuildThisFileDirectory)Sylvan.BuildTools.Data.xaml" />
+    <PropertyPageSchema Include="$(MSBuildThisFileDirectory)Sylvan.BuildTools.Data.ContentType.xaml" />-->
+	</ItemGroup>
+
+	<PropertyGroup>
+
+		<CoreCompileDependsOn>
+			SylvanDataGenerateSchema;
+			SylvanDataCodeGen;
+			$(CoreCompileDependsOn)
+		</CoreCompileDependsOn>
+
+		<SylvanDataCodeGenerationRoot>$([System.IO.Path]::Combine($(MSBuildProjectDirectory), $(IntermediateOutputPath), 'Sylvan'))\</SylvanDataCodeGenerationRoot>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<SylvanData
+		  Include="**/*.csv"
+		  Exclude="@(SylvanData);$(DefaultItemExcludes)">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</SylvanData>
+	</ItemGroup>
+
+	<ItemGroup>
+
+		<SylvanData Update="@(SylvanData)">
+			<Schema Condition="Exists('%(Filename)%(Extension).schema')">%(Filename)%(Extension).schema</Schema>
+			<GeneratedSchema>$(SylvanDataCodeGenerationRoot)%(Filename)%(Extension).schema</GeneratedSchema>
+			<GeneratedCode>$(SylvanDataCodeGenerationRoot)%(Filename)%(Extension).g.cs</GeneratedCode>
+		</SylvanData>
+
+		<Compile Include="@(SylvanData->'%(GeneratedCode)')">
+			<Visible>false</Visible>
+		</Compile>
+
+	</ItemGroup>
+
+	<Target
+	  Name="SylvanDataGenerateSchema"
+	  BeforeTargets="SylvanDataCodeGen"
+	  Inputs="@(SylvanData);$(MSBuildProjectFile);$(SylvanDataTaskAssembly)"
+	  Outputs="%(SylvanData.GeneratedSchema)"
+  >
+
+		<MakeDir Directories="$(SylvanDataCodeGenerationRoot)%(SylvanData.RecursiveDir)"/>
+		<SylvanDataGenerateSchema InputFiles="@(SylvanData)"/>
+	</Target>
+
+	<Target
+	  Name="CleanSylvanData"
+	  BeforeTargets="Clean">
+		<Delete Files="%(SylvanData.GeneratedSchema);%(SylvanData.GeneratedCode)"/>
+	</Target>
+
+	<Target
+	  Name="SylvanDataCodeGen"
+	  Condition="'@(SylvanData)' != ''"
+	  Inputs="%(SylvanData.GeneratedSchema);%(SylvanData.Schema);$(MSBuildProjectFile);$(SylvanDataTaskAssembly)"
+	  Outputs="%(SylvanData.GeneratedCode)"
+    >
+		<MakeDir Directories="$(SylvanDataCodeGenerationRoot)%(SylvanData.RecursiveDir)"/>
+		<SylvanDataCodeGen
+			InputFiles="@(SylvanData)"
+	/>
+
+	</Target>
+</Project>

@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.ObjectModel;
 using System.Data;
 using System.Data.Common;
 
 namespace Sylvan.Data
 {
 	// Adapts an IDataReader into a DbDataReader.
-	sealed class IDataReaderAdpater : DbDataReader
+	sealed class IDataReaderAdpater : DbDataReader, IDbColumnSchemaGenerator
 	{
 		readonly IDataReader dr;
 
@@ -149,6 +150,26 @@ namespace Sylvan.Data
 		public override bool Read()
 		{
 			return this.dr.Read();
+		}
+
+		public override DataTable GetSchemaTable()
+		{
+			return SchemaTable.GetSchemaTable(this.GetColumnSchema());
+		}
+
+		public ReadOnlyCollection<DbColumn> GetColumnSchema()
+		{
+			if (dr is IDbColumnSchemaGenerator g)
+			{
+				return g.GetColumnSchema();
+			}
+			var sb = new Schema.Builder();
+			for(int i = 0; i < this.FieldCount; i++)
+			{
+				var dbType = Schema.GetDbType(this.GetFieldType(i)); 
+				sb.AddColumn(this.GetName(i), dbType);
+			}
+			return sb.Build().GetColumnSchema();
 		}
 	}
 }

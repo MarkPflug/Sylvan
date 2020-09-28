@@ -12,12 +12,12 @@ using System.Threading.Tasks;
 
 namespace Sylvan.Data.Csv
 {
-	[SimpleJob]
 	[MemoryDiagnoser]
 	public class CsvReaderBenchmarks
 	{
 		const int BufferSize = 0x4000;
 		readonly StringFactory pool;
+		char[] buffer = new char[BufferSize];
 
 		public CsvReaderBenchmarks()
 		{
@@ -36,6 +36,18 @@ namespace Sylvan.Data.Csv
 				{
 					var s = dr.GetString(i);
 				}
+			}
+		}
+
+
+		[Benchmark]
+		public void CsvTextFieldParser()
+		{
+			var tr = TestData.GetTextReader();
+			var csv = new NotVisualBasic.FileIO.CsvTextFieldParser(tr);			
+			while(!csv.EndOfData)
+			{
+				var fields = csv.ReadFields();
 			}
 		}
 
@@ -209,7 +221,7 @@ namespace Sylvan.Data.Csv
 		public async Task Sylvan()
 		{
 			using var tr = TestData.GetTextReader();
-			using var dr = await CsvDataReader.CreateAsync(tr);
+			using var dr = await CsvDataReader.CreateAsync(tr, new CsvDataReaderOptions() { Buffer = buffer });
 			while (await dr.ReadAsync())
 			{
 				for (int i = 0; i < dr.FieldCount; i++)

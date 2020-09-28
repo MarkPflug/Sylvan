@@ -168,7 +168,7 @@ namespace Sylvan.Data.Csv
 				options.Validate();
 			options ??= CsvDataReaderOptions.Default;
 			this.reader = reader;
-			this.buffer = new char[options.BufferSize];
+			this.buffer = options.Buffer ?? new char[options.BufferSize];
 
 			this.hasHeaders = options.HasHeaders;
 			this.delimiter = options.Delimiter;
@@ -221,7 +221,7 @@ namespace Sylvan.Data.Csv
 				InitializeSchema(schema);
 			}
 		}
-		
+
 		char DetectDelimiter()
 		{
 			int[] counts = new int[AutoDetectDelimiters.Length];
@@ -333,13 +333,7 @@ namespace Sylvan.Data.Csv
 			bool last = false;
 			bool complete = false;
 
-			if (idx >= bufferEnd)
-			{
-				return atEndOfText 
-					? ReadResult.False 
-					: ReadResult.Incomplete;
-			}
-			else
+			if (idx < bufferEnd)
 			{
 				c = buffer[idx];
 				if (c == quote)
@@ -442,9 +436,9 @@ namespace Sylvan.Data.Csv
 					}
 					fieldCount++;
 				}
+				curFieldCount++;
 				if (fieldIdx < fieldCount)
 				{
-					curFieldCount++;
 					ref var fi = ref fieldInfos[fieldIdx];
 					fi.isQuoted =
 						closeQuoteIdx == -1
@@ -465,7 +459,7 @@ namespace Sylvan.Data.Csv
 
 			return ReadResult.Incomplete;
 		}
-		
+
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		static bool IsEndOfLine(char c)
 		{
@@ -493,7 +487,7 @@ namespace Sylvan.Data.Csv
 				}
 				else
 				{
-					return atEndOfText 
+					return atEndOfText
 						? ReadResult.True
 						// the next buffer might contain a \n that we need to consume.
 						: ReadResult.Incomplete;
@@ -537,6 +531,12 @@ namespace Sylvan.Data.Csv
 
 		/// <inheritdoc/>
 		public override int Depth => 0;
+
+		/// <summary>
+		/// Gets the number of fields in the current row.
+		/// This may be different than FieldCount.
+		/// </summary>
+		public int RowFieldCount => this.curFieldCount;
 
 		/// <inheritdoc/>
 		public override int FieldCount => fieldCount;
@@ -634,7 +634,10 @@ namespace Sylvan.Data.Csv
 
 			var offset = (int)dataOffset;
 
-			var (b, o, l) = GetField(ordinal);
+			var cs = GetField(ordinal);
+			var b = cs.buffer;
+			var o = cs.offset;
+			var l = cs.length;
 
 			var quadIdx = Math.DivRem(offset, 3, out int rem);
 
@@ -723,10 +726,10 @@ namespace Sylvan.Data.Csv
 		/// <inheritdoc/>
 		public override char GetChar(int ordinal)
 		{
-			var (b, o, l) = GetField(ordinal);
-			if (l == 1)
+			var s = GetField(ordinal);
+			if (s.length == 1)
 			{
-				return b[o];
+				return s.buffer[s.offset];
 			}
 			throw new FormatException();
 		}
@@ -736,25 +739,27 @@ namespace Sylvan.Data.Csv
 		{
 			if (dataOffset > int.MaxValue) throw new ArgumentOutOfRangeException(nameof(dataOffset));
 
-			var (b, o, l) = GetField(ordinal);
-			var len = Math.Min(l - dataOffset, length);
+			var s = GetField(ordinal);
+			var len = Math.Min(s.length - dataOffset, length);
 
-			Array.Copy(b, o, buffer, bufferOffset, len);
+			Array.Copy(s.buffer, s.offset, buffer, bufferOffset, len);
 			return len;
 		}
 
 		/// <inheritdoc/>
 		public override DateTime GetDateTime(int ordinal)
 		{
+			var format = columns[ordinal].Format ?? this.dateFormat;
+
 #if NETSTANDARD2_1
-			if (this.dateFormat != null && DateTime.TryParseExact(this.GetFieldSpan(ordinal), this.dateFormat.AsSpan(), culture, DateTimeStyles.None, out var dt))
+			if (format != null && DateTime.TryParseExact(this.GetFieldSpan(ordinal), format.AsSpan(), culture, DateTimeStyles.None, out var dt))
 			{
 				return dt;
 			}
 			return DateTime.Parse(this.GetFieldSpan(ordinal), culture);
 #else
 			var dateStr = this.GetString(ordinal);
-			if (this.dateFormat != null && DateTime.TryParseExact(dateStr, this.dateFormat, culture, DateTimeStyles.None, out var dt))
+			if (format != null && DateTime.TryParseExact(dateStr, format, culture, DateTimeStyles.None, out var dt))
 			{
 				return dt;
 			}
@@ -883,9 +888,10 @@ namespace Sylvan.Data.Csv
 		{
 			if ((uint)ordinal < (uint)curFieldCount)
 			{
-				var (b, o, l) = GetField(ordinal);
+				var s = GetField(ordinal);
+				var l = s.length;
 				if (l == 0) return string.Empty;
-				return stringFactory.Invoke(b, o, l);
+				return stringFactory.Invoke(s.buffer, s.offset, l);
 			}
 			ThrowIfOutOfRange(ordinal);
 			return string.Empty;
@@ -895,14 +901,28 @@ namespace Sylvan.Data.Csv
 
 		ReadOnlySpan<char> GetFieldSpan(int ordinal)
 		{
-			var (b, o, l) = GetField(ordinal);
-			return b.AsSpan().Slice(o, l);
+			var s = GetField(ordinal);
+			return s.buffer.AsSpan().Slice(s.offset, s.length);
 		}
 
 #endif
 
+		readonly struct CharSpan
+		{
+			public CharSpan(char[] buffer, int offset, int length)
+			{
+				this.buffer = buffer;
+				this.offset = offset;
+				this.length = length;
+			}
+
+			public readonly char[] buffer;
+			public readonly int offset;
+			public readonly int length;
+		}
+
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		(char[] buffer, int offset, int len) GetField(int ordinal)
+		CharSpan GetField(int ordinal)
 		{
 			ref var fi = ref this.fieldInfos[ordinal];
 			var startIdx = recordStart + (ordinal == 0 ? 0 : this.fieldInfos[ordinal - 1].endIdx + 1);
@@ -925,10 +945,10 @@ namespace Sylvan.Data.Csv
 					return PrepareField(offset, len, fi.escapeCount);
 				}
 			}
-			return (buffer, offset, len);
+			return new CharSpan(buffer, offset, len);
 		}
 
-		(char[] buffer, int offset, int len) PrepareField(int offset, int len, int escapeCount)
+		CharSpan PrepareField(int offset, int len, int escapeCount)
 		{
 
 			bool inQuote = true; // we start inside the quotes
@@ -974,17 +994,17 @@ namespace Sylvan.Data.Csv
 				}
 				temp[d++] = c;
 			}
-			return (temp, 0, eLen);
+			return new CharSpan(temp, 0, eLen);
 		}
 
 		/// <inheritdoc/>
-		public override object? GetValue(int ordinal)
+		public override object GetValue(int ordinal)
 		{
 			ThrowIfOutOfRange(ordinal);
 
 			if (columns[ordinal].AllowDBNull != false && this.IsDBNull(ordinal))
 			{
-				return null;
+				return DBNull.Value;
 			}
 			var type = this.GetFieldType(ordinal);
 
@@ -1015,7 +1035,7 @@ namespace Sylvan.Data.Csv
 				default:
 					if (type == typeof(byte[]))
 					{
-						var (_, _, l) = this.GetField(ordinal);
+						var l = this.GetField(ordinal).length;
 						var dataLen = l / 4 * 3;
 						var buffer = new byte[dataLen];
 						var len = GetBytes(ordinal, 0, buffer, 0, dataLen);
@@ -1049,12 +1069,11 @@ namespace Sylvan.Data.Csv
 		public override bool IsDBNull(int ordinal)
 		{
 			ThrowIfOutOfRange(ordinal);
-
+			var col = columns[ordinal];
 			if ((uint)ordinal >= (uint)curFieldCount)
 			{
-				return true;
+				return col.AllowDBNull != false;
 			}
-			var col = columns[ordinal];
 			if (col.DataType == typeof(string))
 			{
 				if (col.AllowDBNull == false)
@@ -1157,13 +1176,17 @@ namespace Sylvan.Data.Csv
 
 		class CsvColumn : DbColumn
 		{
+			public string? Format { get; }
+
 			public CsvColumn(string? name, int ordinal, DbColumn? schema = null)
 			{
 				// non-overridable
 				this.ColumnOrdinal = ordinal;
 				this.IsReadOnly = true; // I don't understand what false would mean here.
 
-				this.ColumnName = schema?.ColumnName ?? name;
+				var colName = schema?.ColumnName;
+
+				this.ColumnName = string.IsNullOrEmpty(colName) ? name : colName;
 				this.DataType = schema?.DataType ?? typeof(string);
 				this.DataTypeName = schema?.DataTypeName ?? this.DataType.Name;
 
@@ -1189,6 +1212,22 @@ namespace Sylvan.Data.Csv
 				this.BaseColumnName = schema?.BaseColumnName ?? name; // default in the orignal header name if they chose to remap it.
 				this.BaseCatalogName = schema?.BaseCatalogName;
 				this.UdtAssemblyQualifiedName = schema?.UdtAssemblyQualifiedName;
+				this.Format = schema?[nameof(Format)] as string;
+			}
+
+			/// <inheritdoc/>
+			public override object? this[string property]
+			{
+				get
+				{
+					switch (property)
+					{
+						case nameof(Format):
+							return Format;
+						default:
+							return base[property];
+					}
+				}
 			}
 		}
 
@@ -1219,5 +1258,27 @@ namespace Sylvan.Data.Csv
 
 #endif
 
+		/// <summary>
+		/// Copies the raw record data from the buffer.
+		/// </summary>
+		/// <param name="buffer">The buffer to receive the data, or null to query the required size.</param>
+		/// <param name="offset">The offset into the buffer to start writing.</param>
+		/// <returns>The length of the record data.</returns>
+		// TODO: do I want to expose this publicly?
+		private int GetRawRecord(char[]? buffer, int offset)
+		{
+			var len = this.idx - this.recordStart;
+			if (buffer != null)
+			{
+				if (offset < 0 || offset >= buffer.Length)
+					throw new ArgumentOutOfRangeException(nameof(offset));
+
+				if (buffer.Length - offset < len)
+					throw new ArgumentOutOfRangeException(nameof(buffer));
+
+				Array.Copy(this.buffer, this.recordStart, buffer, offset, len);
+			}
+			return len;
+		}
 	}
 }

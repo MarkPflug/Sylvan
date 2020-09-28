@@ -75,6 +75,12 @@ namespace Sylvan.Data.Csv
 		public int BufferSize { get; set; }
 
 		/// <summary>
+		/// The buffer to use when writing records.
+		/// The default is null, in which case the writer will allocate a buffer of BufferSize.
+		/// </summary>
+		public char[]? Buffer { get; set; }
+
+		/// <summary>
 		/// The CultureInfo to use when writing values. The default is the InvariantCulture.
 		/// </summary>
 		public CultureInfo Culture { get; set; }
@@ -91,7 +97,8 @@ namespace Sylvan.Data.Csv
 				char.IsLetterOrDigit(Delimiter) ||
 				Quote == Delimiter ||
 				(NewLine != "\r" && NewLine != "\n" && NewLine != "\r\n") ||
-				TrueString == FalseString;
+				TrueString == FalseString ||
+				(Buffer != null && Buffer.Length < MinBufferSize);
 			if (invalid)
 				throw new CsvConfigurationException();
 		}

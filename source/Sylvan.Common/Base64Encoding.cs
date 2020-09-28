@@ -6,7 +6,7 @@ namespace Sylvan
 	/// <summary>
 	/// Provides encoding/decoding to Base64.
 	/// </summary>
-	public class Base64Encoding
+	public sealed class Base64Encoding
 	{
 		static readonly char[] DefaultEncodeMap;
 		static readonly byte[] DefaultDecodeMap;

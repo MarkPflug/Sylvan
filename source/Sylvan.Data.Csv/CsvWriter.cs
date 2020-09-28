@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Data.Common;
 using System.Globalization;
 using System.IO;
 using System.Threading.Tasks;
@@ -61,7 +60,7 @@ namespace Sylvan.Data.Csv
 			this.invariantCulture = this.culture == CultureInfo.InvariantCulture;
 			this.prepareBuffer = new char[0x100];
 			this.bufferSize = options.BufferSize;
-			this.writeBuffer = new char[bufferSize];
+			this.writeBuffer = options.Buffer ?? new char[bufferSize];
 			this.ownsWriter = options.OwnsWriter;
 			this.pos = 0;
 		}
@@ -143,7 +142,7 @@ namespace Sylvan.Data.Csv
 		}
 
 		/// <summary>
-		/// Asynchronously writes a value to the current record.
+		/// Writes a Guid value to the current record.
 		/// </summary>
 		/// <param name="value">The value to write.</param>
 		/// <returns>A task representing the asynchronous operation.</returns>
@@ -163,7 +162,7 @@ namespace Sylvan.Data.Csv
 		}
 
 		/// <summary>
-		/// Asynchronously writes a value to the current record.
+		/// Writes a base64 encoded binary value to the current record.
 		/// </summary>
 		/// <param name="value">The value to write.</param>
 		/// <returns>A task representing the asynchronous operation.</returns>
@@ -635,7 +634,7 @@ namespace Sylvan.Data.Csv
 		}
 
 		/// <summary>
-		/// Writes hex-encoded data to the current record.
+		/// Asynchronously writes a base64 encoded binary value to the current record.
 		/// </summary>
 		/// <param name="buffer">The buffer containing the data to write.</param>
 		/// <param name="offset">The offset in the buffer from which to begin writing.</param>
@@ -724,7 +723,7 @@ namespace Sylvan.Data.Csv
 		}
 
 		/// <summary>
-		/// Writes hex-encoded data to the current record.
+		/// Writes a base64 encoded binary value to the current record.
 		/// </summary>
 		/// <param name="buffer">The buffer containing the data to write.</param>
 		/// <param name="offset">The offset in the buffer from which to begin writing.</param>
@@ -773,7 +772,7 @@ namespace Sylvan.Data.Csv
 		}
 
 		/// <summary>
-		/// Asynchronously writes an empty field to the current record.
+		/// Writes an empty field to the current record.
 		/// </summary>
 		public void WriteField()
 		{

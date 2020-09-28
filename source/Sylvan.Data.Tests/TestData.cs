@@ -9,11 +9,35 @@ using System.Text;
 
 namespace Sylvan.Data
 {
+	public sealed class TestRecord
+	{
+		public int Id { get; set; }
+		public string Name { get; set; }
+		public DateTime Date { get; set; }
+		public bool IsActive { get; set; }
+		public double[] DataSet { get; set; }
+	}
+
 	public class TestData
 	{
-
 		const string DataSetUrl = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/f7c2384622806d5297d16c314a7bc0b9cde24937/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_US.csv";
 		const string DataFileName = "Data.csv";
+
+		const string DataSetSchema = @"UID:int,
+iso2,
+iso3,
+code3:int?,
+FIPS:int?,
+Admin2,
+Province_State,
+Country_Region,
+Lat:float?,
+Long_:float?,
+Combined_Key,
+{Date}>Values*:int";
+
+		static ICsvSchemaProvider Schema;
+		static CsvDataReaderOptions Options;
 
 		static string CachedData;
 		static byte[] CachedUtfData;
@@ -35,6 +59,8 @@ namespace Sylvan.Data
 			// is it a bad idea to do this in a static constructor?
 			// probably, but this is only used in test/benchmarks.
 			CacheData();
+			Schema = new CsvSchema(Sylvan.Data.Schema.TryParse(DataSetSchema).GetColumnSchema());
+			Options = new CsvDataReaderOptions { Schema = Schema };
 		}
 
 		public static string DataFile
@@ -57,7 +83,14 @@ namespace Sylvan.Data
 
 		public static DbDataReader GetData()
 		{
+			
 			return CsvDataReader.Create(GetTextReader());
+		}
+
+		public static DbDataReader GetDataWithSchema()
+		{
+
+			return CsvDataReader.Create(GetTextReader(), Options);
 		}
 
 		public static DbDataReader GetTypedData()
@@ -105,52 +138,31 @@ namespace Sylvan.Data
 			}
 		}
 
-		public sealed class TestClass
-		{
-			//public TestClass(int i)
-			//{
-			//	this.Id = i;
-			//	this.Name = "Name" + i;
-			//	this.Date = new DateTime(2020, 01, 01).AddDays(i);
-			//	this.IsActive = i % 2 == 1;
-			//	this.DataSet = Enumerable.Range(0, 10).Select(n => (double)n * i * .3).ToArray();
-			//}
-
-			public int Id { get; set; }
-			public string Name { get; set; }
-			public DateTime Date { get; set; }
-			public bool IsActive { get; set; }
-			public double[] DataSet { get; set; }
-		}
-
-		public static DbDataReader GetTestData(int count = 10)
-		{
-			var dr =
-				ObjectDataReader
-				.Create(GetTestObjects(count, 10))
+		static ObjectDataReader.Factory<TestRecord> Factory = 
+			ObjectDataReader
+				.BuildFactory<TestRecord>()
 				.AddColumn("Id", i => i.Id)
 				.AddColumn("Name", i => i.Name)
 				.AddColumn("Date", i => i.Date)
-				.AddColumn("IsActive", i => i.IsActive);
+				.AddColumn("IsActive", i => i.IsActive)
+				.Repeat((b, i) => b.AddColumn("Data" + i, r => r.DataSet[i]), 10)
+				.Build();
+			
 
-			for(int i = 0; i < 10; i++)
-			{
-				var x = i;
-				dr.AddColumn("Data" + i, r => r.DataSet[x]);
-			}
-
-			return dr;
+		public static DbDataReader GetTestData(int count = 10)
+		{
+			return Factory.Create(GetTestObjects(count, 10));
 		}
 
 		public const int DefaultRecordCount = 100000;
 		public const int DefaultDataValueCount = 20;
 
-		public static IEnumerable<TestClass> GetTestObjects(int recordCount = DefaultRecordCount, int valueCount = DefaultDataValueCount)
+		public static IEnumerable<TestRecord> GetTestObjects(int recordCount = DefaultRecordCount, int valueCount = DefaultDataValueCount)
 		{
 			// We'll reuse the single instance of TestClass. 
 			// We do this so memory usage in benchmarks is a better indicator
 			// of the library, and not just overwhelmed by TestClass allocations.
-			var row = new TestClass();
+			var row = new TestRecord();
 			DateTime startDate = new DateTime(2020, 3, 23, 0, 0, 0, DateTimeKind.Utc);
 			row.DataSet = new double[valueCount];
 			var counter = 1;
@@ -174,13 +186,16 @@ namespace Sylvan.Data
 				);
 		}
 
+		static ObjectDataReader.Factory<BinaryData> BinaryFactory =
+			ObjectDataReader
+				.BuildFactory<BinaryData>()
+				.AddColumn("Id", d => d.Id)
+				.AddColumn("Data", d => d.Data)				
+				.Build();
+
 		public static DbDataReader GetBinaryData()
 		{
-			var items = GetTestBinary();
-			var reader = ObjectDataReader.Create(items);
-			reader.AddColumn("Id", d => d.Id);
-			reader.AddColumn("Data", d => d.Data);
-			return reader;
+			return BinaryFactory.Create(GetTestBinary());
 		}
 
 		public class BinaryData
@@ -199,19 +214,16 @@ namespace Sylvan.Data
 		public static DbDataReader GetTestDataReader(int recordCount = DefaultRecordCount, int valueCount = DefaultDataValueCount)
 		{
 			var items = GetTestObjects(recordCount, valueCount);
-			var reader = ObjectDataReader.Create(items);
-			reader.AddColumn("Id", d => d.Id);
-			reader.AddColumn("Name", d => d.Name);
-			reader.AddColumn("Date", d => d.Date);
-			reader.AddColumn("IsActive", d => d.IsActive);
-
-			for (int i = 0; i < valueCount; i++)
-			{
-				var idx = 0;
-				reader.AddColumn("Value" + i, d => d.DataSet[idx]);
-			}
-
-			return reader;
+			return
+				ObjectDataReader
+				.BuildFactory<TestRecord>()
+				.AddColumn("Id", i => i.Id)
+				.AddColumn("Name", i => i.Name)
+				.AddColumn("Date", i => i.Date)
+				.AddColumn("IsActive", i => i.IsActive)
+				.Repeat((b, i) => b.AddColumn("Data" + i, r => r.DataSet[i]), valueCount)
+				.Build()
+				.Create(items);
 		}
 	}
 }

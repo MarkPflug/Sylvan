@@ -1,0 +1,18 @@
+﻿<Project>
+
+  <PropertyGroup>
+    <SylvanDataTaskAssembly Condition="'$(SylvanDataTaskAssembly)' == ''">$(MSBuildThisFileDirectory)Sylvan.BuildTools.Data.dll</SylvanDataTaskAssembly>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AvailableItemName Include="SylvanData"/>
+  </ItemGroup>
+
+  <ItemDefinitionGroup>
+    <SylvanData>
+      <Generator>MSBuild:SylvanDataCodeGen</Generator>
+	  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </SylvanData>
+  </ItemDefinitionGroup>
+  
+</Project>

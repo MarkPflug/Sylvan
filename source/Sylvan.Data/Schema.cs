@@ -5,7 +5,6 @@ using System.Data;
 using System.Data.Common;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Text.RegularExpressions;
 
 namespace Sylvan.Data
@@ -15,6 +14,9 @@ namespace Sylvan.Data
 	/// </summary>
 	public sealed class Schema : IDbColumnSchemaGenerator
 	{
+		public const string DateSeriesMarker = "{Date}";
+		public const string IntegerSeriesMarker = "{Integer}";
+
 		static readonly Lazy<Dictionary<string, DbType>> ColumnTypeMap = new Lazy<Dictionary<string, DbType>>(InitializeTypeMap);
 
 		static Dictionary<string, DbType> InitializeTypeMap()
@@ -31,7 +33,7 @@ namespace Sylvan.Data
 			return map;
 		}
 
-		static Type GetDataType(DbType type)
+		internal static Type GetDataType(DbType type)
 		{
 			switch (type)
 			{
@@ -54,7 +56,7 @@ namespace Sylvan.Data
 			throw new NotSupportedException();
 		}
 
-		static DbType GetColumnType(Type type)
+		internal static DbType GetDbType(Type type)
 		{
 			switch (Type.GetTypeCode(type))
 			{
@@ -107,17 +109,17 @@ namespace Sylvan.Data
 				type == DbType.Binary;
 		}
 
-		class SchemaColumn : DbColumn
+		internal sealed class SchemaColumn : DbColumn
 		{
 			const string SeriesSymbol = "*";
-			public DbType DbType { get; }
+			public DbType DbType { get; private set; }
 
-			public int? SeriesOrdinal { get; }
-			public string? SeriesName { get; }
-			public string? SeriesHeaderFormat { get; }
+			public int? SeriesOrdinal { get; private set; }
+			public string? SeriesName { get; private set; }
+			public string? SeriesHeaderFormat { get; private set; }
 
-			public bool? IsDateSeries { get; }
-			public bool? IsIntegerSeries { get; }
+			public bool? IsSeries { get; private set; }
+			public Type? SeriesType { get; private set; }
 
 			public override object? this[string property]
 			{
@@ -133,41 +135,61 @@ namespace Sylvan.Data
 							return this.SeriesName;
 						case nameof(SeriesHeaderFormat):
 							return this.SeriesHeaderFormat;
-						case nameof(IsDateSeries):
-							return this.IsDateSeries;
-						case nameof(IsIntegerSeries):
-							return this.IsIntegerSeries;
+						case nameof(IsSeries):
+							return this.IsSeries;
+						case nameof(SeriesType):
+							return this.SeriesType;
+						case nameof(Format):
+							return this.Format;
 						default:
 							return base[property];
 					}
 				}
 			}
 
-			public SchemaColumn(string? baseName, string name, DbType type, bool allowNull, int size = -1)
+			public string? Format { get; private set; }
+
+			public SchemaColumn(int? ordinal, string? baseName, string name, DbType type, bool allowNull, int? size = null, string? format = null)
 			{
+				this.ColumnOrdinal = ordinal;
 				this.DbType = type;
 
-				bool isSeries = name.EndsWith(SeriesSymbol);
+#warning this feels like the wrong place to deal with series.
 
-				this.SeriesOrdinal = isSeries ? 0 : (int?)null;
-				this.SeriesName = isSeries ? name.Substring(0, name.Length - 1) : null;
-				this.BaseColumnName = isSeries ? null : baseName;
-				this.ColumnName = isSeries ? null : name;
-				this.SeriesHeaderFormat = isSeries ? baseName : null;
-				this.IsDateSeries = isSeries ? name.IndexOf("{Date}", StringComparison.OrdinalIgnoreCase) >= 0 : (bool?)null;
-				this.IsIntegerSeries = isSeries ? name.IndexOf("{Integer}", StringComparison.OrdinalIgnoreCase) >= 0 : (bool?)null;
+				var isSeries = name?.EndsWith(SeriesSymbol) == true;
+				if (isSeries == false)
+				{
+					this.BaseColumnName = baseName;
+					this.ColumnName = name;
+				}
+				else
+				{
+					this.IsSeries = true;
+					this.SeriesOrdinal = 0;
+					this.SeriesName = name?.Substring(0, name.Length - 1);
+					this.SeriesHeaderFormat = baseName;
+					if (SeriesHeaderFormat?.IndexOf(DateSeriesMarker, StringComparison.OrdinalIgnoreCase) >= 0)
+					{
+						this.SeriesType = typeof(DateTime);
+					}
+					if (SeriesHeaderFormat?.IndexOf(IntegerSeriesMarker, StringComparison.OrdinalIgnoreCase) >= 0)
+					{
+						this.SeriesType = typeof(int);
+					}
+				}
 
 				this.AllowDBNull = allowNull;
-				this.ColumnSize = size < 0 ? (int?)null : size;
+				this.ColumnSize = size;
 				this.DataType = GetDataType(type);
 				this.DataTypeName = type.ToString();
-
+				this.Format = format;
 			}
 
 			public SchemaColumn(DbColumn col)
 			{
-				this.DbType = GetColumnType(col.DataType);
+				this.DbType = GetDbType(col.DataType);
 				this.ColumnName = col.ColumnName;
+				this.ColumnOrdinal = col.ColumnOrdinal;
 				this.BaseColumnName = col.BaseColumnName;
 				this.DataType = col.DataType;
 				this.ColumnSize = col.ColumnSize;
@@ -176,6 +198,158 @@ namespace Sylvan.Data
 				this.IsLong = col.IsLong;
 				this.NumericPrecision = col.NumericPrecision;
 				this.NumericScale = col.NumericScale;
+				this.Format = col[nameof(Format)] as string;
+			}
+
+			private SchemaColumn() { }
+
+
+			static (int precision, int scale, string name) GetTypeInfo(Type type)
+			{
+				return
+					(type == typeof(long))
+					? (19, 8, "long")
+					: (type == typeof(int))
+					? (18, 4, "int")
+					: (type == typeof(short))
+					? (5, 2, "short")
+					: (3, 1, "byte");
+			}
+
+			internal static SchemaColumn CreateSeries(string seriesName, bool isNullable, Type type, SeriesType st, string headerFormat)
+			{
+				var (p, s, n) = GetTypeInfo(type);
+
+				var cs =
+					new SchemaColumn()
+					{
+						AllowDBNull = isNullable,
+						IsSeries = true,
+						SeriesOrdinal = 0,
+						SeriesHeaderFormat = headerFormat,
+						SeriesType = st == Sylvan.Data.SeriesType.Integer ? typeof(int) : typeof(DateTime),
+						DataType = type,
+						DataTypeName = n,
+						NumericPrecision = p,
+						ColumnSize = s,
+						DbType = GetDbType(type),
+					};
+
+				return cs;
+			}
+
+			public static SchemaColumn CreateString(int ordinal, string? name, bool isNullable, bool isUnique, int length, bool isAscii)
+			{
+				return
+					new SchemaColumn()
+					{
+						ColumnOrdinal = ordinal,
+						ColumnName = name,
+						AllowDBNull = isNullable,
+						IsUnique = isUnique,
+						ColumnSize = length,
+						NumericPrecision = isAscii ? 8 : 16,
+						DataType = typeof(string),
+						DataTypeName = "string",
+						IsLong = false,
+						DbType = DbType.String,
+					};
+			}
+
+			public static SchemaColumn CreateText(int ordinal, string? name, bool isNullable)
+			{
+				return
+					new SchemaColumn()
+					{
+						ColumnOrdinal = ordinal,
+						ColumnName = name,
+						AllowDBNull = isNullable,
+						ColumnSize = int.MaxValue,
+						NumericPrecision = 16,
+						DataType = typeof(string),
+						DataTypeName = "string",
+						IsLong = true,
+						DbType = DbType.String,
+					};
+			}
+
+			public static SchemaColumn CreateDate(int ordinal, string? name, bool isNullable, bool isUnique, int? precision)
+			{
+				return
+					new SchemaColumn()
+					{
+						ColumnOrdinal = ordinal,
+						ColumnName = name,
+						AllowDBNull = isNullable,
+						NumericPrecision = precision,
+						DataType = typeof(DateTime),
+						DataTypeName = precision == null ? "date" : "datetime",
+						DbType = precision == null ? DbType.Date : DbType.DateTime2
+					};
+			}
+
+			public static SchemaColumn CreateBoolean(int ordinal, string? name, bool isNullable)
+			{
+				return
+					new SchemaColumn()
+					{
+						ColumnOrdinal = ordinal,
+						ColumnName = name,
+						AllowDBNull = isNullable,
+						DataType = typeof(bool),
+						DbType = DbType.Boolean,
+					};
+			}
+
+			public static SchemaColumn CreateInt(int ordinal, string? name, bool isNullable, bool isUnique, Type type)
+			{
+
+				var (p, s, n) = GetTypeInfo(type);
+
+				return
+					new SchemaColumn()
+					{
+						ColumnOrdinal = ordinal,
+						ColumnName = name,
+						AllowDBNull = isNullable,
+						DataType = type,
+						DataTypeName = n,
+						NumericPrecision = p,
+						ColumnSize = s,
+						DbType = DbType.Int32
+					};
+			}
+
+			public static SchemaColumn CreateFloat(int ordinal, string? name, bool isNullable)
+			{
+				return
+					new SchemaColumn()
+					{
+						ColumnOrdinal = ordinal,
+						ColumnName = name,
+						AllowDBNull = isNullable,
+						DataType = typeof(float),
+						DataTypeName = "float",
+						NumericPrecision = 7,
+						ColumnSize = 4,
+						DbType = DbType.Single,
+					};
+			}
+
+			public static SchemaColumn CreateDouble(int ordinal, string? name, bool isNullable)
+			{
+				return
+					new SchemaColumn()
+					{
+						ColumnOrdinal = ordinal,
+						ColumnName = name,
+						AllowDBNull = isNullable,
+						DataType = typeof(double),
+						DataTypeName = "double",
+						NumericPrecision = 15,
+						ColumnSize = 8,
+						DbType = DbType.Double,
+					};
 			}
 		}
 
@@ -197,9 +371,17 @@ namespace Sylvan.Data
 			/// <summary>
 			/// Adds a column
 			/// </summary>
-			public Builder AddColumn(string baseName, string name, DbType type, bool allowNull = true, int size = -1)
+			public Builder AddColumn(string name, DbType type, bool allowNull = true, int? size = null, string? format = null)
 			{
-				var col = new SchemaColumn(baseName, name, type, allowNull, size);
+				return this.AddColumn(null, name, type, allowNull, size, format);
+			}
+
+			/// <summary>
+			/// Adds a column
+			/// </summary>
+			public Builder AddColumn(string? baseName, string name, DbType type, bool allowNull = true, int? size = null, string? format = null)
+			{
+				var col = new SchemaColumn(this.columns.Count, baseName, name, type, allowNull, size, format);
 				this.columns.Add(col);
 				return this;
 			}
@@ -218,14 +400,11 @@ namespace Sylvan.Data
 		// FirstName:string[32]?;
 		// LastName:string[32]?;
 		// *:double?;
-
-		Dictionary<string, SchemaColumn> namedColumns;
 		SchemaColumn[] columns;
 
 		private Schema(IEnumerable<SchemaColumn> cols)
 		{
 			this.columns = cols.ToArray();
-			this.namedColumns = cols.Where(c => c.ColumnName != null).ToDictionary(c => c.ColumnName, c => c);
 		}
 
 		/// <summary>
@@ -242,18 +421,14 @@ namespace Sylvan.Data
 		{
 			this.columns =
 				schema
-				.Select(c => new SchemaColumn(c))
+				.Select(c => c as SchemaColumn ?? new SchemaColumn(c))
 				.ToArray();
 
-			this.namedColumns =
-				columns
-				.Where(c => c.BaseColumnName != null)
-				.ToDictionary(c => c.BaseColumnName, c => c);
 		}
 
 		static readonly Regex ColSpecRegex =
 			new Regex(
-				@"^((?<BaseName>[^\>]+)\>)?(?<Name>[^\:]+)?(?::(?<Type>[a-z0-9]+)(\[(?<Size>\d+)\])?(?<AllowNull>\?)?)$",
+				@"^((?<BaseName>[^\>]+)\>)?(?<Name>[^\:]+)?(?::(?<Type>[a-z0-9]+)(\[(?<Size>\d+)\])?(?<AllowNull>\?)?(\{(?<Format>[^\}]+)\})?)?$",
 				RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant
 			);
 
@@ -279,20 +454,37 @@ namespace Sylvan.Data
 				var match = ColSpecRegex.Match(colSpec);
 				if (match.Success)
 				{
-					var baseName = WebUtility.UrlDecode(match.Groups["BaseName"].Value);
-					var name = WebUtility.UrlDecode(match.Groups["Name"].Value);
-					var typeName = match.Groups["Type"].Value;
-					var allowNull = match.Groups["AllowNull"].Success;
-					var sg = match.Groups["Size"];
-					var size = sg.Success ? int.Parse(sg.Value) : (int?)null;
-					if (map.TryGetValue(typeName, out var type))
+					var typeGroup = match.Groups["Type"];
+					var formatGroup = match.Groups["Format"];
+					var baseNameGroup = match.Groups["BaseName"];
+					var baseName = baseNameGroup.Success ? baseNameGroup.Value : null;
+					var name = match.Groups["Name"].Value;
+					DbType type = DbType.String;
+					bool allowNull = false;
+					int size = -1;
+					if (typeGroup.Success)
 					{
-						builder.AddColumn(baseName, name, type, allowNull, size ?? -1);
-
-						continue;
+						var typeName = typeGroup.Value;
+						allowNull = match.Groups["AllowNull"].Success;
+						var sg = match.Groups["Size"];
+						size = sg.Success ? int.Parse(sg.Value) : -1;
+						if (!map.TryGetValue(typeName, out type))
+						{
+							return null;
+						}
 					}
+					string? format = null;
+					if (formatGroup.Success)
+					{
+						format = formatGroup.Value;
+					}
+
+					builder.AddColumn(baseName, name, type, allowNull, size == -1 ? null : (int?)size, format);
 				}
-				return null;
+				else
+				{
+					return null;
+				}
 			}
 			return builder.Build();
 		}
@@ -327,12 +519,24 @@ namespace Sylvan.Data
 					}
 				}
 
-				if (col.BaseColumnName != null && col.BaseColumnName != col.ColumnName)
+				if (col.IsSeries == true)
 				{
-					w.Write(WebUtility.UrlEncode(col.BaseColumnName));
-					w.Write(">");
+					if (col.SeriesHeaderFormat != null)
+					{
+						w.Write(col.SeriesHeaderFormat);
+						w.Write(">");
+					}
+					w.Write(col.SeriesName + "*");
 				}
-				w.Write(WebUtility.UrlEncode(col.ColumnName));
+				else
+				{
+					if (col.BaseColumnName != null && col.BaseColumnName != col.ColumnName)
+					{
+						w.Write(col.BaseColumnName);
+						w.Write(">");
+					}
+					w.Write(col.ColumnName);
+				}
 				WriteType(w, col);
 			}
 
@@ -341,17 +545,36 @@ namespace Sylvan.Data
 
 		static void WriteType(TextWriter w, SchemaColumn col)
 		{
+			if (col.DataType == typeof(string) && col.AllowDBNull == false && col.ColumnSize == null)
+				return;
+
 			w.Write(":");
-			w.Write(col.DbType.ToString());
+			w.Write(GetTypeName(col.DbType));
 			if (HasLength(col.DbType))
 			{
-				w.Write("[");
-				w.Write(col.ColumnSize?.ToString() ?? "*");
-				w.Write("]");
+				if (col.ColumnSize != null)
+				{
+					w.Write("[");
+					w.Write(col.ColumnSize?.ToString() ?? "*");
+					w.Write("]");
+				}
 			}
 			if (col.AllowDBNull != false)
 			{
 				w.Write("?");
+			}
+		}
+
+		static string GetTypeName(DbType type)
+		{
+			switch (type)
+			{
+				case DbType.Int32:
+					return "int";
+				case DbType.String:
+					return "string";
+				default:
+					return type.ToString();
 			}
 		}
 

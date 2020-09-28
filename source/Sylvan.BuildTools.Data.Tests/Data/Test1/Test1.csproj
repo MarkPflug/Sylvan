@@ -1,0 +1,11 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <OutputType>exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../../../../source/Sylvan.Data/Sylvan.Data.csproj"/>
+    <ProjectReference Include="../../../../../source/Sylvan.Data.Csv/Sylvan.Data.Csv.csproj"/>
+  </ItemGroup>
+</Project>

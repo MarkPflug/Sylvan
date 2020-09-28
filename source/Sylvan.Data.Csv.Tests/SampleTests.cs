@@ -292,9 +292,6 @@ namespace Sylvan.Data.Csv
 				.Select(i => new { Id = i, Name = "name " + i, Code = (i % 2 == 1) ? "" : "OR" });
 
 			var dataReader = ObjectDataReader.Create(data);
-			dataReader.AddColumn("Id", r => r.Id);
-			dataReader.AddColumn("Name", r => r.Name);
-			dataReader.AddColumn("Code", r => r.Code);
 
 			using var cmd = conn.CreateCommand();
 			cmd.CommandText = "InsertSimple2";
@@ -352,8 +349,6 @@ namespace Sylvan.Data.Csv
 				.Select(i => new { Id = i, Name = "name " + i });
 
 			var dataReader = ObjectDataReader.Create(data);
-			dataReader.AddColumn("Id", r => r.Id);
-			dataReader.AddColumn("Name", r => r.Name);
 
 			using var cmd = conn.CreateCommand();
 			cmd.CommandText = "InsertSimple1";

@@ -1,4 +1,14 @@
 # Sylvan.Data.Csv Release Notes
+_0.7.4_
+
+- Remove usage of ValueTuple, which is apparently problematic in some scenarios.
+
+_0.7.3_
+
+- Support user-allocated buffer, to allow pooling.
+- More consistent default-schema behavior around null/empty. (Technically breaking, but shouldn't affect reasonable code.)
+- Nullability annotations aligned with BCL base types.
+- Expose RowFieldCount to allow detecting missing/extra fields in rows.
 
 _0.7.2_
 
