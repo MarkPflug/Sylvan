@@ -7,7 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Dapper" Version="2.0.35" />
     <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="1.1.1" />
     <PackageReference Include="System.Buffers" Version="4.4.0" />
     <PackageReference Include="System.Data.SqlClient" Version="4.8.1" />
@@ -20,10 +19,6 @@
     <ProjectReference Include="..\Sylvan.Data.Tests\Sylvan.Data.Tests.csproj" />
     <ProjectReference Include="..\Sylvan.Data\Sylvan.Data.csproj" />
   </ItemGroup>
-
-  <!--<ItemGroup>
-    <Compile Include="../Sylvan.Data.Tests/TestData.cs"/>
-  </ItemGroup>-->
 
   <ItemGroup>
     <None Update="Data\**\*">

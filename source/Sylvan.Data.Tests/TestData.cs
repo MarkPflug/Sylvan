@@ -9,18 +9,8 @@ using System.Text;
 
 namespace Sylvan.Data
 {
-
 	public sealed class TestRecord
 	{
-		//public TestClass(int i)
-		//{
-		//	this.Id = i;
-		//	this.Name = "Name" + i;
-		//	this.Date = new DateTime(2020, 01, 01).AddDays(i);
-		//	this.IsActive = i % 2 == 1;
-		//	this.DataSet = Enumerable.Range(0, 10).Select(n => (double)n * i * .3).ToArray();
-		//}
-
 		public int Id { get; set; }
 		public string Name { get; set; }
 		public DateTime Date { get; set; }
@@ -30,9 +20,24 @@ namespace Sylvan.Data
 
 	public class TestData
 	{
-
 		const string DataSetUrl = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/f7c2384622806d5297d16c314a7bc0b9cde24937/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_US.csv";
 		const string DataFileName = "Data.csv";
+
+		const string DataSetSchema = @"UID:int,
+iso2,
+iso3,
+code3:int?,
+FIPS:int?,
+Admin2,
+Province_State,
+Country_Region,
+Lat:float?,
+Long_:float?,
+Combined_Key,
+{Date}>Values*:int";
+
+		static ICsvSchemaProvider Schema;
+		static CsvDataReaderOptions Options;
 
 		static string CachedData;
 		static byte[] CachedUtfData;
@@ -54,6 +59,8 @@ namespace Sylvan.Data
 			// is it a bad idea to do this in a static constructor?
 			// probably, but this is only used in test/benchmarks.
 			CacheData();
+			Schema = new CsvSchema(Sylvan.Data.Schema.TryParse(DataSetSchema).GetColumnSchema());
+			Options = new CsvDataReaderOptions { Schema = Schema };
 		}
 
 		public static string DataFile
@@ -76,7 +83,14 @@ namespace Sylvan.Data
 
 		public static DbDataReader GetData()
 		{
+			
 			return CsvDataReader.Create(GetTextReader());
+		}
+
+		public static DbDataReader GetDataWithSchema()
+		{
+
+			return CsvDataReader.Create(GetTextReader(), Options);
 		}
 
 		public static DbDataReader GetTypedData()
@@ -123,8 +137,6 @@ namespace Sylvan.Data
 				this.AllowDBNull = allowNull;
 			}
 		}
-
-		
 
 		static ObjectDataReader.Factory<TestRecord> Factory = 
 			ObjectDataReader

@@ -6,7 +6,6 @@ using System.Data.Common;
 using System.IO;
 using System.Linq;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Sylvan.Data
 {
