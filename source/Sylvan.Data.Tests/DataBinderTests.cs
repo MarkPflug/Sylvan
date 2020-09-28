@@ -153,7 +153,7 @@ namespace Sylvan.Data
 		[Fact]
 		public void SeriesInt()
 		{
-			var schemaSpec = "Id:int,Name,{Integer}>Values:int";
+			var schemaSpec = "Id:int,Name,{Integer}>Values*:int";
 			var schema = Schema.TryParse(schemaSpec);
 			var cols = schema.GetColumnSchema();
 			var binderFactory = DataBinder<SeriesRecord>.CreateFactory(cols);

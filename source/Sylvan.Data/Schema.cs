@@ -14,6 +14,9 @@ namespace Sylvan.Data
 	/// </summary>
 	public sealed class Schema : IDbColumnSchemaGenerator
 	{
+		public const string DateSeriesMarker = "{Date}";
+		public const string IntegerSeriesMarker = "{Integer}";
+
 		static readonly Lazy<Dictionary<string, DbType>> ColumnTypeMap = new Lazy<Dictionary<string, DbType>>(InitializeTypeMap);
 
 		static Dictionary<string, DbType> InitializeTypeMap()
@@ -165,11 +168,11 @@ namespace Sylvan.Data
 					this.SeriesOrdinal = 0;
 					this.SeriesName = name?.Substring(0, name.Length - 1);
 					this.SeriesHeaderFormat = baseName;
-					if (SeriesHeaderFormat?.IndexOf("{Date}", StringComparison.OrdinalIgnoreCase) >= 0)
+					if (SeriesHeaderFormat?.IndexOf(DateSeriesMarker, StringComparison.OrdinalIgnoreCase) >= 0)
 					{
 						this.SeriesType = typeof(DateTime);
 					}
-					if (SeriesHeaderFormat?.IndexOf("{Integer}", StringComparison.OrdinalIgnoreCase) >= 0)
+					if (SeriesHeaderFormat?.IndexOf(IntegerSeriesMarker, StringComparison.OrdinalIgnoreCase) >= 0)
 					{
 						this.SeriesType = typeof(int);
 					}
@@ -542,7 +545,7 @@ namespace Sylvan.Data
 
 		static void WriteType(TextWriter w, SchemaColumn col)
 		{
-			if (col.DataType == typeof(string) && col.AllowDBNull == false && col.ColumnSize == int.MaxValue)
+			if (col.DataType == typeof(string) && col.AllowDBNull == false && col.ColumnSize == null)
 				return;
 
 			w.Write(":");

@@ -9,9 +9,9 @@ namespace Sylvan.Data.Csv
 		[Fact]
 		public void Test1()
 		{
-			//var data = TestData.GetTestDataReader();
-			//var schema = new Schema(data);
-			//var spec = schema.GetSchemaSpecification(true);
+			var data = TestData.GetTestDataReader();
+			var schema = new Schema(data);
+			var spec = schema.GetSchemaSpecification(true);
 		}
 
 		[Fact]
@@ -24,14 +24,16 @@ namespace Sylvan.Data.Csv
 		[Fact]
 		public void ParseTest2()
 		{
-			var spec = Schema.TryParse("Abra,Cadabra");
+			var spec = Schema.TryParse("A,B");
 			Assert.NotNull(spec);
 			var cols = spec.GetColumnSchema();
-			Assert.Equal("Abra", cols[0].ColumnName);
+			Assert.Equal("A", cols[0].ColumnName);
 			Assert.Equal(typeof(string), cols[0].DataType);
+			Assert.False(cols[0].AllowDBNull);
 
-			Assert.Equal("Cadabra", cols[1].ColumnName);
+			Assert.Equal("B", cols[1].ColumnName);
 			Assert.Equal(typeof(string), cols[1].DataType);
+			Assert.False(cols[1].AllowDBNull);
 		}
 
 		[Fact]

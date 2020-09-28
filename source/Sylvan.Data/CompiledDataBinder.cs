@@ -179,11 +179,16 @@ namespace Sylvan.Data
 								seriesAccType
 							)
 						);
-					// TODO: need to handle other series types.
-					var seriesType = typeof(DateSeries<>).MakeGenericType(schemaCol.DataType);
-					var seriesCtor = seriesType.GetConstructor(new Type[] { typeof(DateTime), typeof(IEnumerable<>).MakeGenericType(schemaCol.DataType) });
+		
+					Type seriesType = 
+						schemaCol.SeriesType == typeof(DateTime) 
+						? typeof(DateSeries<>)
+						: typeof(Series<>);
+					seriesType = seriesType.MakeGenericType(schemaCol.DataType);
 
-					// TODO: this is terrible. Just push this down as a constructor on Series.
+					var seriesCtor = seriesType.GetConstructor(new Type[] { schemaCol.SeriesType!, typeof(IEnumerable<>).MakeGenericType(schemaCol.DataType) });
+
+					// TODO: push this down as a constructor on Series?
 					var ctorExpr =
 						Expression.New(
 							seriesCtor,
@@ -254,7 +259,7 @@ namespace Sylvan.Data
 			switch (Type.GetTypeCode(seriesCol.SeriesType))
 			{
 				case TypeCode.Int32:
-					throw new NotImplementedException();
+					return GetIntSeriesAccessor(seriesCol, physicalSchema);
 				case TypeCode.DateTime:
 					return GetDateSeriesAccessor(seriesCol, physicalSchema);
 				default:
@@ -264,14 +269,14 @@ namespace Sylvan.Data
 
 		static object GetDateSeriesAccessor(Schema.SchemaColumn seriesCol, ReadOnlyCollection<DbColumn> physicalSchema)
 		{
-			var fmt = seriesCol.SeriesHeaderFormat ?? "{Date}"; //asdf{Date}qwer => ^asdf(.*)qwer$
+			var fmt = seriesCol.SeriesHeaderFormat ?? Schema.DateSeriesMarker; //asdf{Date}qwer => ^asdf(.+)qwer$
 
 			var accessorType = typeof(DataSeriesAccessor<,>).MakeGenericType(typeof(DateTime), seriesCol.DataType);
 			var cols = new List<DataSeriesColumn<DateTime>>();
-			var i = fmt.IndexOf("{Date}", StringComparison.OrdinalIgnoreCase);
+			var i = fmt.IndexOf(Schema.DateSeriesMarker, StringComparison.OrdinalIgnoreCase);
 
 			var prefix = fmt.Substring(0, i);
-			var suffix = fmt.Substring(i + "{Date}".Length);
+			var suffix = fmt.Substring(i + Schema.DateSeriesMarker.Length);
 			var pattern = "^" + Regex.Escape(prefix) + "(.+)" + Regex.Escape(suffix) + "$";
 
 			var regex = new Regex(pattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
@@ -287,6 +292,38 @@ namespace Sylvan.Data
 					{
 						var ordinal = col.ColumnOrdinal!.Value;
 						cols.Add(new DataSeriesColumn<DateTime>(name, d, ordinal));
+					}
+				}
+			}
+
+			return Activator.CreateInstance(accessorType, cols);
+		}
+
+		static object GetIntSeriesAccessor(Schema.SchemaColumn seriesCol, ReadOnlyCollection<DbColumn> physicalSchema)
+		{			
+			var fmt = seriesCol.SeriesHeaderFormat ?? Schema.IntegerSeriesMarker; //col{Integer} => ^col(\d+)$
+
+			var accessorType = typeof(DataSeriesAccessor<,>).MakeGenericType(typeof(int), seriesCol.DataType);
+			var cols = new List<DataSeriesColumn<int>>();
+			var i = fmt.IndexOf(Schema.IntegerSeriesMarker, StringComparison.OrdinalIgnoreCase);
+
+			var prefix = fmt.Substring(0, i);
+			var suffix = fmt.Substring(i + Schema.IntegerSeriesMarker.Length);
+			var pattern = "^" + Regex.Escape(prefix) + "(\\d+)" + Regex.Escape(suffix) + "$";
+
+			var regex = new Regex(pattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+			foreach (var col in physicalSchema)
+			{
+				var name = col.ColumnName;
+				var match = regex.Match(name);
+				if (match.Success)
+				{
+					var intStr = match.Captures[0].Value;
+					int d;
+					if (int.TryParse(intStr, out d))
+					{
+						var ordinal = col.ColumnOrdinal!.Value;
+						cols.Add(new DataSeriesColumn<int>(name, d, ordinal));
 					}
 				}
 			}

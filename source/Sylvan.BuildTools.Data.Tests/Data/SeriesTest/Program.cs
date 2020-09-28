@@ -8,16 +8,16 @@ class Program
 	{
 		var t = Type.GetType("Issues");
 
-		foreach(var issue in IssuesSet.Read())
-        {
+		foreach (var issue in IssuesSet.Read())
+		{
 			Console.WriteLine(issue.State);
 			Console.WriteLine(issue.County);
-			foreach(var v in issue.Values)
-            {
+			foreach (var v in issue.Values)
+			{
 				Console.WriteLine(v);
 			}
 		}
-		
+
 		return t == null ? 0 : 1;
 	}
 }
