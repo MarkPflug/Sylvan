@@ -4,7 +4,7 @@
     <TargetFramework>netstandard2.0</TargetFramework>
 
     <VersionPrefix>0.1.0</VersionPrefix>
-    <VersionSuffix>B0032</VersionSuffix>
+    <VersionSuffix>B0033</VersionSuffix>
     <Description>CSV data access build tools.</Description>
     <NoPackageAnalysis>true</NoPackageAnalysis>
     <BuildOutputTargetFolder>build</BuildOutputTargetFolder>    

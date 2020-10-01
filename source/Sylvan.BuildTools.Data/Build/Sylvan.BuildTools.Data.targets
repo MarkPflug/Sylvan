@@ -26,9 +26,7 @@
 	<ItemGroup>
 		<SylvanData
 		  Include="**/*.csv"
-		  Exclude="@(SylvanData);$(DefaultItemExcludes)">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</SylvanData>
+		  Exclude="@(SylvanData);$(DefaultItemExcludes)"/>
 	</ItemGroup>
 
 	<ItemGroup>
@@ -38,10 +36,9 @@
 			<GeneratedSchema>$(SylvanDataCodeGenerationRoot)%(Filename)%(Extension).schema</GeneratedSchema>
 			<GeneratedCode>$(SylvanDataCodeGenerationRoot)%(Filename)%(Extension).g.cs</GeneratedCode>
 		</SylvanData>
-
-		<!--<Compile Include="@(SylvanData->'%(GeneratedCode)')">
-			<Visible>false</Visible>
-		</Compile>-->
+		<None Update="@(SylvanData)">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>			
+		</None>
 
 	</ItemGroup>
 
@@ -56,14 +53,7 @@
 		<SylvanDataGenerateSchema InputFiles="@(SylvanData)"/>
 	</Target>
 
-	<Target
-		Name="SylvanDataCompileInclude"
-		DependsOnTargets="SylvanDataCodeGen"
-		>
-		<ItemGroup>
-			<Compile Include="%(SylvanData.GeneratedCode)"/>
-		</ItemGroup>
-	</Target>
+	
 
 	<Target
 	  Name="SylvanDataCodeGen"
@@ -76,6 +66,15 @@
 			InputFiles="@(SylvanData)"
 		/>
 
+	</Target>
+	
+	<Target
+		Name="SylvanDataCompileInclude"
+		DependsOnTargets="SylvanDataCodeGen"
+		>
+		<ItemGroup>
+			<Compile Include="%(SylvanData.GeneratedCode)"/>
+		</ItemGroup>
 	</Target>
 
 	<Target
