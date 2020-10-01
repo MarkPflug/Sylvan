@@ -16,8 +16,7 @@
 	<PropertyGroup>
 
 		<CoreCompileDependsOn>
-			SylvanDataGenerateSchema;
-			SylvanDataCodeGen;
+			SylvanDataCompileInclude;
 			$(CoreCompileDependsOn)
 		</CoreCompileDependsOn>
 
@@ -40,9 +39,9 @@
 			<GeneratedCode>$(SylvanDataCodeGenerationRoot)%(Filename)%(Extension).g.cs</GeneratedCode>
 		</SylvanData>
 
-		<Compile Include="@(SylvanData->'%(GeneratedCode)')">
+		<!--<Compile Include="@(SylvanData->'%(GeneratedCode)')">
 			<Visible>false</Visible>
-		</Compile>
+		</Compile>-->
 
 	</ItemGroup>
 
@@ -58,9 +57,12 @@
 	</Target>
 
 	<Target
-	  Name="CleanSylvanData"
-	  BeforeTargets="Clean">
-		<Delete Files="%(SylvanData.GeneratedSchema);%(SylvanData.GeneratedCode)"/>
+		Name="SylvanDataCompileInclude"
+		DependsOnTarget="SylvanDataCodeGen"
+		>
+		<ItemGroup>
+			<Compile Include="%(SylvanData.GeneratedCode)"/>
+		</ItemGroup>
 	</Target>
 
 	<Target
@@ -72,7 +74,14 @@
 		<MakeDir Directories="$(SylvanDataCodeGenerationRoot)%(SylvanData.RecursiveDir)"/>
 		<SylvanDataCodeGen
 			InputFiles="@(SylvanData)"
-	/>
+		/>
 
 	</Target>
+
+	<Target
+	  Name="CleanSylvanData"
+	  BeforeTargets="Clean">
+		<Delete Files="%(SylvanData.GeneratedSchema);%(SylvanData.GeneratedCode)"/>
+	</Target>
+
 </Project>
