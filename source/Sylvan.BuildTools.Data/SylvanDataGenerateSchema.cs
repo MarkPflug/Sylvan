@@ -43,7 +43,7 @@ namespace Sylvan.BuildTools.Data
 				{
 					bool hasHeaders = HasHeaders(csvFile);
 					using var csv = CsvDataReader.Create(csvFile, new CsvDataReaderOptions { HasHeaders = hasHeaders });
-					var analyzer = new SchemaAnalyzer(new SchemaAnalyzerOptions { AnalyzeRowCount = 1000 });
+					var analyzer = new SchemaAnalyzer(new SchemaAnalyzerOptions { AnalyzeRowCount = 10000 });
 					var result = analyzer.Analyze(csv);
 					var schema = result.GetSchema();
 					var spec = new Schema(schema).GetSchemaSpecification(true);
