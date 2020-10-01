@@ -58,7 +58,7 @@
 
 	<Target
 		Name="SylvanDataCompileInclude"
-		DependsOnTarget="SylvanDataCodeGen"
+		DependsOnTargets="SylvanDataCodeGen"
 		>
 		<ItemGroup>
 			<Compile Include="%(SylvanData.GeneratedCode)"/>
