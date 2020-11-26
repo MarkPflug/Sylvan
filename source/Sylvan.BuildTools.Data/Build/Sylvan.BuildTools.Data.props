@@ -10,7 +10,7 @@
 
   <ItemDefinitionGroup>
     <SylvanData>
-      <Generator>MSBuild:SylvanDataCodeGen</Generator>	 
+      <Generator>MSBuild:SylvanDataCompileInclude</Generator>
     </SylvanData>
   </ItemDefinitionGroup>
   
