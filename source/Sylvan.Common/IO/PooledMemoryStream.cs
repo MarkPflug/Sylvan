@@ -234,7 +234,7 @@ namespace Sylvan.IO
 				var rem = length - position;
 				cancellationToken.ThrowIfCancellationRequested();
 				var blockIdx = position >> blockShift;
-				var block = this.blocks[blockIdx];
+				var block = this.blocks[blockIdx]!;
 				var blockOffset = (int)(position & blockMask);
 				var blockCount = blockSize - blockOffset;
 				var blockLen = rem < blockCount ? (int)rem : blockCount;

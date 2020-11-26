@@ -3,8 +3,8 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
 
-    <VersionPrefix>0.1.0</VersionPrefix>
-    <VersionSuffix>B0022</VersionSuffix>
+    <VersionPrefix>0.1.1</VersionPrefix>
+    <VersionSuffix>B0003</VersionSuffix>
     <Description>CSV data access build tools.</Description>
     <NoPackageAnalysis>true</NoPackageAnalysis>
     <BuildOutputTargetFolder>build</BuildOutputTargetFolder>    

@@ -18,6 +18,21 @@ namespace Sylvan.Data
 		public double[] DataSet { get; set; }
 	}
 
+	public sealed class CovidRow
+	{
+		public int UID { get; set; }
+		public string iso2 { get; set; }
+		public string iso3 { get; set; }
+		public int? code3 { get; set; }
+		public float? FIPS { get; set; }
+		public string Admin2 { get; set; }
+		public string Province_State { get; set; }
+		public string Country_Region { get; set; }
+		public float? Lat { get; set; }
+		public float? Long_ { get; set; }
+		public string Combined_Key { get; set; }
+	}
+
 	public class TestData
 	{
 		const string DataSetUrl = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/f7c2384622806d5297d16c314a7bc0b9cde24937/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_US.csv";
@@ -27,7 +42,7 @@ namespace Sylvan.Data
 iso2,
 iso3,
 code3:int?,
-FIPS:int?,
+FIPS:float?,
 Admin2,
 Province_State,
 Country_Region,
@@ -83,18 +98,18 @@ Combined_Key,
 
 		public static DbDataReader GetData()
 		{
-			
+
 			return CsvDataReader.Create(GetTextReader());
 		}
 
-		public static DbDataReader GetDataWithSchema()
+		public static DbDataReader GetDataWithSchema(Action<CsvDataReaderOptions> opts = null)
 		{
-
+			opts?.Invoke(Options);
 			return CsvDataReader.Create(GetTextReader(), Options);
 		}
 
 		public static DbDataReader GetTypedData()
-		{
+		{ 
 			var reader = File.OpenText("Data\\Schema.csv");
 			return CsvDataReader.Create(reader, new CsvDataReaderOptions() { Schema = DataSchema.Instance });
 		}
@@ -110,7 +125,7 @@ Combined_Key,
 
 			private DataSchema()
 			{
-				Type i = typeof(int), s = typeof(string), f = typeof(double);
+				Type i = typeof(int), s = typeof(string), f = typeof(float);
 				types = new Type[] { i, s, s, i, f, s, s, s, f, f, s };
 				nullable = new bool[] { false, false, false, false, true };
 			}
@@ -138,7 +153,7 @@ Combined_Key,
 			}
 		}
 
-		static ObjectDataReader.Factory<TestRecord> Factory = 
+		static ObjectDataReader.Factory<TestRecord> Factory =
 			ObjectDataReader
 				.BuildFactory<TestRecord>()
 				.AddColumn("Id", i => i.Id)
@@ -147,7 +162,7 @@ Combined_Key,
 				.AddColumn("IsActive", i => i.IsActive)
 				.Repeat((b, i) => b.AddColumn("Data" + i, r => r.DataSet[i]), 10)
 				.Build();
-			
+
 
 		public static DbDataReader GetTestData(int count = 10)
 		{
@@ -190,7 +205,7 @@ Combined_Key,
 			ObjectDataReader
 				.BuildFactory<BinaryData>()
 				.AddColumn("Id", d => d.Id)
-				.AddColumn("Data", d => d.Data)				
+				.AddColumn("Data", d => d.Data)
 				.Build();
 
 		public static DbDataReader GetBinaryData()

@@ -26,6 +26,7 @@
   </ItemGroup>
 
    <Target
+     Condition="false"
      Name="PackValidations" BeforeTargets="GenerateNuspec">
     <!-- Attempt to prevent myself from accidentally releaseing a debug build. -->
     <Error Condition="$(Configuration) != 'Release'" Text="Attempting to pack a debug build."/>

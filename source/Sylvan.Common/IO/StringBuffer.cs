@@ -70,10 +70,10 @@ namespace Sylvan.IO
 			this.Write(((Span<char>)buffer).Slice(offset, count));
 		}
 
-#if NETSTANDARD2_1
-		public override void Write(ReadOnlySpan<char> buffer)
-#else
+#if NETSTANDARD2_0
 		public void Write(ReadOnlySpan<char> buffer)
+#else
+		public override void Write(ReadOnlySpan<char> buffer)
 #endif
 		{
 			var offset = 0;

@@ -1,78 +1,79 @@
 ﻿<Project>
 
-	<UsingTask
+  <UsingTask
 	  AssemblyFile="$(SylvanDataTaskAssembly)"
 	  TaskName="SylvanDataGenerateSchema"/>
 
-	<UsingTask
+  <UsingTask
 	  AssemblyFile="$(SylvanDataTaskAssembly)"
 	   TaskName="SylvanDataCodeGen"/>
 
-	<ItemGroup>
-		<!--<PropertyPageSchema Include="$(MSBuildThisFileDirectory)Sylvan.BuildTools.Data.xaml" />
+  <ItemGroup>
+    <!--<PropertyPageSchema Include="$(MSBuildThisFileDirectory)Sylvan.BuildTools.Data.xaml" />
     <PropertyPageSchema Include="$(MSBuildThisFileDirectory)Sylvan.BuildTools.Data.ContentType.xaml" />-->
-	</ItemGroup>
+  </ItemGroup>
 
-	<PropertyGroup>
+  <PropertyGroup>
 
-		<CoreCompileDependsOn>
-			SylvanDataGenerateSchema;
-			SylvanDataCodeGen;
-			$(CoreCompileDependsOn)
-		</CoreCompileDependsOn>
+    <CoreCompileDependsOn>
+      SylvanDataGenerateSchema;
+      SylvanDataCodeGen;
+      $(CoreCompileDependsOn)
+    </CoreCompileDependsOn>
 
-		<SylvanDataCodeGenerationRoot>$([System.IO.Path]::Combine($(MSBuildProjectDirectory), $(IntermediateOutputPath), 'Sylvan'))\</SylvanDataCodeGenerationRoot>
-	</PropertyGroup>
+    <SylvanDataCodeGenerationRoot>$([System.IO.Path]::Combine($(MSBuildProjectDirectory), $(IntermediateOutputPath), 'Sylvan'))\</SylvanDataCodeGenerationRoot>
+  </PropertyGroup>
 
-	<ItemGroup>
-		<SylvanData
+  <ItemGroup>
+    <SylvanData
 		  Include="**/*.csv"
-		  Exclude="@(SylvanData);$(DefaultItemExcludes)">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</SylvanData>
-	</ItemGroup>
+		  Exclude="@(SylvanData);$(DefaultItemExcludes);obj/**/*"/>
 
-	<ItemGroup>
+    <None Update="@(SylvanData)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 
-		<SylvanData Update="@(SylvanData)">
-			<Schema Condition="Exists('%(Filename)%(Extension).schema')">%(Filename)%(Extension).schema</Schema>
-			<GeneratedSchema>$(SylvanDataCodeGenerationRoot)%(Filename)%(Extension).schema</GeneratedSchema>
-			<GeneratedCode>$(SylvanDataCodeGenerationRoot)%(Filename)%(Extension).g.cs</GeneratedCode>
-		</SylvanData>
+  <ItemGroup>
 
-		<Compile Include="@(SylvanData->'%(GeneratedCode)')">
-			<Visible>false</Visible>
-		</Compile>
+    <SylvanData Update="@(SylvanData)">
+      <Schema Condition="Exists('%(Filename)%(Extension).schema')">%(Filename)%(Extension).schema</Schema>
+      <GeneratedSchema>$(SylvanDataCodeGenerationRoot)%(Filename)%(Extension).schema</GeneratedSchema>
+      <GeneratedCode>$(SylvanDataCodeGenerationRoot)%(Filename)%(Extension).g.cs</GeneratedCode>
+    </SylvanData>
+  </ItemGroup>
 
-	</ItemGroup>
-
-	<Target
+  <Target
 	  Name="SylvanDataGenerateSchema"
 	  BeforeTargets="SylvanDataCodeGen"
 	  Inputs="@(SylvanData);$(MSBuildProjectFile);$(SylvanDataTaskAssembly)"
 	  Outputs="%(SylvanData.GeneratedSchema)"
   >
 
-		<MakeDir Directories="$(SylvanDataCodeGenerationRoot)%(SylvanData.RecursiveDir)"/>
-		<SylvanDataGenerateSchema InputFiles="@(SylvanData)"/>
-	</Target>
+    <MakeDir Directories="$(SylvanDataCodeGenerationRoot)%(SylvanData.RecursiveDir)"/>
+    <SylvanDataGenerateSchema InputFiles="@(SylvanData)"/>
+  </Target>
 
-	<Target
+  <Target
 	  Name="CleanSylvanData"
 	  BeforeTargets="Clean">
-		<Delete Files="%(SylvanData.GeneratedSchema);%(SylvanData.GeneratedCode)"/>
-	</Target>
+    <Delete Files="%(SylvanData.GeneratedSchema);%(SylvanData.GeneratedCode)"/>
+  </Target>
 
-	<Target
+  <Target
 	  Name="SylvanDataCodeGen"
 	  Condition="'@(SylvanData)' != ''"
 	  Inputs="%(SylvanData.GeneratedSchema);%(SylvanData.Schema);$(MSBuildProjectFile);$(SylvanDataTaskAssembly)"
 	  Outputs="%(SylvanData.GeneratedCode)"
     >
-		<MakeDir Directories="$(SylvanDataCodeGenerationRoot)%(SylvanData.RecursiveDir)"/>
-		<SylvanDataCodeGen
+    <MakeDir Directories="$(SylvanDataCodeGenerationRoot)%(SylvanData.RecursiveDir)"/>
+    <SylvanDataCodeGen
 			InputFiles="@(SylvanData)"
-	/>
-
-	</Target>
+	  />
+    <ItemGroup>
+      <Compile Include="@(SylvanData->'%(GeneratedCode)')">
+        <Visible>false</Visible>
+      </Compile>
+    </ItemGroup>
+  </Target>
 </Project>

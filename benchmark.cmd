@@ -1,2 +1,2 @@
-rem bin\release\net50\Sylvan.Benchmarks.exe
-bin\release\netcoreapp3.1\Sylvan.Benchmarks.exe
+bin\release\net5.0\Sylvan.Benchmarks.exe
+rem --cli "c:\Program Files\dotnet\dotnet.exe"

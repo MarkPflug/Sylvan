@@ -10,6 +10,8 @@ using System.Globalization;
 using System.IO;
 using System.Threading.Tasks;
 
+using Cesil;
+
 namespace Sylvan.Data.Csv
 {
 	[MemoryDiagnoser]
@@ -28,6 +30,22 @@ namespace Sylvan.Data.Csv
 		public void CsvHelper()
 		{
 			var tr = TestData.GetTextReader();
+			var csv = new CsvHelper.CsvDataReader(new CsvHelper.CsvReader(tr, new CsvHelper.Configuration.CsvConfiguration(CultureInfo.CurrentCulture)));
+			var dr = (IDataReader)csv;
+			while (dr.Read())
+			{
+				for (int i = 0; i < dr.FieldCount; i++)
+				{
+					var s = dr.GetString(i);
+				}
+			}
+		}
+
+		[Benchmark]
+		public void CesilCsv()
+		{
+			var tr = TestData.GetTextReader();
+
 			var csv = new CsvHelper.CsvDataReader(new CsvHelper.CsvReader(tr, new CsvHelper.Configuration.CsvConfiguration(CultureInfo.CurrentCulture)));
 			var dr = (IDataReader)csv;
 			while (dr.Read())

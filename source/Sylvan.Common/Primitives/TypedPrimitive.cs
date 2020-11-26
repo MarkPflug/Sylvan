@@ -206,9 +206,9 @@ namespace Sylvan.Primitives
 			return this.type.GetHashCode() ^ this.value.GetHashCode();
 		}
 
-		public override bool Equals(object obj)
+		public override bool Equals(object? obj)
 		{
-			return obj is TypedPrimitive && Equals((TypedPrimitive)obj);
+			return obj is TypedPrimitive p && Equals(p);
 		}
 
 		public bool Equals(TypedPrimitive obj)

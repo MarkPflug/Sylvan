@@ -332,9 +332,9 @@ namespace Sylvan.Primitives
 
 		#region equality, hashing, tostring
 
-		public override bool Equals(object obj)
+		public override bool Equals(object? obj)
 		{
-			return obj is Primitive && Equals((Primitive)obj);
+			return obj is Primitive p && Equals(p);
 		}
 
 		public override int GetHashCode()

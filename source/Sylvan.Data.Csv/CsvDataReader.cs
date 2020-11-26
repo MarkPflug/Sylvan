@@ -261,7 +261,7 @@ namespace Sylvan.Data.Csv
 				columns[i] = new CsvColumn(name, i, columnSchema);
 
 				name = columns[i].ColumnName;
-				if (name != null)
+				if (!string.IsNullOrEmpty(name))
 				{
 					headerMap.Add(name, i);
 				}
@@ -524,10 +524,10 @@ namespace Sylvan.Data.Csv
 		}
 
 		/// <inheritdoc/>
-		public override object? this[int ordinal] => this.GetValue(ordinal);
+		public override object this[int ordinal] => this.GetValue(ordinal);
 
 		/// <inheritdoc/>
-		public override object? this[string name] => this[this.GetOrdinal(name)];
+		public override object this[string name] => this.GetValue(this.GetOrdinal(name));
 
 		/// <inheritdoc/>
 		public override int Depth => 0;
@@ -623,8 +623,9 @@ namespace Sylvan.Data.Csv
 		}
 
 		/// <inheritdoc/>
-		public override long GetBytes(int ordinal, long dataOffset, byte[] buffer, int bufferOffset, int length)
+		public override long GetBytes(int ordinal, long dataOffset, byte[]? buffer, int bufferOffset, int length)
 		{
+			if (buffer == null) throw new ArgumentNullException(nameof(buffer));
 			if (dataOffset > int.MaxValue) throw new ArgumentOutOfRangeException(nameof(dataOffset));
 
 			if (scratch == null)
@@ -735,8 +736,9 @@ namespace Sylvan.Data.Csv
 		}
 
 		/// <inheritdoc/>
-		public override long GetChars(int ordinal, long dataOffset, char[] buffer, int bufferOffset, int length)
+		public override long GetChars(int ordinal, long dataOffset, char[]? buffer, int bufferOffset, int length)
 		{
+			if (buffer == null) throw new ArgumentNullException(nameof(buffer));
 			if (dataOffset > int.MaxValue) throw new ArgumentOutOfRangeException(nameof(dataOffset));
 
 			var s = GetField(ordinal);
@@ -797,13 +799,13 @@ namespace Sylvan.Data.Csv
 		/// <inheritdoc/>
 		public override string GetDataTypeName(int ordinal)
 		{
-			return this.columns[ordinal].DataTypeName;
+			return this.columns[ordinal].DataTypeName!;
 		}
 
 		/// <inheritdoc/>
 		public override Type GetFieldType(int ordinal)
 		{
-			return this.columns[ordinal].DataType;
+			return this.columns[ordinal].DataType!;
 		}
 
 		/// <inheritdoc/>
@@ -1186,7 +1188,7 @@ namespace Sylvan.Data.Csv
 
 				var colName = schema?.ColumnName;
 
-				this.ColumnName = string.IsNullOrEmpty(colName) ? name : colName;
+				this.ColumnName = string.IsNullOrEmpty(colName) ? name ?? "" : colName;
 				this.DataType = schema?.DataType ?? typeof(string);
 				this.DataTypeName = schema?.DataTypeName ?? this.DataType.Name;
 

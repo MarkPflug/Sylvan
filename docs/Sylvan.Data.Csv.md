@@ -68,7 +68,7 @@ _Schema_
 
 `CsvDataReader` supports providing a schema for CSV data. Such a schema is useful if the data is going
 to be passed directly to another tool capable of processing the schema, such as `SqlBulkCopy` 
-or APIs that bind row data to objects.. By default, columns are treated as non-null strings.
+or APIs that bind row data to objects. By default, columns are treated as non-null strings.
 The `Sylvan.Data` package provides APIs for easily defining/serializing schemas, as well as binding row data
 to objects.
 
@@ -89,7 +89,7 @@ CsvDataReader supports de-duplicating strings during reading. CSV files often co
 reptetive data. By default, repeated values will be returned as a new, duplicated string. However,
 it is possible to provide a function which allows de-duplicating strings. The `Sylvan.Data.Csv`
 library doesn't include an implementation, but `Sylvan.Common` library provides one via the `StringPool` class.
-This implementation is faster and requires fewer allocations than de-duping using a `HashSet\<string\>` after the fact
+This implementation is faster and requires fewer allocations than de-duping using a `HashSet\<string\>` after the fact.
 
 ## Limitations
 
@@ -112,7 +112,6 @@ _Missing Fields_
 A missing field, meaning a row that contains fewer columns (delimiters) than the header column will be treated
 the same as if it were an empty string. Missing fields can be identified by comparing the RowFieldCount to FieldCount.
 
-
 _Extra Fields_
 
 Extra fields, meaning a row that contains more columns than the header column, will be ignored. 
@@ -123,7 +122,7 @@ _Malformed Fields_
 
 A properly constructed and compliant CSV should quote and escape fields containing delimiters or quotes. 
 Improperly quoted fields will still be parsed from the file. If a field starts with a quote, it will
-be parsed as a quoted field untili the closing quote is found, at which point it will resume un-escaped parsing mode.
+be parsed as a quoted field until the closing quote is found, at which point it will resume un-escaped parsing mode.
 
 Examples:
 

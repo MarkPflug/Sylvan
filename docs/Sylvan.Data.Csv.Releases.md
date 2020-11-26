@@ -1,4 +1,9 @@
 # Sylvan.Data.Csv Release Notes
+
+_0.7.5_
+
+- Add some nullability annotations to align with new annotations exposed in net5.0.
+
 _0.7.4_
 
 - Remove usage of ValueTuple, which is apparently problematic in some scenarios.

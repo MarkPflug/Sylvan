@@ -4,9 +4,10 @@ namespace Sylvan.Benchmarks
 {
 	static class Program
 	{
-		public static void Main()
+		public static void Main(string[] args)
 		{
-			var summary = BenchmarkSwitcher.FromAssembly(typeof(Program).Assembly).Run();
+			var summary = BenchmarkSwitcher
+				.FromAssembly(typeof(Program).Assembly).Run(args);
 		}
 	}
 }
