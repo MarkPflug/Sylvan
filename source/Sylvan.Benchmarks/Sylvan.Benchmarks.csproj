@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-   <TargetFramework>net5.0</TargetFramework>
+   <TargetFrameworks>net5.0;net461</TargetFrameworks>
     <OutputType>exe</OutputType>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
@@ -11,7 +11,7 @@
     <PackageReference Include="Csv" Version="1.0.57" />
     <PackageReference Include="CsvHelper" Version="15.0.5" />
     <PackageReference Include="CsvTextFieldParser" Version="1.2.2-preview" />
-    <PackageReference Include="Cesil" Version="0.6.0" />
+    
     <PackageReference Include="Dapper" Version="2.0.78" />
     <PackageReference Include="FastCsvParser" Version="1.1.1" />
     <PackageReference Include="FlatFiles" Version="4.7.0" />
@@ -24,6 +24,10 @@
     <PackageReference Include="System.Data.OleDb" Version="4.7.0" />
     <PackageReference Include="System.Data.SqlClient" Version="4.8.1" />
    
+  </ItemGroup>
+  
+  <ItemGroup Condition="'$(TargetFramework)' == 'net5.0'">
+    <PackageReference Include="Cesil" Version="0.6.0" />
   </ItemGroup>
 
   <ItemGroup>

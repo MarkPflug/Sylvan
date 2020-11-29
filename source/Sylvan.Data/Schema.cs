@@ -223,6 +223,7 @@ namespace Sylvan.Data
 				var cs =
 					new SchemaColumn()
 					{
+						ColumnName = string.Empty,
 						AllowDBNull = isNullable,
 						IsSeries = true,
 						SeriesOrdinal = 0,

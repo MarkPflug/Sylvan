@@ -1,4 +1,5 @@
 ﻿using Sylvan.Benchmarks;
+using System;
 using System.IO;
 using System.Text;
 using Xunit;
@@ -7,6 +8,7 @@ namespace Sylvan.IO
 {
 	public class MemoryBlockStreamTests
 	{
+
 		[Fact]
 		public void Test1()
 		{
@@ -17,7 +19,7 @@ namespace Sylvan.IO
 			const int Count = 100;
 			for (int i = 0; i < Count; i++)
 			{
-				s.Write(data);
+				s.Write(data, 0, data.Length);
 			}
 
 			s.Seek(0, SeekOrigin.Begin);

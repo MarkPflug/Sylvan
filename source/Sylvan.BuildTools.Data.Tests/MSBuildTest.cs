@@ -4,6 +4,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using Xunit;
 using Xunit.Abstractions;
@@ -34,6 +35,7 @@ namespace Sylvan.BuildTools.Data
 			{
 				FileName = "dotnet",
 				Arguments = exePath + " " + args,
+				WorkingDirectory = Path.GetDirectoryName(exePath),
 				UseShellExecute = false,
 				RedirectStandardOutput = true,
 				RedirectStandardError = true,
@@ -59,15 +61,19 @@ namespace Sylvan.BuildTools.Data
 			}
 		}
 
-		protected string BuildProject(string projFile)
+		protected string BuildProject(string projFile, bool restore = true)
 		{
 			var pc = new ProjectCollection(gp);
 			var proj = pc.LoadProject(projFile);
-			var success = proj.Build("Restore", new[] { logger });
-			//if (!success) LogProps(proj);
-			Assert.True(success, "Failed to restore packages");
+			bool success = false;
+			if (restore)
+			{
+				success = proj.Build("Restore", new[] { logger });
+				if (!success) LogProps(proj);
+				Assert.True(success, "Failed to restore packages");
+			}
 			success = proj.Build(logger);
-			if (!success) LogProps(proj);
+			//if (!success) LogProps(proj);
 
 			var outputPath = proj.GetPropertyValue("TargetPath");
 			Assert.True(success, "Build failed");

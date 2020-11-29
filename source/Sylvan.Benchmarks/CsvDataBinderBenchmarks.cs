@@ -1,8 +1,17 @@
 ﻿using BenchmarkDotNet.Attributes;
+
+#if NET5_0
 using Cesil;
+#endif
+
 using Sylvan.Data;
 using Sylvan.Data.Csv;
+using System;
+using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Reflection;
 
 namespace Sylvan.Benchmarks
 {
@@ -27,39 +36,41 @@ namespace Sylvan.Benchmarks
 		{
 			var tr = TestData.GetTextReader();
 			var csv = new CsvHelper.CsvReader(tr, new CsvHelper.Configuration.CsvConfiguration(CultureInfo.CurrentCulture));
-			var rows = csv.GetRecords<CovidRow>();
+			var rows = csv.GetRecords<CovidRecord>();
 
 			foreach (var row in rows)
 			{
 
 			}
 		}
-
+#if NET5_0
 		[Benchmark]
 		public void Cesil()
 		{
-			var tr = TestData.GetTextReader();
-			var o = Options.Default;
+			var tr = new StringReader(@"Name,Health,Armor,Strength,Agility,Intellect
+Gnoll,50,10,10,10,6
+Goblin,30,8,7,13,12
+Ogre,80,9,15,6,4
+");
+			var data = CesilUtils.Enumerate<Monster>(tr).ToArray();
+			//var o = Options.Default;
 
-			var c = Configuration.For<CovidRow>(o);
-			var csv = c.CreateReader(tr);
-			if (csv.TryRead(out var r))
-#pragma warning disable CS0642 // Possible mistaken empty statement
-				;
-#pragma warning restore CS0642 // Possible mistaken empty statement
-			var rows = csv.ReadAll();
+			//var c = Configuration.For<CovidRecord>(o);
+			//var csv = c.CreateReader(tr);
+			//var rows = csv.ReadAll();
 		}
-
+#endif
 		[Benchmark]
 		public void SylvanBench()
 		{
+			
 			var dr = (CsvDataReader)TestData.GetDataWithSchema(o => { o.StringFactory = pool; });
 
-			var binder = DataBinder<CovidRow>.Create(dr.GetColumnSchema());
+			var binder = DataBinder<CovidRecord>.Create(dr.GetColumnSchema());
 
 			while (dr.Read())
 			{
-				CovidRow cr = new CovidRow();
+				CovidRecord cr = new CovidRecord();
 				binder.Bind(dr, cr);
 			}
 		}

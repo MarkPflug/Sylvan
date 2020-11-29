@@ -17,8 +17,8 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.5.0" />
     <PackageReference Include="xunit" Version="2.4.0" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.4.0" />
-    <PackageReference Include="Coverlet.MSbuild" Version="2.9.0"/>
-    <PackageReference Include="ReportGenerator" Version="4.5.0"/>
+    <!--<PackageReference Include="Coverlet.MSbuild" Version="2.9.0"/>
+    <PackageReference Include="ReportGenerator" Version="4.5.0"/>-->
   </ItemGroup>
 
   <ItemGroup>
@@ -26,7 +26,6 @@
   </ItemGroup>
 
    <Target
-     Condition="false"
      Name="PackValidations" BeforeTargets="GenerateNuspec">
     <!-- Attempt to prevent myself from accidentally releaseing a debug build. -->
     <Error Condition="$(Configuration) != 'Release'" Text="Attempting to pack a debug build."/>
@@ -41,5 +40,10 @@
       >
       <Output PropertyName="SourceRevisionId" TaskParameter="ConsoleOutput"/>
     </Exec>
+  </Target>
+
+  <!-- This target reports all compiler constants for the compilation -->
+  <Target Condition="false" Name="Symbols" BeforeTargets="CoreCompile">
+    <Error Text="$(DefineConstants)"/>
   </Target>
 </Project>

@@ -18,7 +18,17 @@ namespace Sylvan.Data
 		public double[] DataSet { get; set; }
 	}
 
-	public sealed class CovidRow
+	public class Monster
+	{
+		public string Name { get; set; }
+		public int Health { get; set; }
+		public int Armor { get; set; }
+		public int Strength { get; set; }
+		public int Agility { get; set; }
+		public int Intellect { get; set; }
+	}
+
+	public class CovidRecord
 	{
 		public int UID { get; set; }
 		public string iso2 { get; set; }

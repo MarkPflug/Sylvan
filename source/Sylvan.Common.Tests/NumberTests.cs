@@ -1,4 +1,5 @@
-﻿using Xunit;
+﻿using System;
+using Xunit;
 
 namespace Sylvan
 {
@@ -7,7 +8,7 @@ namespace Sylvan
 		[Fact]
 		public void Test1()
 		{
-			var v = Number.ParseInt("1234");
+			var v = Number.ParseInt("1234".AsSpan());
 			Assert.Equal(1234, v);
 		}
 	}

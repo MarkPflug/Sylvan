@@ -17,7 +17,7 @@ namespace Sylvan.Data.Csv
 			Assert.Equal(3, schema.Count);
 			Assert.Equal("Id", schema[0].ColumnName);
 			Assert.Equal("Name", schema[1].ColumnName);
-			Assert.Null(schema[2].ColumnName);
+			Assert.Equal("", schema[2].ColumnName);
 			Assert.Equal(typeof(int), schema[2].DataType);
 		}
 
@@ -33,7 +33,7 @@ namespace Sylvan.Data.Csv
 			Assert.Equal(3, schema.Count);
 			Assert.Equal("Id", schema[0].ColumnName);
 			Assert.Equal("Name", schema[1].ColumnName);
-			Assert.Null(schema[2].ColumnName);
+			Assert.Equal("", schema[2].ColumnName);
 			Assert.Equal(typeof(float), schema[2].DataType);
 		}
 

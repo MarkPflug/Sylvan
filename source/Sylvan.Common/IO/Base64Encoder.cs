@@ -194,7 +194,7 @@ namespace Sylvan.IO
 			bytesWritten = dstOffset;
 			bytesConsumed = srcOffset;
 
-			return carry == 0 ? EncoderResult.Flush : EncoderResult.RequiresInput;
+			return carry == 0 ? final ? EncoderResult.Complete: EncoderResult.Flush : EncoderResult.RequiresInput;
 		}
 	}
 }

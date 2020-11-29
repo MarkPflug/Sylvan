@@ -118,9 +118,10 @@ namespace Sylvan.IO
 				if (result == EncoderResult.RequiresOutputSpace)
 				{
 					Flush();
+					dst = this.buffer.AsSpan().Slice(bufferIdx);
 					result = this.encoder.Encode(ReadOnlySpan<byte>.Empty, dst, out srcCount, out dstCount);
 					this.bufferIdx += dstCount;
-					Debug.Assert(result == EncoderResult.Complete);
+					Debug.Assert(result == EncoderResult.Complete, "" + result);
 				}
 				Flush();
 				this.isClosed = true;

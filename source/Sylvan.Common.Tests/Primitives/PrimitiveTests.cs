@@ -1,5 +1,4 @@
-﻿using System;
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Xunit;
 
@@ -7,12 +6,6 @@ namespace Sylvan.Primitives
 {
 	public class PrimitiveTests
 	{
-		[Fact]
-		public void PrimitiveSize()
-		{
-			Assert.Equal(16, Marshal.SizeOf<Primitive>());
-		}
-
 		[Fact]
 		public void EqualsTest()
 		{
@@ -29,7 +22,6 @@ namespace Sylvan.Primitives
 			var g = Guid.Parse("000102030405060708090a0b0c0d0e0f");
 			var p = new Primitive(g);
 			var a = p[0];
-
 		}
 #endif
 	}
