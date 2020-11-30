@@ -145,12 +145,39 @@ namespace Sylvan
 					done:
 						break;
 					case UnicodeCategory.LowercaseLetter:
-					case UnicodeCategory.DecimalDigitNumber:
 						if (length == 0)
 						{
 							start = i;
 						}
 						length++;
+						break;
+					case UnicodeCategory.DecimalDigitNumber:
+						if (length > 0)
+						{
+							yield return new Range(start, length);
+						}
+						start = i;
+						length = 1;
+						for (int j = i + 1; j < identifier.Length; j++)
+						{
+							c = identifier[j];
+							cat = char.GetUnicodeCategory(c);
+							switch (cat)
+							{
+								case UnicodeCategory.DecimalDigitNumber:
+									length++;
+									break;								
+								default:
+									yield return new Range(start, length);
+									i = j - 1;
+									start = j;
+									length = 0;
+									goto done2;
+							}
+						}
+						i = identifier.Length;
+
+					done2:
 						break;
 					default:
 						if (length > 0)
