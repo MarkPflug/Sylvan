@@ -1,8 +1,10 @@
 # Sylvan.Data.Csv Release Notes
-
-_0.7.5_
+_0.8.0_
 
 - Add some nullability annotations to align with new annotations exposed in net5.0.
+	Most notably, this means that schema column names can no longer be reported as null, 
+	but will instead be empty string when no headers are present.
+
 
 _0.7.4_
 

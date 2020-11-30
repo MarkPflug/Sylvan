@@ -50,7 +50,7 @@ namespace Sylvan.BuildTools.Data
 					sw.WriteLine("using System.Collections.ObjectModel;");
 					sw.WriteLine("using System.Data.Common;");
 
-					sw.WriteLine("class " + typeName + "Record {");
+					sw.WriteLine("class " + typeName + " {");
 					var colSchema = schema.GetColumnSchema();
 					int unnamedCounter = 1;
 					//int unnamedSeriesCounter = 1;
@@ -89,12 +89,10 @@ namespace Sylvan.BuildTools.Data
 
 						}
 					}
-					sw.WriteLine("}");
 
 					//var hasHeaders = colSchema.All(c => !string.IsNullOrEmpty(c.ColumnName));
 
-					sw.WriteLine("class " + typeName + "Set {");
-					sw.WriteLine("const string FileName = @\"" + file.ItemSpec + "\";");
+					sw.WriteLine("const string FileName = @\"" + file.GetMetadata("Filename") + file.GetMetadata("Extension") + "\";");
 					sw.WriteLine("const string SchemaSpec = \"" + schema.GetSchemaSpecification() + "\";");
 					sw.WriteLine("static readonly ReadOnlyCollection<DbColumn> ColumnSchema = Sylvan.Data.Schema.TryParse(SchemaSpec).GetColumnSchema();");
 					sw.WriteLine("static readonly ICsvSchemaProvider SchemaProvider = new CsvSchema(ColumnSchema);");
@@ -106,14 +104,14 @@ namespace Sylvan.BuildTools.Data
 
 					sw.WriteLine("};");
 
-					sw.WriteLine("public static IEnumerable<" + typeName + "Record> Read() { return Read(FileName, DefaultOptions); }");
+					sw.WriteLine("public static IEnumerable<" + typeName + "> Read() { return Read(FileName, DefaultOptions); }");
 
-					sw.WriteLine("public static IEnumerable<" + typeName + "Record> Read(string filename, CsvDataReaderOptions opts) {");
+					sw.WriteLine("public static IEnumerable<" + typeName + "> Read(string filename, CsvDataReaderOptions opts) {");
 					sw.WriteLine("var csv = CsvDataReader.Create(filename, opts);");
-					sw.WriteLine("var binder = DataBinder<" + typeName + "Record>.Create(ColumnSchema, csv.GetColumnSchema());");
+					sw.WriteLine("var binder = DataBinder<" + typeName + ">.Create(ColumnSchema, csv.GetColumnSchema());");
 
 					sw.WriteLine("while(csv.Read()) {");
-					sw.WriteLine("var item = new " + typeName + "Record();");
+					sw.WriteLine("var item = new " + typeName + "();");
 					sw.WriteLine("binder.Bind(csv, item);");
 					sw.WriteLine("yield return item;");
 					sw.WriteLine("}");
