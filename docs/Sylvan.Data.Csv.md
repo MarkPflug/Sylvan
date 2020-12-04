@@ -86,18 +86,39 @@ CsvDataReader/Writer both support async operations.
 _String Pooling_
 
 CsvDataReader supports de-duplicating strings during reading. CSV files often contain very
-reptetive data. By default, repeated values will be returned as a new, duplicated string. However,
-it is possible to provide a function which allows de-duplicating strings. The `Sylvan.Data.Csv`
-library doesn't include an implementation, but `Sylvan.Common` library provides one via the `StringPool` class.
-This implementation is faster and requires fewer allocations than de-duping using a `HashSet\<string\>` after the fact.
+repetetive data, so loading each value as a unique string can be extremely wasteful. 
+By default, repeated values will be returned as a new, duplicated string. However,
+one can optionally provide a function which allows de-duplicating strings. The `Sylvan.Data.Csv`
+library doesn't include such a function implementation, but `Sylvan.Common` library provides one via the `StringPool` class.
+This implementation is faster and requires fewer allocations than de-duping using a `HashSet\<string\>` after the fact, as
+it will de-dupe directly out of the internal CSV read buffer.
+
+Here are some real-world examples of the impact of string pooling. 
+These examples load the entire CSV data set into memory binding to a strongly-typed object.
+The memory usage is as reported in Windows Task Manager, so includes more than just the raw data size.
+
+| DataSet | CSV Size | NoPool | NoPoolTime | Pool | PoolTime |
+| :- | -: | -: | -: | -: | -: |
+|[GNIS feature national file](https://www.usgs.gov/core-science-systems/ngp/board-on-geographic-names/download-gnis-data)|309MB|1215MB|6219ms|685MB|7726ms|
+|[FEC individual contributions](https://www.fec.gov/data/browse-data/?tab=bulk-data)|176MB|720MB|2884ms|413MB|3008ms|
+
+As you can see, string pooling significantly reduces the memory required to load these datasets into memory, 
+while only requiring a relatively small amount of additional time to load.
+
+String pooling is performed by an external function so that the pool can be shared across multiple datasets. The `StringPool` in Sylvan.Common will only attempt to pool strings that are smaller than 32 characters long by default. As strings get longer it is less likely that they will be duplicated, and also more costly to identify duplicates, so this size limit allows tuning the size vs time.
+
+_Binary data_
+CsvDataReader and CsvWriter both support binary data encoded as base64.
 
 ## Limitations
 
 Record size is the primary limitation. A record must fit entirely within the working buffer.
 
-There is no support for multi-character delimiters. There are plenty of other libraries capable of handling that nonsense; use one of them if you need that feature.
+There is no support for multi-character value delimiters.
 
-Comments are not currently supported, and the CSV RFC 4180 makes no mention of comments. Typically, a comment line(s) would appear at the beginning of the file, and can be trivially pre-processed (Peek/ReadLine) before handing the TextReader off to the CsvDataReader.
+Record delimiters cannot be configured in the `CsvDataReader`, which expects any of `\r`, `\n` or `\r\n` and allows mixed line endings within the same file. `CsvWriter` can be configured to use any of those options, and defaults to `Environment.NewLine`. 
+
+Comments are not currently supported, and the CSV RFC 4180 makes no mention of comments. Typically, a comment line(s) would appear at the beginning of the file, and can be trivially pre-processed (Peek/ReadLine) before handing the TextReader off to a `CsvDataReader`.
 
 ## Error Handling
 
@@ -109,7 +130,7 @@ by providing a larger buffer.
 
 _Missing Fields_
 
-A missing field, meaning a row that contains fewer columns (delimiters) than the header column will be treated
+A missing field, meaning a row that contains fewer columns than the header column will be treated
 the same as if it were an empty string. Missing fields can be identified by comparing the RowFieldCount to FieldCount.
 
 _Extra Fields_
