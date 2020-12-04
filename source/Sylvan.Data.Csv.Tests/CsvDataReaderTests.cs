@@ -13,22 +13,6 @@ namespace Sylvan.Data.Csv
 {
 	public class CsvDataReaderTests
 	{
-#if NET5_0
-		[Fact]
-		public void CesilBench()
-		{
-			var b = new CsvDataBinderBenchmarks();
-			b.Cesil();
-		}
-#endif
-
-		[Fact]
-		public void CsvHelperBench()
-		{
-			var b = new CsvDataBinderBenchmarks();
-			b.CsvHelper();
-		}
-
 		[Fact]
 		public void SylvanBench()
 		{

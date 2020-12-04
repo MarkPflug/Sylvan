@@ -19,17 +19,17 @@ namespace Sylvan.Data
 			return new ObjectDataReader<T>(data);
 		}
 
-		internal static Builder<T> BuildFactory<T>(IEnumerable<T> data)
+		public static Builder<T> BuildFactory<T>(IEnumerable<T> data)
 		{
 			return new Builder<T>();
 		}
 
-		internal static Builder<T> BuildFactory<T>()
+		public static Builder<T> BuildFactory<T>()
 		{
 			return new Builder<T>();
 		}
 
-		internal sealed class Builder<T>
+		public sealed class Builder<T>
 		{
 			ObjectDataReader<T>.Factory.Builder builder;
 
@@ -61,7 +61,7 @@ namespace Sylvan.Data
 			}
 		}
 
-		internal sealed class Factory<T>
+		public sealed class Factory<T>
 		{
 			ObjectDataReader<T>.Factory factory;
 

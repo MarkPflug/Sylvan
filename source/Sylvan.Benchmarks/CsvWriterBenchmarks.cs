@@ -1,7 +1,4 @@
 ﻿using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Jobs;
-using CsvHelper.Configuration;
-using System.Globalization;
 using System.IO;
 using System.Threading.Tasks;
 
@@ -11,71 +8,6 @@ namespace Sylvan.Data.Csv
 	public class CsvWriterBenchmarks
 	{
 		static readonly int ValueCount = TestData.DefaultDataValueCount;
-
-		[Benchmark(Baseline = true)]
-		public void CsvHelperSync()
-		{
-			TextWriter tw = TextWriter.Null;
-			var items = TestData.GetTestObjects();
-			var csv = new CsvHelper.CsvWriter(tw, new CsvConfiguration(CultureInfo.InvariantCulture));
-			csv.WriteField("Id");
-			csv.WriteField("Name");
-			csv.WriteField("Date");
-			csv.WriteField("IsActive");
-			for (int i = 0; i < ValueCount; i++)
-			{
-				csv.WriteField("Value" + i);
-			}
-			csv.NextRecord();
-
-			foreach (var item in items)
-			{
-				csv.WriteField(item.Id);
-				csv.WriteField(item.Name);
-				csv.WriteField(item.Date);
-				csv.WriteField(item.IsActive);
-				for (int i = 0; i < ValueCount; i++)
-				{
-					csv.WriteField(item.DataSet[i]);
-				}
-				csv.NextRecord();
-			}
-			csv.Flush();
-		}
-
-
-		//// this is horrifically slow: I might be doing something wrong.
-		//[Benchmark]
-		//public async Task CsvHelperAsync()
-		//{
-		//	TextWriter tw = TextWriter.Null;
-		//	var items = TestData.GetTestObjects();
-		//	var csv = new CsvHelper.CsvWriter(tw, new CsvConfiguration(CultureInfo.InvariantCulture));
-		//	csv.WriteField("Id");
-		//	csv.WriteField("Name");
-		//	csv.WriteField("Date");
-		//	csv.WriteField("IsActive");
-		//	for (int i = 0; i < ValueCount; i++)
-		//	{
-		//		csv.WriteField("Value" + i);
-		//	}
-		//	await csv.NextRecordAsync();
-
-		//	foreach (var item in items)
-		//	{
-		//		csv.WriteField(item.Id);
-		//		csv.WriteField(item.Name);
-		//		csv.WriteField(item.Date);
-		//		csv.WriteField(item.IsActive);
-		//		for (int i = 0; i < ValueCount; i++)
-		//		{
-		//			csv.WriteField(item.DataSet[i]);
-		//		}
-		//		await csv.NextRecordAsync();
-		//		await csv.FlushAsync();
-		//	}
-		//	await csv.FlushAsync();
-		//}
 
 		[Benchmark]
 		public void NaiveBroken()
@@ -114,67 +46,6 @@ namespace Sylvan.Data.Csv
 				tw.WriteLine();
 			}
 		}
-
-		//[Benchmark]
-		//public void NLightCsv()
-		//{
-		//	TextWriter tw = TextWriter.Null;
-		//	var items = TestData.GetTestObjects();
-		//	var csv = new NLight.IO.Text.DelimitedRecordWriter(tw);
-		//	csv.WriteField("Id");
-		//	csv.WriteField("Name");
-		//	csv.WriteField("Date");
-		//	csv.WriteField("IsActive");
-		//	for (int i = 0; i < ValueCount; i++)
-		//	{
-		//		csv.WriteField("Value" + i);
-		//	}
-		//	csv.WriteRecordEnd();
-
-		//	foreach (var item in items)
-		//	{
-		//		csv.WriteField(item.Id);
-		//		csv.WriteField(item.Name);
-		//		csv.WriteField(item.Date);
-		//		csv.WriteField(item.IsActive);
-		//		for (int i = 0; i < ValueCount; i++)
-		//		{
-		//			csv.WriteField(item.DataSet[i]);
-		//		}
-		//		csv.WriteRecordEnd();
-		//	}
-		//}
-
-		[Benchmark]
-		public void NReco()
-		{
-			TextWriter tw = TextWriter.Null;
-			var items = TestData.GetTestObjects();
-			var csv = new NReco.Csv.CsvWriter(tw);
-			csv.WriteField("Id");
-			csv.WriteField("Name");
-			csv.WriteField("Date");
-			csv.WriteField("IsActive");
-			for (int i = 0; i < ValueCount; i++)
-			{
-				csv.WriteField("Value" + i);
-			}
-			csv.NextRecord();
-			var c = CultureInfo.InvariantCulture;
-			foreach (var item in items)
-			{
-				csv.WriteField(item.Id.ToString(c));
-				csv.WriteField(item.Name);
-				csv.WriteField(item.Date.ToString(c));
-				csv.WriteField(item.IsActive.ToString(c));
-				for (int i = 0; i < ValueCount; i++)
-				{
-					csv.WriteField(item.DataSet[i].ToString());
-				}
-				csv.NextRecord();
-			}
-		}
-
 
 		[Benchmark]
 		public async Task SylvanAsync()

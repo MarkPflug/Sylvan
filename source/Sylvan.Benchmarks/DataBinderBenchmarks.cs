@@ -1,5 +1,4 @@
 ﻿using BenchmarkDotNet.Attributes;
-using Dapper;
 using Sylvan.Data;
 using System;
 using System.Collections.Generic;
@@ -13,8 +12,6 @@ namespace Sylvan.Benchmarks
 	{
 		class TestRecord : IDataReader
 		{
-
-
 			string[] columns;
 			Type[] types;
 			Dictionary<string, int> ordinals;
@@ -210,7 +207,7 @@ namespace Sylvan.Benchmarks
 			this.compiled = new CompiledDataBinder<Record>(schema.GetColumnSchema());
 			this.reflection = new ReflectionDataBinder<Record>(schema.GetColumnSchema());
 
-			dp = record.GetRowParser<Record>();
+			
 		}
 
 		class ManualBinder : IDataBinder<Record>
@@ -229,7 +226,6 @@ namespace Sylvan.Benchmarks
 		Record item;
 		IDataReader record;
 		IDataBinder<Record> compiled, reflection;
-		Func<IDataReader, Record> dp;
 
 		[Benchmark]
 		public void Reflection()
@@ -263,15 +259,6 @@ namespace Sylvan.Benchmarks
 			{
 				var item = new Record();
 				binder.Bind(record, item);
-			}
-		}
-
-		[Benchmark]
-		public void Dapper()
-		{
-			for (int i = 0; i < Count; i++)
-			{
-				dp(record);
 			}
 		}
 	}

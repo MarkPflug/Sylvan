@@ -8,26 +8,6 @@
 
   <ItemGroup>
     <PackageReference Include="BenchmarkDotNet" Version="0.12.1" />
-    <PackageReference Include="Csv" Version="1.0.57" />
-    <PackageReference Include="CsvHelper" Version="15.0.5" />
-    <PackageReference Include="CsvTextFieldParser" Version="1.2.2-preview" />
-    
-    <PackageReference Include="Dapper" Version="2.0.78" />
-    <PackageReference Include="FastCsvParser" Version="1.1.1" />
-    <PackageReference Include="FlatFiles" Version="4.7.0" />
-    <!--<PackageReference Include="LumenWorksCsvReader" Version="4.0.0" />-->
-    <!--<PackageReference Include="NLight" Version="2.1.1" />-->
-    <PackageReference Include="NReco.Csv" Version="1.0.0" />
-    <PackageReference Include="FSharp.Data" Version="3.3.3" />
-    <PackageReference Include="Microsoft.Data.SqlClient" Version="2.0.1" />
-    <PackageReference Include="Microsoft.VisualBasic" Version="10.3.0" />
-    <PackageReference Include="System.Data.OleDb" Version="4.7.0" />
-    <PackageReference Include="System.Data.SqlClient" Version="4.8.1" />
-   
-  </ItemGroup>
-  
-  <ItemGroup Condition="'$(TargetFramework)' == 'net5.0'">
-    <PackageReference Include="Cesil" Version="0.6.0" />
   </ItemGroup>
 
   <ItemGroup>
