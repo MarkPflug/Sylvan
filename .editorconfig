@@ -12,4 +12,8 @@ dotnet_style_require_accessibility_modifiers = never
 
 # CA1028: If possible, make the underlying type of PrimitiveType System.Int32 instead of byte.
 dotnet_diagnostic.CA1028.severity = none
-dotnet_diagnostic.
+
+
+[*.{xml,props,targets}]
+intent_style = space
+indent_size = 2
