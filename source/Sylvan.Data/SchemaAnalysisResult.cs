@@ -77,6 +77,18 @@ namespace Sylvan.Data
 			public int Length => seriesEnd - seriesStart + 1;
 		}
 
+		static string? GetDateSeriesPrefix(string name)
+		{
+			for (int i = 0; i < name.Length - 4; i++)
+			{
+				if (DateTime.TryParse(name.Substring(i), out DateTime value))
+				{
+					return name.Substring(0, i);
+				}
+			}
+			return null;
+		}
+
 		SeriesInfo? DetectSeries(ColumnInfo[] cols)
 		{
 			var series = new SeriesInfo[cols.Length];
@@ -91,8 +103,11 @@ namespace Sylvan.Data
 				var name = col.Name;
 				if (name == null) continue;
 
-				if (DateTime.TryParse(name, out var _))
+				var dateSeriesPrefix = GetDateSeriesPrefix(name);
+
+				if (dateSeriesPrefix != null)
 				{
+					s.prefix = dateSeriesPrefix;
 					s.type |= SeriesType.Date;
 				}
 				else
