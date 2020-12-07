@@ -5,7 +5,7 @@ My goal in creating this library was to make the fastest possible CSV parser
 without compromising reliability or usability. While there are a number of 
 excellent CSV parsers in the ecosystem, I had an idea for an optimization that 
 sent me down the rabbit hole of rolling my own. The result is Sylvan.Data.Csv, which 
-I believe is currently the fastest, and most memory efficient 
+I believe is [currently the fastest](https://github.com/MarkPflug/CsvBenchmarks/blob/main/docs/Benchmarks.md), and most memory efficient 
 CSV parser available as a Nuget package. I'll be the first to acknowledge that performance 
 in CSV parsers isn't the most important feature, correctness of implementation, and ease of use are paramount.
 Sylvan CSV has achieved high performance without sacrificing robustness or ease of use.
@@ -15,9 +15,6 @@ quoted fields, quoted fields containing new lines, escapes, etc.
 The primary class, `CsvDataReader` derives from `System.Data.Common.DbDataReader`, 
 and so provides a familiar API for anyone who's worked with ADO.NET. 
 Sylvan CSV is also one of the only CSV parsers I'm aware of that supports `async`.
-
-Here is a [brief description](Sylvan.Data.Csv.Design.md) of the strategies used to 
-achieve high performance and low memory usage.
 
 #### Installation
 
