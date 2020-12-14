@@ -209,3 +209,8 @@ reports/
 
 #msbuild binary logs
 *.binlog
+*.bin
+
+# foxpro
+*.dbf
+*.fpt
