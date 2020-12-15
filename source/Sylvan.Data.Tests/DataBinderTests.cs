@@ -17,6 +17,12 @@ namespace Sylvan.Data
 		public DateTime? Date { get; private set; }
 	}
 
+	class NumericNullRecord
+	{
+		public string Name { get; private set; }
+		public double? Value { get; private set; }
+	}
+
 	class SeriesRecord
 	{
 		public int Id { get; private set; }
@@ -91,6 +97,19 @@ namespace Sylvan.Data
 			while (data.Read())
 			{
 				var item = binder.GetRecord(data);
+			}
+		}
+
+		[Fact]
+		public void NumericNullTest()
+		{
+			var tr = new StringReader("Name,Value\n1,A,12.3\nB,\n");
+			var dr = CsvDataReader.Create(tr);
+			var binder = new CompiledDataBinder<NumericNullRecord>(dr.GetColumnSchema());
+
+			while (dr.Read())
+			{
+				var item = binder.GetRecord(dr);
 			}
 		}
 
