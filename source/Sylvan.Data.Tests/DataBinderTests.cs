@@ -19,8 +19,8 @@ namespace Sylvan.Data
 
 	class NumericNullRecord
 	{
-		public string Name { get; private set; }
-		public double? Value { get; private set; }
+		public string Name { get; set; }
+		public double? Value { get; set; }
 	}
 
 	class SeriesRecord
@@ -103,13 +103,52 @@ namespace Sylvan.Data
 		[Fact]
 		public void NumericNullTest()
 		{
-			var tr = new StringReader("Name,Value\n1,A,12.3\nB,\n");
+			var tr = new StringReader("Name,Value\nA,12.3\nB,\n");
 			var dr = CsvDataReader.Create(tr);
 			var binder = new CompiledDataBinder<NumericNullRecord>(dr.GetColumnSchema());
 
 			while (dr.Read())
 			{
 				var item = binder.GetRecord(dr);
+			}
+		}
+
+		[Fact]
+		public void NumericNullManualTest()
+		{
+			var tr = new StringReader("Name,Value\nA,12.3\nB,\n");
+			var dr = CsvDataReader.Create(tr);
+
+			while (dr.Read())
+			{
+				var item = new NumericNullRecord();
+				string tempStr;
+
+				// This is essentially the block of code
+				// that CompiledDataBinder should generate.
+
+				if (!dr.IsDBNull(0))
+				{
+					item.Name = dr.GetString(0);
+				}
+				else
+				{
+					//optionally emit this.
+					item.Name = default!;
+				}
+				if (!dr.IsDBNull(1))
+				{
+					tempStr = dr.GetString(1);
+					if (!string.IsNullOrWhiteSpace(tempStr))
+					{
+						item.Value = double.Parse(tempStr);
+					}
+				}
+				else
+				{
+					//optionally emit this.
+					item.Value = default;
+				}
 			}
 		}
 
@@ -195,7 +234,7 @@ namespace Sylvan.Data
 			var schemaSpec = "Id:int,Name,{Date}>Values*:int";
 			var schema = Schema.TryParse(schemaSpec);
 			var cols = schema.GetColumnSchema();
-			
+
 			var binderFactory = DataBinder<SeriesDateRecord>.CreateFactory(cols);
 
 			var csvData = "Id,Name,2020-09-19,2020-09-20,2020-09-21,2020-09-22\n1,Test,7,8,9,10\n";
@@ -266,7 +305,8 @@ namespace Sylvan.Data
 			var binder = BuildBinder(getter, converter, setter);
 		}
 
-		static Action<T> BuildBinder<T, TS, TD>(Func<TS> getter, Func<TS, TD> converter, Action<T, TD> setter) {
+		static Action<T> BuildBinder<T, TS, TD>(Func<TS> getter, Func<TS, TD> converter, Action<T, TD> setter)
+		{
 			return (T a) => setter(a, converter(getter()));
 		}
 	}

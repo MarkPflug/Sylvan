@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Data;
 using System.Data.Common;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Text.RegularExpressions;
 
 namespace Sylvan.Data
 {
@@ -28,9 +28,10 @@ namespace Sylvan.Data
 
 	sealed class CompiledDataBinder<T> : IDataBinder<T>
 	{
-		Action<IDataRecord, object[], T> f;
+		Action<IDataRecord, BinderContext, T> recordBinderFunction;
 
 		object[] state = Array.Empty<object>();
+		CultureInfo cultureInfo;
 
 		static readonly Type drType = typeof(IDataRecord);
 
@@ -84,7 +85,9 @@ namespace Sylvan.Data
 			// If the schema claims a column is not nullable, then avoid calling IsDBNull, 
 			// which can be costly in some scenarios (and is never free).
 			var state = new List<object>();
-			var stateIdx = 0;
+			this.cultureInfo = CultureInfo.InvariantCulture;
+
+			//var stateIdx = 0;
 
 			var ordinalMap =
 				logicalSchema
@@ -119,20 +122,43 @@ namespace Sylvan.Data
 			}
 
 			var drType = typeof(IDataRecord);
-
-			var targetType = typeof(T);
-
-			var recordParam = Expression.Parameter(drType);
-			var stateParam = Expression.Parameter(typeof(object[]));
-			var itemParam = Expression.Parameter(targetType);
-			var localsMap = new Dictionary<Type, ParameterExpression>();
-			var locals = new List<ParameterExpression>();
-
-			var bodyExpressions = new List<Expression>();
-
 			var isDbNullMethod = drType.GetMethod("IsDBNull")!;
 
-			foreach (var property in targetType.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
+			var recordType = typeof(T);
+
+			var recordParam = Expression.Parameter(drType);
+			var contextParam = Expression.Parameter(typeof(BinderContext));
+			var itemParam = Expression.Parameter(recordType);
+			var localsMap = new Dictionary<Type, ParameterExpression>();
+			var locals = new List<ParameterExpression>();
+			var bodyExpressions = new List<Expression>();
+
+			// var cultureInfo;
+			var cultureInfoExpr = Expression.Variable(typeof(CultureInfo));
+			locals.Add(cultureInfoExpr);
+
+			// To provide special handling empty string as a null for a nullable primtivite type
+			// we want to construct the following:
+			// tempStr = GetString(ordinal);
+			// if(!IsNullString(tempStr)) { target.Value = double.Parse(tempStr); }
+			// specifically, we want to avoid calling GetString(ordinal) twice.
+			// so we use this singluar temporary variable for that purpose.
+			var tempStrExpr = Expression.Variable(typeof(CultureInfo));
+			locals.Add(tempStrExpr);
+
+			// var cultureInfo = context.cultureInfo;
+			bodyExpressions.Add(
+				Expression
+				.Assign(
+					cultureInfoExpr,
+					Expression.Field(
+						contextParam,
+						typeof(BinderContext).GetField("cultureInfo")
+					)
+				)
+			);
+
+			foreach (var property in recordType.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
 			{
 				var columnOrdinal = property.GetCustomAttribute<ColumnOrdinalAttribute>()?.Ordinal;
 				var columnName = property.GetCustomAttribute<ColumnNameAttribute>()?.Name ?? property.Name;
@@ -144,184 +170,356 @@ namespace Sylvan.Data
 					continue;
 				}
 
+				#region series
 				// TODO: potentially use the properties dynamically instead of depending on the type here? 
 				// Not of much value probably.
-				var schemaCol = col as Schema.SchemaColumn;
-				var isSeries = schemaCol?.IsSeries == true;
+				//var schemaCol = col as Schema.SchemaColumn;
+				//var isSeries = schemaCol?.IsSeries == true;
 
-				if (isSeries)
+				//if (isSeries)
+				//{
+				//	// TODO: I don't like that I'm special-casing the Sylvan.Data.Series type here.
+				//	// Can this be done in a more generic way that would support BYO type?
+
+				//	// var acc = (DataSeriesAccessor<DateTime,int>)state[1];
+				//	// target.Series = new DateSeries<DateTime>(acc.Minimum, acc.GetValues(reader));
+				//	var sct = Type.GetTypeCode(schemaCol!.SeriesType);
+				//	object seriesAccessor = GetDataSeriesAccessor(schemaCol, physicalSchema);
+				//	stateIdx = state.Count;
+				//	state.Add(seriesAccessor);
+
+				//	var setter = property.GetSetMethod(true);
+				//	if (setter == null)
+				//	{
+				//		// TODO:
+				//		continue;
+				//	}
+				//	var paramType = setter.GetParameters()[0].ParameterType;
+
+				//	var seriesAccType = seriesAccessor.GetType();
+				//	var accLocal = Expression.Variable(seriesAccType);
+
+
+				//	var stateIdxExpr = Expression.Constant(stateIdx, typeof(int));
+
+				//	var setLocalExpr =
+				//		Expression.Assign(
+				//			accLocal,
+				//			Expression.Convert(
+				//				Expression.ArrayAccess(
+				//					stateParam,
+				//					stateIdxExpr
+				//				),
+				//				seriesAccType
+				//			)
+				//		);
+
+				//	Type seriesType =
+				//		schemaCol.SeriesType == typeof(DateTime)
+				//		? typeof(DateSeries<>)
+				//		: typeof(Series<>);
+				//	seriesType = seriesType.MakeGenericType(schemaCol.DataType!);
+
+				//	var seriesCtor = seriesType.GetConstructor(new Type[] { schemaCol.SeriesType!, typeof(IEnumerable<>).MakeGenericType(schemaCol.DataType!) })!;
+
+				//	// TODO: push this down as a constructor on Series?
+				//	var ctorExpr =
+				//		Expression.New(
+				//			seriesCtor,
+				//			Expression.Property(
+				//				accLocal,
+				//				seriesAccType.GetProperty("Minimum")!
+				//			),
+				//			Expression.Call(
+				//				accLocal,
+				//				seriesAccType.GetMethod("GetValues")!,
+				//				recordParam
+				//			)
+				//		);
+
+				//	var setExpr = Expression.Call(itemParam, setter, ctorExpr);
+
+				//	var block = Expression.Block(new ParameterExpression[] { accLocal }, new Expression[] { setLocalExpr, setExpr });
+
+				//	bodyExpressions.Add(block);
+
+				//}
+				//else
+				//{
+
+				#endregion
+
+				var ordinal = col.ColumnOrdinal ?? columnOrdinal;
+
+				if (ordinal == null)
 				{
-					// TODO: I don't like that I'm special-casing the Sylvan.Data.Series type here.
-					// Can this be done in a more generic way that would support BYO type?
+					// this means the column didn't know it's own ordinal, and neither did the property.
+					continue;
+				}
 
-					// var acc = (DataSeriesAccessor<DateTime,int>)state[1];
-					// target.Series = new DateSeries<DateTime>(acc.Minimum, acc.GetValues(reader));
-					var sct = Type.GetTypeCode(schemaCol!.SeriesType);
-					object seriesAccessor = GetDataSeriesAccessor(schemaCol, physicalSchema);
-					stateIdx = state.Count;
-					state.Add(seriesAccessor);
+				var setter = property.GetSetMethod(true);
+				if (setter == null)
+				{
+					//TODO: can/should we handle properties that have auto-backed fields?
+					continue;
+				}
 
-					var setter = property.GetSetMethod(true);
-					if(setter == null)
-					{
-						// TODO:
-						continue;
-					}
-					var paramType = setter.GetParameters()[0].ParameterType;
+				var targetType = setter.GetParameters()[0].ParameterType!;
 
-					var seriesAccType = seriesAccessor.GetType();
-					var accLocal = Expression.Variable(seriesAccType);
+				var accessorMethod = GetAccessorMethod(col.DataType!);
+
+				var ordinalExpr = Expression.Constant(ordinal, typeof(int));
+				Expression getterExpr = Expression.Call(recordParam, accessorMethod, ordinalExpr);
+
+				Expression? expr = getterExpr;
 
 
-					var stateIdxExpr = Expression.Constant(stateIdx, typeof(int));
+				var sourceType = getterExpr.Type;
 
-					var setLocalExpr =
-						Expression.Assign(
-							accLocal,
-							Expression.Convert(
-								Expression.ArrayAccess(
-									stateParam,
-									stateIdxExpr
-								),
-								seriesAccType
-							)
-						);
-
-					Type seriesType =
-						schemaCol.SeriesType == typeof(DateTime)
-						? typeof(DateSeries<>)
-						: typeof(Series<>);
-					seriesType = seriesType.MakeGenericType(schemaCol.DataType!);
-
-					var seriesCtor = seriesType.GetConstructor(new Type[] { schemaCol.SeriesType!, typeof(IEnumerable<>).MakeGenericType(schemaCol.DataType!) })!;
-
-					// TODO: push this down as a constructor on Series?
-					var ctorExpr =
-						Expression.New(
-							seriesCtor,
-							Expression.Property(
-								accLocal,
-								seriesAccType.GetProperty("Minimum")!
-							),
-							Expression.Call(
-								accLocal,
-								seriesAccType.GetMethod("GetValues")!,
-								recordParam
-							)
-						);
-
-					var setExpr = Expression.Call(itemParam, setter, ctorExpr);
-
-					var block = Expression.Block(new ParameterExpression[] { accLocal }, new Expression[] { setLocalExpr, setExpr });
-
-					bodyExpressions.Add(block);
-
+				// Direct binding, this is fairly common.
+				// The code below would end up doing this anyway.
+				if (sourceType == targetType)
+				{
+					expr = getterExpr;
 				}
 				else
 				{
-					var ordinal = col.ColumnOrdinal ?? columnOrdinal;
-					if (ordinal == null)
+
+					// If the target is nullable coerce to the underlying type.
+					var underlyingType = Nullable.GetUnderlyingType(targetType);
+					Type? nullableType = null;
+					bool isNullable = underlyingType != null;
+					if (isNullable)
 					{
-						// this means the column didn't know it's own ordinal, and neither did the property.
-						continue;
+						nullableType = targetType;
+						targetType = underlyingType!;
 					}
 
-					var setter = property.GetSetMethod(true);
-					if (setter == null)
+					if (targetType.IsEnum)
 					{
-						//TODO: can we handle auto backed properties? what about the new init-only?
-						continue;
+						var enumBaseType = Enum.GetUnderlyingType(targetType);
+						if (sourceType == enumBaseType)
+						{
+							expr = Expression.Convert(getterExpr, targetType);
+						}
+						else
+						{
+							if (sourceType == typeof(string))
+							{
+								expr =
+									Expression.Call(
+										EnumParseMethod.MakeGenericMethod(targetType),
+										getterExpr
+									);
+							}
+							else
+							{
+								throw new NotSupportedException();
+								// not sure what else would be supportable here.
+							}
+						}
+					}
+					else
+					{
+						expr = Convert(getterExpr, targetType, cultureInfoExpr);
+
+						if (expr == null)
+						{
+							throw new NotSupportedException();
+						}
 					}
 
-					var paramType = setter.GetParameters()[0].ParameterType;
+					Debug.Assert(expr != null);
 
-					var accessorMethod = GetAccessorMethod(col.DataType!);
-
-					var ordinalExpr = Expression.Constant(ordinal, typeof(int));
-					Expression accessorExpr = Expression.Call(recordParam, accessorMethod, ordinalExpr);
-
-					Expression expr = GetConvertExpression(accessorExpr, paramType);
-
-					if (col.AllowDBNull != false)
+					if (isNullable)
 					{
-						// roughly:
-						// item.Property = record.IsDBNull(idx) ? default : Coerce(record.Get[Type](idx));
-						expr =
-							Expression.Condition(
-								Expression.Call(recordParam, isDbNullMethod, ordinalExpr),
-								Expression.Default(paramType),
-								expr
-							);
+						var nullableCtor = nullableType!.GetConstructor(new Type[] { underlyingType! })!;
+
+						if (getterExpr.Type == typeof(string))
+						{
+							var tempVar = Expression.Variable(getterExpr.Type);
+
+							// var tempVar = getter();
+							// retur IsNullString(tempVar) ? new double?() : 
+
+							expr =
+								Expression.Block(
+									new ParameterExpression[] {
+								tempVar
+									},
+									new Expression[]
+									{
+								Expression.Assign(tempVar, getterExpr),
+								Expression.Condition(
+									Expression.Call(
+										IsNullStringMethod,
+										tempVar
+									),
+									Expression.Default(nullableType),
+									Expression.New(
+										nullableCtor,
+										Expression.Call(
+											ChangeTypeMethod,
+											tempVar,
+											Expression.Constant(underlyingType)
+										)
+									)
+								)
+									}
+								);
+						}
+						else
+						{
+							expr =
+								Expression.New(
+									nullableCtor,
+									getterExpr
+								);
+						}
 					}
 
-					var setExpr = Expression.Call(itemParam, setter, expr);
-					bodyExpressions.Add(setExpr);
+					if(expr == null)
+					{
+						throw new NotSupportedException();
+					}
 				}
+
+
+
+				if (col.AllowDBNull != false)
+				{
+					// roughly:
+					// item.Property = record.IsDBNull(idx) ? default : Coerce(record.Get[Type](idx));
+					expr =
+						Expression.Condition(
+							Expression.Call(recordParam, isDbNullMethod, ordinalExpr),
+							Expression.Default(targetType),
+							expr
+						);
+				}
+
+				var setExpr = Expression.Call(itemParam, setter, expr);
+				bodyExpressions.Add(setExpr);
+				//}
 			}
 
 			this.state = state.ToArray();
 			var body = Expression.Block(locals, bodyExpressions);
 
-			var lf = Expression.Lambda<Action<IDataRecord, object[], T>>(body, recordParam, stateParam, itemParam);
-			this.f = lf.Compile();
+			var lf = Expression.Lambda<Action<IDataRecord, BinderContext, T>>(body, recordParam, contextParam, itemParam);
+			this.recordBinderFunction = lf.Compile();
+		}
+
+		class BinderContext
+		{
+			public BinderContext(CultureInfo ci, object[] state)
+			{
+				this.cultureInfo = ci;
+				this.state = state;
+			}
+
+			public CultureInfo cultureInfo;
+			public object[] state;
 		}
 
 		enum ConversionType
 		{
+			// conversion is not supported
 			NotSupported = 0,
+			// no op
 			Identity = 1,
+			// simple primitive widening type cast
 			Cast = 2,
+			// convert via ToString operation
 			ToString = 3,
+			// simple primitive narrowing type cast, must be checked
 			UnsafeCast = 4,
+			// convert via Parse operation
 			Parse = 5,
 		}
 
-		// TODO: validate this table.
-		static byte[][] Conversion = new byte[][] {
-					// Empty, Object, DBNull, Boolean, Char, SByte, Byte, Int16, UInt16, Int32, UInt32, Int64, UInt64, Single, Double, Decimal, DateTime, BLANK, String
+		static int[] TypeCodeMap = new int[] {
 			//Empty = 0,
-					new byte[20],
+			-1,
 			//Object = 1,
-					new byte[20],
+			-1,
 			//DBNull = 2,
-					new byte[20],
+			-1,
 			//Boolean = 3,
-			new byte[20] { 0, 0, 0, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 3, 0 },
+			0,
 			//Char = 4,
-			new byte[20] { 0, 0, 0, 0, 1, 4, 4, 4, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 3, 0 },
+			1,
 			//SByte = 5,
-			new byte[20] { 0, 0, 0, 0, 2, 1, 4, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 3, 0 },
+			2,
 			//Byte = 6,
-			new byte[20] { 0, 0, 0, 0, 4, 4, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 3, 0 },
+			3,
 			//Int16 = 7,
-			new byte[20] { 0, 0, 0, 0, 4, 4, 4, 1, 4, 2, 2, 2, 2, 2, 2, 2, 0, 0, 3, 0 },
+			4,
 			//UInt16 = 8,
-			new byte[20] { 0, 0, 0, 0, 4, 4, 4, 4, 1, 2, 2, 2, 2, 2, 2, 2, 0, 0, 3, 0 },
+			5,
 			//Int32 = 9,
-			new byte[20] { 0, 0, 0, 0, 4, 4, 4, 4, 4, 1, 4, 2, 2, 2, 2, 2, 0, 0, 3, 0 },
-			//UInt32 = 10,			
-			new byte[20] { 0, 0, 0, 0, 4, 4, 4, 4, 4, 4, 1, 2, 2, 2, 2, 2, 0, 0, 3, 0 },
+			6,
+			//UInt32 = 10,
+			7,
 			//Int64 = 11,
-			new byte[20] { 0, 0, 0, 0, 4, 4, 4, 4, 4, 4, 4, 1, 4, 2, 2, 2, 0, 0, 3, 0 },
+			8,
 			//UInt64 = 12,
-			new byte[20] { 0, 0, 0, 0, 4, 4, 4, 4, 4, 4, 4, 4, 1, 2, 2, 2, 0, 0, 3, 0 },
+			9,
 			//Single = 13,
-			new byte[20] { 0, 0, 0, 0, 4, 4, 4, 4, 4, 4, 4, 4, 4, 1, 2, 4, 0, 0, 3, 0 },
+			10,
 			//Double = 14,
-			new byte[20] { 0, 0, 0, 0, 4, 4, 4, 4, 4, 4, 4, 4, 4, 2, 1, 4, 0, 0, 3, 0 },
+			11,
 			//Decimal = 15,
-			new byte[20] { 0, 0, 0, 0, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 1, 0, 0, 3, 0 },
+			12,
 			//DateTime = 16,
-			new byte[20] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 3, 0 },
+			13,
 			// BLANK
-			new byte[20],
+			-1,
 			//String = 18
-			new byte[20] { 0, 0, 0, 5, 0, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 0, 1, 0 },
+			14,
+		};
+
+		// TODO: validate this table.
+		static byte[] Conversion = new byte[16 * 15] {
+			// Boolean, Char, SByte, Byte, Int16, UInt16, Int32, UInt32, Int64, UInt64, Single, Double, Decimal, DateTime, String, PAD
+			//Boolean = 3,
+			1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 3, 0,
+			//Char = 4,
+			0, 1, 4, 4, 4, 2, 2, 2, 2, 2, 2, 2, 2, 0, 3, 0,
+			//SByte = 5,
+			0, 2, 1, 4, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 3, 0,
+			//Byte = 6,
+			0, 4, 4, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 3, 0,
+			//Int16 = 7,
+			0, 4, 4, 4, 1, 4, 2, 2, 2, 2, 2, 2, 2, 0, 3, 0,
+			//UInt16 = 8,
+			0, 4, 4, 4, 4, 1, 2, 2, 2, 2, 2, 2, 2, 0, 3, 0,
+			//Int32 = 9,
+			0, 4, 4, 4, 4, 4, 1, 4, 2, 2, 2, 2, 2, 0, 3, 0,
+			//UInt32 = 10,
+			0, 4, 4, 4, 4, 4, 4, 1, 2, 2, 2, 2, 2, 0, 3, 0,
+			//Int64 = 11,
+			0, 4, 4, 4, 4, 4, 4, 4, 1, 4, 2, 2, 2, 0, 3, 0,
+			//UInt64 = 12,
+			0, 4, 4, 4, 4, 4, 4, 4, 4, 1, 2, 2, 2, 0, 3, 0,
+			//Single = 13,
+			0, 4, 4, 4, 4, 4, 4, 4, 4, 4, 1, 2, 4, 0, 3, 0,
+			//Double = 14,
+			0, 4, 4, 4, 4, 4, 4, 4, 4, 4, 2, 1, 4, 0, 3, 0,
+			//Decimal = 15,
+			0, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 1, 0, 3, 0,
+			//DateTime = 16
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 3, 0,
+			//String = 18
+			5, 0, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 1, 0,
 		};
 
 		static ConversionType GetConversionType(TypeCode src, TypeCode dst)
 		{
-			return (ConversionType)Conversion[(int)src][(int)dst];
+			int srcIdx = TypeCodeMap[(int)src];
+			int dstIdx = TypeCodeMap[(int)dst];
+			if (srcIdx == -1 || dstIdx == -1) return ConversionType.NotSupported;
+			return (ConversionType)Conversion[srcIdx * 16 + dstIdx];
 		}
 
 		static Expression? Convert(Expression expr, Type dstType, Expression cultureInfoExpr)
@@ -332,8 +530,7 @@ namespace Sylvan.Data
 
 			var conversionType = GetConversionType(srcTypeCode, dstTypeCode);
 
-			
-			switch(conversionType)
+			switch (conversionType)
 			{
 				case ConversionType.NotSupported:
 					return null;
@@ -342,7 +539,7 @@ namespace Sylvan.Data
 				case ConversionType.Cast:
 					return Expression.MakeUnary(ExpressionType.Convert, expr, dstType);
 				case ConversionType.UnsafeCast:
-					// TODO: this should be opt-in when building the binder.
+					// TODO: should this be opt-in when constructing the binder?
 					return Expression.MakeUnary(ExpressionType.ConvertChecked, expr, dstType);
 				case ConversionType.ToString:
 					var toStringMethod = srcType.GetMethod("ToString", BindingFlags.Instance | BindingFlags.Public, null, new Type[] { typeof(IFormatProvider) }, null);
@@ -366,8 +563,6 @@ namespace Sylvan.Data
 					return null;
 			}
 
-
-
 			return null;
 			//var dstCtor = dstType.GetConstructor(new Type[] { typeof(string), typeof(IFormatProvider) });
 			//if (dstCtor != null)
@@ -381,225 +576,83 @@ namespace Sylvan.Data
 			//}
 		}
 
-		static object GetDataSeriesAccessor(Schema.SchemaColumn seriesCol, ReadOnlyCollection<DbColumn> physicalSchema)
-		{
-			switch (Type.GetTypeCode(seriesCol.SeriesType))
-			{
-				case TypeCode.Int32:
-					return GetIntSeriesAccessor(seriesCol, physicalSchema);
-				case TypeCode.DateTime:
-					return GetDateSeriesAccessor(seriesCol, physicalSchema);
-				default:
-					throw new NotSupportedException();
-			}
-		}
+		//static object GetDataSeriesAccessor(Schema.SchemaColumn seriesCol, ReadOnlyCollection<DbColumn> physicalSchema)
+		//{
+		//	switch (Type.GetTypeCode(seriesCol.SeriesType))
+		//	{
+		//		case TypeCode.Int32:
+		//			return GetIntSeriesAccessor(seriesCol, physicalSchema);
+		//		case TypeCode.DateTime:
+		//			return GetDateSeriesAccessor(seriesCol, physicalSchema);
+		//		default:
+		//			throw new NotSupportedException();
+		//	}
+		//}
 
-		static object GetDateSeriesAccessor(Schema.SchemaColumn seriesCol, ReadOnlyCollection<DbColumn> physicalSchema)
-		{
-			var fmt = seriesCol.SeriesHeaderFormat ?? Schema.DateSeriesMarker; //asdf{Date}qwer => ^asdf(.+)qwer$
+		//static object GetDateSeriesAccessor(Schema.SchemaColumn seriesCol, ReadOnlyCollection<DbColumn> physicalSchema)
+		//{
+		//	var fmt = seriesCol.SeriesHeaderFormat ?? Schema.DateSeriesMarker; //asdf{Date}qwer => ^asdf(.+)qwer$
 
-			var accessorType = typeof(DataSeriesAccessor<,>).MakeGenericType(typeof(DateTime), seriesCol.DataType!);
-			var cols = new List<DataSeriesColumn<DateTime>>();
-			var i = fmt.IndexOf(Schema.DateSeriesMarker, StringComparison.OrdinalIgnoreCase);
+		//	var accessorType = typeof(DataSeriesAccessor<,>).MakeGenericType(typeof(DateTime), seriesCol.DataType!);
+		//	var cols = new List<DataSeriesColumn<DateTime>>();
+		//	var i = fmt.IndexOf(Schema.DateSeriesMarker, StringComparison.OrdinalIgnoreCase);
 
-			var prefix = fmt.Substring(0, i);
-			var suffix = fmt.Substring(i + Schema.DateSeriesMarker.Length);
-			var pattern = "^" + Regex.Escape(prefix) + "(.+)" + Regex.Escape(suffix) + "$";
+		//	var prefix = fmt.Substring(0, i);
+		//	var suffix = fmt.Substring(i + Schema.DateSeriesMarker.Length);
+		//	var pattern = "^" + Regex.Escape(prefix) + "(.+)" + Regex.Escape(suffix) + "$";
 
-			var regex = new Regex(pattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-			foreach (var col in physicalSchema)
-			{
-				var name = col.ColumnName;
-				var match = regex.Match(name);
-				if (match.Success)
-				{
-					var dateStr = match.Captures[0].Value;
-					DateTime d;
-					if (DateTime.TryParse(dateStr, out d))
-					{
-						var ordinal = col.ColumnOrdinal!.Value;
-						cols.Add(new DataSeriesColumn<DateTime>(name, d, ordinal));
-					}
-				}
-			}
+		//	var regex = new Regex(pattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+		//	foreach (var col in physicalSchema)
+		//	{
+		//		var name = col.ColumnName;
+		//		var match = regex.Match(name);
+		//		if (match.Success)
+		//		{
+		//			var dateStr = match.Captures[0].Value;
+		//			DateTime d;
+		//			if (DateTime.TryParse(dateStr, out d))
+		//			{
+		//				var ordinal = col.ColumnOrdinal!.Value;
+		//				cols.Add(new DataSeriesColumn<DateTime>(name, d, ordinal));
+		//			}
+		//		}
+		//	}
 
-			return Activator.CreateInstance(accessorType, cols)!;
-		}
+		//	return Activator.CreateInstance(accessorType, cols)!;
+		//}
 
-		static object GetIntSeriesAccessor(Schema.SchemaColumn seriesCol, ReadOnlyCollection<DbColumn> physicalSchema)
-		{
-			var fmt = seriesCol.SeriesHeaderFormat ?? Schema.IntegerSeriesMarker; //col{Integer} => ^col(\d+)$
+		//static object GetIntSeriesAccessor(Schema.SchemaColumn seriesCol, ReadOnlyCollection<DbColumn> physicalSchema)
+		//{
+		//	var fmt = seriesCol.SeriesHeaderFormat ?? Schema.IntegerSeriesMarker; //col{Integer} => ^col(\d+)$
 
-			var accessorType = typeof(DataSeriesAccessor<,>).MakeGenericType(typeof(int), seriesCol.DataType!);
-			var cols = new List<DataSeriesColumn<int>>();
-			var i = fmt.IndexOf(Schema.IntegerSeriesMarker, StringComparison.OrdinalIgnoreCase);
+		//	var accessorType = typeof(DataSeriesAccessor<,>).MakeGenericType(typeof(int), seriesCol.DataType!);
+		//	var cols = new List<DataSeriesColumn<int>>();
+		//	var i = fmt.IndexOf(Schema.IntegerSeriesMarker, StringComparison.OrdinalIgnoreCase);
 
-			var prefix = fmt.Substring(0, i);
-			var suffix = fmt.Substring(i + Schema.IntegerSeriesMarker.Length);
-			var pattern = "^" + Regex.Escape(prefix) + "(\\d+)" + Regex.Escape(suffix) + "$";
+		//	var prefix = fmt.Substring(0, i);
+		//	var suffix = fmt.Substring(i + Schema.IntegerSeriesMarker.Length);
+		//	var pattern = "^" + Regex.Escape(prefix) + "(\\d+)" + Regex.Escape(suffix) + "$";
 
-			var regex = new Regex(pattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-			foreach (var col in physicalSchema)
-			{
-				var name = col.ColumnName;
-				var match = regex.Match(name);
-				if (match.Success)
-				{
-					var intStr = match.Captures[0].Value;
-					int d;
-					if (int.TryParse(intStr, out d))
-					{
-						var ordinal = col.ColumnOrdinal!.Value;
-						cols.Add(new DataSeriesColumn<int>(name, d, ordinal));
-					}
-				}
-			}
+		//	var regex = new Regex(pattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+		//	foreach (var col in physicalSchema)
+		//	{
+		//		var name = col.ColumnName;
+		//		var match = regex.Match(name);
+		//		if (match.Success)
+		//		{
+		//			var intStr = match.Captures[0].Value;
+		//			int d;
+		//			if (int.TryParse(intStr, out d))
+		//			{
+		//				var ordinal = col.ColumnOrdinal!.Value;
+		//				cols.Add(new DataSeriesColumn<int>(name, d, ordinal));
+		//			}
+		//		}
+		//	}
 
-			return Activator.CreateInstance(accessorType, cols)!;
-		}
+		//	return Activator.CreateInstance(accessorType, cols)!;
+		//}
 
-		static Expression GetConvertExpression(Expression getterExpr, Type targetType)
-		{
-			var sourceType = getterExpr.Type;
-			// Direct binding, this is fairly common.
-			// The code below would end up doing this anyway.
-			if (sourceType == targetType)
-			{
-				return getterExpr;
-			}
-
-			Expression? expr = null;
-
-			// If the target is nullable coerce to the underlying type.
-			var underlyingType = Nullable.GetUnderlyingType(targetType);
-			Type? nullableType = null;
-			bool isNullable = underlyingType != null;
-			if (underlyingType != null)
-			{
-				nullableType = targetType;
-				targetType = underlyingType;
-			}
-
-			if (sourceType == targetType)
-			{
-				expr = getterExpr;
-			}
-			else
-			{
-				if (targetType.IsEnum)
-				{
-					var enumBaseType = Enum.GetUnderlyingType(targetType);
-					if (sourceType == enumBaseType)
-					{
-						expr = Expression.Convert(getterExpr, targetType);
-					}
-					else
-					{
-						if (sourceType == typeof(string))
-						{
-							expr =
-								Expression.Call(
-									EnumParseMethod.MakeGenericMethod(targetType),
-									getterExpr
-								);
-						}
-						else
-						{
-							throw new NotSupportedException();
-							// not sure what else would be supportable here.
-						}
-					}
-				}
-				else
-				{
-					if (sourceType.IsValueType && targetType.IsValueType)
-					{
-						// handle primitive conversions with casts.
-						expr = Expression.Convert(getterExpr, targetType);
-					}
-					else
-					{
-						if (targetType.IsClass && targetType != typeof(string))
-						{
-							var ctor = targetType.GetConstructor(new Type[] { getterExpr.Type });
-							if (ctor == null)
-							{
-								throw new NotSupportedException();
-							}
-							expr = Expression.New(ctor, getterExpr);
-						}
-						else
-						{
-							// handle everything else with Convert.ChangeType?
-							expr = Expression.Call(
-								ChangeTypeMethod,
-								getterExpr,
-								Expression.Constant(targetType)
-							);
-
-							if (targetType.IsValueType)
-							{
-								expr = Expression.Unbox(expr, targetType);
-							}
-							else
-							{
-								expr = Expression.Convert(expr, targetType);
-							}
-						}
-					}
-				}
-			}
-
-			if (isNullable && expr != null)
-			{
-
-				var nullableCtor = nullableType!.GetConstructor(new Type[] { underlyingType! })!;
-
-				if (getterExpr.Type == typeof(string))
-				{
-					var tempVar = Expression.Variable(getterExpr.Type);
-
-					// var tempVar = getter();
-					// retur IsNullString(tempVar) ? new double?() : 
-
-					expr =
-						Expression.Block(
-							new ParameterExpression[] {
-								tempVar
-							},
-							new Expression[]
-							{
-								Expression.Assign(tempVar, getterExpr),
-								Expression.Condition(
-									Expression.Call(
-										IsNullStringMethod,
-										tempVar
-									),
-									Expression.Default(nullableType),
-									Expression.New(
-										nullableCtor,
-										Expression.Call(
-											ChangeTypeMethod,
-											tempVar,
-											Expression.Constant(underlyingType)
-										)
-									)
-								)
-							}
-						);
-				}
-				else
-				{
-					expr =
-						Expression.New(
-							nullableCtor,
-							getterExpr
-						);
-				}
-			}
-
-			return expr ?? throw new NotSupportedException();
-		}
 
 		static MethodInfo EnumParseMethod =
 			typeof(BinderMethods)
@@ -615,13 +668,15 @@ namespace Sylvan.Data
 
 		void IDataBinder<T>.Bind(IDataRecord record, T item)
 		{
-			f(record, this.state, item);
+			var context = new BinderContext(this.cultureInfo, this.state);
+
+			recordBinderFunction(record, context, item);
 		}
 	}
 
 	static class BinderMethods
 	{
-		
+
 
 		static bool IsNullString(string str)
 		{
