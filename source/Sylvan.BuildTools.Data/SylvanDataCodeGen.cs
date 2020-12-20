@@ -28,7 +28,7 @@ namespace Sylvan.BuildTools.Data
 				if (!string.IsNullOrEmpty(schemaFile))
 				{
 					var spec = File.ReadAllText(schemaFile);
-					var schema = Schema.TryParse(spec);
+					var schema = SchemaSerializer.Simple.Read(spec);
 					if (schema == null)
 					{
 						this.BuildEngine.LogErrorEvent(
@@ -93,7 +93,7 @@ namespace Sylvan.BuildTools.Data
 					//var hasHeaders = colSchema.All(c => !string.IsNullOrEmpty(c.ColumnName));
 
 					sw.WriteLine("const string FileName = @\"" + file.GetMetadata("Filename") + file.GetMetadata("Extension") + "\";");
-					sw.WriteLine("const string SchemaSpec = \"" + schema.GetSchemaSpecification() + "\";");
+					sw.WriteLine("const string SchemaSpec = \"" + schema.ToString() + "\";");
 					sw.WriteLine("static readonly ReadOnlyCollection<DbColumn> ColumnSchema = Sylvan.Data.Schema.TryParse(SchemaSpec).GetColumnSchema();");
 					sw.WriteLine("static readonly ICsvSchemaProvider SchemaProvider = new CsvSchema(ColumnSchema);");
 

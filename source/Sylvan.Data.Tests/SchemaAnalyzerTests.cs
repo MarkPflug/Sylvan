@@ -11,9 +11,9 @@ namespace Sylvan.Data
 			var a = new SchemaAnalyzer();
 			var result = a.Analyze(data);
 			var schema = new Schema(result.GetSchema());
-			var spec = schema.GetSchemaSpecification(true);
+			var spec = schema.ToString();
 
-			var ss = Schema.TryParse(spec);
+			var ss = SchemaSerializer.Simple.Read(spec);
 			Assert.NotNull(ss);
 		}
 
@@ -24,10 +24,9 @@ namespace Sylvan.Data
 			var a = new SchemaAnalyzer();
 			var result = a.Analyze(data);
 			var schema = new Schema(result.GetSchema());
-			var spec = schema.GetSchemaSpecification(true);
+			var spec = schema.ToString();
 
-
-			var ss = Schema.TryParse(spec);
+			var ss = SchemaSerializer.Simple.Read(spec);
 			Assert.NotNull(ss);
 		}
 	}

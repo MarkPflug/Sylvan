@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Data.Common;
 using System.Text.RegularExpressions;
 
 namespace Sylvan.Data
@@ -27,10 +25,16 @@ namespace Sylvan.Data
 			return this.GetEnumerator();
 		}
 
-		public ReadOnlyCollection<DbColumn> GetSchema()
+		public Schema GetSchema()
+		{
+			return GetSchemaBuilder().Build();
+		}
+
+		public Schema.Builder GetSchemaBuilder()
 		{
 			var series = DetectSeries(columns);
-			var schema = new List<DbColumn>();
+			var schema = new Schema.Builder();
+
 			for (int i = 0; i < columns.Length; i++)
 			{
 				var col = columns[i];
@@ -48,15 +52,22 @@ namespace Sylvan.Data
 						types &= col.GetColType();
 					}
 					var type = ColumnInfo.GetType(types);
-					var columnSchema = Schema.SchemaColumn.CreateSeries("Values", allowNull, type, series.type, prefix + "{" + series.type + "}");
+					var cb = new Schema.Column.Builder("Values", type, allowNull)
+						{
+							IsSeries = true,
+							SeriesOrdinal = 0,						
+							SeriesType = series.type == SeriesType.Integer ? typeof(int) : typeof(DateTime),
+							SeriesHeaderFormat = prefix + "{" + series.type + "}",
+						};
+					
 					i = series.seriesEnd;
-					schema.Add(columnSchema);
+					schema.Add(cb);
 					continue;
 				}
 				var dbCol = col.CreateColumnSchema();
 				schema.Add(dbCol);
 			}
-			return new ReadOnlyCollection<DbColumn>(schema);
+			return schema;
 		}
 
 		class SeriesInfo

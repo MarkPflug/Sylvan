@@ -7,24 +7,37 @@ namespace Sylvan.Data.Csv
 	public class CsvSchemaTests
 	{
 		[Fact]
+		public void SchemaTest()
+		{
+			var sb = new 
+				Schema
+				.Builder()
+				;
+
+			var data = TestData.GetTestDataReader();
+			var schema = new Schema(data);
+			var spec = schema.ToString();
+		}
+
+		[Fact]
 		public void Test1()
 		{
 			var data = TestData.GetTestDataReader();
 			var schema = new Schema(data);
-			var spec = schema.GetSchemaSpecification(true);
+			var spec = schema.ToString();
 		}
 
 		[Fact]
 		public void ParseTest1()
 		{
-			var spec = Schema.TryParse("A:Int,B:String?");
+			var spec = SchemaSerializer.Simple.Read("A:Int,B:String?");
 			Assert.NotNull(spec);
 		}
 
 		[Fact]
 		public void ParseTest2()
 		{
-			var spec = Schema.TryParse("A,B");
+			var spec = SchemaSerializer.Simple.Read("A,B");
 			Assert.NotNull(spec);
 			var cols = spec.GetColumnSchema();
 			Assert.Equal("A", cols[0].ColumnName);
@@ -39,7 +52,7 @@ namespace Sylvan.Data.Csv
 		[Fact]
 		public void ParseTestFormat()
 		{
-			var spec = Schema.TryParse("Name,Date:DateTime{yyyyMMdd}");
+			var spec = SchemaSerializer.Simple.Read("Name,Date:DateTime{yyyyMMdd}");
 			Assert.NotNull(spec);
 			var cols = spec.GetColumnSchema();
 			Assert.Equal("Name", cols[0].ColumnName);
@@ -53,7 +66,7 @@ namespace Sylvan.Data.Csv
 		[Fact]
 		public void Variadic()
 		{
-			var spec = Schema.TryParse("Id:string,Cases*:int");
+			var spec = SchemaSerializer.Simple.Read("Id:string,Cases*:int");
 			var data = "Id,8/12/20,8/13/20,8/14/20\r\nTest,1,2,3\r\nTest2,12345,54321,2343";
 			var schema = new CsvSchema(spec.GetColumnSchema());
 			var csv = CsvDataReader.Create(new StringReader(data), new CsvDataReaderOptions { Schema = schema });

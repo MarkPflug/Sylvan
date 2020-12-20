@@ -165,8 +165,10 @@ namespace Sylvan.Data
 		{
 			this.cols = columns.OrderBy(c => c.Key).ToArray();
 			this.getter = GetAccessor(typeof(TV));
-			this.Minimum = columns.Select(c => c.Key).Min();
-			this.Maximum = columns.Select(c => c.Key).Max();
+			
+			this.Minimum = columns.Select(c => c.Key).Min()!;
+			this.Maximum = columns.Select(c => c.Key).Max()!;
+
 		}
 
 		public IEnumerable<KeyValuePair<TK, TV>> GetSeries(IDataRecord record)

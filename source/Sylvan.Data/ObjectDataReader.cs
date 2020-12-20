@@ -175,6 +175,7 @@ namespace Sylvan.Data
 				{
 					var propType = prop.PropertyType;
 					var getter = prop.GetGetMethod();
+					if (getter == null) throw new ArgumentException(nameof(prop));
 					var param = Expression.Parameter(typeof(T));
 					var parameters = new ParameterExpression[] { param };
 					var expr = Expression.Lambda(Expression.Call(param, getter), parameters);
@@ -291,7 +292,7 @@ namespace Sylvan.Data
 
 		public override Type GetFieldType(int ordinal)
 		{
-			return this.columns[ordinal].DataType;
+			return this.columns[ordinal].DataType!;
 		}
 
 		public override int GetOrdinal(string name)
@@ -327,8 +328,9 @@ namespace Sylvan.Data
 			return GetFieldValue<byte>(ordinal);
 		}
 
-		public override long GetBytes(int ordinal, long dataOffset, byte[] buffer, int bufferOffset, int length)
+		public override long GetBytes(int ordinal, long dataOffset, byte[]? buffer, int bufferOffset, int length)
 		{
+			if (buffer == null) throw new ArgumentNullException(nameof(buffer));
 			if (dataOffset > int.MaxValue) throw new ArgumentOutOfRangeException(nameof(dataOffset));
 			var offset = (int)dataOffset;
 			// TODO: consider caching the result of GetFieldValue between calls to GetBytes.
@@ -346,8 +348,9 @@ namespace Sylvan.Data
 			return GetFieldValue<char>(ordinal);
 		}
 
-		public override long GetChars(int ordinal, long dataOffset, char[] buffer, int bufferOffset, int length)
+		public override long GetChars(int ordinal, long dataOffset, char[]? buffer, int bufferOffset, int length)
 		{
+			if (buffer == null) throw new ArgumentNullException(nameof(buffer));
 			if (dataOffset > int.MaxValue) throw new ArgumentOutOfRangeException(nameof(dataOffset));
 			var off = (int)dataOffset;
 			var str = this.GetString(ordinal);
@@ -358,7 +361,7 @@ namespace Sylvan.Data
 
 		public override string GetDataTypeName(int ordinal)
 		{
-			return this.columns[ordinal].DataTypeName;
+			return GetFieldType(ordinal).Name;
 		}
 
 		public override DateTime GetDateTime(int ordinal)

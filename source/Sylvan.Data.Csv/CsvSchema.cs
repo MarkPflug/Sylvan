@@ -98,6 +98,7 @@ namespace Sylvan.Data.Csv
 
 			if (ordinal >= 0 && ordinal < schema.Length)
 				return schema[ordinal];
+
 			return null;
 		}
 	}

@@ -39,31 +39,31 @@ namespace Sylvan.Data
 			switch (Type.GetTypeCode(type))
 			{
 				case TypeCode.Boolean:
-					return drType.GetMethod("GetBoolean");
+					return drType.GetMethod("GetBoolean")!;
 				case TypeCode.Byte:
-					return drType.GetMethod("GetByte");
+					return drType.GetMethod("GetByte")!;
 				case TypeCode.Int16:
-					return drType.GetMethod("GetInt16");
+					return drType.GetMethod("GetInt16")!;
 				case TypeCode.Int32:
-					return drType.GetMethod("GetInt32");
+					return drType.GetMethod("GetInt32")!;
 				case TypeCode.Int64:
-					return drType.GetMethod("GetInt64");
+					return drType.GetMethod("GetInt64")!;
 				case TypeCode.DateTime:
-					return drType.GetMethod("GetDateTime");
+					return drType.GetMethod("GetDateTime")!;
 				case TypeCode.Char:
-					return drType.GetMethod("GetChar");
+					return drType.GetMethod("GetChar")!;
 				case TypeCode.String:
-					return drType.GetMethod("GetString");
+					return drType.GetMethod("GetString")!;
 				case TypeCode.Single:
-					return drType.GetMethod("GetFloat");
+					return drType.GetMethod("GetFloat")!;
 				case TypeCode.Double:
-					return drType.GetMethod("GetDouble");
+					return drType.GetMethod("GetDouble")!;
 				case TypeCode.Decimal:
-					return drType.GetMethod("GetDecimal");
+					return drType.GetMethod("GetDecimal")!;
 				default:
 					if (type == typeof(Guid))
 					{
-						return drType.GetMethod("GetGuid");
+						return drType.GetMethod("GetGuid")!;
 					}
 					// TODO: byte[]? char[]?
 					break;
@@ -93,7 +93,7 @@ namespace Sylvan.Data
 
 			var seriesMap =
 				logicalSchema
-				.OfType<Schema.SchemaColumn>()
+				.OfType<Schema.Column>()
 				.Where(c => c.IsSeries == true)
 				.ToDictionary(p => string.IsNullOrEmpty(p.SeriesName) ? "Values" : p.SeriesName, p => p);
 
@@ -146,7 +146,7 @@ namespace Sylvan.Data
 
 				// TODO: potentially use the properties dynamically instead of depending on the type here? 
 				// Not of much value probably.
-				var schemaCol = col as Schema.SchemaColumn;
+				var schemaCol = col as Schema.Column;
 				var isSeries = schemaCol?.IsSeries == true;
 
 				if (isSeries)
@@ -160,6 +160,7 @@ namespace Sylvan.Data
 					state.Add(seriesAccessor);
 
 					var setter = property.GetSetMethod(true);
+					if (setter == null) continue;
 					var paramType = setter.GetParameters()[0].ParameterType;
 
 					var seriesAccType = seriesAccessor.GetType();
@@ -184,21 +185,22 @@ namespace Sylvan.Data
 						schemaCol.SeriesType == typeof(DateTime) 
 						? typeof(DateSeries<>)
 						: typeof(Series<>);
-					seriesType = seriesType.MakeGenericType(schemaCol.DataType);
 
-					var seriesCtor = seriesType.GetConstructor(new Type[] { schemaCol.SeriesType!, typeof(IEnumerable<>).MakeGenericType(schemaCol.DataType) });
+					seriesType = seriesType.MakeGenericType(schemaCol.DataType!);
+
+					var seriesCtor = seriesType.GetConstructor(new Type[] { schemaCol.SeriesType!, typeof(IEnumerable<>).MakeGenericType(schemaCol.DataType!) });
 
 					// TODO: push this down as a constructor on Series?
 					var ctorExpr =
 						Expression.New(
-							seriesCtor,
+							seriesCtor!,
 							Expression.Property(
 								accLocal,
-								seriesAccType.GetProperty("Minimum")
+								seriesAccType.GetProperty("Minimum")!
 							),
 							Expression.Call(
 								accLocal,
-								seriesAccType.GetMethod("GetValues"),
+								seriesAccType.GetMethod("GetValues")!,
 								recordParam
 							)
 						);
@@ -220,10 +222,10 @@ namespace Sylvan.Data
 						continue;
 					}
 
-					var setter = property.GetSetMethod(true);
+					var setter = property.GetSetMethod(true)!;
 					var paramType = setter.GetParameters()[0].ParameterType;
 
-					var accessorMethod = GetAccessorMethod(col.DataType);
+					var accessorMethod = GetAccessorMethod(col.DataType!);
 
 					var ordinalExpr = Expression.Constant(ordinal, typeof(int));
 					Expression accessorExpr = Expression.Call(recordParam, accessorMethod, ordinalExpr);
@@ -236,7 +238,7 @@ namespace Sylvan.Data
 						// item.Property = record.IsDBNull(idx) ? default : Coerce(record.Get[Type](idx));
 						expr =
 							Expression.Condition(
-								Expression.Call(recordParam, isDbNullMethod, ordinalExpr),
+								Expression.Call(recordParam, isDbNullMethod!, ordinalExpr),
 								Expression.Default(paramType),
 								expr
 							);
@@ -254,7 +256,7 @@ namespace Sylvan.Data
 			this.f = lf.Compile();
 		}
 
-		static object GetDataSeriesAccessor(Schema.SchemaColumn seriesCol, ReadOnlyCollection<DbColumn> physicalSchema)
+		static object GetDataSeriesAccessor(Schema.Column seriesCol, ReadOnlyCollection<DbColumn> physicalSchema)
 		{
 			switch (Type.GetTypeCode(seriesCol.SeriesType))
 			{
@@ -267,11 +269,11 @@ namespace Sylvan.Data
 			}
 		}
 
-		static object GetDateSeriesAccessor(Schema.SchemaColumn seriesCol, ReadOnlyCollection<DbColumn> physicalSchema)
+		static object GetDateSeriesAccessor(Schema.Column seriesCol, ReadOnlyCollection<DbColumn> physicalSchema)
 		{
 			var fmt = seriesCol.SeriesHeaderFormat ?? Schema.DateSeriesMarker; //asdf{Date}qwer => ^asdf(.+)qwer$
 
-			var accessorType = typeof(DataSeriesAccessor<,>).MakeGenericType(typeof(DateTime), seriesCol.DataType);
+			var accessorType = typeof(DataSeriesAccessor<,>).MakeGenericType(typeof(DateTime), seriesCol.DataType!);
 			var cols = new List<DataSeriesColumn<DateTime>>();
 			var i = fmt.IndexOf(Schema.DateSeriesMarker, StringComparison.OrdinalIgnoreCase);
 
@@ -296,14 +298,14 @@ namespace Sylvan.Data
 				}
 			}
 
-			return Activator.CreateInstance(accessorType, cols);
+			return Activator.CreateInstance(accessorType, cols)!;
 		}
 
-		static object GetIntSeriesAccessor(Schema.SchemaColumn seriesCol, ReadOnlyCollection<DbColumn> physicalSchema)
+		static object GetIntSeriesAccessor(Schema.Column seriesCol, ReadOnlyCollection<DbColumn> physicalSchema)
 		{			
 			var fmt = seriesCol.SeriesHeaderFormat ?? Schema.IntegerSeriesMarker; //col{Integer} => ^col(\d+)$
 
-			var accessorType = typeof(DataSeriesAccessor<,>).MakeGenericType(typeof(int), seriesCol.DataType);
+			var accessorType = typeof(DataSeriesAccessor<,>).MakeGenericType(typeof(int), seriesCol.DataType!);
 			var cols = new List<DataSeriesColumn<int>>();
 			var i = fmt.IndexOf(Schema.IntegerSeriesMarker, StringComparison.OrdinalIgnoreCase);
 
@@ -328,7 +330,7 @@ namespace Sylvan.Data
 				}
 			}
 
-			return Activator.CreateInstance(accessorType, cols);
+			return Activator.CreateInstance(accessorType, cols)!;
 		}
 
 		static Expression GetConvertExpression(Expression getterExpr, Type targetType)
@@ -429,7 +431,7 @@ namespace Sylvan.Data
 					Expression.New(
 						nullableType!.GetConstructor(
 							new Type[] { underlyingType! }
-						),
+						)!,
 						getterExpr
 					);
 			}
@@ -439,11 +441,11 @@ namespace Sylvan.Data
 
 		static MethodInfo EnumParseMethod =
 			typeof(BinderMethods)
-			.GetMethod("ParseEnum", BindingFlags.NonPublic | BindingFlags.Static);
+			.GetMethod("ParseEnum", BindingFlags.NonPublic | BindingFlags.Static)!;
 
 		static MethodInfo ChangeTypeMethod =
 			typeof(BinderMethods)
-			.GetMethod("ChangeType", BindingFlags.NonPublic | BindingFlags.Static);
+			.GetMethod("ChangeType", BindingFlags.NonPublic | BindingFlags.Static)!;
 
 		void IDataBinder<T>.Bind(IDataRecord record, T item)
 		{

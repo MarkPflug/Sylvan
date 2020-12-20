@@ -21,10 +21,6 @@
     <PackageReference Include="ReportGenerator" Version="4.5.0"/>-->
   </ItemGroup>
 
-  <ItemGroup>
-    <!--<PackageReference Include="Microsoft.CodeAnalysis.FxCopAnalyzers" Version="3.0.0" PrivateAssets="all"/>-->
-  </ItemGroup>
-
    <Target
      Name="PackValidations" BeforeTargets="GenerateNuspec">
     <!-- Attempt to prevent myself from accidentally releaseing a debug build. -->

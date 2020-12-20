@@ -41,8 +41,9 @@ namespace Sylvan.Data
 			return dr.GetByte(ordinal);
 		}
 
-		public override long GetBytes(int ordinal, long dataOffset, byte[] buffer, int bufferOffset, int length)
+		public override long GetBytes(int ordinal, long dataOffset, byte[]? buffer, int bufferOffset, int length)
 		{
+			if (buffer == null) throw new ArgumentNullException(nameof(buffer));
 			return dr.GetBytes(ordinal, dataOffset, buffer, bufferOffset, length);
 		}
 
@@ -51,8 +52,9 @@ namespace Sylvan.Data
 			return dr.GetChar(ordinal);
 		}
 
-		public override long GetChars(int ordinal, long dataOffset, char[] buffer, int bufferOffset, int length)
+		public override long GetChars(int ordinal, long dataOffset, char[]? buffer, int bufferOffset, int length)
 		{
+			if (buffer == null) throw new ArgumentNullException(nameof(buffer));
 			return dr.GetChars(ordinal, dataOffset, buffer, bufferOffset, length);
 		}
 
@@ -163,11 +165,12 @@ namespace Sylvan.Data
 			{
 				return g.GetColumnSchema();
 			}
+
 			var sb = new Schema.Builder();
 			for(int i = 0; i < this.FieldCount; i++)
 			{
-				var dbType = Schema.GetDbType(this.GetFieldType(i)); 
-				sb.AddColumn(this.GetName(i), dbType);
+				// TODO: determine nullability from GetSchemaTable?
+				sb.Add(new Schema.Column.Builder(this.GetName(i), this.GetFieldType(i), true));
 			}
 			return sb.Build().GetColumnSchema();
 		}

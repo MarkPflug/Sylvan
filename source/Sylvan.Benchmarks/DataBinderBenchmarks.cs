@@ -201,7 +201,7 @@ namespace Sylvan.Benchmarks
 
 		public DataBinderBenchmarks()
 		{
-			var schema = Schema.TryParse("B:Boolean,D:DateTime,V:Double,G:Guid,I:Int32,S:String");
+			var schema = SchemaSerializer.Simple.Read("B:Boolean,D:DateTime,V:Double,G:Guid,I:Int32,S:String");
 			this.record = new TestRecord();
 			this.item = new Record();
 			this.compiled = new CompiledDataBinder<Record>(schema.GetColumnSchema());

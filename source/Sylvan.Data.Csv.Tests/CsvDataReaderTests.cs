@@ -715,7 +715,7 @@ namespace Sylvan.Data.Csv
 		[Fact]
 		public void CustomFormatTest()
 		{
-			var schema = Schema.TryParse("Name,Date:DateTime{yyyyMMdd}");
+			var schema = SchemaSerializer.Simple.Read("Name,Date:DateTime{yyyyMMdd}");
 			var csvSchema = new CsvSchema(schema.GetColumnSchema());
 			using var tr = new StringReader("Test,20200812");
 			var csv = CsvDataReader.Create(tr, new CsvDataReaderOptions { Schema = csvSchema, HasHeaders = false });

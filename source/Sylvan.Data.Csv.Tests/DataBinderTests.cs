@@ -23,7 +23,7 @@ namespace Sylvan.Data.Csv
 
 		public DataBinderTests()
 		{
-			var s = Schema.TryParse(SchemaSpec).GetColumnSchema();
+			var s = SchemaSerializer.Simple.Read(SchemaSpec).GetColumnSchema();
 			this.schema = new CsvSchema(s);
 			opts = new CsvDataReaderOptions { Schema = schema };
 

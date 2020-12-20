@@ -7,7 +7,7 @@ using System.IO;
 
 namespace Sylvan.Data
 {
-	public abstract partial class DataReaderAdapter : DbDataReader, IDbColumnSchemaGenerator
+	internal abstract partial class DataReaderAdapter : DbDataReader, IDbColumnSchemaGenerator
 	{
 		DbDataReader dr;
 
@@ -42,8 +42,10 @@ namespace Sylvan.Data
 			return dr.GetByte(ordinal);
 		}
 
-		public override long GetBytes(int ordinal, long dataOffset, byte[] buffer, int bufferOffset, int length)
+		public override long GetBytes(int ordinal, long dataOffset, byte[]? buffer, int bufferOffset, int length)
 		{
+			if (buffer == null) throw new ArgumentNullException(nameof(buffer));
+
 			return dr.GetBytes(ordinal, dataOffset, buffer, bufferOffset, length);
 		}
 
@@ -52,8 +54,10 @@ namespace Sylvan.Data
 			return dr.GetChar(ordinal);
 		}
 
-		public override long GetChars(int ordinal, long dataOffset, char[] buffer, int bufferOffset, int length)
+		public override long GetChars(int ordinal, long dataOffset, char[]? buffer, int bufferOffset, int length)
 		{
+			if (buffer == null) throw new ArgumentNullException(nameof(buffer));
+
 			return dr.GetChars(ordinal, dataOffset, buffer, bufferOffset, length);
 		}
 
@@ -122,16 +126,16 @@ namespace Sylvan.Data
 			return dr.GetOrdinal(name);
 		}
 
-		public override string? GetString(int ordinal)
+		public override string GetString(int ordinal)
 		{
 			return dr.GetString(ordinal);
 		}
 
-		public override object? GetValue(int ordinal)
+		public override object GetValue(int ordinal)
 		{
 			if (this.IsDBNull(ordinal))
 			{
-				return null;
+				return DBNull.Value;
 			}
 			var type = this.GetFieldType(ordinal);
 
@@ -210,7 +214,7 @@ namespace Sylvan.Data
 			return dr.Read();
 		}
 
-		public override DataTable GetSchemaTable()
+		public override DataTable? GetSchemaTable()
 		{
 			return dr.GetSchemaTable();
 		}

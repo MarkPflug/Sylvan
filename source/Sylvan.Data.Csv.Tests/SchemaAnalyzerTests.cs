@@ -13,7 +13,7 @@ namespace Sylvan.Data.Csv
 			var a = new SchemaAnalyzer();
 			var result = a.Analyze(csv);
 
-			var schema = result.GetSchema();
+			var schema = result.GetSchema().GetColumnSchema();
 			Assert.Equal(3, schema.Count);
 			Assert.Equal("Id", schema[0].ColumnName);
 			Assert.Equal("Name", schema[1].ColumnName);
@@ -29,7 +29,7 @@ namespace Sylvan.Data.Csv
 			var a = new SchemaAnalyzer();
 			var result = a.Analyze(csv);
 
-			var schema = result.GetSchema();
+			var schema = result.GetSchema().GetColumnSchema();
 			Assert.Equal(3, schema.Count);
 			Assert.Equal("Id", schema[0].ColumnName);
 			Assert.Equal("Name", schema[1].ColumnName);
@@ -45,7 +45,7 @@ namespace Sylvan.Data.Csv
 			var a = new SchemaAnalyzer();
 			var result = a.Analyze(csv);
 
-			var schema = result.GetSchema();
+			var schema = result.GetSchema().GetColumnSchema();
 			var col = schema[11];
 			Assert.NotNull(col);
 		}

@@ -501,23 +501,27 @@ namespace Sylvan.Data
 			return typeof(string);
 		}
 
-		internal Schema.SchemaColumn CreateColumnSchema()
+		internal Schema.Column.Builder CreateColumnSchema()
 		{
+			var name = this.name ?? "";
 			if (nullCount == count)
 			{
 				// never saw any values, so no determination could be made
-				return Schema.SchemaColumn.CreateText(this.ordinal, name, true);
+				return new Schema.Column.Builder(name, typeof(string), true);
 			}
 
 			if (this.isBoolean)
 			{
-				return Schema.SchemaColumn.CreateBoolean(this.ordinal, name, isNullable);
+				return new Schema.Column.Builder(name, typeof(bool), isNullable);
 			}
 
 			if (this.isDate || this.isDateTime)
 			{
-				int? precision = isDate ? (int?)null : dateHasFractionalSeconds ? 7 : 0;
-				return Schema.SchemaColumn.CreateDate(this.ordinal, name, isNullable, isUnique, precision);
+				int? scale = isDate ? (int?)null : dateHasFractionalSeconds ? 7 : 0;
+				return new Schema.Column.Builder(name, typeof(DateTime), isNullable)
+				{
+					NumericScale = scale
+				};
 			}
 
 			if (this.isInt)
@@ -526,22 +530,31 @@ namespace Sylvan.Data
 					intMin < int.MinValue || intMax > int.MaxValue
 					? typeof(long)
 					: typeof(int);
-				return Schema.SchemaColumn.CreateInt(this.ordinal, name, isNullable, isUnique, type);
+				return new Schema.Column.Builder(name, type, isNullable)
+				{
+					IsUnique = isUnique
+				};
 			}
 
 			if (this.isFloat)
 			{
-				return
+				var type =
 					floatMin < float.MinValue || floatMax > float.MaxValue
-					? Schema.SchemaColumn.CreateDouble(this.ordinal, name, isNullable)
-					: Schema.SchemaColumn.CreateFloat(this.ordinal, name, isNullable);
+					? typeof(double)
+					: typeof(float);
+				return new Schema.Column.Builder(name, type, isNullable);
 			}
 
 			var len = stringLenMax;
-			return Schema.SchemaColumn.CreateString(this.ordinal, name, isNullable, isUnique, len, isAscii);
+			return new Schema.Column.Builder(name, typeof(string), isNullable)
+			{
+				ColumnSize = len,
+				NumericPrecision = isAscii ? 2 : 1,
+				CommonDataType = isAscii ? System.Data.DbType.AnsiString : System.Data.DbType.String,
+				IsUnique = isUnique
+			};
 		}
 	}
-
 
 	[Flags]
 	enum SeriesType
