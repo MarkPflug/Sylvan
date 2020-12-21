@@ -52,14 +52,17 @@ namespace Sylvan.Data
 						types &= col.GetColType();
 					}
 					var type = ColumnInfo.GetType(types);
-					var cb = new Schema.Column.Builder("Values", type, allowNull)
-						{
-							IsSeries = true,
-							SeriesOrdinal = 0,						
-							SeriesType = series.type == SeriesType.Integer ? typeof(int) : typeof(DateTime),
-							SeriesHeaderFormat = prefix + "{" + series.type + "}",
-						};
-					
+
+					var name = string.IsNullOrEmpty(series.prefix) ? "Values" : series.prefix;
+					var cb = new Schema.Column.Builder(name + "*", type, allowNull)
+					{
+						IsSeries = true,
+						SeriesName = name,
+						SeriesOrdinal = 0,
+						SeriesType = series.type == SeriesType.Integer ? typeof(int) : typeof(DateTime),
+						SeriesHeaderFormat = prefix + "{" + series.type + "}",
+					};
+
 					i = series.seriesEnd;
 					schema.Add(cb);
 					continue;

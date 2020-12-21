@@ -8,7 +8,7 @@ namespace Sylvan.Data
 {
 	public abstract class SchemaSerializer
 	{
-		public static SchemaSerializer Simple = new SimpleSchemaSerializer();
+		public static SchemaSerializer Simple = new SimpleSchemaSerializer(false);
 
 		public abstract string Write(Schema schema);
 
@@ -17,11 +17,16 @@ namespace Sylvan.Data
 
 	sealed class SimpleSchemaSerializer : SchemaSerializer
 	{
+
+
 		static readonly Regex ColSpecRegex =
 			new Regex(
 				@"^((?<BaseName>[^\>]+)\>)?(?<Name>[^\:]+)?(?::(?<Type>[a-z0-9]+)(\[(?<Size>\d+)\])?(?<AllowNull>\?)?(\{(?<Format>[^\}]+)\})?)?$",
 				RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant
 			);
+
+		static readonly Regex SeriesFormatRegex =
+			new Regex("^(?<prefix>.*){{(Date|Integer)}}(?<suffix>.*)$");
 
 		static readonly Regex NewLineRegex =
 			new Regex(
@@ -29,7 +34,6 @@ namespace Sylvan.Data
 				RegexOptions.Multiline | RegexOptions.Compiled
 			);
 
-		bool multiline = true;
 
 		static readonly Lazy<Dictionary<string, DbType>> ColumnTypeMap = new Lazy<Dictionary<string, DbType>>(InitializeTypeMap);
 
@@ -47,6 +51,13 @@ namespace Sylvan.Data
 			return map;
 		}
 
+		bool multiLine;
+
+		internal SimpleSchemaSerializer(bool multiLine)
+		{
+			this.multiLine = multiLine;
+		}
+
 		/// <summary>
 		/// Attempts to parse a schema specification.
 		/// </summary>
@@ -55,7 +66,6 @@ namespace Sylvan.Data
 		public override Schema Read(string spec)
 		{
 			var builder = new Schema.Builder();
-
 
 			var map = ColumnTypeMap.Value;
 			var colSpecs = NewLineRegex.Replace(spec, "").Split(',');
@@ -90,14 +100,24 @@ namespace Sylvan.Data
 						format = formatGroup.Value;
 					}
 
-					builder.Add(
-						new Schema.Column.Builder(name, type, allowNull)
+					var cb = new Schema.Column.Builder(name, type, allowNull)
 						{
 							BaseColumnName = baseName,
 							ColumnSize = size == -1 ? null : (int?)size,
 							Format = format
-						}
-					);
+						};
+
+					if(name.EndsWith("*"))
+					{
+						cb.IsSeries = true;
+						cb.ColumnName = "";
+						cb.SeriesHeaderFormat = cb.BaseColumnName;
+						cb.SeriesOrdinal = 0;
+						cb.SeriesName = name.Substring(0, name.Length - 1);
+						cb.SeriesType = cb.BaseColumnName!.Contains(Schema.DateSeriesMarker) ? typeof(DateTime) : typeof(int);
+					}
+
+					builder.Add(cb);
 				}
 				else
 				{
@@ -125,7 +145,7 @@ namespace Sylvan.Data
 				else
 				{
 					w.Write(",");
-					if (multiline)
+					if (multiLine)
 					{
 						w.WriteLine();
 					}
@@ -160,15 +180,35 @@ namespace Sylvan.Data
 			if (col.DataType == typeof(string) && col.AllowDBNull == false && col.ColumnSize == null)
 				return;
 
-			w.Write(":");
-			w.Write(col.DataTypeName);
-			if (col.CommonDataType != null && HasLength(col.CommonDataType.Value))
+			
+
+			var typeName = col.CommonDataType switch
 			{
-				if (col.ColumnSize != null)
+				DbType.String => "string",
+				DbType.Int32 => "int",
+				DbType.Double => "double",
+				DbType.Decimal => "decimal",
+				_ => null
+			};
+			if (typeName == null)
+			{
+				typeName = col.DataTypeName ?? col.DataType?.Name;
+			}
+			if (typeName != null)
+			{
+
+				w.Write(":");
+
+				w.Write(typeName);
+
+				if (col.CommonDataType != null && HasLength(col.CommonDataType.Value))
 				{
-					w.Write("[");
-					w.Write(col.ColumnSize?.ToString() ?? "*");
-					w.Write("]");
+					if (col.ColumnSize != null)
+					{
+						w.Write("[");
+						w.Write(col.ColumnSize?.ToString() ?? "*");
+						w.Write("]");
+					}
 				}
 			}
 			if (col.AllowDBNull != false)
