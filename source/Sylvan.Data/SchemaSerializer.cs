@@ -114,7 +114,10 @@ namespace Sylvan.Data
 						cb.SeriesHeaderFormat = cb.BaseColumnName;
 						cb.SeriesOrdinal = 0;
 						cb.SeriesName = name.Substring(0, name.Length - 1);
-						cb.SeriesType = cb.BaseColumnName!.Contains(Schema.DateSeriesMarker) ? typeof(DateTime) : typeof(int);
+						if (cb.BaseColumnName != null)
+						{
+							cb.SeriesType = cb.BaseColumnName!.Contains(Schema.DateSeriesMarker) ? typeof(DateTime) : typeof(int);
+						}
 					}
 
 					builder.Add(cb);
