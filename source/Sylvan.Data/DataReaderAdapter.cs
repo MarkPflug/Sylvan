@@ -7,7 +7,7 @@ using System.IO;
 
 namespace Sylvan.Data
 {
-	internal abstract partial class DataReaderAdapter : DbDataReader, IDbColumnSchemaGenerator
+	abstract partial class DataReaderAdapter : DbDataReader, IDbColumnSchemaGenerator
 	{
 		DbDataReader dr;
 

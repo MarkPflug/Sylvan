@@ -14,7 +14,7 @@ namespace Sylvan.Data
 		}
 
 		/// <example>
-		/// var reader = seq.CreateDataReader()
+		/// var reader = seq.AsDataReader()
 		/// </example>
 		public static DbDataReader AsDataReader<T>(this IEnumerable<T> seq)
 		{

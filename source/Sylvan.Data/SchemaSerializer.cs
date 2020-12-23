@@ -17,7 +17,7 @@ namespace Sylvan.Data
 
 	sealed class SimpleSchemaSerializer : SchemaSerializer
 	{
-
+		const string SeriesSymbol = "*";
 
 		static readonly Regex ColSpecRegex =
 			new Regex(
@@ -107,7 +107,8 @@ namespace Sylvan.Data
 							Format = format
 						};
 
-					if(name.EndsWith("*"))
+					// if the column represents a series.
+					if(name.EndsWith(SeriesSymbol))
 					{
 						cb.IsSeries = true;
 						cb.ColumnName = "";
@@ -183,8 +184,6 @@ namespace Sylvan.Data
 			if (col.DataType == typeof(string) && col.AllowDBNull == false && col.ColumnSize == null)
 				return;
 
-			
-
 			var typeName = col.CommonDataType switch
 			{
 				DbType.String => "string",
@@ -199,7 +198,6 @@ namespace Sylvan.Data
 			}
 			if (typeName != null)
 			{
-
 				w.Write(":");
 
 				w.Write(typeName);
