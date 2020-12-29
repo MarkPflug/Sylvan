@@ -1,14 +1,10 @@
 ﻿using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Jobs;
-using System;
+using Sylvan.Data;
+using Sylvan.Data.Csv;
 using System.Collections.Generic;
-using System.Data;
-using System.Data.OleDb;
-using System.Globalization;
-using System.IO;
 using System.Threading.Tasks;
 
-namespace Sylvan.Data.Csv
+namespace Sylvan.Benchmarks
 {
 	[MemoryDiagnoser]
 	public class CsvReaderBenchmarks
@@ -104,7 +100,7 @@ namespace Sylvan.Data.Csv
 		{
 			using var tr = TestData.GetTextReader();
 			using var dr = await CsvDataReader.CreateAsync(tr, new CsvDataReaderOptions { Schema = TestData.TestDataSchema });
-			await ProcessDataAsync(dr);
+			await dr.ProcessDataAsync();
 		}
 
 		[Benchmark]
@@ -113,72 +109,8 @@ namespace Sylvan.Data.Csv
 			var pool = new StringPool();
 			using var tr = TestData.GetTextReader();
 			using var dr = CsvDataReader.Create(tr, new CsvDataReaderOptions { Schema = TestData.TestDataSchema, StringFactory = pool.GetString });
-			ProcessData(dr);
-		}
-
-		static void ProcessData(CsvDataReader dr)
-		{
-			var types = new TypeCode[dr.FieldCount];
-
-			for (int i = 0; i < types.Length; i++)
-			{
-				types[i] = Type.GetTypeCode(dr.GetFieldType(i));
-			}
-			while (dr.Read())
-			{
-				for (int i = 0; i < dr.FieldCount; i++)
-				{
-					switch (types[i])
-					{
-						case TypeCode.Int32:
-							var v = dr.GetInt32(i);
-							break;
-						case TypeCode.Double:
-							if (i == 4 && dr.IsDBNull(i))
-								break;
-							var d = dr.GetDouble(i);
-							break;
-						case TypeCode.String:
-							var s = dr.GetString(i);
-							break;
-						default:
-							break;
-					}
-				}
-			}
-		}
-
-		static async Task ProcessDataAsync(CsvDataReader dr)
-		{
-			var types = new TypeCode[dr.FieldCount];
-
-			for (int i = 0; i < types.Length; i++)
-			{
-				types[i] = Type.GetTypeCode(dr.GetFieldType(i));
-			}
-			while (await dr.ReadAsync())
-			{
-				for (int i = 0; i < dr.FieldCount; i++)
-				{
-					switch (types[i])
-					{
-						case TypeCode.Int32:
-							var v = dr.GetInt32(i);
-							break;
-						case TypeCode.Double:
-							if (i == 4 && dr.IsDBNull(i))
-								break;
-							var d = dr.GetDouble(i);
-							break;
-						case TypeCode.String:
-							var s = dr.GetString(i);
-							break;
-						default:
-							break;
-					}
-				}
-			}
-		}
+			dr.ProcessData();
+		}	
 
 		[Benchmark]
 		public void SylvanSelect()

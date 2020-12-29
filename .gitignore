@@ -19,6 +19,12 @@ _site
 *.sln.docstates
 *.cobertura.xml
 
+#temporarily disable foxpro files
+*.dbf
+*.fpt
+*.dbf.bin
+*.bin
+
 # Build results
 [Dd]ebug/
 [Dd]ebugPublic/
