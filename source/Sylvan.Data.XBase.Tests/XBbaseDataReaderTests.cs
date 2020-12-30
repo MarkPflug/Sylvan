@@ -59,7 +59,7 @@ namespace Sylvan.Data.XBase.Tests
 
 			var a = new SchemaAnalyzer();
 			var result = a.Analyze(r);
-
+			r.Process();
 		}
 
 		[Fact]
@@ -83,6 +83,14 @@ namespace Sylvan.Data.XBase.Tests
 		public void Test1()
 		{
 			using var stream = GetDBaseStream();
+			var r = XBaseDataReader.Create(stream);
+			Process(r);
+		}
+
+		[Fact]
+		public void TestEnc()
+		{
+			using var stream = File.OpenRead(@"Data/vc2.dbf");
 			var r = XBaseDataReader.Create(stream);
 			Process(r);
 		}

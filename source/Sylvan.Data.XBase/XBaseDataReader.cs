@@ -168,6 +168,7 @@ namespace Sylvan.Data.XBase
 		int recordLength;
 		byte[] recordBuffer;
 		byte[] memoBuffer;
+		char[] textBuffer;
 
 		int memoBlockSize;
 
@@ -228,6 +229,7 @@ namespace Sylvan.Data.XBase
 			this.recordBuffer = Array.Empty<byte>();
 			this.memoBuffer = Array.Empty<byte>();
 			this.cachedRecord = string.Empty;
+			this.textBuffer = Array.Empty<char>();
 		}
 
 		async Task InitializeAsync(XBaseDataReaderOptions options)
@@ -280,6 +282,8 @@ namespace Sylvan.Data.XBase
 			if (recordCount < 0)
 				throw new InvalidDataException();
 
+			int maxTextLength = 0;
+
 			var flagIdx = 0;
 			int fieldOffset = 1;
 			for (int i = 0; i < 128; i++)
@@ -305,6 +309,7 @@ namespace Sylvan.Data.XBase
 				if (type == XBaseType.Character)
 				{
 					fieldLength = BitConverter.ToInt16(buffer, 0x10);
+					maxTextLength = Math.Max(maxTextLength, fieldLength);
 				}
 				else
 				{
@@ -346,6 +351,11 @@ namespace Sylvan.Data.XBase
 
 				fieldOffset += fieldLength;
 				fields.Add(field);
+			}
+
+			if (maxTextLength > 0)
+			{
+				this.textBuffer = new char[encoding.GetMaxCharCount(maxTextLength)];
 			}
 
 			if (memoStream != null)

@@ -279,14 +279,21 @@ namespace Sylvan.Data.XBase
 		{
 			public static CharacterAccessor Instance = new CharacterAccessor();
 
-
 			public override string GetString(XBaseDataReader dr, int ordinal)
 			{
 				var col = dr.columns[ordinal];
+				var buf = dr.textBuffer;
 
-				//var ns = dr.GetNullFlagsStr();
-				var str = dr.encoding.GetString(dr.recordBuffer, col.offset, col.length);
-				return str;
+				int count = dr.encoding.GetChars(dr.recordBuffer, col.offset, col.length, buf, 0);
+
+				int i = count;
+				for (; i >= 0; i--)
+				{
+					if (buf[i] != ' ')
+						break;
+				}
+
+				return i == 0 ? string.Empty : new string(dr.textBuffer, 0, i);
 			}
 		}
 
@@ -296,7 +303,6 @@ namespace Sylvan.Data.XBase
 
 			public override string GetString(XBaseDataReader dr, int ordinal)
 			{
-				//var ns = dr.GetNullFlagsStr();
 				var buf = dr.recordBuffer;
 
 				var col = dr.columns[ordinal];
