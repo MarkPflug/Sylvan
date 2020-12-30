@@ -7,6 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="System.Text.Encoding.CodePages" Version="5.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Sylvan.Data.XBase\Sylvan.Data.XBase.csproj" />
     <ProjectReference Include="..\Sylvan.Data.Tests\Sylvan.Data.Tests.csproj" />
     <ProjectReference Include="..\Sylvan.Data\Sylvan.Data.csproj" />

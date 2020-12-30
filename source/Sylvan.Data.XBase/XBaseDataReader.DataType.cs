@@ -91,7 +91,6 @@ namespace Sylvan.Data.XBase
 			}
 		}
 
-
 		sealed class UnknownAccessor : DataAccessor
 		{
 			public static readonly UnknownAccessor Instance = new UnknownAccessor();
@@ -229,14 +228,16 @@ namespace Sylvan.Data.XBase
 				if (b[o] == ' ')
 					throw new InvalidCastException();
 
+				// TODO: this could probably use some range validation.
+
 				var y =
 					(b[o + 0] - '0') * 1000 +
 					(b[o + 1] - '0') * 100 +
 					(b[o + 2] - '0') * 10 +
 					(b[o + 3] - '0');
 				var m =
-				(b[o + 4] - '0') * 10 +
-				(b[o + 5] - '0');
+					(b[o + 4] - '0') * 10 +
+					(b[o + 5] - '0');
 				var d =
 					(b[o + 6] - '0') * 10 +
 					(b[o + 7] - '0');
@@ -257,7 +258,8 @@ namespace Sylvan.Data.XBase
 				var b = dr.recordBuffer;
 				var date = BitConverter.ToInt32(b, o);
 				var time = BitConverter.ToInt32(b, o + 4);
-				var value = new DateTime(1, 1, 1).AddDays(date).Subtract(TimeSpan.FromDays(1721426)).AddMilliseconds(time);
+				// don't ask me if this magic number has any meaning
+				var value = DateTime.MinValue.AddDays(date - 1721426).AddMilliseconds(time);
 				return value;
 			}
 		}
@@ -320,6 +322,15 @@ namespace Sylvan.Data.XBase
 		{
 			public static MemoAccessor Instance = new MemoAccessor();
 
+			public override bool CanBeNull => true;
+
+			public override bool IsDBNull(XBaseDataReader dr, int ordinal)
+			{
+				var col = dr.columns[ordinal];
+				var idx = BitConverter.ToInt32(dr.recordBuffer, col.offset);
+				return idx == 0;
+			}
+
 			public override int GetChars(XBaseDataReader dr, int ordinal, int dataOffset, char[] buffer, int offset, int length)
 			{
 				string str =
@@ -355,7 +366,16 @@ namespace Sylvan.Data.XBase
 
 		sealed class BlobAccessor : DataAccessor
 		{
-			public static MemoAccessor Instance = new MemoAccessor();
+			public static BlobAccessor Instance = new BlobAccessor();
+
+			public override bool CanBeNull => true;
+
+			public override bool IsDBNull(XBaseDataReader dr, int ordinal)
+			{
+				var col = dr.columns[ordinal];
+				var idx = BitConverter.ToInt32(dr.recordBuffer, col.offset);
+				return idx == 0;
+			}
 
 			public override int GetBytes(XBaseDataReader dr, int ordinal, int dataOffset, byte[] buffer, int bufferOffset, int length)
 			{
@@ -468,12 +488,13 @@ namespace Sylvan.Data.XBase
 				Scale[i] = new decimal(1, 0, 0, false, (byte)i);
 			}
 
-			CodePageMap = new Dictionary<short, short>();
+			CodePageMap = new Dictionary<ushort, ushort>();
 
-			short[] codePageData = new short[]
+			// maps the xBase header encoding number to the codePage number
+			ushort[] codePageData = new ushort[]
 			{
 				 0x01, 437 ,
-				 0x69, 620 ,
+				 0x69, 620 , // *
 				 0x6a, 737 ,
 				 0x02, 850 ,
 				 0x64, 852 ,
@@ -482,7 +503,7 @@ namespace Sylvan.Data.XBase
 				 0x66, 865 ,
 				 0x65, 866 ,
 				 0x7c, 874 ,
-				 0x68, 895 ,
+				 0x68, 895 , // *
 				 0x7b, 932 ,
 				 0x7a, 936 ,
 				 0x79, 949 ,
@@ -494,11 +515,14 @@ namespace Sylvan.Data.XBase
 				 0xca, 1254 ,
 				 0x7d, 1255 ,
 				 0x7e, 1256 ,
+				 0x7f, 65001, // TODO: Not sure about this one.
 				 0x04, 10000 ,
 				 0x98, 10006 ,
 				 0x96, 10007 ,
 				 0x97, 10029 ,
+
 			};
+			// *: Not supported by the CodePagesEncodingProvider, unlikely that anyone would care.
 
 			for (int i = 0; i < codePageData.Length; i += 2)
 			{

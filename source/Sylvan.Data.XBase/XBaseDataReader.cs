@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Data;
 using System.Data.Common;
 using System.IO;
 using System.Linq;
@@ -40,12 +41,7 @@ namespace Sylvan.Data.XBase
 
 	public sealed partial class XBaseDataReader : DbDataReader, IDbColumnSchemaGenerator
 	{
-		static Dictionary<short, short> CodePageMap;
-
-		static void RegisterCodePages()
-		{
-			Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-		}
+		static Dictionary<ushort, ushort> CodePageMap;
 
 		class XBaseColumn : DbColumn
 		{
@@ -69,15 +65,17 @@ namespace Sylvan.Data.XBase
 				this.ColumnName = name;
 				this.offset = offset;
 				this.length = length;
+				this.ColumnSize = length;
 				this.DBaseDataType = type;
 				this.DataType = GetType(type);
 				this.DataTypeName = type.ToString();
 				this.decimalCount = decimalCount;
-				this.AllowDBNull = isNullable;
+				
 				this.IsHidden = isSystem;
 
 				var acc = GetAccessor(type);
 				this.accessor = isNullable ? new FoxProNullAccessor(acc) : acc;
+				this.AllowDBNull = accessor.CanBeNull;
 			}
 
 			DataAccessor GetAccessor(XBaseType type)
@@ -217,7 +215,7 @@ namespace Sylvan.Data.XBase
 		{
 			options = options ?? XBaseDataReaderOptions.Default;
 			var reader = new XBaseDataReader(stream, memoStream);
-			await reader.InitializeAsync();
+			await reader.InitializeAsync(options);
 			return reader;
 		}
 
@@ -226,13 +224,13 @@ namespace Sylvan.Data.XBase
 			this.stream = stream;
 			this.memoStream = memoStream;
 			this.columns = Array.Empty<XBaseColumn>();
-			this.encoding = Encoding.ASCII;
+			this.encoding = Encoding.Default;
 			this.recordBuffer = Array.Empty<byte>();
 			this.memoBuffer = Array.Empty<byte>();
-			this.cachedRecord = String.Empty;
+			this.cachedRecord = string.Empty;
 		}
 
-		async Task InitializeAsync()
+		async Task InitializeAsync(XBaseDataReaderOptions options)
 		{
 			var buffer = new byte[0x20];
 			var p = 0;
@@ -252,22 +250,36 @@ namespace Sylvan.Data.XBase
 
 			var flags = (DBaseFileFlags)buffer[0x1c];
 			var langId = buffer[0x1d];
-			var enc = Encoding.ASCII;
 
-			if (CodePageMap.TryGetValue(langId, out var codePage))
+			if(options.Encoding != null)
 			{
-				RegisterCodePages();
-				enc = Encoding.GetEncoding(codePage);
-			}
-			this.encoding = enc;
+				this.encoding = options.Encoding;
+			} 
+			else
+			{
+				if (langId == 0)
+				{
+					this.encoding = Encoding.Default;
+				}
+				else
+				{
+					if (CodePageMap.TryGetValue(langId, out var codePage))
+					{
+						this.encoding = Encoding.GetEncoding(codePage);
+					}
+					else
+					{
+						// TODO: consider adding an option to fall-back to system default encoding?
+						throw new EncodingNotSupportedException(langId);
+					}
+				}
+			}			
 
-			// TODO: This isn't right.
-			var fieldCount = ((headerLength - 1) / 0x20) - 1;
-
-			var fields = new List<XBaseColumn>(fieldCount);
+			var fields = new List<XBaseColumn>(16);
 
 			if (recordCount < 0)
 				throw new InvalidDataException();
+
 			var flagIdx = 0;
 			int fieldOffset = 1;
 			for (int i = 0; i < 128; i++)
@@ -311,13 +323,14 @@ namespace Sylvan.Data.XBase
 					var next = BitConverter.ToInt32(buffer, 0x13);
 					var step = buffer[0x17];
 				}
+
 				if (system)
 				{
 					;
 				}
 
 				var field = new XBaseColumn(i, name, fieldOffset, fieldLength, type, decimalCount, nullable, system);
-				
+
 				switch (field.DBaseDataType)
 				{
 					case XBaseType.VarBinary:
@@ -369,9 +382,9 @@ namespace Sylvan.Data.XBase
 			this.ModifiedDate = date;
 			this.version = version;
 		}
-		
 
-		
+
+
 
 		string ReadZString(byte[] buffer, int offset, int maxLength)
 		{
@@ -433,10 +446,10 @@ namespace Sylvan.Data.XBase
 				throw new ArgumentNullException(nameof(buffer));
 
 			var col = this.columns[ordinal];
-			return col.accessor.GetChars(this, ordinal, (int) dataOffset, buffer, bufferOffset, length);
+			return col.accessor.GetChars(this, ordinal, (int)dataOffset, buffer, bufferOffset, length);
 		}
 
-		
+
 
 		public override string GetDataTypeName(int ordinal)
 		{
@@ -704,6 +717,11 @@ namespace Sylvan.Data.XBase
 		public ReadOnlyCollection<DbColumn> GetColumnSchema()
 		{
 			return new ReadOnlyCollection<DbColumn>(columns);
+		}
+
+		public override DataTable GetSchemaTable()
+		{
+			return SchemaTable.GetSchemaTable(GetColumnSchema());
 		}
 
 		protected override void Dispose(bool disposing)

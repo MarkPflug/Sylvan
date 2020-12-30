@@ -1,3 +1,4 @@
+using System.Data;
 using System.IO;
 using System.IO.Compression;
 using System.Net.Http;
@@ -6,7 +7,16 @@ using Xunit;
 
 namespace Sylvan.Data.XBase.Tests
 {
-	public class XBbaseDataReaderTests
+
+	public class EncodingsFixture
+	{
+		public EncodingsFixture()
+		{
+			Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+		}
+	}
+
+	public class XBbaseDataReaderTests : IClassFixture<EncodingsFixture>
 	{
 		const string DataFileName = "data.zip";
 		const string DBaseFileName = "data.dbf";
@@ -50,6 +60,23 @@ namespace Sylvan.Data.XBase.Tests
 			var a = new SchemaAnalyzer();
 			var result = a.Analyze(r);
 
+		}
+
+		[Fact]
+		public void TestOnline()
+		{
+			var fileName = @"C:\Users\Mark\Downloads\cb_2018_us_cd116_20m.zip";
+			var za = ZipFile.OpenRead(fileName);
+			var entry = za.GetEntry(Path.GetFileNameWithoutExtension(fileName) + ".dbf");
+			using var stream = entry.Open();
+			var dr = XBaseDataReader.Create(stream);
+
+			var dt = new DataTable();
+			dt.TableName = Path.GetFileNameWithoutExtension(fileName);
+			dt.Load(dr);
+			var sw = new StringWriter();
+			dt.WriteXml(sw);
+			var str = sw.ToString();
 		}
 
 		[Fact]
