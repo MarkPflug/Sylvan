@@ -331,7 +331,10 @@ namespace Sylvan.Data.XBase
 
 				if (system)
 				{
-					;
+
+					// TODO: hide these?
+					// currently I only know of the foxpro nullflags column
+					// which is special-cased below.
 				}
 
 				var field = new XBaseColumn(i, name, fieldOffset, fieldLength, type, decimalCount, nullable, system);
@@ -353,10 +356,10 @@ namespace Sylvan.Data.XBase
 				fields.Add(field);
 			}
 
-			if (maxTextLength > 0)
-			{
-				this.textBuffer = new char[encoding.GetMaxCharCount(maxTextLength)];
-			}
+
+			var textLen = Math.Max(64, encoding.GetMaxCharCount(maxTextLength));
+
+			this.textBuffer = new char[textLen];
 
 			if (memoStream != null)
 			{
@@ -497,17 +500,20 @@ namespace Sylvan.Data.XBase
 
 		public override float GetFloat(int ordinal)
 		{
-			throw new NotSupportedException();
+			var col = this.columns[ordinal];
+			return col.accessor.GetFloat(this, ordinal);
 		}
 
 		public override Guid GetGuid(int ordinal)
 		{
-			throw new NotSupportedException();
+			var col = this.columns[ordinal];
+			return col.accessor.GetGuid(this, ordinal);
 		}
 
 		public override short GetInt16(int ordinal)
 		{
-			return (short)GetInt32(ordinal);
+			var col = columns[ordinal];
+			return col.accessor.GetInt16(this, ordinal);
 		}
 
 		public override int GetInt32(int ordinal)
@@ -518,7 +524,8 @@ namespace Sylvan.Data.XBase
 
 		public override long GetInt64(int ordinal)
 		{
-			return GetInt32(ordinal);
+			var col = columns[ordinal];
+			return col.accessor.GetInt64(this, ordinal);
 		}
 
 		public override string GetName(int ordinal)

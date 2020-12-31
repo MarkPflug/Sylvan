@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 
 namespace Sylvan.Data.XBase
 {
@@ -27,24 +28,130 @@ namespace Sylvan.Data.XBase
 				throw new NotSupportedException();
 			}
 
+			public virtual short GetInt16(XBaseDataReader dr, int ordinal)
+			{
+				return checked((short)GetInt64(dr, ordinal));
+			}
+
 			public virtual int GetInt32(XBaseDataReader dr, int ordinal)
 			{
-				throw new NotSupportedException();
+				return checked((int)GetInt64(dr, ordinal));
+			}
+
+			public virtual long GetInt64(XBaseDataReader dr, int ordinal)
+			{
+				var value = GetDecimal(dr, ordinal);
+
+				if (value > long.MaxValue || value < long.MinValue)
+				{
+					throw new InvalidCastException();
+				}
+
+				var intVal = (long)value;
+				if (intVal != value)
+				{
+					throw new InvalidCastException();
+				}
+				return intVal;
 			}
 
 			public virtual string GetString(XBaseDataReader dr, int ordinal)
 			{
-				throw new NotSupportedException();
+				var col = dr.columns[ordinal];
+				return Encoding.ASCII.GetString(dr.recordBuffer, col.offset, col.length);
 			}
 
 			public virtual decimal GetDecimal(XBaseDataReader dr, int ordinal)
+			{
+				var b = dr.GetRecordString(ordinal);
+				var col = dr.columns[ordinal];
+				decimal value;
+				if (TryParseAsciiDecimal(dr.recordBuffer, col.offset, col.length, out value))
+				{
+					return value;
+				}
+				else
+				{
+					var str = this.GetString(dr, ordinal);
+					if (decimal.TryParse(str, out value))
+					{
+						return value;
+					}
+					else
+					{
+						// for scientific notation, which decimal does not support.
+						if (double.TryParse(str, out double dValue))
+						{
+							// this cast can throw.
+							value = (decimal)dValue;
+							return value;
+						}
+					}
+				}
+				throw new FormatException();
+			}
+
+			// this is a non-allocating fast-path for the common case.
+			static bool TryParseAsciiDecimal(byte[] buffer, int offset, int length, out decimal value)
+			{
+				ulong val = 0;
+				value = decimal.Zero;
+
+				bool neg = false;
+				int decIdx = -1;
+				for (int i = 0; i < length; i++)
+				{
+					byte b = buffer[offset + i];
+					switch (b)
+					{
+						case (byte)' ':
+							break;
+						case (byte)'-':
+							if (neg)
+							{
+								return false;
+							}
+							neg = true;
+							break;
+						case (byte)'.':
+							if (decIdx != -1)
+								return false;
+							decIdx = i;
+							break;
+						case (byte)'0':
+						case (byte)'1':
+						case (byte)'2':
+						case (byte)'3':
+						case (byte)'4':
+						case (byte)'5':
+						case (byte)'6':
+						case (byte)'7':
+						case (byte)'8':
+						case (byte)'9':
+							val = (val * 10) + (ulong)(b - '0');
+							break;
+						default:
+							return false;
+					}
+				}
+				var scale = decIdx == -1 ? 0 : length - decIdx - 1;
+
+				unchecked
+				{
+					value = new Decimal((int)(val & 0xffffffff), (int)(val >> 32), 0, neg, (byte)scale);
+				}
+				return true;
+			}
+
+			public virtual float GetFloat(XBaseDataReader dr, int ordinal)
 			{
 				throw new NotSupportedException();
 			}
 
 			public virtual double GetDouble(XBaseDataReader dr, int ordinal)
 			{
-				throw new NotSupportedException();
+				var value = this.GetDecimal(dr, ordinal);
+				return (double)value;
 			}
 
 			public virtual bool GetBoolean(XBaseDataReader dr, int ordinal)
@@ -281,19 +388,20 @@ namespace Sylvan.Data.XBase
 
 			public override string GetString(XBaseDataReader dr, int ordinal)
 			{
+				var str = dr.GetRecordChars(ordinal);
 				var col = dr.columns[ordinal];
 				var buf = dr.textBuffer;
 
 				int count = dr.encoding.GetChars(dr.recordBuffer, col.offset, col.length, buf, 0);
 
-				int i = count;
+				int i = count - 1;
 				for (; i >= 0; i--)
 				{
 					if (buf[i] != ' ')
 						break;
 				}
 
-				return i == 0 ? string.Empty : new string(buf, 0, i);
+				return i <= 0 ? string.Empty : new string(buf, 0, i);
 			}
 		}
 
@@ -470,36 +578,7 @@ namespace Sylvan.Data.XBase
 				return dr.recordBuffer[col.offset + col.length - 1] == ' ';
 			}
 
-			public override decimal GetDecimal(XBaseDataReader dr, int ordinal)
-			{
-				var col = dr.columns[ordinal];
-
-				//var debugBuffer = dr.GetRecordBytes(ordinal);
-				//var debugStr = dr.GetRecordString(ordinal);
-				long v = 0;
-				var o = col.offset;
-				var decimalIdx = -1;
-				for (int i = 0; i < col.length; i++)
-				{
-					var c = dr.recordBuffer[o + i];
-					if (c == ' ')
-					{
-
-					}
-					else if (c == '.')
-					{
-						decimalIdx = i;
-					}
-					else
-					{
-						var d = c - '0';
-						v = v * 10 + d;
-					}
-				}
-				var scale = decimalIdx == -1 ? 1 : col.length - decimalIdx;
-				var value = v * Scale[scale - 1];
-				return value;
-			}
+			// uses the base implementation of GetDecimal
 		}
 
 		sealed class DoubleAccessor : DataAccessor
