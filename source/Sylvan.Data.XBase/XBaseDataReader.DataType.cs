@@ -63,7 +63,7 @@ namespace Sylvan.Data.XBase
 
 			public virtual decimal GetDecimal(XBaseDataReader dr, int ordinal)
 			{
-				var b = dr.GetRecordString(ordinal);
+				//var b = dr.GetRecordString(ordinal);
 				var col = dr.columns[ordinal];
 				decimal value;
 				if (TryParseAsciiDecimal(dr.recordBuffer, col.offset, col.length, out value))
@@ -388,7 +388,7 @@ namespace Sylvan.Data.XBase
 
 			public override string GetString(XBaseDataReader dr, int ordinal)
 			{
-				var str = dr.GetRecordChars(ordinal);
+				//var str = dr.GetRecordChars(ordinal);
 				var col = dr.columns[ordinal];
 				var buf = dr.textBuffer;
 
