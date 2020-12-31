@@ -18,7 +18,7 @@ namespace Sylvan.Data.XBase
 			/// Indicates if the dbase type can hold a null value.
 			/// Date, for example can be filled with ' ', which has no meaningful value.
 			/// Int32, on the other hand, is store in a 4-byte binary representation
-			/// so cannot inherently hold a null value.
+			/// so cannot represent a null value.
 			/// </summary>
 			public virtual bool CanBeNull => false;
 
@@ -55,18 +55,19 @@ namespace Sylvan.Data.XBase
 			// allow the raw binary representation to be accessed for all fields
 			public virtual int GetBytes(XBaseDataReader dr, int ordinal, int dataOffset, byte[] buffer, int bufferOffset, int length)
 			{
-				if (dataOffset > int.MaxValue)
-				{
-					throw new ArgumentOutOfRangeException(nameof(dataOffset));
-				}
-				int off = (int)dataOffset;
+				return GetBytesRaw(dr, ordinal, dataOffset, buffer, bufferOffset, length);
+			}
+
+			public int GetBytesRaw(XBaseDataReader dr, int ordinal, int dataOffset, byte[] buffer, int bufferOffset, int length)
+			{
+				int off = dataOffset;
 				var col = dr.columns[ordinal];
 				var offset = col.offset;
 				var len = col.length;
 
 				var count = Math.Min(len - off, length);
 
-				Buffer.BlockCopy(dr.recordBuffer, offset + off, buffer, offset, count);
+				Buffer.BlockCopy(dr.recordBuffer, offset + off, buffer, bufferOffset, count);
 				return count;
 			}
 
@@ -198,8 +199,8 @@ namespace Sylvan.Data.XBase
 			internal static bool GetFlag(byte[] buffer, int offset, int flagIdx)
 			{
 				var i = flagIdx >> 3;
-				var bit = 1 << (flagIdx & 0x7);
 				var b = buffer[offset + i];
+				var bit = 1 << (flagIdx & 0x7);
 				bool flag = (b & bit) != 0;
 				return flag;
 			}
@@ -207,7 +208,7 @@ namespace Sylvan.Data.XBase
 
 		sealed class DateAccessor : DataAccessor
 		{
-			public static DateAccessor Instance = new DateAccessor();
+			public static readonly DateAccessor Instance = new DateAccessor();
 
 			public override bool CanBeNull => true;
 
@@ -248,11 +249,10 @@ namespace Sylvan.Data.XBase
 
 		sealed class DateTimeAccessor : DataAccessor
 		{
-			public static DateTimeAccessor Instance = new DateTimeAccessor();
+			public static readonly DateTimeAccessor Instance = new DateTimeAccessor();
 
 			public override DateTime GetDateTime(XBaseDataReader dr, int ordinal)
 			{
-				//var str = dr.GetRecordBytes(ordinal);
 				var col = dr.columns[ordinal];
 				var o = col.offset;
 				var b = dr.recordBuffer;
@@ -266,7 +266,7 @@ namespace Sylvan.Data.XBase
 
 		sealed class Int32Accessor : DataAccessor
 		{
-			public static Int32Accessor Instance = new Int32Accessor();
+			public static readonly Int32Accessor Instance = new Int32Accessor();
 
 			public override int GetInt32(XBaseDataReader dr, int ordinal)
 			{
@@ -277,7 +277,7 @@ namespace Sylvan.Data.XBase
 
 		sealed class CharacterAccessor : DataAccessor
 		{
-			public static CharacterAccessor Instance = new CharacterAccessor();
+			public static readonly CharacterAccessor Instance = new CharacterAccessor();
 
 			public override string GetString(XBaseDataReader dr, int ordinal)
 			{
@@ -293,13 +293,13 @@ namespace Sylvan.Data.XBase
 						break;
 				}
 
-				return i == 0 ? string.Empty : new string(dr.textBuffer, 0, i);
+				return i == 0 ? string.Empty : new string(buf, 0, i);
 			}
 		}
 
 		sealed class VarCharAccessor : DataAccessor
 		{
-			public static VarCharAccessor Instance = new VarCharAccessor();
+			public static readonly VarCharAccessor Instance = new VarCharAccessor();
 
 			public override string GetString(XBaseDataReader dr, int ordinal)
 			{
@@ -321,12 +321,30 @@ namespace Sylvan.Data.XBase
 
 		sealed class VarBinaryAccessor : DataAccessor
 		{
-			public static VarBinaryAccessor Instance = new VarBinaryAccessor();
+			public static readonly VarBinaryAccessor Instance = new VarBinaryAccessor();
+
+			public override int GetBytes(XBaseDataReader dr, int ordinal, int dataOffset, byte[] buffer, int bufferOffset, int length)
+			{
+				var buf = dr.recordBuffer;
+
+				var col = dr.columns[ordinal];
+				var varFlagIdx = col.varFlagIdx;
+				Debug.Assert(varFlagIdx >= 0);
+				var hasVar = NullFlagsAccessor.GetFlag(buf, dr.nullFlagsColumn!.offset, varFlagIdx);
+				var varLen =
+					hasVar
+					? buf[col.offset + col.length - 1]
+					: col.length;
+
+				var count = Math.Min(varLen - dataOffset, length);
+				Buffer.BlockCopy(dr.recordBuffer, col.offset + dataOffset, buffer, bufferOffset, count);
+				return count;
+			}
 		}
 
 		sealed class MemoAccessor : DataAccessor
 		{
-			public static MemoAccessor Instance = new MemoAccessor();
+			public static readonly MemoAccessor Instance = new MemoAccessor();
 
 			public override bool CanBeNull => true;
 
@@ -372,7 +390,7 @@ namespace Sylvan.Data.XBase
 
 		sealed class BlobAccessor : DataAccessor
 		{
-			public static BlobAccessor Instance = new BlobAccessor();
+			public static readonly BlobAccessor Instance = new BlobAccessor();
 
 			public override bool CanBeNull => true;
 
@@ -399,7 +417,7 @@ namespace Sylvan.Data.XBase
 
 		sealed class NullAccessor : DataAccessor
 		{
-			public static NullAccessor Instance = new NullAccessor();
+			public static readonly NullAccessor Instance = new NullAccessor();
 
 			public override bool IsDBNull(XBaseDataReader dr, int ordinal)
 			{
@@ -409,8 +427,7 @@ namespace Sylvan.Data.XBase
 
 		sealed class BooleanAccessor : DataAccessor
 		{
-			public static BooleanAccessor Instance = new BooleanAccessor();
-
+			public static readonly BooleanAccessor Instance = new BooleanAccessor();
 
 			public override bool CanBeNull => true;
 
@@ -423,13 +440,14 @@ namespace Sylvan.Data.XBase
 			public override bool GetBoolean(XBaseDataReader dr, int ordinal)
 			{
 				var col = dr.columns[ordinal];
-				return dr.recordBuffer[col.offset] == 'T';
+				byte value = dr.recordBuffer[col.offset];
+				return value == 'T' || value == 't';
 			}
 		}
 
 		sealed class CurrencyAccessor : DataAccessor
 		{
-			public static CurrencyAccessor Instance = new CurrencyAccessor();
+			public static readonly CurrencyAccessor Instance = new CurrencyAccessor();
 
 			public override decimal GetDecimal(XBaseDataReader dr, int ordinal)
 			{
@@ -442,7 +460,7 @@ namespace Sylvan.Data.XBase
 
 		sealed class NumericAccessor : DataAccessor
 		{
-			public static NumericAccessor Instance = new NumericAccessor();
+			public static readonly NumericAccessor Instance = new NumericAccessor();
 
 			public override bool CanBeNull => true;
 
@@ -481,6 +499,17 @@ namespace Sylvan.Data.XBase
 				var scale = decimalIdx == -1 ? 1 : col.length - decimalIdx;
 				var value = v * Scale[scale - 1];
 				return value;
+			}
+		}
+
+		sealed class DoubleAccessor : DataAccessor
+		{
+			public static readonly DoubleAccessor Instance = new DoubleAccessor();
+
+			public override double GetDouble(XBaseDataReader dr, int ordinal)
+			{
+				var col = dr.columns[ordinal];
+				return BitConverter.ToDouble(dr.recordBuffer, col.offset);
 			}
 		}
 
@@ -533,17 +562,6 @@ namespace Sylvan.Data.XBase
 			for (int i = 0; i < codePageData.Length; i += 2)
 			{
 				CodePageMap.Add(codePageData[i], codePageData[i + 1]);
-			}
-		}
-
-		sealed class DoubleAccessor : DataAccessor
-		{
-			public static DoubleAccessor Instance = new DoubleAccessor();
-
-			public override double GetDouble(XBaseDataReader dr, int ordinal)
-			{
-				var col = dr.columns[ordinal];
-				return BitConverter.ToDouble(dr.recordBuffer, col.offset);
 			}
 		}
 	}
