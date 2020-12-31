@@ -1,3 +1,5 @@
+using System;
+using System.Data;
 using System.IO;
 using System.IO.Compression;
 using System.Net.Http;
@@ -6,7 +8,19 @@ using Xunit;
 
 namespace Sylvan.Data.XBase.Tests
 {
-	public class XBbaseDataReaderTests
+
+	public class EncodingsFixture
+	{
+		public EncodingsFixture()
+		{
+#if NET5_0
+			// encodings are available by default on net461
+			Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+#endif
+		}
+	}
+
+	public class XBbaseDataReaderTests : IClassFixture<EncodingsFixture>
 	{
 		const string DataFileName = "data.zip";
 		const string DBaseFileName = "data.dbf";
@@ -49,13 +63,38 @@ namespace Sylvan.Data.XBase.Tests
 
 			var a = new SchemaAnalyzer();
 			var result = a.Analyze(r);
+			r.Process();
+		}
 
+		[Fact]
+		public void TestOnline()
+		{
+			var fileName = @"C:\Users\Mark\Downloads\cb_2018_us_cd116_20m.zip";
+			var za = ZipFile.OpenRead(fileName);
+			var entry = za.GetEntry(Path.GetFileNameWithoutExtension(fileName) + ".dbf");
+			using var stream = entry.Open();
+			var dr = XBaseDataReader.Create(stream);
+
+			var dt = new DataTable();
+			dt.TableName = Path.GetFileNameWithoutExtension(fileName);
+			dt.Load(dr);
+			var sw = new StringWriter();
+			dt.WriteXml(sw);
+			var str = sw.ToString();
 		}
 
 		[Fact]
 		public void Test1()
 		{
 			using var stream = GetDBaseStream();
+			var r = XBaseDataReader.Create(stream);
+			Process(r);
+		}
+
+		[Fact]
+		public void TestEnc()
+		{
+			using var stream = File.OpenRead(@"Data/vc2.dbf");
 			var r = XBaseDataReader.Create(stream);
 			Process(r);
 		}
@@ -98,6 +137,20 @@ namespace Sylvan.Data.XBase.Tests
 		}
 
 		[Fact]
+		public void Numbers4()
+		{
+			var name = "data/num3.dbf";
+			using var stream = File.OpenRead(name);
+			var r = XBaseDataReader.Create(stream);
+			while (r.Read())
+			{
+				var a = r.TryGetDecimal(0);
+				var b = r.TryGetDecimal(1);
+				var c = r.TryGetDecimal(2);
+			}
+		}
+
+		[Fact]
 		public void Varchar()
 		{
 			Proc("data/nulltest.dbf");
@@ -123,7 +176,7 @@ namespace Sylvan.Data.XBase.Tests
 				var bin = dr.GetStream(1);
 				bin.CopyTo(mss);
 				var ss = Encoding.ASCII.GetString(mss.GetBuffer());
-				
+
 			}
 		}
 
@@ -135,7 +188,8 @@ namespace Sylvan.Data.XBase.Tests
 			Process(r);
 		}
 
-		void Process(XBaseDataReader r) { 
+		void Process(XBaseDataReader r)
+		{
 			var schema = r.GetColumnSchema();
 			var ss = new Schema(r);
 			var spec = ss.ToString();
@@ -145,6 +199,21 @@ namespace Sylvan.Data.XBase.Tests
 			{
 				r.ProcessRecord();
 				c++;
+			}
+		}
+	}
+
+	static class Ex
+	{
+		public static decimal? TryGetDecimal(this IDataReader dr, int ord)
+		{
+			try
+			{
+				return dr.GetDecimal(ord);
+			}
+			catch
+			{
+				return null;
 			}
 		}
 	}

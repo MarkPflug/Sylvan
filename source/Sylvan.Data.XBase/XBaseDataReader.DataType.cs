@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 
 namespace Sylvan.Data.XBase
 {
@@ -18,7 +19,7 @@ namespace Sylvan.Data.XBase
 			/// Indicates if the dbase type can hold a null value.
 			/// Date, for example can be filled with ' ', which has no meaningful value.
 			/// Int32, on the other hand, is store in a 4-byte binary representation
-			/// so cannot inherently hold a null value.
+			/// so cannot represent a null value.
 			/// </summary>
 			public virtual bool CanBeNull => false;
 
@@ -27,24 +28,183 @@ namespace Sylvan.Data.XBase
 				throw new NotSupportedException();
 			}
 
+			public virtual short GetInt16(XBaseDataReader dr, int ordinal)
+			{
+				return checked((short)GetInt64(dr, ordinal));
+			}
+
 			public virtual int GetInt32(XBaseDataReader dr, int ordinal)
 			{
-				throw new NotSupportedException();
+				return checked((int)GetInt64(dr, ordinal));
+			}
+
+			public virtual long GetInt64(XBaseDataReader dr, int ordinal)
+			{
+				var value = GetDecimal(dr, ordinal);
+
+				if (value > long.MaxValue || value < long.MinValue)
+				{
+					throw new InvalidCastException();
+				}
+
+				var intVal = (long)value;
+				if (intVal != value)
+				{
+					throw new InvalidCastException();
+				}
+				return intVal;
 			}
 
 			public virtual string GetString(XBaseDataReader dr, int ordinal)
 			{
-				throw new NotSupportedException();
+				return GetRawAsciiString(dr, ordinal);
+			}
+
+			public string GetRawAsciiString(XBaseDataReader dr, int ordinal)
+			{
+				var col = dr.columns[ordinal];
+				return Encoding.ASCII.GetString(dr.recordBuffer, col.offset, col.length);
+			}
+
+#if NETSTANDARD2_1
+
+			Span<byte> GetRecordSpan(XBaseDataReader dr, int ordinal)
+			{
+				var col = dr.columns[ordinal];
+				return dr.recordBuffer.AsSpan().Slice(col.offset, col.length);
 			}
 
 			public virtual decimal GetDecimal(XBaseDataReader dr, int ordinal)
+			{
+				var col = dr.columns[ordinal];
+				decimal value;
+				int c;
+
+				var span = dr.recordBuffer.AsSpan().Slice(col.offset, col.length);
+				int i;
+				for(i = 0; i < span.Length; i++)
+				{
+					if (span[i] != ' ')
+						break;
+				}
+				span = span.Slice(i);
+
+				if (System.Buffers.Text.Utf8Parser.TryParse(span, out value, out c))
+				{
+					return value;
+				}
+				else
+				{
+					if (System.Buffers.Text.Utf8Parser.TryParse(span, out double d, out c))
+					{
+						return (decimal)d;
+					}
+				}
+				throw new FormatException();
+			}
+#else
+			public virtual decimal GetDecimal(XBaseDataReader dr, int ordinal)
+			{
+				var col = dr.columns[ordinal];
+				decimal value;
+				if (TryParseAsciiDecimal(dr.recordBuffer, col.offset, col.length, out value))
+				{
+					return value;
+				}
+				else
+				{
+					if (TryParseDecimal(dr, ordinal, out value))
+						return value;
+				}
+
+				throw new FormatException();
+			}
+
+			bool TryParseDecimal(XBaseDataReader dr, int ordinal, out decimal value)
+			{
+
+				var str = this.GetString(dr, ordinal);
+				if (decimal.TryParse(str, out value))
+				{
+					return true;
+				}
+				else
+				{
+					// for scientific notation, which decimal does not support.
+					if (double.TryParse(str, out double dValue))
+					{
+						// this cast can throw.
+						value = (decimal)dValue;
+						return true;
+					}
+				}
+				return false;
+			}
+
+			// this is a non-allocating fast-path for the common case, attempts
+			// to parse directly out of the byte[] instead of needing to convert to chars
+			static bool TryParseAsciiDecimal(byte[] buffer, int offset, int length, out decimal value)
+			{
+				ulong val = 0;
+				value = decimal.Zero;
+
+				bool neg = false;
+				int decIdx = -1;
+				for (int i = 0; i < length; i++)
+				{
+					byte b = buffer[offset + i];
+					switch (b)
+					{
+						case (byte)' ':
+							break;
+						case (byte)'-':
+							if (neg)
+							{
+								return false;
+							}
+							neg = true;
+							break;
+						case (byte)'.':
+							if (decIdx != -1)
+								return false;
+							decIdx = i;
+							break;
+						case (byte)'0':
+						case (byte)'1':
+						case (byte)'2':
+						case (byte)'3':
+						case (byte)'4':
+						case (byte)'5':
+						case (byte)'6':
+						case (byte)'7':
+						case (byte)'8':
+						case (byte)'9':
+							val = (val * 10) + (ulong)(b - '0');
+							break;
+						default:
+							return false;
+					}
+				}
+				var scale = decIdx == -1 ? 0 : length - decIdx - 1;
+
+				unchecked
+				{
+					value = new Decimal((int)(val & 0xffffffff), (int)(val >> 32), 0, neg, (byte)scale);
+				}
+				return true;
+			}
+
+#endif
+
+			public virtual float GetFloat(XBaseDataReader dr, int ordinal)
 			{
 				throw new NotSupportedException();
 			}
 
 			public virtual double GetDouble(XBaseDataReader dr, int ordinal)
 			{
-				throw new NotSupportedException();
+				var value = this.GetDecimal(dr, ordinal);
+				return (double)value;
 			}
 
 			public virtual bool GetBoolean(XBaseDataReader dr, int ordinal)
@@ -55,18 +215,19 @@ namespace Sylvan.Data.XBase
 			// allow the raw binary representation to be accessed for all fields
 			public virtual int GetBytes(XBaseDataReader dr, int ordinal, int dataOffset, byte[] buffer, int bufferOffset, int length)
 			{
-				if (dataOffset > int.MaxValue)
-				{
-					throw new ArgumentOutOfRangeException(nameof(dataOffset));
-				}
-				int off = (int)dataOffset;
+				return GetBytesRaw(dr, ordinal, dataOffset, buffer, bufferOffset, length);
+			}
+
+			public int GetBytesRaw(XBaseDataReader dr, int ordinal, int dataOffset, byte[] buffer, int bufferOffset, int length)
+			{
+				int off = dataOffset;
 				var col = dr.columns[ordinal];
 				var offset = col.offset;
 				var len = col.length;
 
 				var count = Math.Min(len - off, length);
 
-				Buffer.BlockCopy(dr.recordBuffer, offset + off, buffer, offset, count);
+				Buffer.BlockCopy(dr.recordBuffer, offset + off, buffer, bufferOffset, count);
 				return count;
 			}
 
@@ -87,10 +248,20 @@ namespace Sylvan.Data.XBase
 
 			public virtual Guid GetGuid(XBaseDataReader dr, int ordinal)
 			{
-				throw new NotSupportedException();
+#if NETSTANDARD2_1
+				var span = GetRecordSpan(dr, ordinal);
+				if(System.Buffers.Text.Utf8Parser.TryParse(span, out Guid value, out _))
+				{
+					return value;
+				}
+#else
+				var str = GetRawAsciiString(dr, ordinal);
+				return Guid.Parse(str);
+
+#endif
+				throw new FormatException();
 			}
 		}
-
 
 		sealed class UnknownAccessor : DataAccessor
 		{
@@ -199,8 +370,8 @@ namespace Sylvan.Data.XBase
 			internal static bool GetFlag(byte[] buffer, int offset, int flagIdx)
 			{
 				var i = flagIdx >> 3;
-				var bit = 1 << (flagIdx & 0x7);
 				var b = buffer[offset + i];
+				var bit = 1 << (flagIdx & 0x7);
 				bool flag = (b & bit) != 0;
 				return flag;
 			}
@@ -208,7 +379,7 @@ namespace Sylvan.Data.XBase
 
 		sealed class DateAccessor : DataAccessor
 		{
-			public static DateAccessor Instance = new DateAccessor();
+			public static readonly DateAccessor Instance = new DateAccessor();
 
 			public override bool CanBeNull => true;
 
@@ -229,14 +400,16 @@ namespace Sylvan.Data.XBase
 				if (b[o] == ' ')
 					throw new InvalidCastException();
 
+				// TODO: this could probably use some range validation.
+
 				var y =
 					(b[o + 0] - '0') * 1000 +
 					(b[o + 1] - '0') * 100 +
 					(b[o + 2] - '0') * 10 +
 					(b[o + 3] - '0');
 				var m =
-				(b[o + 4] - '0') * 10 +
-				(b[o + 5] - '0');
+					(b[o + 4] - '0') * 10 +
+					(b[o + 5] - '0');
 				var d =
 					(b[o + 6] - '0') * 10 +
 					(b[o + 7] - '0');
@@ -247,24 +420,24 @@ namespace Sylvan.Data.XBase
 
 		sealed class DateTimeAccessor : DataAccessor
 		{
-			public static DateTimeAccessor Instance = new DateTimeAccessor();
+			public static readonly DateTimeAccessor Instance = new DateTimeAccessor();
 
 			public override DateTime GetDateTime(XBaseDataReader dr, int ordinal)
 			{
-				//var str = dr.GetRecordBytes(ordinal);
 				var col = dr.columns[ordinal];
 				var o = col.offset;
 				var b = dr.recordBuffer;
 				var date = BitConverter.ToInt32(b, o);
 				var time = BitConverter.ToInt32(b, o + 4);
-				var value = new DateTime(1, 1, 1).AddDays(date).Subtract(TimeSpan.FromDays(1721426)).AddMilliseconds(time);
+				// don't ask me if this magic number has any meaning
+				var value = DateTime.MinValue.AddDays(date - 1721426).AddMilliseconds(time);
 				return value;
 			}
 		}
 
 		sealed class Int32Accessor : DataAccessor
 		{
-			public static Int32Accessor Instance = new Int32Accessor();
+			public static readonly Int32Accessor Instance = new Int32Accessor();
 
 			public override int GetInt32(XBaseDataReader dr, int ordinal)
 			{
@@ -275,26 +448,33 @@ namespace Sylvan.Data.XBase
 
 		sealed class CharacterAccessor : DataAccessor
 		{
-			public static CharacterAccessor Instance = new CharacterAccessor();
-
+			public static readonly CharacterAccessor Instance = new CharacterAccessor();
 
 			public override string GetString(XBaseDataReader dr, int ordinal)
 			{
+				//var str = dr.GetRecordChars(ordinal);
 				var col = dr.columns[ordinal];
+				var buf = dr.textBuffer;
 
-				//var ns = dr.GetNullFlagsStr();
-				var str = dr.encoding.GetString(dr.recordBuffer, col.offset, col.length);
-				return str;
+				int count = dr.encoding.GetChars(dr.recordBuffer, col.offset, col.length, buf, 0);
+
+				int i = count - 1;
+				for (; i >= 0; i--)
+				{
+					if (buf[i] != ' ')
+						break;
+				}
+
+				return i <= 0 ? string.Empty : new string(buf, 0, i);
 			}
 		}
 
 		sealed class VarCharAccessor : DataAccessor
 		{
-			public static VarCharAccessor Instance = new VarCharAccessor();
+			public static readonly VarCharAccessor Instance = new VarCharAccessor();
 
 			public override string GetString(XBaseDataReader dr, int ordinal)
 			{
-				//var ns = dr.GetNullFlagsStr();
 				var buf = dr.recordBuffer;
 
 				var col = dr.columns[ordinal];
@@ -313,12 +493,39 @@ namespace Sylvan.Data.XBase
 
 		sealed class VarBinaryAccessor : DataAccessor
 		{
-			public static VarBinaryAccessor Instance = new VarBinaryAccessor();
+			public static readonly VarBinaryAccessor Instance = new VarBinaryAccessor();
+
+			public override int GetBytes(XBaseDataReader dr, int ordinal, int dataOffset, byte[] buffer, int bufferOffset, int length)
+			{
+				var buf = dr.recordBuffer;
+
+				var col = dr.columns[ordinal];
+				var varFlagIdx = col.varFlagIdx;
+				Debug.Assert(varFlagIdx >= 0);
+				var hasVar = NullFlagsAccessor.GetFlag(buf, dr.nullFlagsColumn!.offset, varFlagIdx);
+				var varLen =
+					hasVar
+					? buf[col.offset + col.length - 1]
+					: col.length;
+
+				var count = Math.Min(varLen - dataOffset, length);
+				Buffer.BlockCopy(dr.recordBuffer, col.offset + dataOffset, buffer, bufferOffset, count);
+				return count;
+			}
 		}
 
 		sealed class MemoAccessor : DataAccessor
 		{
-			public static MemoAccessor Instance = new MemoAccessor();
+			public static readonly MemoAccessor Instance = new MemoAccessor();
+
+			public override bool CanBeNull => true;
+
+			public override bool IsDBNull(XBaseDataReader dr, int ordinal)
+			{
+				var col = dr.columns[ordinal];
+				var idx = BitConverter.ToInt32(dr.recordBuffer, col.offset);
+				return idx == 0;
+			}
 
 			public override int GetChars(XBaseDataReader dr, int ordinal, int dataOffset, char[] buffer, int offset, int length)
 			{
@@ -355,7 +562,16 @@ namespace Sylvan.Data.XBase
 
 		sealed class BlobAccessor : DataAccessor
 		{
-			public static MemoAccessor Instance = new MemoAccessor();
+			public static readonly BlobAccessor Instance = new BlobAccessor();
+
+			public override bool CanBeNull => true;
+
+			public override bool IsDBNull(XBaseDataReader dr, int ordinal)
+			{
+				var col = dr.columns[ordinal];
+				var idx = BitConverter.ToInt32(dr.recordBuffer, col.offset);
+				return idx == 0;
+			}
 
 			public override int GetBytes(XBaseDataReader dr, int ordinal, int dataOffset, byte[] buffer, int bufferOffset, int length)
 			{
@@ -373,7 +589,7 @@ namespace Sylvan.Data.XBase
 
 		sealed class NullAccessor : DataAccessor
 		{
-			public static NullAccessor Instance = new NullAccessor();
+			public static readonly NullAccessor Instance = new NullAccessor();
 
 			public override bool IsDBNull(XBaseDataReader dr, int ordinal)
 			{
@@ -383,8 +599,7 @@ namespace Sylvan.Data.XBase
 
 		sealed class BooleanAccessor : DataAccessor
 		{
-			public static BooleanAccessor Instance = new BooleanAccessor();
-
+			public static readonly BooleanAccessor Instance = new BooleanAccessor();
 
 			public override bool CanBeNull => true;
 
@@ -397,13 +612,14 @@ namespace Sylvan.Data.XBase
 			public override bool GetBoolean(XBaseDataReader dr, int ordinal)
 			{
 				var col = dr.columns[ordinal];
-				return dr.recordBuffer[col.offset] == 'T';
+				byte value = dr.recordBuffer[col.offset];
+				return value == 'T' || value == 't';
 			}
 		}
 
 		sealed class CurrencyAccessor : DataAccessor
 		{
-			public static CurrencyAccessor Instance = new CurrencyAccessor();
+			public static readonly CurrencyAccessor Instance = new CurrencyAccessor();
 
 			public override decimal GetDecimal(XBaseDataReader dr, int ordinal)
 			{
@@ -416,7 +632,7 @@ namespace Sylvan.Data.XBase
 
 		sealed class NumericAccessor : DataAccessor
 		{
-			public static NumericAccessor Instance = new NumericAccessor();
+			public static readonly NumericAccessor Instance = new NumericAccessor();
 
 			public override bool CanBeNull => true;
 
@@ -426,39 +642,22 @@ namespace Sylvan.Data.XBase
 				return dr.recordBuffer[col.offset + col.length - 1] == ' ';
 			}
 
-			public override decimal GetDecimal(XBaseDataReader dr, int ordinal)
+			// uses the base implementation of GetDecimal
+		}
+
+		sealed class DoubleAccessor : DataAccessor
+		{
+			public static readonly DoubleAccessor Instance = new DoubleAccessor();
+
+			public override double GetDouble(XBaseDataReader dr, int ordinal)
 			{
 				var col = dr.columns[ordinal];
-
-				//var debugBuffer = dr.GetRecordBytes(ordinal);
-				//var debugStr = dr.GetRecordString(ordinal);
-				long v = 0;
-				var o = col.offset;
-				var decimalIdx = -1;
-				for (int i = 0; i < col.length; i++)
-				{
-					var c = dr.recordBuffer[o + i];
-					if (c == ' ')
-					{
-
-					}
-					else if (c == '.')
-					{
-						decimalIdx = i;
-					}
-					else
-					{
-						var d = c - '0';
-						v = v * 10 + d;
-					}
-				}
-				var scale = decimalIdx == -1 ? 1 : col.length - decimalIdx;
-				var value = v * Scale[scale - 1];
-				return value;
+				return BitConverter.ToDouble(dr.recordBuffer, col.offset);
 			}
 		}
 
 		static readonly decimal[] Scale;
+		static Dictionary<ushort, ushort> CodePageMap;
 
 		static XBaseDataReader()
 		{
@@ -468,12 +667,13 @@ namespace Sylvan.Data.XBase
 				Scale[i] = new decimal(1, 0, 0, false, (byte)i);
 			}
 
-			CodePageMap = new Dictionary<short, short>();
+			CodePageMap = new Dictionary<ushort, ushort>();
 
-			short[] codePageData = new short[]
+			// maps the xBase header encoding number to the codePage number
+			ushort[] codePageData = new ushort[]
 			{
 				 0x01, 437 ,
-				 0x69, 620 ,
+				 0x69, 620 , // *
 				 0x6a, 737 ,
 				 0x02, 850 ,
 				 0x64, 852 ,
@@ -482,7 +682,7 @@ namespace Sylvan.Data.XBase
 				 0x66, 865 ,
 				 0x65, 866 ,
 				 0x7c, 874 ,
-				 0x68, 895 ,
+				 0x68, 895 , // *
 				 0x7b, 932 ,
 				 0x7a, 936 ,
 				 0x79, 949 ,
@@ -494,26 +694,18 @@ namespace Sylvan.Data.XBase
 				 0xca, 1254 ,
 				 0x7d, 1255 ,
 				 0x7e, 1256 ,
+				 0x7f, 65001, // TODO: Not sure about this one.
 				 0x04, 10000 ,
 				 0x98, 10006 ,
 				 0x96, 10007 ,
 				 0x97, 10029 ,
+
 			};
+			// *: Not supported by the CodePagesEncodingProvider, unlikely that anyone would care.
 
 			for (int i = 0; i < codePageData.Length; i += 2)
 			{
 				CodePageMap.Add(codePageData[i], codePageData[i + 1]);
-			}
-		}
-
-		sealed class DoubleAccessor : DataAccessor
-		{
-			public static DoubleAccessor Instance = new DoubleAccessor();
-
-			public override double GetDouble(XBaseDataReader dr, int ordinal)
-			{
-				var col = dr.columns[ordinal];
-				return BitConverter.ToDouble(dr.recordBuffer, col.offset);
 			}
 		}
 	}

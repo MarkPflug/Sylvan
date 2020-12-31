@@ -37,6 +37,16 @@ Supported data types:
 - Blob
 - Memo
 
+### Text Encodings
+
+xBase data files, being technology that pre-dates the unicode standard, tend to use older, legacy encodings for text values.
+These legacy encodings are not available by default on all runtimes. Support for legacy encodings can be provided via the 
+`System.Text.Encoding.CodePages` nuget package, which provides the `CodePagesEncodingProvider` type.
+
+The `XBaseDataReader` will attempt to load the correct code page as specified in the file header, which can fail in the absence
+of these legacy encoding provider. By providing an explicit (non-null) Encoding via the `XBaseDataReaderOptions` type, this will
+override the encoding-detect behavior. Often times, ASCII encoding is sufficient for reading xBase files.
+
 ### Sample data
 Example shapefiles that contain dBase .dbf files:
 https://www.census.gov/geographies/mapping-files/time-series/geo/carto-boundary-file.html
