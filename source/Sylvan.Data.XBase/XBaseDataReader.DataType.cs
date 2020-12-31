@@ -625,7 +625,7 @@ namespace Sylvan.Data.XBase
 			{
 				var col = dr.columns[ordinal];
 				var dec = (decimal)BitConverter.ToInt64(dr.recordBuffer, col.offset);
-				dec = dec / 1000m;
+				dec = dec / 10000m;
 				return dec;
 			}
 		}

@@ -137,6 +137,12 @@ namespace Sylvan.Data.XBase.Tests
 		}
 
 		[Fact]
+		public void Curr()
+		{
+			Proc("data/cur.dbf");
+		}
+
+		[Fact]
 		public void Numbers4()
 		{
 			var name = "data/num3.dbf";
