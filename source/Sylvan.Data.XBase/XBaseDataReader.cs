@@ -41,7 +41,6 @@ namespace Sylvan.Data.XBase
 
 	public sealed partial class XBaseDataReader : DbDataReader, IDbColumnSchemaGenerator
 	{
-		static Dictionary<ushort, ushort> CodePageMap;
 
 		class XBaseColumn : DbColumn
 		{

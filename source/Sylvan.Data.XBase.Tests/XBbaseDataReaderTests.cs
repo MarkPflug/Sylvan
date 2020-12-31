@@ -13,7 +13,10 @@ namespace Sylvan.Data.XBase.Tests
 	{
 		public EncodingsFixture()
 		{
+#if NET5_0
+			// encodings are available by default on net461
 			Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+#endif
 		}
 	}
 

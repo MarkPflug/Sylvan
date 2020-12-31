@@ -57,13 +57,54 @@ namespace Sylvan.Data.XBase
 
 			public virtual string GetString(XBaseDataReader dr, int ordinal)
 			{
+				return GetRawAsciiString(dr, ordinal);
+			}
+
+			public string GetRawAsciiString(XBaseDataReader dr, int ordinal)
+			{
 				var col = dr.columns[ordinal];
 				return Encoding.ASCII.GetString(dr.recordBuffer, col.offset, col.length);
 			}
 
+#if NETSTANDARD2_1
+
+			Span<byte> GetRecordSpan(XBaseDataReader dr, int ordinal)
+			{
+				var col = dr.columns[ordinal];
+				return dr.recordBuffer.AsSpan().Slice(col.offset, col.length);
+			}
+
 			public virtual decimal GetDecimal(XBaseDataReader dr, int ordinal)
 			{
-				//var b = dr.GetRecordString(ordinal);
+				var col = dr.columns[ordinal];
+				decimal value;
+				int c;
+
+				var span = dr.recordBuffer.AsSpan().Slice(col.offset, col.length);
+				int i;
+				for(i = 0; i < span.Length; i++)
+				{
+					if (span[i] != ' ')
+						break;
+				}
+				span = span.Slice(i);
+
+				if (System.Buffers.Text.Utf8Parser.TryParse(span, out value, out c))
+				{
+					return value;
+				}
+				else
+				{
+					if (System.Buffers.Text.Utf8Parser.TryParse(span, out double d, out c))
+					{
+						return (decimal)d;
+					}
+				}
+				throw new FormatException();
+			}
+#else
+			public virtual decimal GetDecimal(XBaseDataReader dr, int ordinal)
+			{
 				var col = dr.columns[ordinal];
 				decimal value;
 				if (TryParseAsciiDecimal(dr.recordBuffer, col.offset, col.length, out value))
@@ -72,26 +113,36 @@ namespace Sylvan.Data.XBase
 				}
 				else
 				{
-					var str = this.GetString(dr, ordinal);
-					if (decimal.TryParse(str, out value))
-					{
+					if (TryParseDecimal(dr, ordinal, out value))
 						return value;
-					}
-					else
-					{
-						// for scientific notation, which decimal does not support.
-						if (double.TryParse(str, out double dValue))
-						{
-							// this cast can throw.
-							value = (decimal)dValue;
-							return value;
-						}
-					}
 				}
+
 				throw new FormatException();
 			}
 
-			// this is a non-allocating fast-path for the common case.
+			bool TryParseDecimal(XBaseDataReader dr, int ordinal, out decimal value)
+			{
+
+				var str = this.GetString(dr, ordinal);
+				if (decimal.TryParse(str, out value))
+				{
+					return true;
+				}
+				else
+				{
+					// for scientific notation, which decimal does not support.
+					if (double.TryParse(str, out double dValue))
+					{
+						// this cast can throw.
+						value = (decimal)dValue;
+						return true;
+					}
+				}
+				return false;
+			}
+
+			// this is a non-allocating fast-path for the common case, attempts
+			// to parse directly out of the byte[] instead of needing to convert to chars
 			static bool TryParseAsciiDecimal(byte[] buffer, int offset, int length, out decimal value)
 			{
 				ulong val = 0;
@@ -142,6 +193,8 @@ namespace Sylvan.Data.XBase
 				}
 				return true;
 			}
+
+#endif
 
 			public virtual float GetFloat(XBaseDataReader dr, int ordinal)
 			{
@@ -195,7 +248,18 @@ namespace Sylvan.Data.XBase
 
 			public virtual Guid GetGuid(XBaseDataReader dr, int ordinal)
 			{
-				throw new NotSupportedException();
+#if NETSTANDARD2_1
+				var span = GetRecordSpan(dr, ordinal);
+				if(System.Buffers.Text.Utf8Parser.TryParse(span, out Guid value, out _))
+				{
+					return value;
+				}
+#else
+				var str = GetRawAsciiString(dr, ordinal);
+				return Guid.Parse(str);
+
+#endif
+				throw new FormatException();
 			}
 		}
 
@@ -593,6 +657,7 @@ namespace Sylvan.Data.XBase
 		}
 
 		static readonly decimal[] Scale;
+		static Dictionary<ushort, ushort> CodePageMap;
 
 		static XBaseDataReader()
 		{

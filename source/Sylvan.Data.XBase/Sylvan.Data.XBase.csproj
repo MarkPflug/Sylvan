@@ -1,9 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFrameworks>netstandard2.0;netstandard2.1</TargetFrameworks>
     <VersionPrefix>0.1.0</VersionPrefix>
-    <VersionSuffix>B0005</VersionSuffix>
+    <VersionSuffix>B0003</VersionSuffix>
     <Description>A .NET library for reading xBase (DBase, FoxPro, Clipper, etc) .dbf data files.</Description>
     <PackageTags>dbf;xbase;dBase;FoxPro</PackageTags>
     <Nullable>enable</Nullable>
