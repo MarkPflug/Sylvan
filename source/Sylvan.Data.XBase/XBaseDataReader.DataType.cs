@@ -656,17 +656,10 @@ namespace Sylvan.Data.XBase
 			}
 		}
 
-		static readonly decimal[] Scale;
 		static Dictionary<ushort, ushort> CodePageMap;
 
 		static XBaseDataReader()
 		{
-			Scale = new decimal[21];
-			for (int i = 0; i < Scale.Length; i++)
-			{
-				Scale[i] = new decimal(1, 0, 0, false, (byte)i);
-			}
-
 			CodePageMap = new Dictionary<ushort, ushort>();
 
 			// maps the xBase header encoding number to the codePage number
