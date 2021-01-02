@@ -12,7 +12,8 @@ A library containing some types for working with ADO.net data objects.
 An extremely fast, lightweight library for reading and writing delimited CSV data.
 
 ### Sylvan.Data.XBase
-A data reader for dBASE/FoxPro/Clipper .dbf files.
+A data reader for dBASE/FoxPro/Clipper .dbf files. 
+This is the format used to store metadata in [ESRI ShapeFiles](https://en.wikipedia.org/wiki/Shapefile).
 
 ### [Sylvan.BuildTools.Data](docs/Sylvan.BuildTools.Data.md)
 Provides design time code generation for accessing CSV data files.
