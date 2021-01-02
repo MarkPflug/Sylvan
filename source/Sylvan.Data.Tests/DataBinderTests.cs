@@ -58,11 +58,12 @@ namespace Sylvan.Data
 	{
 		static ReadOnlyCollection<DbColumn> BuildSchema()
 		{
-			var sb = new Schema.Builder();
-			sb.AddColumn(null, DbType.Int32, false);
-			sb.AddColumn(null, DbType.String, false);
-			sb.AddColumn(null, DbType.DateTime, true);
-			var schema = sb.Build();
+			var schema =
+				new Schema.Builder()
+				.Add<int>()
+				.Add<string>()
+				.Add<DateTime?>()
+				.Build();
 			return schema.GetColumnSchema();
 		}
 
@@ -155,8 +156,7 @@ namespace Sylvan.Data
 		[Fact]
 		public void TestEnumByValue()
 		{
-			var schema = Schema.TryParse(":int,:string,:int").GetColumnSchema();
-
+			var schema = SchemaSerializer.Simple.Read(":int,:string,:int").GetColumnSchema();
 
 			var csvData = "Id,Name,Severity\r\n1,Olive,3";
 			var tr = new StringReader(csvData);
@@ -174,7 +174,7 @@ namespace Sylvan.Data
 		[Fact]
 		public void TestByName()
 		{
-			var schema = Schema.TryParse(":int,:string,:string").GetColumnSchema();
+			var schema = SchemaSerializer.Simple.Read(":int,:string,:string").GetColumnSchema();
 
 			var csvData = "Id,Name,Severity\r\n1,Olive,Warning";
 			var tr = new StringReader(csvData);
@@ -192,7 +192,7 @@ namespace Sylvan.Data
 		[Fact]
 		public void TestByA()
 		{
-			var schema = Schema.TryParse(":boolean,:string,:string").GetColumnSchema();
+			var schema = SchemaSerializer.Simple.Read(":boolean,:string,:string").GetColumnSchema();
 
 			var csvData = "Id,Name,Severity\r\n1,Olive,Warning";
 			var tr = new StringReader(csvData);
@@ -210,8 +210,7 @@ namespace Sylvan.Data
 		[Fact]
 		public void SeriesInt()
 		{
-			var schemaSpec = "Id:int,Name,{Integer}>Values*:int";
-			var schema = Schema.TryParse(schemaSpec);
+			var schema = SchemaSerializer.Simple.Read("Id:int,Name,{Integer}>Values*:int");
 			var cols = schema.GetColumnSchema();
 			var binderFactory = DataBinder<SeriesRecord>.CreateFactory(cols);
 
@@ -232,14 +231,14 @@ namespace Sylvan.Data
 		public void SeriesDate()
 		{
 			var schemaSpec = "Id:int,Name,{Date}>Values*:int";
-			var schema = Schema.TryParse(schemaSpec);
+			var schema = SchemaSerializer.Simple.Read(schemaSpec);
 			var cols = schema.GetColumnSchema();
 
 			var binderFactory = DataBinder<SeriesDateRecord>.CreateFactory(cols);
 
 			var csvData = "Id,Name,2020-09-19,2020-09-20,2020-09-21,2020-09-22\n1,Test,7,8,9,10\n";
 			var tr = new StringReader(csvData);
-			var opts = new CsvDataReaderOptions() { Schema = new CsvSchema(cols) };
+			var opts = new CsvDataReaderOptions() { Schema = new CsvSchema(schema) };
 			DbDataReader data = CsvDataReader.Create(tr, opts);
 			var binder = binderFactory.CreateBinder(data.GetColumnSchema());
 
@@ -252,13 +251,11 @@ namespace Sylvan.Data
 		[Fact]
 		public void Manual()
 		{
-			var schemaSpec = "Id:int,Name,{Date}>Values*:int";
-			var schema = Schema.TryParse(schemaSpec);
-			var cols = schema.GetColumnSchema();
+			var schema = SchemaSerializer.Simple.Read("Id:int,Name,{Date}>Values*:int").GetColumnSchema();
 
 			var csvData = "Id,Name,2020-09-19,2020-09-20,2020-09-21\n1,Test,7,8,9\n";
 			var tr = new StringReader(csvData);
-			var opts = new CsvDataReaderOptions() { Schema = new CsvSchema(cols) };
+			var opts = new CsvDataReaderOptions() { Schema = new CsvSchema(schema) };
 			var data = CsvDataReader.Create(tr, opts);
 			var binder = new ManualBinder(data.GetColumnSchema());
 

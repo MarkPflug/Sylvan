@@ -96,7 +96,7 @@ namespace Sylvan.Data
 
 			var seriesMap =
 				logicalSchema
-				.OfType<Schema.SchemaColumn>()
+				.OfType<Schema.Column>()
 				.Where(c => c.IsSeries == true)
 				.ToDictionary(p => string.IsNullOrEmpty(p.SeriesName) ? "Values" : p.SeriesName, p => p);
 

@@ -46,7 +46,7 @@ namespace Sylvan.BuildTools.Data
 					var analyzer = new SchemaAnalyzer(new SchemaAnalyzerOptions { AnalyzeRowCount = 10000 });
 					var result = analyzer.Analyze(csv);
 					var schema = result.GetSchema();
-					var spec = new Schema(schema).GetSchemaSpecification(true);
+					var spec = schema.ToString();
 					File.WriteAllText(generatedSchemaFile, spec);
 				}
 				catch (Exception e)

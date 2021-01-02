@@ -58,7 +58,7 @@ namespace Sylvan.Data
 				var columnOrdinal = property.GetCustomAttribute<ColumnOrdinalAttribute>()?.Ordinal;
 				var columnName = property.GetCustomAttribute<ColumnNameAttribute>()?.Name ?? property.Name;
 
-				var setter = property.GetSetMethod(true);
+				var setter = property.GetSetMethod(true)!;
 
 				var paramType = setter.GetParameters()[0].ParameterType;
 

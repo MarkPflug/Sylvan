@@ -223,6 +223,7 @@ namespace Sylvan.Data
 		int stringLenMax;
 		int stringLenMin;
 		long stringLenTotal;
+		int errorCount = 0;
 
 		Dictionary<string, int> valueCount;
 
@@ -247,113 +248,120 @@ namespace Sylvan.Data
 
 			var typeCode = Type.GetTypeCode(type);
 
-			switch (typeCode)
+			try
 			{
-				case TypeCode.Boolean:
-					boolValue = dr.GetBoolean(ordinal);
-					break;
-				case TypeCode.Int16:
-					intValue = dr.GetInt16(ordinal);
-					break;
-				case TypeCode.Int32:
-					intValue = dr.GetInt32(ordinal);
-					break;
-				case TypeCode.Int64:
-					intValue = dr.GetInt64(ordinal);
-					break;
-				case TypeCode.Single:
-					floatValue = dr.GetFloat(ordinal);
-					break;
-				case TypeCode.Double:
-					floatValue = dr.GetDouble(ordinal);
-					break;
-				case TypeCode.Decimal:
-					decimalValue = dr.GetDecimal(ordinal);
-					break;
-				case TypeCode.DateTime:
-					dateValue = dr.GetDateTime(ordinal);
-					break;
-				case TypeCode.String:
-					stringValue = dr.GetString(ordinal);
+				switch (typeCode)
+				{
+					case TypeCode.Boolean:
+						boolValue = dr.GetBoolean(ordinal);
+						break;
+					case TypeCode.Int16:
+						intValue = dr.GetInt16(ordinal);
+						break;
+					case TypeCode.Int32:
+						intValue = dr.GetInt32(ordinal);
+						break;
+					case TypeCode.Int64:
+						intValue = dr.GetInt64(ordinal);
+						break;
+					case TypeCode.Single:
+						floatValue = dr.GetFloat(ordinal);
+						break;
+					case TypeCode.Double:
+						floatValue = dr.GetDouble(ordinal);
+						break;
+					case TypeCode.Decimal:
+						decimalValue = dr.GetDecimal(ordinal);
+						break;
+					case TypeCode.DateTime:
+						dateValue = dr.GetDateTime(ordinal);
+						break;
+					case TypeCode.String:
+						stringValue = dr.GetString(ordinal);
 
-					if (isBoolean || isFloat || isInt || isDate || isDateTime || isGuid)
-					{
-						if (string.IsNullOrEmpty(stringValue))
+						if (isBoolean || isFloat || isInt || isDate || isDateTime || isGuid)
 						{
-							isNullable = true;
+							if (string.IsNullOrEmpty(stringValue))
+							{
+								isNullable = true;
+							}
+							else
+							{
+								if (isBoolean)
+								{
+									if (bool.TryParse(stringValue, out var b))
+									{
+
+									}
+									else
+									{
+										isBoolean = false;
+									}
+								}
+								if (isFloat)
+								{
+									if (double.TryParse(stringValue, out var f))
+									{
+										floatValue = f;
+
+									}
+									else
+									{
+										isFloat = false;
+									}
+								}
+								if (isInt)
+								{
+									if (long.TryParse(stringValue, out var i))
+									{
+										intValue = i;
+									}
+									else
+									{
+										isInt = false;
+									}
+								}
+								if (isDateTime || isDate)
+								{
+									if (DateTime.TryParse(stringValue, out var d))
+									{
+										dateValue = d;
+									}
+									else
+									{
+										isDate = isDateTime = false;
+									}
+								}
+								if (isGuid)
+								{
+									if (Guid.TryParse(stringValue, out var g))
+									{
+										guidValue = g;
+									}
+									else
+									{
+										isGuid = false;
+									}
+								}
+							}
 						}
-						else
+
+						break;
+					default:
+						if (type == typeof(byte[]))
 						{
-							if (isBoolean)
-							{
-								if (bool.TryParse(stringValue, out var b))
-								{
 
-								}
-								else
-								{
-									isBoolean = false;
-								}
-							}
-							if (isFloat)
-							{
-								if (double.TryParse(stringValue, out var f))
-								{
-									floatValue = f;
-
-								}
-								else
-								{
-									isFloat = false;
-								}
-							}
-							if (isInt)
-							{
-								if (long.TryParse(stringValue, out var i))
-								{
-									intValue = i;
-								}
-								else
-								{
-									isInt = false;
-								}
-							}
-							if (isDateTime || isDate)
-							{
-								if (DateTime.TryParse(stringValue, out var d))
-								{
-									dateValue = d;
-								}
-								else
-								{
-									isDate = isDateTime = false;
-								}
-							}
-							if (isGuid)
-							{
-								if (Guid.TryParse(stringValue, out var g))
-								{
-									guidValue = g;
-								}
-								else
-								{
-									isGuid = false;
-								}
-							}
 						}
-					}
-
-					break;
-				default:
-					if (type == typeof(byte[]))
-					{
-
-					}
-					if (type == typeof(Guid))
-					{
-						isGuid = true;
-					}
-					break;
+						if (type == typeof(Guid))
+						{
+							isGuid = true;
+						}
+						break;
+				}
+			}
+			catch (Exception)
+			{
+				errorCount++;
 			}
 
 			if (isFloat && floatValue.HasValue)
@@ -501,23 +509,27 @@ namespace Sylvan.Data
 			return typeof(string);
 		}
 
-		internal Schema.SchemaColumn CreateColumnSchema()
+		internal Schema.Column.Builder CreateColumnSchema()
 		{
+			var name = this.name ?? "";
 			if (nullCount == count)
 			{
 				// never saw any values, so no determination could be made
-				return Schema.SchemaColumn.CreateText(this.ordinal, name, true);
+				return new Schema.Column.Builder(name, typeof(string), true);
 			}
 
 			if (this.isBoolean)
 			{
-				return Schema.SchemaColumn.CreateBoolean(this.ordinal, name, isNullable);
+				return new Schema.Column.Builder(name, typeof(bool), isNullable);
 			}
 
 			if (this.isDate || this.isDateTime)
 			{
-				int? precision = isDate ? (int?)null : dateHasFractionalSeconds ? 7 : 0;
-				return Schema.SchemaColumn.CreateDate(this.ordinal, name, isNullable, isUnique, precision);
+				int? scale = isDate ? (int?)null : dateHasFractionalSeconds ? 7 : 0;
+				return new Schema.Column.Builder(name, typeof(DateTime), isNullable)
+				{
+					NumericScale = scale
+				};
 			}
 
 			if (this.isInt)
@@ -526,22 +538,31 @@ namespace Sylvan.Data
 					intMin < int.MinValue || intMax > int.MaxValue
 					? typeof(long)
 					: typeof(int);
-				return Schema.SchemaColumn.CreateInt(this.ordinal, name, isNullable, isUnique, type);
+				return new Schema.Column.Builder(name, type, isNullable)
+				{
+					IsUnique = isUnique
+				};
 			}
 
 			if (this.isFloat)
 			{
-				return
+				var type =
 					floatMin < float.MinValue || floatMax > float.MaxValue
-					? Schema.SchemaColumn.CreateDouble(this.ordinal, name, isNullable)
-					: Schema.SchemaColumn.CreateFloat(this.ordinal, name, isNullable);
+					? typeof(double)
+					: typeof(float);
+				return new Schema.Column.Builder(name, type, isNullable);
 			}
 
 			var len = stringLenMax;
-			return Schema.SchemaColumn.CreateString(this.ordinal, name, isNullable, isUnique, len, isAscii);
+			return new Schema.Column.Builder(name, typeof(string), isNullable)
+			{
+				ColumnSize = len,
+				NumericPrecision = isAscii ? 2 : 1,
+				CommonDataType = isAscii ? System.Data.DbType.AnsiString : System.Data.DbType.String,
+				IsUnique = isUnique
+			};
 		}
 	}
-
 
 	[Flags]
 	enum SeriesType

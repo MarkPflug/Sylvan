@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 
 namespace Sylvan.Data
 {
@@ -29,9 +30,10 @@ namespace Sylvan.Data
 
 			public override int Peek()
 			{
-				var l = Read(peekBuffer!, 0, 1);
-				position -= l;
-				return l == 0 ? -1 : peekBuffer![0];
+				throw new NotSupportedException();
+				//var l = Read(peekBuffer!, 0, 1);
+				//position -= l;
+				//return l == 0 ? -1 : peekBuffer![0];
 			}
 
 			public override int Read()

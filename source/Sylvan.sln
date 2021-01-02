@@ -27,6 +27,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sylvan.Tools.SystemInfo", "
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Build", "Build", "{70EFA271-0E5B-4977-90F0-F86C13B937AF}"
 	ProjectSection(SolutionItems) = preProject
+		..\.gitignore = ..\.gitignore
 		..\benchmark.cmd = ..\benchmark.cmd
 		..\coverage.cmd = ..\coverage.cmd
 		..\build\Coverage.proj = ..\build\Coverage.proj
@@ -46,6 +47,10 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sylvan.BuildTools.Data", "Sylvan.BuildTools.Data\Sylvan.BuildTools.Data.csproj", "{277AE92E-A25E-4C9F-B6FC-5172CA3E283D}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sylvan.BuildTools.Data.Tests", "Sylvan.BuildTools.Data.Tests\Sylvan.BuildTools.Data.Tests.csproj", "{D4616E66-28EF-49E7-8CC5-351D8457312D}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sylvan.Data.XBase", "Sylvan.Data.XBase\Sylvan.Data.XBase.csproj", "{E4C6FE26-BB63-448A-A0F1-B81B4E83597B}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sylvan.Data.XBase.Tests", "Sylvan.Data.XBase.Tests\Sylvan.Data.XBase.Tests.csproj", "{8B707398-D57B-47CF-B858-9052E60AC4A9}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -189,6 +194,30 @@ Global
 		{D4616E66-28EF-49E7-8CC5-351D8457312D}.Release|x64.Build.0 = Release|Any CPU
 		{D4616E66-28EF-49E7-8CC5-351D8457312D}.Release|x86.ActiveCfg = Release|Any CPU
 		{D4616E66-28EF-49E7-8CC5-351D8457312D}.Release|x86.Build.0 = Release|Any CPU
+		{E4C6FE26-BB63-448A-A0F1-B81B4E83597B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E4C6FE26-BB63-448A-A0F1-B81B4E83597B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E4C6FE26-BB63-448A-A0F1-B81B4E83597B}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{E4C6FE26-BB63-448A-A0F1-B81B4E83597B}.Debug|x64.Build.0 = Debug|Any CPU
+		{E4C6FE26-BB63-448A-A0F1-B81B4E83597B}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{E4C6FE26-BB63-448A-A0F1-B81B4E83597B}.Debug|x86.Build.0 = Debug|Any CPU
+		{E4C6FE26-BB63-448A-A0F1-B81B4E83597B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E4C6FE26-BB63-448A-A0F1-B81B4E83597B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E4C6FE26-BB63-448A-A0F1-B81B4E83597B}.Release|x64.ActiveCfg = Release|Any CPU
+		{E4C6FE26-BB63-448A-A0F1-B81B4E83597B}.Release|x64.Build.0 = Release|Any CPU
+		{E4C6FE26-BB63-448A-A0F1-B81B4E83597B}.Release|x86.ActiveCfg = Release|Any CPU
+		{E4C6FE26-BB63-448A-A0F1-B81B4E83597B}.Release|x86.Build.0 = Release|Any CPU
+		{8B707398-D57B-47CF-B858-9052E60AC4A9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8B707398-D57B-47CF-B858-9052E60AC4A9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8B707398-D57B-47CF-B858-9052E60AC4A9}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{8B707398-D57B-47CF-B858-9052E60AC4A9}.Debug|x64.Build.0 = Debug|Any CPU
+		{8B707398-D57B-47CF-B858-9052E60AC4A9}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{8B707398-D57B-47CF-B858-9052E60AC4A9}.Debug|x86.Build.0 = Debug|Any CPU
+		{8B707398-D57B-47CF-B858-9052E60AC4A9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8B707398-D57B-47CF-B858-9052E60AC4A9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8B707398-D57B-47CF-B858-9052E60AC4A9}.Release|x64.ActiveCfg = Release|Any CPU
+		{8B707398-D57B-47CF-B858-9052E60AC4A9}.Release|x64.Build.0 = Release|Any CPU
+		{8B707398-D57B-47CF-B858-9052E60AC4A9}.Release|x86.ActiveCfg = Release|Any CPU
+		{8B707398-D57B-47CF-B858-9052E60AC4A9}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -201,6 +230,7 @@ Global
 		{7FE08757-86A4-4E5D-AB4F-8645A03A7493} = {38AEC6F9-6E57-4C17-ACDD-ACF310AA2537}
 		{277AE92E-A25E-4C9F-B6FC-5172CA3E283D} = {38AEC6F9-6E57-4C17-ACDD-ACF310AA2537}
 		{D4616E66-28EF-49E7-8CC5-351D8457312D} = {395AEB56-67B5-4510-A19C-9E8811062C87}
+		{8B707398-D57B-47CF-B858-9052E60AC4A9} = {395AEB56-67B5-4510-A19C-9E8811062C87}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {DBE90730-1E35-44B9-9C20-707675F7BD3A}

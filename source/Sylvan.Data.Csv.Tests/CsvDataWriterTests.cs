@@ -1,4 +1,5 @@
 using System;
+using System.Data;
 using System.IO;
 using System.Threading.Tasks;
 using Xunit;
@@ -15,6 +16,16 @@ namespace Sylvan.Data.Csv
 			var sw = new StringWriter();
 			var csv = new CsvDataWriter(sw);
 			await csv.WriteAsync(dr);
+		}
+
+		[Fact]
+		public void DataTable()
+		{
+			var dr = TestData.GetData();
+			var dt = new DataTable();
+			dt.Load(dr);
+			Assert.Equal(3253, dt.Rows.Count);
+			Assert.Equal(85, dt.Columns.Count);
 		}
 
 		[Fact]
