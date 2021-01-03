@@ -102,6 +102,21 @@ namespace Sylvan.Data
 		}
 
 		[Fact]
+		public void StringTest()
+		{
+			var csvData = "Id,Name,Date\n1,Test,2020-08-12\n";
+			var tr = new StringReader(csvData);
+			DbDataReader data = CsvDataReader.Create(tr);
+
+			var binder = new CompiledDataBinder<MyDataRecord>(data.GetColumnSchema());
+
+			while (data.Read())
+			{
+				var item = binder.GetRecord(data);
+			}
+		}
+
+		[Fact]
 		public void NumericNullTest()
 		{
 			var tr = new StringReader("Name,Value\nA,12.3\nB,\n");
