@@ -13,7 +13,7 @@ namespace Sylvan.Data
 		{
 			var data = "Id,Name,2020-01-01,2020-01-02,2020-01-03\r\n1,Test,5,6,7";
 			var spec = "Id:int,Name,{Date}>Values*:int";
-			var schema = new CsvSchema(SchemaSerializer.Simple.Read(spec).GetColumnSchema());
+			var schema = new CsvSchema(Schema.Parse(spec).GetColumnSchema());
 			var opts = new CsvDataReaderOptions { Schema = schema };
 			var csv = CsvDataReader.Create(new StringReader(data), opts);
 

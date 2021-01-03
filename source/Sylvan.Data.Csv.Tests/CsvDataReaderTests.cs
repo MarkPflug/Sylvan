@@ -419,6 +419,59 @@ namespace Sylvan.Data.Csv
 
 		}
 
+		class FixHeaders : ICsvSchemaProvider
+		{
+
+			HashSet<string> h;
+
+			public FixHeaders()
+			{
+				this.h = new HashSet<string>();
+			}
+
+			class Column : DbColumn
+			{
+				public Column(string orignalName, string name)
+				{
+					this.BaseColumnName = orignalName;
+					this.ColumnName = name;
+				}
+			}
+
+
+			public DbColumn GetColumn(string name, int ordinal)
+			{
+				if (h.Add(name))
+				{
+					return new Column(name, name);
+				}
+				for (int i = 2; i < 100; i++)
+				{
+					var dedupe = name + i;
+					if (h.Add(dedupe))
+					{
+						return new Column(name, dedupe);
+					}
+				}
+
+				//exceptions are better than infinite loops.
+				throw new NotSupportedException();
+			}
+		}
+
+		[Fact]
+		public void DupeHeaderFix2()
+		{
+			var data = "a,a,b,b,c,c";
+
+			var fixSchema = new FixHeaders();
+			var opts = new CsvDataReaderOptions { Schema = fixSchema };
+
+			var csv = CsvDataReader.Create(new StringReader(data), opts);
+			Assert.Equal(6, csv.FieldCount);
+
+		}
+
 		[Fact]
 		public void GetSchemaTable()
 		{
@@ -715,7 +768,7 @@ namespace Sylvan.Data.Csv
 		[Fact]
 		public void CustomFormatTest()
 		{
-			var schema = SchemaSerializer.Simple.Read("Name,Date:DateTime{yyyyMMdd}");
+			var schema = Schema.Parse("Name,Date:DateTime{yyyyMMdd}");
 			var csvSchema = new CsvSchema(schema.GetColumnSchema());
 			using var tr = new StringReader("Test,20200812");
 			var csv = CsvDataReader.Create(tr, new CsvDataReaderOptions { Schema = csvSchema, HasHeaders = false });

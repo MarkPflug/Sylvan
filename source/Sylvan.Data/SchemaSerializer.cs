@@ -6,17 +6,11 @@ using System.Text.RegularExpressions;
 
 namespace Sylvan.Data
 {
-	public abstract class SchemaSerializer
+	sealed class SimpleSchemaSerializer
 	{
-		public static SchemaSerializer Simple = new SimpleSchemaSerializer(false);
+		internal static readonly SimpleSchemaSerializer SingleLine = new SimpleSchemaSerializer(false);
+		internal static readonly SimpleSchemaSerializer MultiLine = new SimpleSchemaSerializer(true);
 
-		public abstract string Write(Schema schema);
-
-		public abstract Schema Read(string spec);
-	}
-
-	sealed class SimpleSchemaSerializer : SchemaSerializer
-	{
 		const string SeriesSymbol = "*";
 
 		static readonly Regex ColSpecRegex =
@@ -63,7 +57,7 @@ namespace Sylvan.Data
 		/// </summary>
 		/// <param name="spec">The schema specification string.</param>
 		/// <returns>A Schema, or null if it failed to parse.</returns>
-		public override Schema Read(string spec)
+		public Schema Parse(string spec)
 		{
 			var builder = new Schema.Builder();
 
@@ -136,7 +130,7 @@ namespace Sylvan.Data
 		/// </summary>
 		/// <param name="multiline">Indicates if the spec should be singleline, or multiline.</param>
 		/// <returns>A string.</returns>
-		public override string Write(Schema schema)
+		public string GetSchemaSpec(Schema schema)
 		{
 			var w = new StringWriter();
 			bool first = true;

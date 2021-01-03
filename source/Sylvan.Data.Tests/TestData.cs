@@ -84,7 +84,7 @@ Combined_Key,
 			// is it a bad idea to do this in a static constructor?
 			// probably, but this is only used in test/benchmarks.
 			CacheData();
-			Schema = new CsvSchema(SchemaSerializer.Simple.Read(DataSetSchema).GetColumnSchema());
+			Schema = new CsvSchema(Data.Schema.Parse(DataSetSchema).GetColumnSchema());
 			Options = new CsvDataReaderOptions { Schema = Schema };
 		}
 

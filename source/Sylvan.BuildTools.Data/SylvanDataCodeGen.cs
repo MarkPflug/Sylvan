@@ -28,7 +28,7 @@ namespace Sylvan.BuildTools.Data
 				if (!string.IsNullOrEmpty(schemaFile))
 				{
 					var spec = File.ReadAllText(schemaFile);
-					var schema = SchemaSerializer.Simple.Read(spec);
+					var schema = Schema.Parse(spec);
 					if (schema == null)
 					{
 						this.BuildEngine.LogErrorEvent(
