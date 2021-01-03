@@ -338,7 +338,7 @@ namespace Sylvan.Data
 					expr =
 						Expression.Condition(
 							Expression.Call(recordParam, isDbNullMethod, ordinalExpr),
-							Expression.Default(targetType),
+							Expression.Default(expr.Type),
 							expr
 						);
 				}
