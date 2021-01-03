@@ -625,7 +625,10 @@ namespace Sylvan.Data.Csv
 		/// <inheritdoc/>
 		public override long GetBytes(int ordinal, long dataOffset, byte[]? buffer, int bufferOffset, int length)
 		{
-			if (buffer == null) throw new ArgumentNullException(nameof(buffer));
+			if (buffer == null)
+			{
+				return GetBinaryLength(ordinal);
+			}
 			if (dataOffset > int.MaxValue) throw new ArgumentOutOfRangeException(nameof(dataOffset));
 
 			if (scratch == null)
@@ -738,7 +741,11 @@ namespace Sylvan.Data.Csv
 		/// <inheritdoc/>
 		public override long GetChars(int ordinal, long dataOffset, char[]? buffer, int bufferOffset, int length)
 		{
-			if (buffer == null) throw new ArgumentNullException(nameof(buffer));
+			if (buffer == null)
+			{
+				return this.GetCharLength(ordinal);
+			}
+			
 			if (dataOffset > int.MaxValue) throw new ArgumentOutOfRangeException(nameof(dataOffset));
 
 			var s = GetField(ordinal);
@@ -918,6 +925,13 @@ namespace Sylvan.Data.Csv
 				this.length = length;
 			}
 
+			public char this[int idx] {
+				get
+				{
+					return buffer[offset + idx];
+				}
+			}
+
 			public readonly char[] buffer;
 			public readonly int offset;
 			public readonly int length;
@@ -1037,15 +1051,10 @@ namespace Sylvan.Data.Csv
 				default:
 					if (type == typeof(byte[]))
 					{
-						var l = this.GetField(ordinal).length;
-						var dataLen = l / 4 * 3;
-						var buffer = new byte[dataLen];
-						var len = GetBytes(ordinal, 0, buffer, 0, dataLen);
-						// 2/3 chance we'll have to resize.
-						if (len < dataLen)
-						{
-							Array.Resize(ref buffer, (int)len);
-						}
+						var length = this.GetBinaryLength(ordinal);
+						var buffer = new byte[length];
+						var len = GetBytes(ordinal, 0, buffer, 0, length);
+						Debug.Assert(len == length);
 						return buffer;
 					}
 					if (type == typeof(Guid))
@@ -1054,6 +1063,26 @@ namespace Sylvan.Data.Csv
 					}
 					return this.GetString(ordinal);
 			}
+		}
+
+		int GetBinaryLength(int ordinal)
+		{
+			var span = this.GetField(ordinal);
+			var l = span.length;
+			var rem = 0;
+			if (span[l - 1] == '=') rem++;
+			if (span[l - 2] == '=') rem++;
+			var dataLen = l / 4 * 3;
+			dataLen -= rem;
+			return dataLen;
+		}
+
+		int GetCharLength(int ordinal)
+		{
+			var fi = this.fieldInfos[ordinal];
+			var start = ordinal == 0 ? 0 : this.fieldInfos[ordinal - 1].endIdx + 1;
+			var len = fi.endIdx - start - fi.escapeCount;
+			return len;
 		}
 
 		/// <inheritdoc/>
