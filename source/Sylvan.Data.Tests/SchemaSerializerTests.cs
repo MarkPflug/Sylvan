@@ -7,7 +7,7 @@ namespace Sylvan.Data
 		[Fact]
 		public void Test1()
 		{
-			var schema = SchemaSerializer.Simple.Read("{Date}>Values*:int");
+			var schema = Schema.Parse("{Date}>Values*:int");
 		}
 	}
 }

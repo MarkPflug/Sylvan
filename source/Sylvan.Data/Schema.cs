@@ -54,7 +54,12 @@ namespace Sylvan.Data
 		/// <inheritdoc/>
 		public override string ToString()
 		{
-			return SchemaSerializer.Simple.Write(this);
+			return SimpleSchemaSerializer.SingleLine.GetSchemaSpec(this);
+		}
+
+		public static Schema Parse(string spec)
+		{
+			return SimpleSchemaSerializer.SingleLine.Parse(spec);
 		}
 
 		public ReadOnlyCollection<DbColumn> GetColumnSchema()

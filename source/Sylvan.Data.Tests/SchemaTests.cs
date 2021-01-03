@@ -8,7 +8,7 @@ namespace Sylvan.Data
 		public void Test1()
 		{
 			var spec = "A,B*";
-			var s = SchemaSerializer.Simple.Read(spec);
+			var s = Schema.Parse(spec);
 			Assert.NotNull(s);
 			var result = s.ToString();
 			Assert.Equal(spec, result);
@@ -18,7 +18,7 @@ namespace Sylvan.Data
 		public void SeriesTest()
 		{
 			var spec = "State:string[2],County:string[32],{Date}>Issues*:int?";
-			var s = SchemaSerializer.Simple.Read(spec);
+			var s = Schema.Parse(spec);
 			Assert.NotNull(s);
 			var result = s.ToString();
 			Assert.Equal(spec, result, true);

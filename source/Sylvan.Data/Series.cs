@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace Sylvan.Data
 {
-	public interface ISeries<TK, TV> //: IEnumerable<TV>
+	public interface ISeries<TK, TV> : IEnumerable<KeyValuePair<TK, TV>>
 		where TK : IComparable<TK>
 	{
 		TK Minimum { get; }
@@ -17,14 +17,22 @@ namespace Sylvan.Data
 	public sealed class Series<T> : ISeries<int, T>
 	{
 		public int Minimum { get; }
-		public int Maximum => Minimum + values.Length;
+		public int Step { get; }
+		public int Maximum { get; }
 
 		readonly T[] values;
 
-		public Series(int start, IEnumerable<T> values)
+		public Series(int start, IEnumerable<T> values) : this(start, 1, values)
+		{
+
+		}
+
+		public Series(int start, int step, IEnumerable<T> values)
 		{
 			this.Minimum = start;
+			this.Step = step;
 			this.values = values.ToArray();
+			this.Maximum = Minimum + this.values.Length * Step;
 		}
 
 		public T this[int key]
@@ -32,22 +40,44 @@ namespace Sylvan.Data
 			get
 			{
 				if (key < Minimum || key > Maximum) throw new IndexOutOfRangeException();
-				var idx = key - Minimum;
+				var idx = (key - Minimum) / Step;
+
 				return values[idx];
 			}
 		}
+
+		public IEnumerator<KeyValuePair<int, T>> GetEnumerator()
+		{
+			int key = Minimum;
+			for (int i = 0; i < values.Length; i++, key += Step)
+			{
+				yield return new KeyValuePair<int, T>(key, values[i]);
+			}
+		}
+
+		IEnumerator IEnumerable.GetEnumerator()
+		{
+			return this.GetEnumerator();
+		}
 	}
 
-	public sealed class DateSeries<T> : ISeries<DateTime, T>, IEnumerable<T>
+	public sealed class DateSeries<T> : ISeries<DateTime, T>
 	{
 		public DateTime Minimum { get; }
+		public TimeSpan Step { get; }
 		public DateTime Maximum { get; }
 
 		readonly T[] values;
 
 		public DateSeries(DateTime startDate, IEnumerable<T> values)
+			: this(startDate, TimeSpan.FromDays(1), values)
+		{
+		}
+
+		public DateSeries(DateTime startDate, TimeSpan step, IEnumerable<T> values)
 		{
 			this.Minimum = startDate.Date;
+			this.Step = step;
 			this.values = values.ToArray();
 			this.Maximum = Minimum.AddDays(this.values.Length);
 		}
@@ -57,15 +87,19 @@ namespace Sylvan.Data
 			get
 			{
 				if (key < Minimum || key > Maximum) throw new IndexOutOfRangeException();
-				var idx = (key - Minimum).Days;
+				var idx = (key.Ticks - Minimum.Ticks) / Step.Ticks;
 				return values[idx];
 			}
 		}
 
-		public IEnumerator<T> GetEnumerator()
+		public IEnumerator<KeyValuePair<DateTime, T>> GetEnumerator()
 		{
-			foreach (var item in values)
-				yield return item;
+			DateTime key = Minimum;
+			for (int i = 0; i < this.values.Length; i++)
+			{
+				yield return new KeyValuePair<DateTime, T>(key, values[i]);
+				key = key.Add(Step);
+			}
 		}
 
 		IEnumerator IEnumerable.GetEnumerator()

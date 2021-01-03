@@ -13,7 +13,7 @@ namespace Sylvan.Data
 			var schema = new Schema(result.GetSchema());
 			var spec = schema.ToString();
 
-			var ss = SchemaSerializer.Simple.Read(spec);
+			var ss = Schema.Parse(spec);
 			Assert.NotNull(ss);
 		}
 
@@ -26,7 +26,7 @@ namespace Sylvan.Data
 			var schema = new Schema(result.GetSchema());
 			var spec = schema.ToString();
 
-			var ss = SchemaSerializer.Simple.Read(spec);
+			var ss = Schema.Parse(spec);
 			Assert.NotNull(ss);
 		}
 	}

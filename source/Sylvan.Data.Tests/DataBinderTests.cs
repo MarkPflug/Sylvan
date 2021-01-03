@@ -171,7 +171,7 @@ namespace Sylvan.Data
 		[Fact]
 		public void TestEnumByValue()
 		{
-			var schema = SchemaSerializer.Simple.Read(":int,:string,:int").GetColumnSchema();
+			var schema = Schema.Parse(":int,:string,:int").GetColumnSchema();
 
 			var csvData = "Id,Name,Severity\r\n1,Olive,3";
 			var tr = new StringReader(csvData);
@@ -187,66 +187,74 @@ namespace Sylvan.Data
 		}
 
 		[Fact]
-		public void TestByName()
+		public void TestEnumId()
 		{
-			var schema = SchemaSerializer.Simple.Read(":int,:string,:string").GetColumnSchema();
+			var schema = Schema.Parse(":int,:string,:int").GetColumnSchema();
 
-			var csvData = "Id,Name,Severity\r\n1,Olive,Warning";
+			var csvData = "Id,Name,Severity\r\n1,Olive,3\r\n2,Brown,2";
 			var tr = new StringReader(csvData);
 			var opts = new CsvDataReaderOptions() { Schema = new CsvSchema(schema) };
 			var data = CsvDataReader.Create(tr, opts);
 
 			var binder = new CompiledDataBinder<EnumRecord>(data.GetColumnSchema());
 
-			while (data.Read())
-			{
-				var item = binder.GetRecord(data);
-			}
+			Assert.True(data.Read());
+
+			var item = binder.GetRecord(data);
+			Assert.Equal(Severity.Warning, item.Severity);
+			Assert.True(data.Read());
+			item = binder.GetRecord(data);
+			Assert.Equal(Severity.Error, item.Severity);
 		}
 
 		[Fact]
-		public void TestByA()
+		public void TestEnumParse()
 		{
-			var schema = SchemaSerializer.Simple.Read(":boolean,:string,:string").GetColumnSchema();
+			var schema = Schema.Parse(":boolean,:string,:string").GetColumnSchema();
 
-			var csvData = "Id,Name,Severity\r\n1,Olive,Warning";
+			var csvData = "Id,Name,Severity\r\n1,Olive,Warning\r\n2,Brown,Error";
 			var tr = new StringReader(csvData);
 			var opts = new CsvDataReaderOptions() { Schema = new CsvSchema(schema) };
 			var data = CsvDataReader.Create(tr, opts);
 
 			var binder = new CompiledDataBinder<EnumRecord>(data.GetColumnSchema());
 
-			while (data.Read())
-			{
-				var item = binder.GetRecord(data);
-			}
+			Assert.True(data.Read());
+
+			var item = binder.GetRecord(data);
+			Assert.Equal(Severity.Warning, item.Severity);
+			Assert.True(data.Read());
+			item = binder.GetRecord(data);
+			Assert.Equal(Severity.Error, item.Severity);
 		}
 
 		[Fact]
 		public void SeriesInt()
 		{
-			var schema = SchemaSerializer.Simple.Read("Id:int,Name,{Integer}>Values*:int");
+			var schema = Schema.Parse("Id:int,Name,{Integer}>Values*:int");
 			var cols = schema.GetColumnSchema();
 			var binderFactory = DataBinder<SeriesRecord>.CreateFactory(cols);
 
-			var csvData = "Id,Name,1,2,3\n1,Test,7,8,9\n";
+			var csvData = "Id,Name,1,2,3\n1,Test,7,8,9\n2,abc,11,12,13\n";
 			var tr = new StringReader(csvData);
 			var opts = new CsvDataReaderOptions() { Schema = new CsvSchema(cols) };
 			DbDataReader data = CsvDataReader.Create(tr, opts);
 
 			var binder = binderFactory.CreateBinder(data.GetColumnSchema());
 
-			while (data.Read())
-			{
-				var item = binder.GetRecord(data);
-			}
+			Assert.True(data.Read());
+			var item = binder.GetRecord(data);
+			Assert.Equal(new[] { 7, 8, 9 }, item.Values.Select(p => p.Value));
+			Assert.True(data.Read());
+			item = binder.GetRecord(data);
+			Assert.Equal(new[] { 11, 12, 13 }, item.Values.Select(p => p.Value));
 		}
 
 		[Fact]
 		public void SeriesDate()
 		{
 			var schemaSpec = "Id:int,Name,{Date}>Values*:int";
-			var schema = SchemaSerializer.Simple.Read(schemaSpec);
+			var schema = Schema.Parse(schemaSpec);
 			var cols = schema.GetColumnSchema();
 
 			var binderFactory = DataBinder<SeriesDateRecord>.CreateFactory(cols);
@@ -266,7 +274,7 @@ namespace Sylvan.Data
 		[Fact]
 		public void Manual()
 		{
-			var schema = SchemaSerializer.Simple.Read("Id:int,Name,{Date}>Values*:int").GetColumnSchema();
+			var schema = Schema.Parse("Id:int,Name,{Date}>Values*:int").GetColumnSchema();
 
 			var csvData = "Id,Name,2020-09-19,2020-09-20,2020-09-21\n1,Test,7,8,9\n";
 			var tr = new StringReader(csvData);
@@ -278,7 +286,7 @@ namespace Sylvan.Data
 			var item = binder.GetRecord(data);
 			Assert.Equal(1, item.Id);
 			Assert.Equal("Test", item.Name);
-			Assert.Equal(new[] { 7, 8, 9 }, item.Values);
+			Assert.Equal(new[] { 7, 8, 9 }, item.Values.Select(p => p.Value));
 		}
 
 		sealed class ManualBinder : IDataBinder<SeriesDateRecord>
