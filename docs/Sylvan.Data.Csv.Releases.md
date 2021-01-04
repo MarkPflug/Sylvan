@@ -1,6 +1,11 @@
 # Sylvan.Data.Csv Release Notes
 
+_0.8.2_
+
+- Minor `CsvDataReader` performance improvement.
+
 _0.8.1_
+
 - Avoid a potential buffer copy when processing binary (Base64) columns.
 - GetByte and GetChar return the full length of data when passed a null buffer. This matches the same behavior of most other DbDataReader implementations.
 
