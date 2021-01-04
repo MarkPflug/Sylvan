@@ -21,9 +21,14 @@
     <PackageReference Include="ReportGenerator" Version="4.5.0"/>-->
   </ItemGroup>
 
+  
    <Target
+     Condition="$(VersionSuffix) == ''"
      Name="PackValidations" BeforeTargets="GenerateNuspec">
-    <!-- Attempt to prevent myself from accidentally releaseing a debug build. -->
+    <!-- 
+    Attempt to prevent myself from accidentally releaseing a debug build.
+    These are disabled for pre-release builds.
+    -->
     <Error Condition="$(Configuration) != 'Release'" Text="Attempting to pack a debug build."/>
     <Error Condition="$(SourceRevisionId.Contains('-dirty'))" Text="Attempting to pack from a dirty repository."/>
   </Target>
