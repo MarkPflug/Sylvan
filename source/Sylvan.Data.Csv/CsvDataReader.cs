@@ -384,7 +384,7 @@ namespace Sylvan.Data.Csv
 						if (IsEndOfLine(c))
 						{
 							idx--;
-							var r = ConsumeLineEnd(ref idx);
+							var r = ConsumeLineEnd(buffer, ref idx);
 							if (r == ReadResult.Incomplete)
 							{
 								return ReadResult.Incomplete;
@@ -413,7 +413,7 @@ namespace Sylvan.Data.Csv
 				{
 					idx--;
 					var temp = idx;
-					var r = ConsumeLineEnd(ref idx);
+					var r = ConsumeLineEnd(buffer, ref idx);
 					if (r == ReadResult.Incomplete)
 					{
 						return ReadResult.Incomplete;
@@ -466,24 +466,21 @@ namespace Sylvan.Data.Csv
 			return c == '\r' || c == '\n';
 		}
 
-		ReadResult ConsumeLineEnd(ref int idx)
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		ReadResult ConsumeLineEnd(char[] buffer, ref int idx)
 		{
 			var c = buffer[idx++];
 			if (c == '\r')
 			{
-				if (idx < buffer.Length)
+				if (idx < bufferEnd)
 				{
 					c = buffer[idx++];
-					if (c == '\n')
-					{
-						return ReadResult.True;
-					}
-					else
+					if (c != '\n')
 					{
 						// weird, but we'll allow a lone \r
 						idx--;
-						return ReadResult.True;
 					}
+					return ReadResult.True;
 				}
 				else
 				{
@@ -503,6 +500,7 @@ namespace Sylvan.Data.Csv
 
 		async Task<int> FillBufferAsync()
 		{
+			var buffer = this.buffer;
 			if (recordStart != 0)
 			{
 				// move any pending data to the front of the buffer.
