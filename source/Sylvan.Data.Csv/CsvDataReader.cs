@@ -53,12 +53,12 @@ namespace Sylvan.Data.Csv
 		{
 			internal int endIdx;
 			internal int escapeCount;
-			internal QuoteState isQuoted;
+			internal QuoteState quoteState;
 
 #if DEBUG
 			public override string ToString()
 			{
-				return $"EndIdx: {endIdx} IsQuoted: {isQuoted} EscapeCount: {escapeCount}";
+				return $"EndIdx: {endIdx} Quotes: {quoteState} EscapeCount: {escapeCount}";
 			}
 #endif
 		}
@@ -440,7 +440,7 @@ namespace Sylvan.Data.Csv
 				if (fieldIdx < fieldCount)
 				{
 					ref var fi = ref fieldInfos[fieldIdx];
-					fi.isQuoted =
+					fi.quoteState =
 						closeQuoteIdx == -1
 						? QuoteState.Unquoted
 						: fieldEnd == (closeQuoteIdx - recordStart)
@@ -743,7 +743,7 @@ namespace Sylvan.Data.Csv
 			{
 				return this.GetCharLength(ordinal);
 			}
-			
+
 			if (dataOffset > int.MaxValue) throw new ArgumentOutOfRangeException(nameof(dataOffset));
 
 			var s = GetField(ordinal);
@@ -923,7 +923,8 @@ namespace Sylvan.Data.Csv
 				this.length = length;
 			}
 
-			public char this[int idx] {
+			public char this[int idx]
+			{
 				get
 				{
 					return buffer[offset + idx];
@@ -944,13 +945,13 @@ namespace Sylvan.Data.Csv
 			int offset = startIdx;
 			int len = endIdx - startIdx;
 			var buffer = this.buffer;
-			if (fi.isQuoted != QuoteState.Unquoted)
+			if (fi.quoteState != QuoteState.Unquoted)
 			{
 				// if there are no escapes, we can just "trim" the quotes off
 				offset += 1;
 				len -= 2;
 
-				if (fi.isQuoted == QuoteState.Quoted && fi.escapeCount == 0)
+				if (fi.quoteState == QuoteState.Quoted && fi.escapeCount == 0)
 				{
 					// happy path, nothing else to do
 				}
@@ -1099,33 +1100,45 @@ namespace Sylvan.Data.Csv
 		{
 			ThrowIfOutOfRange(ordinal);
 			var col = columns[ordinal];
+
+			if (col.AllowDBNull == false)
+			{
+				// if the schema claims it is not nullable then we will honor that claim
+				// if the schema is wrong a FormatException or CastException may result
+				// when trying to access the value.
+				return false;
+			}
+
 			if ((uint)ordinal >= (uint)curFieldCount)
 			{
-				return col.AllowDBNull != false;
+				// if the current row has missing fields, consider them null
+				return true;
 			}
-			if (col.DataType == typeof(string))
-			{
-				if (col.AllowDBNull == false)
-				{
-					return false;
-				}
-			}
-			// now pay the cost of determining if the thing is null.
-			return IsNull(ordinal);
-		}
 
-		bool IsNull(int ordinal)
-		{
-			ref var fi = ref fieldInfos[ordinal];
-			if (fi.isQuoted == QuoteState.Unquoted)
+			// now pay the cost of determining if the thing is null.
+			var infos = fieldInfos;
+			ref var fi = ref infos[ordinal];
+
+			if (fi.quoteState != QuoteState.Unquoted)
 			{
-				var startIdx = recordStart + (ordinal == 0 ? 0 : this.fieldInfos[ordinal - 1].endIdx + 1);
-				var endIdx = recordStart + fi.endIdx;
-				var isEmpty = endIdx - startIdx == 0;
-				return isEmpty;
+				// never consider quoted fields as null
+				return false;
 			}
-			// never consider quoted fields as null
-			return false;
+
+			var startIdx = recordStart + (ordinal == 0 ? 0 : infos[ordinal - 1].endIdx + 1);
+			var endIdx = recordStart + fi.endIdx;
+			var buf = this.buffer;
+
+			// if the entire field is whitespace, consider it null.
+			// The default configuration will never get here, because
+			// all strings are considered non-null by default, so
+			// this method will have exited early with false.
+			for (int i = startIdx; i < endIdx; i++)
+			{
+				if (char.IsWhiteSpace(buf[i]) == false)
+					return false;
+			}
+			return true;
 		}
 
 		/// <inheritdoc/>
@@ -1156,30 +1169,29 @@ namespace Sylvan.Data.Csv
 		{
 			cancellationToken.ThrowIfCancellationRequested();
 			this.rowNumber++;
-			switch (state)
+			if (this.state == State.Open)
 			{
-				case State.Initialized:
-					state = State.Open;
-					// after initizialization, the first record would already be in the buffer
-					// if hasRows is true.
-					if (hasRows)
-					{
-						return CompleteTrue;
-					}
-					else
-					{
-						this.rowNumber = -1;
-						this.state = State.End;
-						return CompleteFalse;
-					}
-				case State.Open:
-					return this.NextRecordAsync();
-				case State.End:
-					this.rowNumber = -1;
-					return CompleteFalse;
+				return this.NextRecordAsync();
 			}
-			throw new InvalidOperationException();
+			else if (this.state == State.Initialized)
+			{
+				// after initizialization, the first record would already be in the buffer
+				// if hasRows is true.
+				if (hasRows)
+				{
+					this.state = State.Open;
+					return CompleteTrue;
+				}
+				else
+				{
+					this.state = State.End;
+				}
+			}
+			this.rowNumber = -1;
+			return CompleteFalse;
 		}
+
+
 
 		/// <inheritdoc/>
 		public override bool Read()

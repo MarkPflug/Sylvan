@@ -369,16 +369,8 @@ namespace Sylvan.Data
 			// TODO: potentially use the properties dynamically instead of depending on the type here? 
 			// Not of much value probably.
 
-			//var schemaCol = col as Schema.SchemaColumn;
-			//var isSeries = schemaCol?.IsSeries == true;
-
-			//if (isSeries)
-			//{
 			// TODO: I don't like that I'm special-casing the Sylvan.Data.Series type here.
 			// Can this be done in a more generic way that would support BYO type?
-
-			// var acc = (DataSeriesAccessor<DateTime,int>)state[1];
-			// target.Series = new DateSeries<DateTime>(acc.Minimum, acc.GetValues(reader));
 			var sct = Type.GetTypeCode(column.SeriesType);
 
 			object seriesAccessor = GetDataSeriesAccessor(column, physicalSchema);
@@ -440,7 +432,6 @@ namespace Sylvan.Data
 			var block = Expression.Block(new ParameterExpression[] { accLocal }, new Expression[] { setLocalExpr, setExpr });
 
 			return block;
-
 		}
 
 		class BinderContext
