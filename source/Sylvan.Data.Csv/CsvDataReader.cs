@@ -778,7 +778,10 @@ namespace Sylvan.Data.Csv
 		public override decimal GetDecimal(int ordinal)
 		{
 #if NETSTANDARD2_1
-			return decimal.Parse(this.GetFieldSpan(ordinal), provider: culture);
+			var field = this.GetField(ordinal);
+			return
+				field.TryParseSingleCharInt()
+				?? decimal.Parse(field.ToSpan(), provider: culture);
 #else
 			return decimal.Parse(this.GetString(ordinal), culture);
 #endif
@@ -788,7 +791,10 @@ namespace Sylvan.Data.Csv
 		public override double GetDouble(int ordinal)
 		{
 #if NETSTANDARD2_1
-			return double.Parse(this.GetFieldSpan(ordinal), provider: culture);
+			var field = this.GetField(ordinal);
+			return
+				field.TryParseSingleCharInt()
+				?? double.Parse(field.ToSpan(), provider: culture);
 #else
 			var str = this.GetString(ordinal);
 			return double.Parse(str, culture);
@@ -817,7 +823,10 @@ namespace Sylvan.Data.Csv
 		public override float GetFloat(int ordinal)
 		{
 #if NETSTANDARD2_1
-			return float.Parse(this.GetFieldSpan(ordinal), provider: culture);
+			var field = this.GetField(ordinal);
+			return
+				field.TryParseSingleCharInt()
+				?? float.Parse(field.ToSpan(), provider: culture);
 #else
 			return float.Parse(this.GetString(ordinal), culture);
 #endif
@@ -837,7 +846,10 @@ namespace Sylvan.Data.Csv
 		public override short GetInt16(int ordinal)
 		{
 #if NETSTANDARD2_1
-			return short.Parse(this.GetFieldSpan(ordinal), provider: culture);
+			var field = this.GetField(ordinal);
+			return
+				field.TryParseSingleCharInt()
+				?? short.Parse(field.ToSpan(), provider: culture);
 #else
 			return short.Parse(this.GetString(ordinal), culture);
 #endif
@@ -847,7 +859,12 @@ namespace Sylvan.Data.Csv
 		public override int GetInt32(int ordinal)
 		{
 #if NETSTANDARD2_1
-			return int.Parse(this.GetFieldSpan(ordinal), provider: culture);
+
+			var field = this.GetField(ordinal);
+
+			return
+				field.TryParseSingleCharInt()
+				?? int.Parse(field.ToSpan(), provider: culture);
 #else
 			return int.Parse(this.GetString(ordinal), culture);
 #endif
@@ -857,7 +874,10 @@ namespace Sylvan.Data.Csv
 		public override long GetInt64(int ordinal)
 		{
 #if NETSTANDARD2_1
-			return long.Parse(this.GetFieldSpan(ordinal), provider: culture);
+			var field = this.GetField(ordinal);
+			return
+				field.TryParseSingleCharInt()
+				?? long.Parse(field.ToSpan(), provider: culture);
 #else
 			return long.Parse(this.GetString(ordinal), culture);
 #endif
@@ -895,7 +915,7 @@ namespace Sylvan.Data.Csv
 		{
 			if ((uint)ordinal < (uint)curFieldCount)
 			{
-				var s = GetField(ordinal);
+				var s = GetFieldUnsafe(ordinal);
 				var l = s.length;
 				if (l == 0) return string.Empty;
 				return stringFactory.Invoke(s.buffer, s.offset, l);
@@ -909,7 +929,7 @@ namespace Sylvan.Data.Csv
 		ReadOnlySpan<char> GetFieldSpan(int ordinal)
 		{
 			var s = GetField(ordinal);
-			return s.buffer.AsSpan().Slice(s.offset, s.length);
+			return s.ToSpan();
 		}
 
 #endif
@@ -931,6 +951,33 @@ namespace Sylvan.Data.Csv
 				}
 			}
 
+			// optimization for parsing single-character numeric values
+			// accessors fallback to full parser when this fails.
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			internal short? TryParseSingleCharInt()
+			{
+				if (length == 1)
+				{
+					var v = (short)(buffer[offset] - '0');
+					if (v >= 0 && v < 10)
+					{
+						return v;
+					}
+				}
+				return null;
+			}
+
+#if NETSTANDARD2_1
+
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			internal Span<char> ToSpan()
+			{
+				var span = buffer.AsSpan().Slice(offset, length);
+				return span;
+			}
+
+#endif
+
 			public readonly char[] buffer;
 			public readonly int offset;
 			public readonly int length;
@@ -938,6 +985,19 @@ namespace Sylvan.Data.Csv
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		CharSpan GetField(int ordinal)
+		{
+			if((uint)ordinal < (uint) this.curFieldCount)
+			{
+				return GetFieldUnsafe(ordinal);
+			}
+			// this is only called from numeric accessors
+			// which would effectively be the same as trying to parse
+			// an empty string.
+			throw new FormatException();
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		CharSpan GetFieldUnsafe(int ordinal)
 		{
 			ref var fi = ref this.fieldInfos[ordinal];
 			var startIdx = recordStart + (ordinal == 0 ? 0 : this.fieldInfos[ordinal - 1].endIdx + 1);

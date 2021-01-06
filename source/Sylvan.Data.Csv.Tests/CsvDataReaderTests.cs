@@ -888,11 +888,32 @@ namespace Sylvan.Data.Csv
 		[Fact]
 		public void CultureWithCommaDecimal()
 		{
-			using var reader = new StringReader("Name;Value1;Value2\nTest;2,08;0,82\n");
+			using var reader = new StringReader("Name;Value1;Value2\nTest;2,08;0,82\nB;1;2");
 
 			var schema = Schema.Parse("Name,Value1:float,Value2:float");
 
 			var options = new CsvDataReaderOptions {
+				Schema = new CsvSchema(schema),
+				Culture = CultureInfo.GetCultureInfoByIetfLanguageTag("it-IT")
+			};
+			var csv = CsvDataReader.Create(reader, options);
+			Assert.True(csv.Read());
+			Assert.Equal(2.08f, csv.GetFloat(1));
+			Assert.Equal(0.82f, csv.GetFloat(2));
+			Assert.True(csv.Read());
+			Assert.Equal(1, csv.GetFloat(1));
+			Assert.Equal(2, csv.GetFloat(2));
+		}
+
+		[Fact]
+		public void Float()
+		{
+			using var reader = new StringReader("Name;Value1;Value2\nTest;2,08;0,82\n");
+
+			var schema = Schema.Parse("Name,Value1:float,Value2:float");
+
+			var options = new CsvDataReaderOptions
+			{
 				Schema = new CsvSchema(schema),
 				Culture = CultureInfo.GetCultureInfoByIetfLanguageTag("it-IT")
 			};
