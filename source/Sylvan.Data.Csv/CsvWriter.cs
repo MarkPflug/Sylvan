@@ -65,7 +65,7 @@ namespace Sylvan.Data.Csv
 			this.pos = 0;
 		}
 
-		(int o, int l) PrepareValue(string str)
+		void PrepareValue(string str, out int o, out int l)
 		{
 			var worstCaseLenth = str.Length * 2 + 2;
 			// at worst, we'll have to escape every character and put quotes around it
@@ -99,9 +99,16 @@ namespace Sylvan.Data.Csv
 			}
 			buffer[p++] = quote;
 
-			return isQuoted
-				? (0, p)
-				: (1, p - 2);
+			if (isQuoted)
+			{
+				o = 0;
+				l = p;
+			}
+			else
+			{
+				o = 1;
+				l = p - 2;
+			}
 		}
 
 		async Task FlushBufferAsync()
@@ -128,7 +135,8 @@ namespace Sylvan.Data.Csv
 
 		WriteResult WriteValue(string str)
 		{
-			var (o, l) = PrepareValue(str);
+			int o, l;
+			PrepareValue(str, out o, out l);
 			return WriteValue(this.prepareBuffer, o, l);
 		}
 
@@ -320,7 +328,7 @@ namespace Sylvan.Data.Csv
 				this.dateTimeFormat == null
 				? value.ToString(culture)
 				: value.ToString(dateTimeFormat, culture);
-				
+
 			return WriteValue(str);
 		}
 

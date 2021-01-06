@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -862,6 +863,42 @@ namespace Sylvan.Data.Csv
 			Assert.True(csv.Read());
 			Assert.Equal("A\"\"B", csv.GetString(0));
 			Assert.Equal("Andmore", csv.GetString(1));
+		}
+
+		[Fact]
+		public void WhitespaceAsNull()
+		{
+			var schema = new TypedCsvSchema();
+			schema.Add(0, typeof(string));
+			schema.Add(1, typeof(int?));
+
+			using var tr = new StringReader("Name,Value\nA,1\nB, \nC,3");
+			var csv = CsvDataReader.Create(tr, new CsvDataReaderOptions { Schema = schema });
+			csv.Read();
+			Assert.False(csv.IsDBNull(1));
+			Assert.Equal(1, csv.GetInt32(1));
+			csv.Read();
+			Assert.True(csv.IsDBNull(1));
+			Assert.Throws<FormatException>(() => csv.GetInt32(1));
+			csv.Read();
+			Assert.False(csv.IsDBNull(1));
+			Assert.Equal(3, csv.GetInt32(1));
+		}
+
+		[Fact]
+		public void CultureWithCommaDecimal()
+		{
+			using var reader = new StringReader("Name;Value1;Value2\nTest;2,08;0,82\n");
+
+			var schema = Schema.Parse("Name,Value1:float,Value2:float");
+
+			var options = new CsvDataReaderOptions {
+				Schema = new CsvSchema(schema),
+				Culture = CultureInfo.GetCultureInfoByIetfLanguageTag("it-IT")
+			};
+			var csv = CsvDataReader.Create(reader, options);
+			var dt = new DataTable();
+			dt.Load(csv);
 		}
 	}
 }

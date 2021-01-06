@@ -24,7 +24,7 @@ namespace Sylvan.Data.Csv
 	}
 
 	/// <summary>
-	/// A ICsvSchemaProvider implementation based on an existing schema.
+	/// An ICsvSchemaProvider implementation based on an existing schema.
 	/// </summary>
 	public class CsvSchema : ICsvSchemaProvider
 	{

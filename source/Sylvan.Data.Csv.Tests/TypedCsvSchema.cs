@@ -35,9 +35,10 @@ namespace Sylvan.Data.Csv
 		/// </summary>
 		/// <param name="column">The column name.</param>
 		/// <param name="type">The type of the column.</param>
-		public void Add(string column, Type type)
+		public TypedCsvSchema Add(string column, Type type)
 		{
 			this.nameMap.Add(column, type);
+			return this;
 		}
 
 		/// <summary>
@@ -45,9 +46,10 @@ namespace Sylvan.Data.Csv
 		/// </summary>
 		/// <param name="ordinal">The column ordinal.</param>
 		/// <param name="type">The type of the column.</param>
-		public void Add(int ordinal, Type type)
+		public TypedCsvSchema Add(int ordinal, Type type)
 		{
 			this.ordinalMap.Add(ordinal, type);
+			return this;
 		}
 
 		DbColumn ICsvSchemaProvider.GetColumn(string name, int ordinal)
@@ -55,7 +57,7 @@ namespace Sylvan.Data.Csv
 			Type type;
 			if ((name != null && nameMap.TryGetValue(name, out type)) || ordinalMap.TryGetValue(ordinal, out type))
 			{
-				bool allowNull = type != typeof(string);
+				bool allowNull = type == typeof(string);
 				if (type.IsGenericType)
 				{
 					if (type.GetGenericTypeDefinition() == typeof(Nullable<>))
