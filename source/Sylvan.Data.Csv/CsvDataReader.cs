@@ -759,7 +759,7 @@ namespace Sylvan.Data.Csv
 			var format = columns[ordinal].Format ?? this.dateFormat;
 
 #if NETSTANDARD2_1
-			if (format != null && DateTime.TryParseExact(this.GetFieldSpan(ordinal), format.AsSpan(), culture, DateTimeStyles.None, out var dt))
+			if (format != null && DateTime.TryParseExact(this.GetFieldSpan(ordinal), format.AsSpan(), culture, DateTimeStyles.AdjustToUniversal, out var dt))
 			{
 				return dt;
 			}

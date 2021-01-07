@@ -904,22 +904,19 @@ namespace Sylvan.Data.Csv
 			Assert.Equal(1, csv.GetFloat(1));
 			Assert.Equal(2, csv.GetFloat(2));
 		}
-
+		
 		[Fact]
-		public void Float()
+		public void Binary2()
 		{
-			using var reader = new StringReader("Name;Value1;Value2\nTest;2,08;0,82\n");
+			using var reader = new StringReader("Name,Value\r\nrow1,abcdefgh");
+			var csv = CsvDataReader.Create(reader);
+			csv.Read();
+			var buf = new byte[0x100];
+			var len = csv.GetBytes(1, 0, null, 0, 0);
+			Assert.Equal(6, len);
+			len = csv.GetBytes(1, 0, buf, 0, buf.Length);
+			Assert.Equal(6, len);
 
-			var schema = Schema.Parse("Name,Value1:float,Value2:float");
-
-			var options = new CsvDataReaderOptions
-			{
-				Schema = new CsvSchema(schema),
-				Culture = CultureInfo.GetCultureInfoByIetfLanguageTag("it-IT")
-			};
-			var csv = CsvDataReader.Create(reader, options);
-			var dt = new DataTable();
-			dt.Load(csv);
 		}
 	}
 }
