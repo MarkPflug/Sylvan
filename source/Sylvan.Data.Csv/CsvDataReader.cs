@@ -171,7 +171,8 @@ namespace Sylvan.Data.Csv
 			this.buffer = options.Buffer ?? new char[options.BufferSize];
 
 			this.hasHeaders = options.HasHeaders;
-			this.delimiter = options.Delimiter;
+			this.autoDetectDelimiter = options.Delimiter == null;
+			this.delimiter = options.Delimiter ?? '\0';
 			this.quote = options.Quote;
 			this.escape = options.Escape;
 			this.dateFormat = options.DateFormat;
@@ -186,7 +187,6 @@ namespace Sylvan.Data.Csv
 			this.columns = Array.Empty<CsvColumn>();
 			this.culture = options.Culture;
 			this.ownsReader = options.OwnsReader;
-			this.autoDetectDelimiter = options.AutoDetect;
 			this.stringFactory = options.StringFactory ?? new StringFactory((char[] b, int o, int l) => new string(b, o, l));
 		}
 

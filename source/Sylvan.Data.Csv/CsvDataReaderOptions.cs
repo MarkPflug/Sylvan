@@ -18,13 +18,12 @@ namespace Sylvan.Data.Csv
 	{
 		internal static CsvDataReaderOptions Default = new CsvDataReaderOptions();
 
-		const char DefaultDelimiter = ',';
 		const char DefaultQuote = '"';
 		const char DefaultEscape = '"';
 		const int DefaultBufferSize = 0x10000;
 		const int MinBufferSize = 0x80;
 
-		char delimiter;
+		char? delimiter;
 
 		/// <summary>
 		/// Creates a CsvDataReaderOptions with the default values.
@@ -32,7 +31,7 @@ namespace Sylvan.Data.Csv
 		public CsvDataReaderOptions()
 		{
 			this.HasHeaders = true;
-			this.delimiter = DefaultDelimiter;
+			this.delimiter = null;
 			this.Quote = DefaultQuote;
 			this.Escape = DefaultEscape;
 			this.BufferSize = DefaultBufferSize;
@@ -45,7 +44,6 @@ namespace Sylvan.Data.Csv
 			this.FalseString = null;
 			this.DateFormat = null;
 
-			this.AutoDetect = true;
 			this.StringFactory = null;
 		}
 
@@ -53,14 +51,6 @@ namespace Sylvan.Data.Csv
 		/// A string factory function which can de-dupe strings on construction. Defaults to null.
 		/// </summary>
 		public StringFactory? StringFactory { get; set; }
-
-		/// <summary>
-		/// Enables auto detecting the delimiter used in the CSV data. Defaults to true.
-		/// </summary>
-		/// <remarks>
-		/// Will attempt to detect the following delimiters: comma, tab, semicolon, or vertical-bar.
-		/// </remarks>
-		public bool AutoDetect { get; set; }
 
 		/// <summary>
 		/// The string which represents true values when reading boolean. Defaults to null.
@@ -88,7 +78,7 @@ namespace Sylvan.Data.Csv
 		/// <remarks>
 		/// Setting the delimiter will disable auto-detection.
 		/// </remarks>
-		public char Delimiter
+		public char? Delimiter
 		{
 			get
 			{
@@ -97,7 +87,6 @@ namespace Sylvan.Data.Csv
 			set
 			{
 				this.delimiter = value;
-				this.AutoDetect = false;
 			}
 		}
 
@@ -150,7 +139,7 @@ namespace Sylvan.Data.Csv
 		internal void Validate()
 		{
 			var invalid =
-				char.IsLetterOrDigit(Delimiter) ||
+				(Delimiter != null && char.IsLetterOrDigit(Delimiter.Value)) ||
 				Delimiter == Quote ||
 				BufferSize < MinBufferSize ||
 				(StringComparer.OrdinalIgnoreCase.Equals(TrueString, FalseString) && TrueString != null) ||

@@ -394,15 +394,14 @@ namespace Sylvan.Data.Csv
 		{
 			public DbColumn GetColumn(string name, int ordinal)
 			{
-				return new ExcelColumn("" + (char)('A' + ordinal), ordinal);
+				return new ExcelColumn("" + (char)('A' + ordinal));
 			}
 
 			class ExcelColumn : DbColumn
 			{
-				public ExcelColumn(string name, int ordinal)
+				public ExcelColumn(string name)
 				{
 					this.ColumnName = name;
-					this.ColumnOrdinal = ordinal;
 				}
 			}
 		}
@@ -452,7 +451,6 @@ namespace Sylvan.Data.Csv
 					this.ColumnName = name;
 				}
 			}
-
 
 			public DbColumn GetColumn(string name, int ordinal)
 			{
@@ -906,7 +904,8 @@ namespace Sylvan.Data.Csv
 
 			var schema = Schema.Parse("Name,Value1:float,Value2:float");
 
-			var options = new CsvDataReaderOptions {
+			var options = new CsvDataReaderOptions
+			{
 				Schema = new CsvSchema(schema),
 				Culture = CultureInfo.GetCultureInfoByIetfLanguageTag("it-IT")
 			};
