@@ -9,6 +9,12 @@
 /**/packages/
 /**/bin/
 /**/obj/
+/**/TestResults/
+
+*.cobertura.xml
+*.log
+*.binlog
+
 _site
 
 /pkg/
