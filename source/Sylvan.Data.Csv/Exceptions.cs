@@ -54,4 +54,21 @@ namespace Sylvan.Data.Csv
 	{
 		internal CsvMissingHeadersException() : base(0, 0, null, null) { }
 	}
+
+	/// <summary>
+	/// The exception thrown when trying to get the ordinal for a column
+	/// name that appears more than once.
+	/// </summary>
+	public sealed class AmbiguousColumnException : ArgumentException
+	{
+		/// <summary>
+		/// Gets the the ambiguous column name.
+		/// </summary>
+		public string Name { get; }
+
+		internal AmbiguousColumnException(string name)
+		{
+			this.Name = name;
+		}
+	}
 }

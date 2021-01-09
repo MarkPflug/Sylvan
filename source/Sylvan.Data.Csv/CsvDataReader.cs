@@ -171,7 +171,8 @@ namespace Sylvan.Data.Csv
 			this.buffer = options.Buffer ?? new char[options.BufferSize];
 
 			this.hasHeaders = options.HasHeaders;
-			this.delimiter = options.Delimiter;
+			this.autoDetectDelimiter = options.Delimiter == null;
+			this.delimiter = options.Delimiter ?? '\0';
 			this.quote = options.Quote;
 			this.escape = options.Escape;
 			this.dateFormat = options.DateFormat;
@@ -186,7 +187,6 @@ namespace Sylvan.Data.Csv
 			this.columns = Array.Empty<CsvColumn>();
 			this.culture = options.Culture;
 			this.ownsReader = options.OwnsReader;
-			this.autoDetectDelimiter = options.AutoDetect;
 			this.stringFactory = options.StringFactory ?? new StringFactory((char[] b, int o, int l) => new string(b, o, l));
 		}
 
@@ -263,7 +263,17 @@ namespace Sylvan.Data.Csv
 				name = columns[i].ColumnName;
 				if (!string.IsNullOrEmpty(name))
 				{
-					headerMap.Add(name, i);
+					if (headerMap.ContainsKey(name))
+					{
+						// if we encounter duplicate headers track that
+						// it is ambiguous. Attempts to access this by name
+						// will result in an exception.
+						headerMap[name] = -1;
+					}
+					else
+					{
+						headerMap.Add(name, i);
+					}
 				}
 			}
 			this.state = State.Initialized;
@@ -889,7 +899,7 @@ namespace Sylvan.Data.Csv
 			if (ordinal < 0 || ordinal >= fieldCount)
 				throw new IndexOutOfRangeException();
 
-			return columns[ordinal].ColumnName ?? string.Empty;
+			return columns[ordinal].ColumnName;
 		}
 
 		/// <inheritdoc/>
@@ -897,6 +907,10 @@ namespace Sylvan.Data.Csv
 		{
 			if (this.headerMap.TryGetValue(name, out var idx))
 			{
+				if (idx == -1)
+				{
+					throw new AmbiguousColumnException(name);
+				}
 				return idx;
 			}
 			throw new IndexOutOfRangeException();
@@ -1250,8 +1264,6 @@ namespace Sylvan.Data.Csv
 			this.rowNumber = -1;
 			return CompleteFalse;
 		}
-
-
 
 		/// <inheritdoc/>
 		public override bool Read()

@@ -394,17 +394,30 @@ namespace Sylvan.Data.Csv
 		{
 			public DbColumn GetColumn(string name, int ordinal)
 			{
-				return new ExcelColumn("" + (char)('A' + ordinal), ordinal);
+				return new ExcelColumn("" + (char)('A' + ordinal));
 			}
 
 			class ExcelColumn : DbColumn
 			{
-				public ExcelColumn(string name, int ordinal)
+				public ExcelColumn(string name)
 				{
 					this.ColumnName = name;
-					this.ColumnOrdinal = ordinal;
 				}
 			}
+		}
+
+		[Fact]
+		public void DupeHeader()
+		{
+			var data = "a,b,b";
+
+			var csv = CsvDataReader.Create(new StringReader(data));
+			Assert.Equal(0, csv.GetOrdinal("a"));
+			Assert.Throws<AmbiguousColumnException>(() => csv.GetOrdinal("b"));
+			var schema = csv.GetColumnSchema();
+			Assert.Equal("a", schema[0].ColumnName);
+			Assert.Equal("b", schema[1].ColumnName);
+			Assert.Equal("b", schema[2].ColumnName);
 		}
 
 		[Fact]
@@ -438,7 +451,6 @@ namespace Sylvan.Data.Csv
 					this.ColumnName = name;
 				}
 			}
-
 
 			public DbColumn GetColumn(string name, int ordinal)
 			{
@@ -892,7 +904,8 @@ namespace Sylvan.Data.Csv
 
 			var schema = Schema.Parse("Name,Value1:float,Value2:float");
 
-			var options = new CsvDataReaderOptions {
+			var options = new CsvDataReaderOptions
+			{
 				Schema = new CsvSchema(schema),
 				Culture = CultureInfo.GetCultureInfoByIetfLanguageTag("it-IT")
 			};
