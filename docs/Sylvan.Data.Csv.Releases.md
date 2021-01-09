@@ -1,4 +1,13 @@
 # Sylvan.Data.Csv Release Notes
+_0.9.0_
+
+- Collapse AutoDetect (`bool`) and Delimiter (`char`) options into Delimiter (`char?`).
+- Minor numeric parsing performance improvement.
+- Allow loading duplicate headers, but disallow access to those columns by name.
+
+_0.8.3_
+
+- Csv nullable columns treat whitespace-only as null.
 
 _0.8.2_
 
