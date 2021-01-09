@@ -408,6 +408,20 @@ namespace Sylvan.Data.Csv
 		}
 
 		[Fact]
+		public void DupeHeader()
+		{
+			var data = "a,b,b";
+
+			var csv = CsvDataReader.Create(new StringReader(data));
+			Assert.Equal(0, csv.GetOrdinal("a"));
+			Assert.Throws<AmbiguousColumnException>(() => csv.GetOrdinal("b"));
+			var schema = csv.GetColumnSchema();
+			Assert.Equal("a", schema[0].ColumnName);
+			Assert.Equal("b", schema[1].ColumnName);
+			Assert.Equal("b", schema[2].ColumnName);
+		}
+
+		[Fact]
 		public void DupeHeaderFix()
 		{
 			var data = "a,b,c,d,e,e";

@@ -263,7 +263,17 @@ namespace Sylvan.Data.Csv
 				name = columns[i].ColumnName;
 				if (!string.IsNullOrEmpty(name))
 				{
-					headerMap.Add(name, i);
+					if (headerMap.ContainsKey(name))
+					{
+						// if we encounter duplicate headers track that
+						// it is ambiguous. Attempts to access this by name
+						// will result in an exception.
+						headerMap[name] = -1;
+					}
+					else
+					{
+						headerMap.Add(name, i);
+					}
 				}
 			}
 			this.state = State.Initialized;
@@ -869,7 +879,7 @@ namespace Sylvan.Data.Csv
 			if (ordinal < 0 || ordinal >= fieldCount)
 				throw new IndexOutOfRangeException();
 
-			return columns[ordinal].ColumnName ?? string.Empty;
+			return columns[ordinal].ColumnName;
 		}
 
 		/// <inheritdoc/>
@@ -877,6 +887,10 @@ namespace Sylvan.Data.Csv
 		{
 			if (this.headerMap.TryGetValue(name, out var idx))
 			{
+				if (idx == -1)
+				{
+					throw new AmbiguousColumnException(name);
+				}
 				return idx;
 			}
 			throw new IndexOutOfRangeException();
@@ -1190,8 +1204,6 @@ namespace Sylvan.Data.Csv
 			this.rowNumber = -1;
 			return CompleteFalse;
 		}
-
-
 
 		/// <inheritdoc/>
 		public override bool Read()
