@@ -52,7 +52,7 @@ namespace Sylvan.Data.Csv
 		[Fact]
 		public async Task Simple()
 		{
-			using var csv = await CsvDataReader.CreateAsync("Data\\Simple.csv");
+			using var csv = await CsvDataReader.CreateAsync("Data/Simple.csv");
 			Assert.Equal(4, csv.FieldCount);
 			Assert.True(csv.HasRows);
 			Assert.Equal(0, csv.RowNumber);
@@ -81,7 +81,7 @@ namespace Sylvan.Data.Csv
 		[Fact]
 		public async Task Binary()
 		{
-			using (var reader = File.OpenText("Data\\Binary.csv"))
+			using (var reader = File.OpenText("Data/Binary.csv"))
 			{
 				var csv = await CsvDataReader.CreateAsync(reader);
 				csv.Read();
@@ -111,7 +111,7 @@ namespace Sylvan.Data.Csv
 		[Fact]
 		public async Task BinaryValues()
 		{
-			using (var reader = File.OpenText("Data\\Binary.csv"))
+			using (var reader = File.OpenText("Data/Binary.csv"))
 			{
 				var schema = new TypedCsvSchema();
 				schema.Add(1, typeof(byte[]));
@@ -132,7 +132,7 @@ namespace Sylvan.Data.Csv
 		[Fact]
 		public async Task PartialRecord()
 		{
-			using (var reader = File.OpenText("Data\\PartialRecord.csv"))
+			using (var reader = File.OpenText("Data/PartialRecord.csv"))
 			{
 				var csv = await CsvDataReader.CreateAsync(reader);
 				Assert.Equal(4, csv.FieldCount);
@@ -152,7 +152,7 @@ namespace Sylvan.Data.Csv
 		[Fact]
 		public async Task Quoted()
 		{
-			using (var reader = File.OpenText("Data\\Quote.csv"))
+			using (var reader = File.OpenText("Data/Quote.csv"))
 			{
 				var csv = await CsvDataReader.CreateAsync(reader);
 				Assert.Equal(5, csv.FieldCount);
@@ -167,7 +167,7 @@ namespace Sylvan.Data.Csv
 				Assert.Equal(1, csv.RowNumber);
 				Assert.Equal("1", csv[0]);
 				Assert.Equal("John", csv[1]);
-				Assert.Equal("Very\r\nLow\r\n", csv[2]);
+				Assert.Equal($"Very{Environment.NewLine}Low{Environment.NewLine}", csv[2]);
 				Assert.Equal("2000-11-11", csv[3]);
 				Assert.True(await csv.ReadAsync());
 				Assert.Equal(2, csv.RowNumber);
@@ -207,7 +207,7 @@ namespace Sylvan.Data.Csv
 		[Fact]
 		public async Task NoHeaders()
 		{
-			using (var reader = File.OpenText("Data\\DataOnly.csv"))
+			using (var reader = File.OpenText("Data/DataOnly.csv"))
 			{
 				var csv = await CsvDataReader.CreateAsync(reader, new CsvDataReaderOptions { HasHeaders = false });
 				Assert.Equal(4, csv.FieldCount);
@@ -242,7 +242,7 @@ namespace Sylvan.Data.Csv
 					Schema = schema
 				};
 
-			using (var reader = File.OpenText("Data\\DataOnly.csv"))
+			using (var reader = File.OpenText("Data/DataOnly.csv"))
 			{
 				var csv = await CsvDataReader.CreateAsync(reader, opts);
 				Assert.Equal(4, csv.FieldCount);
@@ -315,7 +315,7 @@ namespace Sylvan.Data.Csv
 		[Fact]
 		public void Sync()
 		{
-			using (var reader = File.OpenText("Data\\Simple.csv"))
+			using (var reader = File.OpenText("Data/Simple.csv"))
 			{
 				var csv = CsvDataReader.Create(reader);
 				Assert.Equal(4, csv.FieldCount);
@@ -344,7 +344,7 @@ namespace Sylvan.Data.Csv
 		[Fact]
 		public void Broken()
 		{
-			using (var reader = File.OpenText("Data\\Broken.csv"))
+			using (var reader = File.OpenText("Data/Broken.csv"))
 			{
 				var csv = CsvDataReader.Create(reader);
 				Assert.Equal(2, csv.FieldCount);
@@ -376,7 +376,7 @@ namespace Sylvan.Data.Csv
 		[Fact]
 		public void GetColumnSchema()
 		{
-			using (var reader = File.OpenText("Data\\Simple.csv"))
+			using (var reader = File.OpenText("Data/Simple.csv"))
 			{
 				var csv = CsvDataReader.Create(reader);
 				var cols = csv.GetColumnSchema();
@@ -488,7 +488,7 @@ namespace Sylvan.Data.Csv
 		[Fact]
 		public void GetSchemaTable()
 		{
-			using (var reader = File.OpenText("Data\\Simple.csv"))
+			using (var reader = File.OpenText("Data/Simple.csv"))
 			{
 				var csv = CsvDataReader.Create(reader);
 				var schema = csv.GetSchemaTable();
@@ -506,7 +506,7 @@ namespace Sylvan.Data.Csv
 		[Fact]
 		public void Enumerator()
 		{
-			using (var reader = File.OpenText("Data\\Simple.csv"))
+			using (var reader = File.OpenText("Data/Simple.csv"))
 			{
 				var csv = CsvDataReader.Create(reader);
 				int c = 0;
@@ -529,7 +529,7 @@ namespace Sylvan.Data.Csv
 		public void BufferTooSmall()
 		{
 			var opts = new CsvDataReaderOptions() { BufferSize = 128 };
-			using var tr = File.OpenText("Data\\Binary.csv");
+			using var tr = File.OpenText("Data/Binary.csv");
 			var csv = CsvDataReader.Create(tr, opts);
 			csv.Read();
 			Assert.Throws<CsvRecordTooLargeException>(() => csv.Read());
@@ -538,7 +538,7 @@ namespace Sylvan.Data.Csv
 		[Fact]
 		public void NextResult()
 		{
-			using var tr = File.OpenText("Data\\Binary.csv");
+			using var tr = File.OpenText("Data/Binary.csv");
 			var csv = CsvDataReader.Create(tr);
 			Assert.False(csv.NextResult());
 			Assert.False(csv.Read());
@@ -547,7 +547,7 @@ namespace Sylvan.Data.Csv
 		[Fact]
 		public async Task NextResultAsync()
 		{
-			using var tr = File.OpenText("Data\\Binary.csv");
+			using var tr = File.OpenText("Data/Binary.csv");
 			var csv = CsvDataReader.Create(tr);
 			Assert.False(await csv.NextResultAsync());
 			Assert.False(await csv.ReadAsync());
@@ -555,7 +555,7 @@ namespace Sylvan.Data.Csv
 
 		CsvDataReader GetTypedReader()
 		{
-			var tr = File.OpenText("Data\\Types.csv");
+			var tr = File.OpenText("Data/Types.csv");
 			var schema = new TypedCsvSchema();
 			schema.Add("Byte", typeof(byte));
 			schema.Add("Int16", typeof(short));
@@ -597,7 +597,7 @@ namespace Sylvan.Data.Csv
 		[Fact]
 		public void TextReader()
 		{
-			using var tr = File.OpenText("Data\\Binary.csv");
+			using var tr = File.OpenText("Data/Binary.csv");
 			var csv = CsvDataReader.Create(tr);
 			var buf = new char[32];
 			while (csv.Read())
