@@ -100,10 +100,10 @@ namespace Sylvan.Data.Csv
 				csv.EndRecord();
 			}
 			var str = tw.ToString();
-			Assert.Equal("SGVsbG8sIGNzdiE=,00000000-0000-0000-0000-000000000000\r\n", str);
+			Assert.Equal($"SGVsbG8sIGNzdiE=,00000000-0000-0000-0000-000000000000{Environment.NewLine}", str);
 		}
 
-		const string DataResult = "True,AQIDBAU=,2020-06-12T12:15:15,1234.5,5432.25,00000000-0000-0000-0000-000000000000,9876,\"Value, with comma\",Value no comma\r\n";
+		static readonly string DataResult = $"True,AQIDBAU=,2020-06-12T12:15:15,1234.5,5432.25,00000000-0000-0000-0000-000000000000,9876,\"Value, with comma\",Value no comma{Environment.NewLine}";
 
 		[Fact]
 		public void WriteData()
