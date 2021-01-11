@@ -120,7 +120,7 @@ Combined_Key,
 
 		public static DbDataReader GetTypedData()
 		{ 
-			var reader = File.OpenText(Path.Combine("Data", "Schema.csv"));
+			var reader = File.OpenText("Data/Schema.csv");
 			return CsvDataReader.Create(reader, new CsvDataReaderOptions() { Schema = DataSchema.Instance });
 		}
 
