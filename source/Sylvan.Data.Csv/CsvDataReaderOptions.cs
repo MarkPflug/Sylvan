@@ -32,6 +32,7 @@ namespace Sylvan.Data.Csv
 		{
 			this.HasHeaders = true;
 			this.delimiter = null;
+			this.ImplicitQuotes = false;
 			this.Quote = DefaultQuote;
 			this.Escape = DefaultEscape;
 			this.BufferSize = DefaultBufferSize;
@@ -94,6 +95,11 @@ namespace Sylvan.Data.Csv
 		/// Specifies the character used for quoting fields. Defaults to '"'.
 		/// </summary>
 		public char Quote { get; set; }
+
+		/// <summary>
+		/// Indicates if the file uses escaping only, meaning all fields are implicitly quoted. Defaults to false.
+		/// </summary>
+		public bool ImplicitQuotes { get; set; }
 
 		/// <summary>
 		/// Specifies the character used for escaping characters in quoted fields. Defaults to '"'.

@@ -917,7 +917,7 @@ namespace Sylvan.Data.Csv
 			Assert.Equal(1, csv.GetFloat(1));
 			Assert.Equal(2, csv.GetFloat(2));
 		}
-		
+
 		[Fact]
 		public void Binary2()
 		{
@@ -929,7 +929,27 @@ namespace Sylvan.Data.Csv
 			Assert.Equal(6, len);
 			len = csv.GetBytes(1, 0, buf, 0, buf.Length);
 			Assert.Equal(6, len);
+		}
 
+		[Theory]
+		[InlineData("N,V\na\\,b,c\n", "a,b", "c")]
+		[InlineData("N,V\na\\\nb,c\n", "a\nb", "c")]
+		[InlineData("N,V\na\\\r\nb\n", "a\r\nb", "")]
+		[InlineData("N,V\na\\\r\nb", "a\r\nb", "")]
+		public void ImpliedQuote(string input, string a, string b)
+		{
+			using var reader = new StringReader(input);
+			var options =
+				new CsvDataReaderOptions {
+					ImplicitQuotes = true,
+					Escape = '\\'
+				};
+
+			var csv = CsvDataReader.Create(reader, options);
+			Assert.True(csv.Read());
+			Assert.Equal(a, csv.GetString(0));
+			Assert.Equal(b, csv.GetString(1));
+			Assert.False(csv.Read());
 		}
 	}
 }
