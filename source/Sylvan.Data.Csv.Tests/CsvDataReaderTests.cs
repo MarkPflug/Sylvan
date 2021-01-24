@@ -964,10 +964,10 @@ namespace Sylvan.Data.Csv
 			using var reader = new StringReader("Name,Value\r\nrow1,012");
 			var csv = CsvDataReader.Create(reader, new CsvDataReaderOptions { Schema = new CsvSchema(schema) });
 			csv.Read();
-			Assert.Throws<InvalidDataException>(() => csv.GetBytes(1, 0, null, 0, 0));
+			Assert.Throws<FormatException>(() => csv.GetBytes(1, 0, null, 0, 0));
 
 			var buf = new byte[2];
-			Assert.Throws<InvalidDataException>(() => csv.GetBytes(1, 0, buf, 0, buf.Length));
+			Assert.Throws<FormatException>(() => csv.GetBytes(1, 0, buf, 0, buf.Length));
 		}
 
 		[Fact]
@@ -1026,16 +1026,14 @@ namespace Sylvan.Data.Csv
 		}
 
 		[Fact]
-		public void UnknownBindTest()
+		public void UnknownBinaryTest()
 		{
 			var schema = Schema.Parse(",:binary{unk}");
 			using var reader = new StringReader("Name,Data\r\nrow1,0102030405060708");
 			var csv = CsvDataReader.Create(reader, new CsvDataReaderOptions { Schema = new CsvSchema(schema) });
-			var binder = DataBinder<BinaryObj>.Create(csv.GetColumnSchema());
 			while (csv.Read())
 			{
-				var f = new BinaryObj();
-				binder.Bind(csv, f);
+				Assert.Throws<NotSupportedException>(() => csv.GetValue(1));
 			}
 		}
 	}

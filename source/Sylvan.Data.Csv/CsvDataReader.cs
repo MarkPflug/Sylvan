@@ -646,9 +646,9 @@ namespace Sylvan.Data.Csv
 			{
 				case BinaryEncoding.None: // when the schema is not configured.
 				case BinaryEncoding.Base64:
-					return GetBytesBase64(ordinal, (int) dataOffset, buffer, bufferOffset, length);
+					return GetBytesBase64(ordinal, (int)dataOffset, buffer, bufferOffset, length);
 				case BinaryEncoding.Hexadecimal:
-					return GetBytesHex(ordinal, (int) dataOffset, buffer, bufferOffset, length);
+					return GetBytesHex(ordinal, (int)dataOffset, buffer, bufferOffset, length);
 			}
 			throw new NotSupportedException();// TODO: improve error message.
 		}
@@ -750,27 +750,26 @@ namespace Sylvan.Data.Csv
 
 			var c = Math.Min(outLen - dataOffset, length);
 
+			const int Invalid = 255;
+
 			var e = dataOffset + c;
 			var bo = o;
 			for (int i = 0; i < c; i++) {
 				var cc = b[bo++];
 				var v = HexValue(cc);
-				if (v == 255)
+				if (v == Invalid)
 					throw new FormatException();
 				buffer[bufferOffset + i] = (byte)(v << 4);
 				cc = b[bo++];
 				v = HexValue(cc);
-				if (v == 255)
+				if (v == Invalid)
 					throw new FormatException();
 				buffer[bufferOffset + i] |= (byte)v;
 			}
 			return c;
 		}
-		
-		static int HexValue(char c)
-		{
-			if (c > 128) return -1;
-			return new byte[128]
+
+		static readonly byte[] HexMap = new byte[] 
 			{
 				255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
 				255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
@@ -780,7 +779,12 @@ namespace Sylvan.Data.Csv
 				255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
 				255,  10,  11,  12,  13,  14,  15, 255, 255, 255, 255, 255, 255, 255, 255, 255,
 				255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
-			}[c];
+			};
+		
+		static int HexValue(char c)
+		{
+			if (c > 128) return -1;
+			return HexMap[c];
 		}
 
 		void FromBase64Chars(char[] chars, int charsOffset, int charsLen, byte[] bytes, int bytesOffset, out int bytesWritten)
@@ -1220,7 +1224,7 @@ namespace Sylvan.Data.Csv
 		{
 			var l = span.length;
 			// must be divisible by 4
-			if (l % 4 != 0) throw new InvalidDataException();
+			if (l % 4 != 0) throw new FormatException();
 			var rem = 0;
 			if (span[l - 1] == '=') rem++;
 			if (span[l - 2] == '=') rem++;
@@ -1233,7 +1237,7 @@ namespace Sylvan.Data.Csv
 		{
 			var l = span.length;
 			// must be divisible by 1
-			if (l % 2 != 0) throw new InvalidDataException();
+			if (l % 2 != 0) throw new FormatException();
 			return l / 2;
 		}
 
