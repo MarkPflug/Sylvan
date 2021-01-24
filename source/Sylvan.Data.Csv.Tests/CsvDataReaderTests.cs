@@ -1024,5 +1024,19 @@ namespace Sylvan.Data.Csv
 				binder.Bind(csv, f);
 			}
 		}
+
+		[Fact]
+		public void UnknownBindTest()
+		{
+			var schema = Schema.Parse(",:binary{unk}");
+			using var reader = new StringReader("Name,Data\r\nrow1,0102030405060708");
+			var csv = CsvDataReader.Create(reader, new CsvDataReaderOptions { Schema = new CsvSchema(schema) });
+			var binder = DataBinder<BinaryObj>.Create(csv.GetColumnSchema());
+			while (csv.Read())
+			{
+				var f = new BinaryObj();
+				binder.Bind(csv, f);
+			}
+		}
 	}
 }

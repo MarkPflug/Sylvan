@@ -644,15 +644,13 @@ namespace Sylvan.Data.Csv
 
 			switch (encoding)
 			{
+				case BinaryEncoding.None: // when the schema is not configured.
 				case BinaryEncoding.Base64:
 					return GetBytesBase64(ordinal, (int) dataOffset, buffer, bufferOffset, length);
 				case BinaryEncoding.Hexadecimal:
 					return GetBytesHex(ordinal, (int) dataOffset, buffer, bufferOffset, length);
-				case BinaryEncoding.None:
-					// TODO: consider what this would mean?
-					break;
 			}
-			throw new NotSupportedException();
+			throw new NotSupportedException();// TODO: improve error message.
 		}
 
 		int GetBytesBase64(int ordinal, int dataOffset, byte[] buffer, int bufferOffset, int length)
@@ -1209,12 +1207,13 @@ namespace Sylvan.Data.Csv
 
 			switch (col.BinaryEncoding)
 			{
+				case BinaryEncoding.None:
 				case BinaryEncoding.Base64:
 					return GetBase64Length(span);
 				case BinaryEncoding.Hexadecimal:
 					return GetHexLength(span);
 			}
-			throw new NotSupportedException();
+			throw new NotSupportedException(); // TODO: improve error message.
 		}
 
 		static int GetBase64Length(CharSpan span)
@@ -1435,7 +1434,9 @@ namespace Sylvan.Data.Csv
 				if (StringComparer.OrdinalIgnoreCase.Equals("hex", format))
 					return BinaryEncoding.Hexadecimal;
 
-				throw new NotSupportedException(string.Format("Unknown binary format {0}", format));
+				// for unknown encoding spec, allow initialize but any access
+				// to the column as a binary value will produce a NotSupportedException.
+				return BinaryEncoding.Unknown; 
 			}
 
 			/// <inheritdoc/>
