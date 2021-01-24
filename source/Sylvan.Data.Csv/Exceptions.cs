@@ -25,6 +25,30 @@ namespace Sylvan.Data.Csv
 		public int FieldOrdinal { get; }
 	}
 
+	///// <summary>
+	///// The exception thrown when encountering an invalid character while
+	///// decoding binary data fields.
+	///// </summary>
+	//public class CsvInvalidEncodingException : FormatException
+	//{
+	//	/// <summary>
+	//	/// The offset into the field where the invalid character was located.
+	//	/// </summary>
+	//	public int FieldOffset { get; }
+
+	//	/// <summary>
+	//	/// The invalid character value.
+	//	/// </summary>
+	//	public char InvalidCharacter { get; }
+
+	//	internal CsvInvalidEncodingException(int row, int ordinal, int fieldOffset, char c)
+	//		: base (row, ordinal, null, null)
+	//	{
+	//		this.FieldOffset = fieldOffset;
+	//		this.InvalidCharacter = c;
+	//	}
+	//}
+
 	/// <summary>
 	/// The exception that is thrown when the configuration options specify invalid options.
 	/// </summary>

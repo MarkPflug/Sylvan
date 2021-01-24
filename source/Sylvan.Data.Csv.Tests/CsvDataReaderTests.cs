@@ -917,7 +917,7 @@ namespace Sylvan.Data.Csv
 			Assert.Equal(1, csv.GetFloat(1));
 			Assert.Equal(2, csv.GetFloat(2));
 		}
-		
+
 		[Fact]
 		public void Binary2()
 		{
@@ -929,7 +929,100 @@ namespace Sylvan.Data.Csv
 			Assert.Equal(6, len);
 			len = csv.GetBytes(1, 0, buf, 0, buf.Length);
 			Assert.Equal(6, len);
+		}
 
+		[Fact]
+		public void BinaryB64Err()
+		{
+			using var reader = new StringReader("Name,Value\r\nrow1,####");
+			var csv = CsvDataReader.Create(reader);
+			csv.Read();
+			var buf = new byte[0x100];
+			var len = csv.GetBytes(1, 0, null, 0, 0);
+			Assert.Equal(3, len);
+			Assert.Throws<FormatException>(() => csv.GetBytes(1, 0, buf, 0, buf.Length));
+		}
+
+		[Fact]
+		public void BinaryHex()
+		{
+			var schema = Schema.Parse(",:binary{hex}");
+			using var reader = new StringReader("Name,Value\r\nrow1,0102030405060708");
+			var csv = CsvDataReader.Create(reader, new CsvDataReaderOptions { Schema = new CsvSchema(schema) });
+			csv.Read();
+			var len = csv.GetBytes(1, 0, null, 0, 0);
+			Assert.Equal(8, len);
+			var buf = new byte[len];
+			len = csv.GetBytes(1, 0, buf, 0, buf.Length);
+			Assert.Equal(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 }, buf);
+		}
+
+		[Fact]
+		public void BinaryHex2()
+		{
+			var schema = Schema.Parse(",:binary{hex}");
+			using var reader = new StringReader("Name,Value\r\nrow1,012");
+			var csv = CsvDataReader.Create(reader, new CsvDataReaderOptions { Schema = new CsvSchema(schema) });
+			csv.Read();
+			Assert.Throws<InvalidDataException>(() => csv.GetBytes(1, 0, null, 0, 0));
+
+			var buf = new byte[2];
+			Assert.Throws<InvalidDataException>(() => csv.GetBytes(1, 0, buf, 0, buf.Length));
+		}
+
+		[Fact]
+		public void BinaryHex3()
+		{
+			var schema = Schema.Parse(",:binary{hex}");
+			using var reader = new StringReader("Name,Value\r\nrow1,zz");
+			var csv = CsvDataReader.Create(reader, new CsvDataReaderOptions { Schema = new CsvSchema(schema) });
+			csv.Read();
+			var len = csv.GetBytes(1, 0, null, 0, 0);
+			Assert.Equal(1, len);
+			var buf = new byte[len];
+			Assert.Throws<FormatException>(() => csv.GetBytes(1, 0, buf, 0, buf.Length));
+		}
+
+		class VersionObj
+		{
+			public string Name { get; private set; }
+			public int Num { get; private set; }
+			public Version Ver { get; private set; }
+
+		}
+
+		[Fact]
+		public void Ver()
+		{
+			using var reader = new StringReader("Name,Num,Ver\r\nrow1,12,1.2.3.4");
+			var csv = CsvDataReader.Create(reader);
+			var binder = DataBinder<VersionObj>.Create(csv.GetColumnSchema());
+			while (csv.Read())
+			{
+				var f = new VersionObj();
+				binder.Bind(csv, f);
+			}
+		}
+
+
+		class BinaryObj
+		{
+			public string Name { get; private set; }
+			public byte[] Data { get; private set; }
+		}
+
+		[Fact]
+		public void BinBindTest()
+		{
+			var schema = Schema.Parse(",:binary{hex}");
+			using var reader = new StringReader("Name,Data\r\nrow1,0102030405060708");
+			var csv = CsvDataReader.Create(reader, new CsvDataReaderOptions { Schema = new CsvSchema(schema) });
+			var binder = DataBinder<BinaryObj>.Create(csv.GetColumnSchema());
+			while (csv.Read())
+			{
+				var f = new BinaryObj();
+				binder.Bind(csv, f);
+			}
 		}
 	}
 }

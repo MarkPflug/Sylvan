@@ -68,7 +68,8 @@ namespace Sylvan.Data
 						return drType.GetMethod("GetGuid")!;
 					}
 					// TODO: byte[]? char[]?
-					break;
+
+					return drType.GetMethod("GetValue");
 			}
 
 			throw new NotSupportedException();
@@ -94,13 +95,13 @@ namespace Sylvan.Data
 			var ordinalMap =
 				logicalSchema
 				.Where(c => !string.IsNullOrEmpty(c.ColumnName))
-				.ToDictionary(p => p.ColumnName, p => p);
+				.ToDictionary(p => p.ColumnName, p => p, StringComparer.OrdinalIgnoreCase);
 
 			var seriesMap =
 				logicalSchema
 				.OfType<Schema.Column>()
 				.Where(c => c.IsSeries == true)
-				.ToDictionary(p => string.IsNullOrEmpty(p.SeriesName) ? "Values" : p.SeriesName, p => p);
+				.ToDictionary(p => string.IsNullOrEmpty(p.SeriesName) ? "Values" : p.SeriesName, p => p, StringComparer.OrdinalIgnoreCase);
 
 			DbColumn? GetCol(int? idx, string? name)
 			{
@@ -237,15 +238,20 @@ namespace Sylvan.Data
 
 					if (targetType.IsEnum)
 					{
+						// for enums there are two supported scenarios
+						// binding by name (string)
+						// and binding by value (numeric).
 						var enumBaseType = Enum.GetUnderlyingType(targetType);
 						if (sourceType == enumBaseType)
 						{
 							expr = Expression.Convert(getterExpr, targetType);
+							// TODO: validate that the value is valid for the enum?
 						}
 						else
 						{
 							if (sourceType == typeof(string))
 							{
+								// This method provides its own validation
 								expr =
 									Expression.Call(
 										EnumParseMethod.MakeGenericMethod(targetType),
@@ -254,8 +260,8 @@ namespace Sylvan.Data
 							}
 							else
 							{
-								throw new NotSupportedException();
 								// not sure what else would be supportable here.
+								throw new NotSupportedException();
 							}
 						}
 					}
@@ -273,7 +279,9 @@ namespace Sylvan.Data
 							}
 							else
 							{
-								throw new NotSupportedException();
+								// TODO: should this only happen if the getterExpr is "object"?
+								// what else could it be at this point?
+								expr = Expression.Convert(getterExpr, targetType);								
 							}
 						}
 					}
@@ -466,7 +474,7 @@ namespace Sylvan.Data
 			//Empty = 0,
 			-1,
 			//Object = 1,
-			-1,
+			15,
 			//DBNull = 2,
 			-1,
 			//Boolean = 3,
@@ -504,8 +512,8 @@ namespace Sylvan.Data
 		};
 
 		// TODO: validate this table.
-		static byte[] Conversion = new byte[16 * 15] {
-			// Boolean, Char, SByte, Byte, Int16, UInt16, Int32, UInt32, Int64, UInt64, Single, Double, Decimal, DateTime, String, PAD
+		static byte[] Conversion = new byte[16 * 16] {
+			// Boolean, Char, SByte, Byte, Int16, UInt16, Int32, UInt32, Int64, UInt64, Single, Double, Decimal, DateTime, String, Object
 			//Boolean = 3,
 			1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 3, 0,
 			//Char = 4,
@@ -535,7 +543,9 @@ namespace Sylvan.Data
 			//DateTime = 16
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 3, 0,
 			//String = 18
-			5, 0, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 1, 0,
+			5, 0, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 1, 5,
+			//Object = 1
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0,
 		};
 
 		static ConversionType GetConversionType(TypeCode src, TypeCode dst)
