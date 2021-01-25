@@ -42,6 +42,8 @@ namespace Sylvan.BuildTools.Data
 					}
 					var sw = new StringWriter();
 					var typeName = pc.Convert(file.GetMetadata("filename"));
+					if (char.IsDigit(typeName[0]))
+						typeName = "DataSet" + typeName;
 					sw.WriteLine("// File: " + file.ItemSpec);
 					sw.WriteLine("using System;");
 					sw.WriteLine("using Sylvan.Data.Csv;");
@@ -86,22 +88,18 @@ namespace Sylvan.BuildTools.Data
 
 							var memberName = string.IsNullOrWhiteSpace(col.ColumnName) ? "Column" + (unnamedCounter++) : pc.Convert(col.ColumnName);
 							sw.WriteLine("public " + fullName + (col.AllowDBNull == true && dt.IsValueType ? "?" : "") + " " + memberName + " { get; set; }");
-
 						}
 					}
 
-					//var hasHeaders = colSchema.All(c => !string.IsNullOrEmpty(c.ColumnName));
-
 					sw.WriteLine("const string FileName = @\"" + file.GetMetadata("Filename") + file.GetMetadata("Extension") + "\";");
 					sw.WriteLine("const string SchemaSpec = \"" + schema.ToString() + "\";");
-					sw.WriteLine("static readonly ReadOnlyCollection<DbColumn> ColumnSchema = Sylvan.Data.Schema.TryParse(SchemaSpec).GetColumnSchema();");
+					sw.WriteLine("static readonly ReadOnlyCollection<DbColumn> ColumnSchema = Sylvan.Data.Schema.Parse(SchemaSpec).GetColumnSchema();");
 					sw.WriteLine("static readonly ICsvSchemaProvider SchemaProvider = new CsvSchema(ColumnSchema);");
 
 
 					sw.WriteLine("static readonly CsvDataReaderOptions DefaultOptions = new CsvDataReaderOptions {");
-					//sw.WriteLine("HasHeaders = " + (hasHeaders ? "true" : "false") + ",");
 					sw.WriteLine("Schema = SchemaProvider,");
-
+					sw.WriteLine("BufferSize = 0x80000,");
 					sw.WriteLine("};");
 
 					sw.WriteLine("public static IEnumerable<" + typeName + "> Read() { return Read(FileName, DefaultOptions); }");

@@ -19,6 +19,10 @@ namespace Sylvan
 		[InlineData("CLR_TYPE", "CLR,TYPE")]
 		[InlineData("covid19", "covid,19")]
 		[InlineData("covid19record", "covid,19,record")]
+		[InlineData("REPORT2010", "REPORT,2010")]
+		[InlineData("REPORT_2010", "REPORT,2010")]
+		[InlineData("REPORT2010FOO", "REPORT,2010,FOO")]
+		[InlineData("REPORT_2010_FOO", "REPORT,2010,FOO")]
 		public void GetSegments(string input, string segments)
 		{
 			var parts = segments.Split(',');
@@ -46,6 +50,8 @@ namespace Sylvan
 		[InlineData("CLR_TYPE", "ClrType")]
 		[InlineData("covid19", "Covid19")]
 		[InlineData("covid19record", "Covid19Record")]
+		[InlineData("REPORT2020FOO", "Report2020Foo")]
+		[InlineData("REPORT2020Foo", "REPORT2020Foo")]
 		public void PascalCase(string input, string expected)
 		{
 			var style = new PascalCaseStyle();

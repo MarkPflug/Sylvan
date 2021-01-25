@@ -103,6 +103,7 @@ namespace Sylvan
 
 			for (var i = 0; i < identifier.Length; i++)
 			{
+			startLabel:
 				var c = identifier[i];
 				var cat = char.GetUnicodeCategory(c);
 				switch (cat)
@@ -132,6 +133,12 @@ namespace Sylvan
 										length = 2;
 									}
 									goto done;
+								case UnicodeCategory.DecimalDigitNumber:
+									yield return new Range(start, length);
+									start = j;
+									i = j;
+									length = 0;
+									goto startLabel;
 								default:
 									yield return new Range(start, length);
 									i = j;
@@ -166,7 +173,7 @@ namespace Sylvan
 							{
 								case UnicodeCategory.DecimalDigitNumber:
 									length++;
-									break;								
+									break;
 								default:
 									yield return new Range(start, length);
 									i = j - 1;
