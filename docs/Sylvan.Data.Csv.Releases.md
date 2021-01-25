@@ -2,6 +2,7 @@
 
 _0.9.1_
 - Add support for hexadecimal encoded binary data.
+- Performance improvement for synchronous accessors.
 
 _0.9.0_
 

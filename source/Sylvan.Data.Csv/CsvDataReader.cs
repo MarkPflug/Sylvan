@@ -16,7 +16,7 @@ namespace Sylvan.Data.Csv
 	/// <summary>
 	/// A data reader for delimited text data.
 	/// </summary>
-	public sealed class CsvDataReader : DbDataReader, IDbColumnSchemaGenerator
+	public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerator
 	{
 		static readonly char[] AutoDetectDelimiters = new[] { ',', '\t', ';', '|' };
 
@@ -279,51 +279,7 @@ namespace Sylvan.Data.Csv
 			this.state = State.Initialized;
 		}
 
-		async Task<bool> NextRecordAsync()
-		{
-			this.curFieldCount = 0;
-			this.recordStart = this.idx;
-
-			if (this.idx >= bufferEnd)
-			{
-				await FillBufferAsync();
-				if (idx == bufferEnd)
-				{
-					return false;
-				}
-			}
-
-			int fieldIdx = 0;
-			while (true)
-			{
-				var result = ReadField(fieldIdx);
-
-				if (result == ReadResult.True)
-				{
-					fieldIdx++;
-					continue;
-				}
-				if (result == ReadResult.False)
-				{
-					return true;
-				}
-				if (result == ReadResult.Incomplete)
-				{
-					// we were unable to read an entire record out of the buffer synchronously
-					if (recordStart == 0)
-					{
-						// if we consumed the entire buffer reading this record, then this is an exceptional situation
-						// we expect a record to be able to fit entirely within the buffer.
-						throw new CsvRecordTooLargeException(this.RowNumber, fieldIdx, null, null);
-					}
-					else
-					{
-						await FillBufferAsync();
-						// after filling the buffer, we will resume reading fields from where we left off.
-					}
-				}
-			}
-		}
+		
 
 		// attempt to read a field. 
 		// returns True if there are more in record (hit delimiter), 
@@ -506,29 +462,6 @@ namespace Sylvan.Data.Csv
 			}
 			// this can never be reached.
 			return ReadResult.False;
-		}
-
-		async Task<int> FillBufferAsync()
-		{
-			var buffer = this.buffer;
-			if (recordStart != 0)
-			{
-				// move any pending data to the front of the buffer.
-				Array.Copy(buffer, recordStart, buffer, 0, bufferEnd - recordStart);
-			}
-
-			bufferEnd -= recordStart;
-			idx -= recordStart;
-			recordStart = 0;
-
-			var count = buffer.Length - bufferEnd;
-			var c = await reader.ReadBlockAsync(buffer, bufferEnd, count);
-			bufferEnd += c;
-			if (c < count)
-			{
-				atEndOfText = true;
-			}
-			return c;
 		}
 
 		/// <inheritdoc/>
@@ -1312,55 +1245,12 @@ namespace Sylvan.Data.Csv
 			return IsDBNull(ordinal) ? CompleteTrue : CompleteFalse;
 		}
 
-		/// <inheritdoc/>
-		public override bool NextResult()
-		{
-			state = State.End;
-			return false;
-		}
 
-		/// <inheritdoc/>
-		public override Task<bool> NextResultAsync(CancellationToken cancellationToken)
-		{
-			state = State.End;
-			return CompleteFalse;
-		}
+
+
 
 		readonly static Task<bool> CompleteTrue = Task.FromResult(true);
 		readonly static Task<bool> CompleteFalse = Task.FromResult(false);
-
-		/// <inheritdoc/>
-		public override Task<bool> ReadAsync(CancellationToken cancellationToken)
-		{
-			cancellationToken.ThrowIfCancellationRequested();
-			this.rowNumber++;
-			if (this.state == State.Open)
-			{
-				return this.NextRecordAsync();
-			}
-			else if (this.state == State.Initialized)
-			{
-				// after initizialization, the first record would already be in the buffer
-				// if hasRows is true.
-				if (hasRows)
-				{
-					this.state = State.Open;
-					return CompleteTrue;
-				}
-				else
-				{
-					this.state = State.End;
-				}
-			}
-			this.rowNumber = -1;
-			return CompleteFalse;
-		}
-
-		/// <inheritdoc/>
-		public override bool Read()
-		{
-			return this.ReadAsync().GetAwaiter().GetResult();
-		}
 
 		/// <summary>
 		/// Gets a collection of DbColumns describing the schema of the data reader.
@@ -1459,32 +1349,7 @@ namespace Sylvan.Data.Csv
 			}
 		}
 
-		/// <inheritdoc/>
-		public override void Close()
-		{
-			if (this.state != State.Closed)
-			{
-				if (ownsReader)
-					this.reader.Dispose();
-				this.state = State.Closed;
-			}
-		}
 
-#if NETSTANDARD2_1
-
-		/// <inheritdoc/>
-		public override Task CloseAsync()
-		{
-			if (this.state != State.Closed)
-			{
-				if (ownsReader)
-					this.reader.Dispose();
-				this.state = State.Closed;
-			}
-			return Task.CompletedTask;
-		}
-
-#endif
 
 		/// <summary>
 		/// Copies the raw record data from the buffer.
