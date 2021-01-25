@@ -11,9 +11,11 @@ namespace Sylvan.BuildTools.Data
 		public ITaskItem[] InputFiles { get; set; }
 		public string OutputPath { get; set; }
 
+		IdentifierStyle pc = IdentifierStyle.PascalCase;
+
 		public override bool Execute()
 		{
-			var pc = IdentifierStyle.PascalCase;
+			
 			bool success = true;
 			foreach (var file in InputFiles)
 			{
@@ -74,7 +76,7 @@ namespace Sylvan.BuildTools.Data
 							var memberName = 
 								string.IsNullOrWhiteSpace(name) 
 								? "Values" 
-								: pc.Convert(name);
+								: GetColumnName(name);
 
 							sw.WriteLine("public DateSeries<" + fullName + (col.AllowDBNull == true && dt.IsValueType ? "?" : "") + "> " + memberName + " { get; set; }");
 						}
@@ -86,7 +88,10 @@ namespace Sylvan.BuildTools.Data
 							if (!string.IsNullOrEmpty(col.ColumnName))
 								sw.WriteLine("[ColumnName(\"" + col.ColumnName + "\")]");
 
-							var memberName = string.IsNullOrWhiteSpace(col.ColumnName) ? "Column" + (unnamedCounter++) : pc.Convert(col.ColumnName);
+							var memberName = 
+								string.IsNullOrWhiteSpace(col.ColumnName) 
+								? "Column" + (unnamedCounter++) 
+								: GetColumnName(col.ColumnName);
 							sw.WriteLine("public " + fullName + (col.AllowDBNull == true && dt.IsValueType ? "?" : "") + " " + memberName + " { get; set; }");
 						}
 					}
@@ -123,6 +128,14 @@ namespace Sylvan.BuildTools.Data
 				}
 			}
 			return success;
+		}
+
+		string GetColumnName(string col)
+		{
+			var name = pc.Convert(col);
+			if (char.IsDigit(name[0]))
+				name = "Column" + name;
+			return name;
 		}
 	}
 }
