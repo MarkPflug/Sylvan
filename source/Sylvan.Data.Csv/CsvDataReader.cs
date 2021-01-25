@@ -572,6 +572,22 @@ namespace Sylvan.Data.Csv
 			}
 			if (dataOffset > int.MaxValue) throw new ArgumentOutOfRangeException(nameof(dataOffset));
 
+			var col = this.columns[ordinal];
+			var encoding = col.BinaryEncoding;
+
+			switch (encoding)
+			{
+				case BinaryEncoding.None: // when the schema is not configured.
+				case BinaryEncoding.Base64:
+					return GetBytesBase64(ordinal, (int)dataOffset, buffer, bufferOffset, length);
+				case BinaryEncoding.Hexadecimal:
+					return GetBytesHex(ordinal, (int)dataOffset, buffer, bufferOffset, length);
+			}
+			throw new NotSupportedException();// TODO: improve error message.
+		}
+
+		int GetBytesBase64(int ordinal, int dataOffset, byte[] buffer, int bufferOffset, int length)
+		{
 			if (scratch == null)
 			{
 				scratch = new byte[3];
@@ -652,6 +668,56 @@ namespace Sylvan.Data.Csv
 			}
 
 			return oOff - bufferOffset;
+		}
+
+		int GetBytesHex(int ordinal, int dataOffset, byte[] buffer, int bufferOffset, int length)
+		{
+			var offset = (int)dataOffset;
+
+			var cs = GetField(ordinal);
+			var b = cs.buffer;
+			var o = cs.offset;
+			var l = cs.length;
+
+			var outLen = GetHexLength(cs);
+
+			var c = Math.Min(outLen - dataOffset, length);
+
+			const int Invalid = 255;
+
+			var e = dataOffset + c;
+			var bo = o;
+			for (int i = 0; i < c; i++) {
+				var cc = b[bo++];
+				var v = HexValue(cc);
+				if (v == Invalid)
+					throw new FormatException();
+				buffer[bufferOffset + i] = (byte)(v << 4);
+				cc = b[bo++];
+				v = HexValue(cc);
+				if (v == Invalid)
+					throw new FormatException();
+				buffer[bufferOffset + i] |= (byte)v;
+			}
+			return c;
+		}
+
+		static readonly byte[] HexMap = new byte[] 
+			{
+				255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+				255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+				255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+				  0,   1,   2,   3,   4,   5,   6,   7,   8,   9, 255, 255, 255, 255, 255, 255,
+				255,  10,  11,  12,  13,  14,  15, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+				255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+				255,  10,  11,  12,  13,  14,  15, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+				255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+			};
+		
+		static int HexValue(char c)
+		{
+			if (c > 128) return -1;
+			return HexMap[c];
 		}
 
 		void FromBase64Chars(char[] chars, int charsOffset, int charsLen, byte[] bytes, int bytesOffset, out int bytesWritten)
@@ -933,7 +999,7 @@ namespace Sylvan.Data.Csv
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		CharSpan GetField(int ordinal)
 		{
-			if((uint)ordinal < (uint) this.curFieldCount)
+			if ((uint)ordinal < (uint)this.curFieldCount)
 			{
 				return GetFieldUnsafe(ordinal);
 			}
@@ -1074,13 +1140,38 @@ namespace Sylvan.Data.Csv
 		int GetBinaryLength(int ordinal)
 		{
 			var span = this.GetField(ordinal);
+			var col = this.columns[ordinal];
+
+			switch (col.BinaryEncoding)
+			{
+				case BinaryEncoding.None:
+				case BinaryEncoding.Base64:
+					return GetBase64Length(span);
+				case BinaryEncoding.Hexadecimal:
+					return GetHexLength(span);
+			}
+			throw new NotSupportedException(); // TODO: improve error message.
+		}
+
+		static int GetBase64Length(CharSpan span)
+		{
 			var l = span.length;
+			// must be divisible by 4
+			if (l % 4 != 0) throw new FormatException();
 			var rem = 0;
 			if (span[l - 1] == '=') rem++;
 			if (span[l - 2] == '=') rem++;
 			var dataLen = l / 4 * 3;
 			dataLen -= rem;
 			return dataLen;
+		}
+
+		static int GetHexLength(CharSpan span)
+		{
+			var l = span.length;
+			// must be divisible by 1
+			if (l % 2 != 0) throw new FormatException();
+			return l / 2;
 		}
 
 		int GetCharLength(int ordinal)
@@ -1177,9 +1268,19 @@ namespace Sylvan.Data.Csv
 			return SchemaTable.GetSchemaTable(this.GetColumnSchema());
 		}
 
+		enum BinaryEncoding
+		{
+			Unknown = -1,
+			None = 0,
+			Base64 = 1,
+			Hexadecimal = 2,
+		}
+
 		class CsvColumn : DbColumn
 		{
 			public string? Format { get; }
+
+			public BinaryEncoding BinaryEncoding { get; }
 
 			public CsvColumn(string? name, int ordinal, DbColumn? schema = null)
 			{
@@ -1216,6 +1317,20 @@ namespace Sylvan.Data.Csv
 				this.BaseCatalogName = schema?.BaseCatalogName;
 				this.UdtAssemblyQualifiedName = schema?.UdtAssemblyQualifiedName;
 				this.Format = schema?[nameof(Format)] as string;
+				if(this.DataType == typeof(byte[]))
+					this.BinaryEncoding = GetBinaryEncoding(this.Format);
+			}
+
+			BinaryEncoding GetBinaryEncoding(string? format)
+			{
+				if (format == null || StringComparer.OrdinalIgnoreCase.Equals("base64", format))
+					return BinaryEncoding.Base64; 
+				if (StringComparer.OrdinalIgnoreCase.Equals("hex", format))
+					return BinaryEncoding.Hexadecimal;
+
+				// for unknown encoding spec, allow initialize but any access
+				// to the column as a binary value will produce a NotSupportedException.
+				return BinaryEncoding.Unknown; 
 			}
 
 			/// <inheritdoc/>
