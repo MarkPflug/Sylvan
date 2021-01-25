@@ -1,4 +1,8 @@
 # Sylvan.Data.Csv Release Notes
+
+_0.9.1_
+- Performance improvement for synchronous accessors.
+
 _0.9.0_
 
 - Collapse AutoDetect (`bool`) and Delimiter (`char`) options into Delimiter (`char?`).
