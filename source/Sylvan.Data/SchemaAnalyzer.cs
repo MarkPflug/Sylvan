@@ -193,7 +193,7 @@ namespace Sylvan.Data
 			isAscii = true;
 
 
-			this.valueCount = new Dictionary<string, int>();
+			this.valueCount = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 		}
 
 		public bool AllowDbNull => isNullable;
@@ -400,31 +400,36 @@ namespace Sylvan.Data
 				stringLenMax = Math.Max(stringLenMax, len);
 				stringLenMin = Math.Min(stringLenMin, len);
 				stringLenTotal += len;
-				if (len == 0)
+				if (len == 0 || string.IsNullOrWhiteSpace(stringValue))
 				{
 					emptyStringCount++;
 				}
-
-				if (isAscii)
-				{
-					foreach (var c in stringValue)
-					{
-						if (c >= 128)
-						{
-							isAscii = false;
-							break;
-						}
-					}
-				}
-
-				if (this.valueCount.TryGetValue(stringValue, out int count))
-				{
-					isUnique = false;
-					this.valueCount[stringValue] = count + 1;
-				}
 				else
 				{
-					this.valueCount[stringValue] = 1;
+					if (isAscii)
+					{
+						foreach (var c in stringValue)
+						{
+							if (c >= 128)
+							{
+								isAscii = false;
+								break;
+							}
+						}
+					}
+
+					if (this.valueCount.TryGetValue(stringValue, out int count))
+					{
+						isUnique = false;
+						this.valueCount[stringValue] = count + 1;
+					}
+					else
+					{
+						if (!string.IsNullOrWhiteSpace(stringValue))
+						{
+							this.valueCount[stringValue] = 1;
+						}
+					}
 				}
 			}
 		}
@@ -534,6 +539,11 @@ namespace Sylvan.Data
 
 			if (this.isInt)
 			{
+				if(intMin == 0 && intMax == 1 && count > 2)
+				{
+					// no format needed, will just parse as int
+					return new Schema.Column.Builder(name, typeof(bool), isNullable);
+				}
 				var type =
 					intMin < int.MinValue || intMax > int.MaxValue
 					? typeof(long)
@@ -554,6 +564,36 @@ namespace Sylvan.Data
 			}
 
 			var len = stringLenMax;
+			// check to see if this might be a boolean
+			if (len < 6 && valueCount.Count == 2)
+			{
+				string? t = null, f = null;
+				foreach (var s in TrueStrings)
+				{
+					if (valueCount.ContainsKey(s))
+					{
+						t = s;
+						break;
+					}
+				}
+				foreach (var s in FalseStrings)
+				{
+					if (valueCount.ContainsKey(s))
+					{
+						f = s;
+						break;
+					}
+				}
+				if (t != null && f != null)
+				{
+					return new Schema.Column.Builder(name, typeof(bool), isNullable || emptyStringCount > 0)
+					{
+						CommonDataType = System.Data.DbType.Boolean,
+						Format = t + "|" + f,
+					};
+				}
+			}
+
 			return new Schema.Column.Builder(name, typeof(string), isNullable)
 			{
 				ColumnSize = len,
@@ -562,6 +602,9 @@ namespace Sylvan.Data
 				IsUnique = isUnique
 			};
 		}
+
+		static string[] TrueStrings = new[] { "y", "yes", "t", "true" };
+		static string[] FalseStrings = new[] { "n", "no", "f", "false" };
 	}
 
 	[Flags]

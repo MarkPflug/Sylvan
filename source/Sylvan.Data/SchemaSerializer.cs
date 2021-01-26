@@ -205,11 +205,19 @@ namespace Sylvan.Data
 						w.Write("]");
 					}
 				}
-			}
-			if (col.AllowDBNull != false)
-			{
-				w.Write("?");
-			}
+
+				if (col.AllowDBNull != false)
+				{
+					w.Write("?");
+				}
+
+				if (col.Format != null)
+				{
+					w.Write("{");
+					w.Write(col.Format);
+					w.Write("}");
+				}
+			}			
 		}
 
 		static string GetTypeName(DbType type)

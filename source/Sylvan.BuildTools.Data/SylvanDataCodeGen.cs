@@ -2,7 +2,6 @@
 using Microsoft.Build.Utilities;
 using Sylvan.Data;
 using System.IO;
-using System.Linq;
 
 namespace Sylvan.BuildTools.Data
 {
@@ -11,9 +10,11 @@ namespace Sylvan.BuildTools.Data
 		public ITaskItem[] InputFiles { get; set; }
 		public string OutputPath { get; set; }
 
+		IdentifierStyle pc = IdentifierStyle.PascalCase;
+
 		public override bool Execute()
 		{
-			var pc = IdentifierStyle.PascalCase;
+			
 			bool success = true;
 			foreach (var file in InputFiles)
 			{
@@ -42,6 +43,8 @@ namespace Sylvan.BuildTools.Data
 					}
 					var sw = new StringWriter();
 					var typeName = pc.Convert(file.GetMetadata("filename"));
+					if (char.IsDigit(typeName[0]))
+						typeName = "DataSet" + typeName;
 					sw.WriteLine("// File: " + file.ItemSpec);
 					sw.WriteLine("using System;");
 					sw.WriteLine("using Sylvan.Data.Csv;");
@@ -72,7 +75,7 @@ namespace Sylvan.BuildTools.Data
 							var memberName = 
 								string.IsNullOrWhiteSpace(name) 
 								? "Values" 
-								: pc.Convert(name);
+								: GetColumnName(name);
 
 							sw.WriteLine("public DateSeries<" + fullName + (col.AllowDBNull == true && dt.IsValueType ? "?" : "") + "> " + memberName + " { get; set; }");
 						}
@@ -84,30 +87,29 @@ namespace Sylvan.BuildTools.Data
 							if (!string.IsNullOrEmpty(col.ColumnName))
 								sw.WriteLine("[ColumnName(\"" + col.ColumnName + "\")]");
 
-							var memberName = string.IsNullOrWhiteSpace(col.ColumnName) ? "Column" + (unnamedCounter++) : pc.Convert(col.ColumnName);
+							var memberName = 
+								string.IsNullOrWhiteSpace(col.ColumnName) 
+								? "Column" + (unnamedCounter++) 
+								: GetColumnName(col.ColumnName);
 							sw.WriteLine("public " + fullName + (col.AllowDBNull == true && dt.IsValueType ? "?" : "") + " " + memberName + " { get; set; }");
-
 						}
 					}
 
-					//var hasHeaders = colSchema.All(c => !string.IsNullOrEmpty(c.ColumnName));
-
 					sw.WriteLine("const string FileName = @\"" + file.GetMetadata("Filename") + file.GetMetadata("Extension") + "\";");
 					sw.WriteLine("const string SchemaSpec = \"" + schema.ToString() + "\";");
-					sw.WriteLine("static readonly ReadOnlyCollection<DbColumn> ColumnSchema = Sylvan.Data.Schema.TryParse(SchemaSpec).GetColumnSchema();");
+					sw.WriteLine("static readonly ReadOnlyCollection<DbColumn> ColumnSchema = Sylvan.Data.Schema.Parse(SchemaSpec).GetColumnSchema();");
 					sw.WriteLine("static readonly ICsvSchemaProvider SchemaProvider = new CsvSchema(ColumnSchema);");
 
 
 					sw.WriteLine("static readonly CsvDataReaderOptions DefaultOptions = new CsvDataReaderOptions {");
-					//sw.WriteLine("HasHeaders = " + (hasHeaders ? "true" : "false") + ",");
 					sw.WriteLine("Schema = SchemaProvider,");
-
+					sw.WriteLine("BufferSize = 0x80000,");
 					sw.WriteLine("};");
 
 					sw.WriteLine("public static IEnumerable<" + typeName + "> Read() { return Read(FileName, DefaultOptions); }");
 
 					sw.WriteLine("public static IEnumerable<" + typeName + "> Read(string filename, CsvDataReaderOptions opts) {");
-					sw.WriteLine("var csv = CsvDataReader.Create(filename, opts);");
+					sw.WriteLine("using var csv = CsvDataReader.Create(filename, opts);");
 					sw.WriteLine("var binder = DataBinder<" + typeName + ">.Create(ColumnSchema, csv.GetColumnSchema());");
 
 					sw.WriteLine("while(csv.Read()) {");
@@ -125,6 +127,14 @@ namespace Sylvan.BuildTools.Data
 				}
 			}
 			return success;
+		}
+
+		string GetColumnName(string col)
+		{
+			var name = pc.Convert(col);
+			if (char.IsDigit(name[0]))
+				name = "Column" + name;
+			return name;
 		}
 	}
 }

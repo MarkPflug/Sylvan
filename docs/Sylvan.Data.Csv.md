@@ -105,7 +105,25 @@ while only requiring a relatively small amount of additional time to load.
 String pooling is performed by an external function so that the pool can be shared across multiple datasets. The `StringPool` in Sylvan.Common will only attempt to pool strings that are smaller than 32 characters long by default. As strings get longer it is less likely that they will be duplicated, and also more costly to identify duplicates, so this size limit allows tuning the size vs time.
 
 _Binary data_
-CsvDataReader and CsvWriter both support binary data encoded as base64.
+
+CsvDataReader and CsvWriter both support binary data encoded as base64 or hexadecimal.
+Base64 is the default, but can be overridden by providing a schema specifying hex format.
+```C#
+
+var r = new StringReader("Name,Data\nTest,ABCDEF123456");
+var schema = Schema.Parse(",:binary{hex}");
+var opts = new CsvDataREaderOptions{ Schema = new CsvSchema(schema) };
+var csv = CsvDataReader.Create(r, opts);
+csv.Read();
+// query the size by passing null buffer
+var len = csv.GetBytes(1, null, 0, 0);
+var buffer = new byte[len];
+csv.GetBytes(1, buffer, 0, len);
+
+// Alterernately, you can call GetValue:
+(byte[])csv.GetValue(1);
+
+```
 
 ## Limitations
 

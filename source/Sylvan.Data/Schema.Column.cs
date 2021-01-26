@@ -6,9 +6,9 @@ namespace Sylvan.Data
 {
 	partial class Schema
 	{
-		public partial class Column : DbColumn
+		public sealed partial class Column : DbColumn
 		{		
-			public int? BaseColumnOrdinal { get; protected set; }
+			public int? BaseColumnOrdinal { get; private set; }
 
 			public DbType? CommonDataType { get; private set; }
 
@@ -22,7 +22,7 @@ namespace Sylvan.Data
 
 			internal Type? SeriesType { get; private set; }
 
-			internal string? Format { get; private set; }
+			public string? Format { get; private set; }
 
 			public override object? this[string property]
 			{
