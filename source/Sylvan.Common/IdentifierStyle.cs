@@ -236,7 +236,7 @@ namespace Sylvan
 		{
 			using var sw = new StringWriter();
 			bool isUpper = IsAllUpper(str);
-
+			char last = '\0';
 			foreach (var segment in GetSegments(str))
 			{
 				for (int i = segment.Start; i < segment.End; i++)
@@ -244,6 +244,8 @@ namespace Sylvan
 					var c = str[i];
 					if (i == segment.Start)
 					{
+						if (char.IsDigit(c) && char.IsDigit(last))
+							sw.Write('_');
 						c = char.ToUpper(c, CultureInfo.InvariantCulture);
 					}
 					else
@@ -254,6 +256,7 @@ namespace Sylvan
 						}
 					}
 					sw.Write(c);
+					last = c;
 				}
 			}
 			return sw.ToString();
@@ -272,7 +275,7 @@ namespace Sylvan
 			bool isUpper = IsAllUpper(str);
 
 			bool first = true;
-
+			char last = '\0';
 			foreach (var segment in GetSegments(str))
 			{
 				for (int i = segment.Start; i < segment.End; i++)
@@ -286,6 +289,8 @@ namespace Sylvan
 					{
 						if (i == segment.Start)
 						{
+							if (char.IsDigit(c) && char.IsDigit(last))
+								sw.Write('_');
 							c = char.ToUpper(c, CultureInfo.InvariantCulture);
 						}
 						else
@@ -297,6 +302,7 @@ namespace Sylvan
 						}
 					}
 					sw.Write(c);
+					last = c;
 				}
 				first = false;
 			}
