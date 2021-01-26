@@ -1,5 +1,8 @@
 # Sylvan.Data.Csv Release Notes
 
+_0.9.2_
+- Add support for per-column boolean format specification.
+
 _0.9.1_
 - Add support for hexadecimal encoded binary data.
 - Performance improvement for synchronous accessors.

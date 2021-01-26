@@ -279,7 +279,7 @@ namespace Sylvan.Data.Csv
 			this.state = State.Initialized;
 		}
 
-		
+
 
 		// attempt to read a field. 
 		// returns True if there are more in record (hit delimiter), 
@@ -502,14 +502,16 @@ namespace Sylvan.Data.Csv
 			// true not null, false null. True string true, anything else false.
 			// false not null, false null. True string true, anything else false.
 			// both null. 
-
+			var col = this.columns[ordinal];
+			var trueString = col.TrueString ?? this.trueString;
+			var falseString = col.FalseString ?? this.falseString;
 #if NETSTANDARD2_1
 			var span = this.GetFieldSpan(ordinal);
-			if (trueString != null && span.Equals(this.trueString.AsSpan(), StringComparison.OrdinalIgnoreCase))
+			if (trueString != null && span.Equals(trueString.AsSpan(), StringComparison.OrdinalIgnoreCase))
 			{
 				return true;
 			}
-			if (falseString != null && span.Equals(this.falseString.AsSpan(), StringComparison.OrdinalIgnoreCase))
+			if (falseString != null && span.Equals(falseString.AsSpan(), StringComparison.OrdinalIgnoreCase))
 			{
 				return false;
 			}
@@ -526,11 +528,11 @@ namespace Sylvan.Data.Csv
 			}
 #else
 			var str = this.GetString(ordinal);
-			if (trueString != null && str.Equals(this.trueString, StringComparison.OrdinalIgnoreCase))
+			if (trueString != null && str.Equals(trueString, StringComparison.OrdinalIgnoreCase))
 			{
 				return true;
 			}
-			if (falseString != null && str.Equals(this.falseString, StringComparison.OrdinalIgnoreCase))
+			if (falseString != null && str.Equals(falseString, StringComparison.OrdinalIgnoreCase))
 			{
 				return false;
 			}
@@ -687,7 +689,8 @@ namespace Sylvan.Data.Csv
 
 			var e = dataOffset + c;
 			var bo = o;
-			for (int i = 0; i < c; i++) {
+			for (int i = 0; i < c; i++)
+			{
 				var cc = b[bo++];
 				var v = HexValue(cc);
 				if (v == Invalid)
@@ -702,7 +705,7 @@ namespace Sylvan.Data.Csv
 			return c;
 		}
 
-		static readonly byte[] HexMap = new byte[] 
+		static readonly byte[] HexMap = new byte[]
 			{
 				255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
 				255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
@@ -713,7 +716,7 @@ namespace Sylvan.Data.Csv
 				255,  10,  11,  12,  13,  14,  15, 255, 255, 255, 255, 255, 255, 255, 255, 255,
 				255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
 			};
-		
+
 		static int HexValue(char c)
 		{
 			if (c > 128) return -1;
@@ -1282,6 +1285,10 @@ namespace Sylvan.Data.Csv
 
 			public BinaryEncoding BinaryEncoding { get; }
 
+			public string? TrueString { get; }
+
+			public string? FalseString { get; }
+
 			public CsvColumn(string? name, int ordinal, DbColumn? schema = null)
 			{
 				// non-overridable
@@ -1317,20 +1324,36 @@ namespace Sylvan.Data.Csv
 				this.BaseCatalogName = schema?.BaseCatalogName;
 				this.UdtAssemblyQualifiedName = schema?.UdtAssemblyQualifiedName;
 				this.Format = schema?[nameof(Format)] as string;
-				if(this.DataType == typeof(byte[]))
+				if (this.DataType == typeof(byte[]))
+				{
 					this.BinaryEncoding = GetBinaryEncoding(this.Format);
+				}
+				if (this.DataType == typeof(bool) && this.Format != null)
+				{
+					var idx = this.Format.IndexOf("|");
+					if (idx == -1)
+					{
+						this.TrueString = this.Format;
+					}
+					else
+					{
+						this.TrueString = this.Format.Substring(0, idx);
+						this.FalseString = this.Format.Substring(idx + 1);
+					}
+
+				}
 			}
 
 			BinaryEncoding GetBinaryEncoding(string? format)
 			{
 				if (format == null || StringComparer.OrdinalIgnoreCase.Equals("base64", format))
-					return BinaryEncoding.Base64; 
+					return BinaryEncoding.Base64;
 				if (StringComparer.OrdinalIgnoreCase.Equals("hex", format))
 					return BinaryEncoding.Hexadecimal;
 
 				// for unknown encoding spec, allow initialize but any access
 				// to the column as a binary value will produce a NotSupportedException.
-				return BinaryEncoding.Unknown; 
+				return BinaryEncoding.Unknown;
 			}
 
 			/// <inheritdoc/>

@@ -110,7 +110,7 @@ namespace Sylvan.BuildTools.Data
 					sw.WriteLine("public static IEnumerable<" + typeName + "> Read() { return Read(FileName, DefaultOptions); }");
 
 					sw.WriteLine("public static IEnumerable<" + typeName + "> Read(string filename, CsvDataReaderOptions opts) {");
-					sw.WriteLine("var csv = CsvDataReader.Create(filename, opts);");
+					sw.WriteLine("using var csv = CsvDataReader.Create(filename, opts);");
 					sw.WriteLine("var binder = DataBinder<" + typeName + ">.Create(ColumnSchema, csv.GetColumnSchema());");
 
 					sw.WriteLine("while(csv.Read()) {");
