@@ -2,7 +2,6 @@
 using Microsoft.Build.Utilities;
 using Sylvan.Data;
 using System.IO;
-using System.Linq;
 
 namespace Sylvan.BuildTools.Data
 {
