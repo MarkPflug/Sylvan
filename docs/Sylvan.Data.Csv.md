@@ -106,8 +106,8 @@ String pooling is performed by an external function so that the pool can be shar
 
 _Binary data_
 
-CsvDataReader and CsvWriter both support binary data encoded as base64 or hexadecimal.
-Base64 is the default, but can be overridden by providing a schema specifying hex format.
+CsvDataReader supports reading binary data encoded as base64 or hexadecimal, base64 is the default.
+
 ```C#
 
 var r = new StringReader("Name,Data\nTest,ABCDEF123456");

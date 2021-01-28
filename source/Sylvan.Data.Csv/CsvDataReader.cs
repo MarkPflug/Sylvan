@@ -577,7 +577,7 @@ namespace Sylvan.Data.Csv
 			if (dataOffset > int.MaxValue) throw new ArgumentOutOfRangeException(nameof(dataOffset));
 
 			var col = this.columns[ordinal];
-			var encoding = col.BinaryEnc ?? this.binaryEncoding;
+			var encoding = col.ColumnBinaryEncoding ?? this.binaryEncoding;
 
 			switch (encoding)
 			{
@@ -1147,7 +1147,7 @@ namespace Sylvan.Data.Csv
 			var span = this.GetField(ordinal);
 			var col = this.columns[ordinal];
 
-			var enc = col.BinaryEnc ?? this.binaryEncoding;
+			var enc = col.ColumnBinaryEncoding ?? this.binaryEncoding;
 			switch (enc)
 			{
 				case BinaryEncoding.Base64:
@@ -1279,7 +1279,8 @@ namespace Sylvan.Data.Csv
 		{
 			public string? Format { get; }
 
-			public BinaryEncoding? BinaryEnc { get; }
+			// encoding specified at the column level, fallback to the options-spec if null
+			public BinaryEncoding? ColumnBinaryEncoding { get; }
 
 			public string? TrueString { get; }
 
@@ -1322,7 +1323,7 @@ namespace Sylvan.Data.Csv
 				this.Format = schema?[nameof(Format)] as string;
 				if (this.DataType == typeof(byte[]))
 				{
-					this.BinaryEnc = GetBinaryEncoding(this.Format);
+					this.ColumnBinaryEncoding = GetBinaryEncoding(this.Format);
 				}
 				if (this.DataType == typeof(bool) && this.Format != null)
 				{
