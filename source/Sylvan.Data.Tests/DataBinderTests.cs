@@ -5,13 +5,13 @@ using System.Data;
 using System.Data.Common;
 using System.IO;
 using System.Linq;
+using System.Runtime.Serialization;
 using Xunit;
 
 namespace Sylvan.Data
 {
 	class MyDataRecord
 	{
-		[ColumnOrdinal(0)]
 		public int Id { get; private set; }
 		public string Name { get; private set; }
 		public DateTime? Date { get; private set; }

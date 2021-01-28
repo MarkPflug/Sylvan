@@ -8,6 +8,7 @@ using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.Serialization;
 using System.Text.RegularExpressions;
 
 namespace Sylvan.Data
@@ -178,8 +179,9 @@ namespace Sylvan.Data
 
 			foreach (var property in recordType.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
 			{
-				var columnOrdinal = property.GetCustomAttribute<ColumnOrdinalAttribute>()?.Ordinal;
-				var columnName = property.GetCustomAttribute<ColumnNameAttribute>()?.Name ?? property.Name;
+				var memberAttribute = property.GetCustomAttribute<DataMemberAttribute>();
+				var columnOrdinal = memberAttribute?.Order;
+				var columnName = memberAttribute?.Name ?? property.Name;
 
 				var col = GetCol(columnOrdinal, columnName);
 				if (col == null)

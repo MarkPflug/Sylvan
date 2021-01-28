@@ -5,6 +5,7 @@ using System.Data;
 using System.Data.Common;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.Serialization;
 
 namespace Sylvan.Data
 {
@@ -55,8 +56,10 @@ namespace Sylvan.Data
 			foreach (var property in type.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
 			{
 				args[0] = null;
-				var columnOrdinal = property.GetCustomAttribute<ColumnOrdinalAttribute>()?.Ordinal;
-				var columnName = property.GetCustomAttribute<ColumnNameAttribute>()?.Name ?? property.Name;
+
+				var dataMemberAttr = property.GetCustomAttribute<DataMemberAttribute>();
+				var columnOrdinal = dataMemberAttr?.Order;
+				var columnName = dataMemberAttr?.Name ?? property.Name;
 
 				var setter = property.GetSetMethod(true)!;
 

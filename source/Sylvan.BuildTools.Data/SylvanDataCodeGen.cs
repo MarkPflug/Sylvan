@@ -84,9 +84,12 @@ namespace Sylvan.BuildTools.Data
 						{
 							var dt = col.DataType;
 							var fullName = dt.FullName;
-							sw.WriteLine("[ColumnOrdinal(" + col.ColumnOrdinal + ")]");
+							sw.Write("[DataMember(Order = " + col.ColumnOrdinal);
 							if (!string.IsNullOrEmpty(col.ColumnName))
-								sw.WriteLine("[ColumnName(\"" + col.ColumnName + "\")]");
+							{
+								sw.Write(", Name = \"" + col.ColumnName + "\"");
+							}
+							sw.WriteLine(")]");
 
 							var memberName = 
 								string.IsNullOrWhiteSpace(col.ColumnName) 

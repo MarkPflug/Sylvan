@@ -18,26 +18,6 @@ namespace Sylvan.Data
 		}
 	}
 
-	[AttributeUsage(AttributeTargets.Property | AttributeTargets.Field)]
-	public sealed class ColumnOrdinalAttribute : Attribute
-	{
-		public int Ordinal { get; }
-		public ColumnOrdinalAttribute(int ordinal)
-		{
-			this.Ordinal = ordinal;
-		}
-	}
-
-	[AttributeUsage(AttributeTargets.Property | AttributeTargets.Field)]
-	public sealed class ColumnNameAttribute : Attribute
-	{
-		public string Name { get; }
-		public ColumnNameAttribute(string name)
-		{
-			this.Name = name;
-		}
-	}
-
 	public static class DataBinderExtensions
 	{
 		public static T GetRecord<T>(this IDataBinder<T> binder, IDataRecord record) where T : new()
