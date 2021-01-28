@@ -597,6 +597,7 @@ namespace Sylvan.Data
 				if (intMin == 0 && intMax == 1 && count > 2)
 				{
 					// no format needed, will just parse as int
+					// TODO: rethink this, perhaps a format string would be slightly faster.
 					return new Schema.Column.Builder(name, typeof(bool), isNullable);
 				}
 				var type =
