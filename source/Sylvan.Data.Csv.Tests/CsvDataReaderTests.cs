@@ -983,6 +983,21 @@ namespace Sylvan.Data.Csv
 			Assert.Throws<FormatException>(() => csv.GetBytes(1, 0, buf, 0, buf.Length));
 		}
 
+		[Fact]
+		public void BinaryHexPrefix()
+		{
+			
+			using var reader = new StringReader("Name,Value\r\nrow1,0x01020304");
+			var csv = CsvDataReader.Create(reader, new CsvDataReaderOptions { BinaryEncoding = BinaryEncoding.Hexadecimal });
+			csv.Read();
+			var len = (int)csv.GetBytes(1, 0, null, 0, 0);
+			Assert.Equal(4, len);
+			var buf = new byte[len];
+			csv.GetBytes(1, 0, buf, 0, len);
+			Assert.Equal(new byte[] { 1, 2, 3, 4}, buf);
+
+		}
+
 		class VersionObj
 		{
 			public string Name { get; private set; }

@@ -4,7 +4,7 @@
     <TargetFramework>netstandard2.0</TargetFramework>
 
     <VersionPrefix>0.2.1</VersionPrefix>
-    <VersionSuffix>B0013</VersionSuffix>
+    <VersionSuffix>B0020</VersionSuffix>
     <Description>CSV data access build tools.</Description>
     <NoPackageAnalysis>true</NoPackageAnalysis>
     <BuildOutputTargetFolder>build</BuildOutputTargetFolder>    
@@ -25,6 +25,7 @@
     <PackageReference Include="Microsoft.Build.Utilities.Core" Version="16.6.0">
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="Sylvan.BuildTools.Resources" Version="0.5.0" />
   </ItemGroup>
 
   <ItemGroup>

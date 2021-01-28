@@ -8,9 +8,11 @@ namespace Sylvan.Data
 	public class AnalysisResult : IEnumerable<ColumnInfo>
 	{
 		readonly ColumnInfo[] columns;
+		readonly bool detectSeries;
 
-		internal AnalysisResult(ColumnInfo[] columns)
+		internal AnalysisResult(bool detectSeries, ColumnInfo[] columns)
 		{
+			this.detectSeries = detectSeries;
 			this.columns = columns;
 		}
 
@@ -32,7 +34,7 @@ namespace Sylvan.Data
 
 		public Schema.Builder GetSchemaBuilder()
 		{
-			var series = DetectSeries(columns);
+			var series = detectSeries ? DetectSeries(columns) : null;
 			var schema = new Schema.Builder();
 
 			for (int i = 0; i < columns.Length; i++)
