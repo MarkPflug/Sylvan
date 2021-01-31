@@ -64,19 +64,19 @@ Combined_Key,
 		static ICsvSchemaProvider Schema;
 		static CsvDataReaderOptions Options;
 
-		//static string CachedData;
-		//static byte[] CachedUtfData;
+		static string CachedData;
+		static byte[] CachedUtfData;
 
 		static void CacheData()
 		{
-			//if (!File.Exists(DataFileName))
-			//{
-			//	using var oStream = File.OpenWrite(DataFileName);
-			//	using var iStream = new HttpClient().GetStreamAsync(DataSetUrl).Result;
-			//	iStream.CopyTo(oStream);
-			//}
-			//CachedData = File.ReadAllText(DataFileName);
-			//CachedUtfData = Encoding.UTF8.GetBytes(CachedData);
+			if (!File.Exists(DataFileName))
+			{
+				using var oStream = File.OpenWrite(DataFileName);
+				using var iStream = new HttpClient().GetStreamAsync(DataSetUrl).Result;
+				iStream.CopyTo(oStream);
+			}
+			CachedData = File.ReadAllText(DataFileName);
+			CachedUtfData = Encoding.UTF8.GetBytes(CachedData);
 		}
 
 		static TestData()
@@ -98,14 +98,12 @@ Combined_Key,
 
 		public static TextReader GetTextReader()
 		{
-			throw new NotImplementedException();
-			//return new StringReader(CachedData);
+			return new StringReader(CachedData);
 		}
 
 		public static Stream GetUtf8Stream()
 		{
-			throw new NotImplementedException();
-			//return new MemoryStream(CachedUtfData);
+			return new MemoryStream(CachedUtfData);
 		}
 
 		public static DbDataReader GetData()
