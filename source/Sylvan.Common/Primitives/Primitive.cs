@@ -68,9 +68,6 @@ namespace Sylvan.Primitives
 		DateTime dateTimeValue;
 
 		[FieldOffset(0)]
-		DateTimeOffset dateTimeOffsetValue;
-
-		[FieldOffset(0)]
 		TimeSpan timeSpanValue;
 
 		[FieldOffset(0)]
@@ -82,6 +79,7 @@ namespace Sylvan.Primitives
 		#region value accessors
 
 #if NETSTANDARD21
+
 		/// <summary>
 		/// Allows access to the individual bytes in the value.
 		/// </summary>
@@ -124,8 +122,6 @@ namespace Sylvan.Primitives
 		public double DoubleValue => this.doubleValue;
 
 		public DateTime DateTimeValue => this.dateTimeValue;
-
-		public DateTimeOffset DateTimeOffsetValue => this.dateTimeOffsetValue;
 
 		public TimeSpan TimeSpanValue => this.timeSpanValue;
 
@@ -215,12 +211,6 @@ namespace Sylvan.Primitives
 			this.dateTimeValue = value;
 		}
 
-		public Primitive(DateTimeOffset value)
-		{
-			this = default;
-			this.dateTimeOffsetValue = value;
-		}
-
 		public Primitive(TimeSpan value)
 		{
 			this = default;
@@ -308,11 +298,6 @@ namespace Sylvan.Primitives
 			return new Primitive(value);
 		}
 
-		public static implicit operator Primitive(DateTimeOffset value)
-		{
-			return new Primitive(value);
-		}
-
 		public static implicit operator Primitive(TimeSpan value)
 		{
 			return new Primitive(value);
@@ -385,8 +370,6 @@ namespace Sylvan.Primitives
 					return this.doubleValue.ToString(culture);
 				case PrimitiveType.DateTime:
 					return this.dateTimeValue.ToString(culture);
-				case PrimitiveType.DateTimeOffset:
-					return this.dateTimeOffsetValue.ToString(culture);
 				case PrimitiveType.TimeSpan:
 					return this.timeSpanValue.ToString();
 				case PrimitiveType.Decimal:

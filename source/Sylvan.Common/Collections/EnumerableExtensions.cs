@@ -89,8 +89,6 @@ namespace Sylvan.Collections
 			}
 		}
 
-
-
 		/// <summary>
 		/// Gets the maximum item in a set based on a comparable key.
 		/// </summary>

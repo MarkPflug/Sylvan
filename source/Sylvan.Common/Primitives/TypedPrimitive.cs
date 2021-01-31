@@ -342,10 +342,6 @@ namespace Sylvan.Primitives
 		{
 		}
 
-		public TypedPrimitive(DateTimeOffset value) : this(PrimitiveType.DateTimeOffset, value)
-		{
-		}
-
 		public TypedPrimitive(TimeSpan value) : this(PrimitiveType.TimeSpan, value)
 		{
 		}

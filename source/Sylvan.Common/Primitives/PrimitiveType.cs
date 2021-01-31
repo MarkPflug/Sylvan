@@ -28,7 +28,6 @@
 		Double,
 
 		DateTime,
-		DateTimeOffset,
 		TimeSpan,
 
 		Decimal,
