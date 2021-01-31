@@ -5,12 +5,13 @@ using System.Data;
 using System.Data.Common;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.Serialization;
 
 namespace Sylvan.Data
 {
 	// A DataBinder implementatin that uses reflection.
 	// This was created merely to compare performance with CompiledDataBinder.
-	sealed class ReflectionDataBinder<T> : DataBinder<T>
+	sealed class ReflectionDataBinder<T> : IDataBinder<T>
 	{
 		readonly ReadOnlyCollection<DbColumn> schema;
 		readonly DbColumn[] columns;
@@ -55,8 +56,10 @@ namespace Sylvan.Data
 			foreach (var property in type.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
 			{
 				args[0] = null;
-				var columnOrdinal = property.GetCustomAttribute<ColumnOrdinalAttribute>()?.Ordinal;
-				var columnName = property.GetCustomAttribute<ColumnNameAttribute>()?.Name ?? property.Name;
+
+				var dataMemberAttr = property.GetCustomAttribute<DataMemberAttribute>();
+				var columnOrdinal = dataMemberAttr?.Order;
+				var columnName = dataMemberAttr?.Name ?? property.Name;
 
 				var setter = property.GetSetMethod(true)!;
 
@@ -131,7 +134,7 @@ namespace Sylvan.Data
 			this.propBinders = propBinderList.ToArray();
 		}
 
-		public override void Bind(IDataRecord record, T item)
+		void IDataBinder<T>.Bind(IDataRecord record, T item)
 		{
 			foreach (var pb in propBinders)
 			{

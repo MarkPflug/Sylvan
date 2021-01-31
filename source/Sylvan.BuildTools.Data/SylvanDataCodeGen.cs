@@ -51,8 +51,9 @@ namespace Sylvan.BuildTools.Data
 					sw.WriteLine("using Sylvan.Data;");
 					sw.WriteLine("using System.Collections.Generic;");
 					sw.WriteLine("using System.Collections.ObjectModel;");
+					sw.WriteLine("using System.Data;");
 					sw.WriteLine("using System.Data.Common;");
-
+					
 					sw.WriteLine("class " + typeName + " {");
 					var colSchema = schema.GetColumnSchema();
 					int unnamedCounter = 1;
@@ -83,9 +84,12 @@ namespace Sylvan.BuildTools.Data
 						{
 							var dt = col.DataType;
 							var fullName = dt.FullName;
-							sw.WriteLine("[ColumnOrdinal(" + col.ColumnOrdinal + ")]");
+							sw.Write("[DataMember(Order = " + col.ColumnOrdinal);
 							if (!string.IsNullOrEmpty(col.ColumnName))
-								sw.WriteLine("[ColumnName(\"" + col.ColumnName + "\")]");
+							{
+								sw.Write(", Name = \"" + col.ColumnName + "\"");
+							}
+							sw.WriteLine(")]");
 
 							var memberName = 
 								string.IsNullOrWhiteSpace(col.ColumnName) 
@@ -106,15 +110,23 @@ namespace Sylvan.BuildTools.Data
 					sw.WriteLine("BufferSize = 0x80000,");
 					sw.WriteLine("};");
 
-					sw.WriteLine("public static IEnumerable<" + typeName + "> Read() { return Read(FileName, DefaultOptions); }");
+					sw.WriteLine("public static IEnumerable<" + typeName + "> Read(Action<IDataRecord,Exception> errorHandler = null) { return Read(FileName, DefaultOptions, errorHandler); }");
 
-					sw.WriteLine("public static IEnumerable<" + typeName + "> Read(string filename, CsvDataReaderOptions opts) {");
+					sw.WriteLine("public static IEnumerable<" + typeName + "> Read(string filename, CsvDataReaderOptions opts, Action<IDataRecord,Exception> errorHandler = null) {");
 					sw.WriteLine("using var csv = CsvDataReader.Create(filename, opts);");
 					sw.WriteLine("var binder = DataBinder<" + typeName + ">.Create(ColumnSchema, csv.GetColumnSchema());");
 
 					sw.WriteLine("while(csv.Read()) {");
 					sw.WriteLine("var item = new " + typeName + "();");
+					sw.WriteLine("try {");
 					sw.WriteLine("binder.Bind(csv, item);");
+					sw.WriteLine("} catch(Exception e) {");
+					sw.WriteLine("if(errorHandler != null) {");
+					sw.WriteLine("errorHandler(csv, e);");
+					sw.WriteLine("} else {");
+					sw.WriteLine("throw;");
+					sw.WriteLine("}");
+					sw.WriteLine("}");
 					sw.WriteLine("yield return item;");
 					sw.WriteLine("}");
 

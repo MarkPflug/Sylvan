@@ -105,6 +105,7 @@ namespace Sylvan.Data.Csv
 		readonly CultureInfo culture;
 		readonly string? dateFormat;
 		readonly string? trueString, falseString;
+		readonly BinaryEncoding binaryEncoding;
 		readonly bool hasHeaders;
 		readonly StringFactory stringFactory;
 
@@ -187,6 +188,7 @@ namespace Sylvan.Data.Csv
 			this.columns = Array.Empty<CsvColumn>();
 			this.culture = options.Culture;
 			this.ownsReader = options.OwnsReader;
+			this.binaryEncoding = options.BinaryEncoding;
 			this.stringFactory = options.StringFactory ?? new StringFactory((char[] b, int o, int l) => new string(b, o, l));
 		}
 
@@ -575,11 +577,10 @@ namespace Sylvan.Data.Csv
 			if (dataOffset > int.MaxValue) throw new ArgumentOutOfRangeException(nameof(dataOffset));
 
 			var col = this.columns[ordinal];
-			var encoding = col.BinaryEncoding;
+			var encoding = col.ColumnBinaryEncoding ?? this.binaryEncoding;
 
 			switch (encoding)
 			{
-				case BinaryEncoding.None: // when the schema is not configured.
 				case BinaryEncoding.Base64:
 					return GetBytesBase64(ordinal, (int)dataOffset, buffer, bufferOffset, length);
 				case BinaryEncoding.Hexadecimal:
@@ -674,20 +675,21 @@ namespace Sylvan.Data.Csv
 
 		int GetBytesHex(int ordinal, int dataOffset, byte[] buffer, int bufferOffset, int length)
 		{
-			var offset = (int)dataOffset;
-
 			var cs = GetField(ordinal);
 			var b = cs.buffer;
 			var o = cs.offset;
-			var l = cs.length;
 
-			var outLen = GetHexLength(cs);
+			bool hasPrefix;
+			var outLen = GetHexLength(cs, out hasPrefix);
+			if (hasPrefix)
+			{
+				o += 2;
+			}
 
 			var c = Math.Min(outLen - dataOffset, length);
 
 			const int Invalid = 255;
-
-			var e = dataOffset + c;
+						
 			var bo = o;
 			for (int i = 0; i < c; i++)
 			{
@@ -769,20 +771,20 @@ namespace Sylvan.Data.Csv
 		public override DateTime GetDateTime(int ordinal)
 		{
 			var format = columns[ordinal].Format ?? this.dateFormat;
-
+			var style = DateTimeStyles.AdjustToUniversal;
 #if NETSTANDARD2_1
-			if (format != null && DateTime.TryParseExact(this.GetFieldSpan(ordinal), format.AsSpan(), culture, DateTimeStyles.AdjustToUniversal, out var dt))
+			if (format != null && DateTime.TryParseExact(this.GetFieldSpan(ordinal), format.AsSpan(), culture, style, out var dt))
 			{
 				return dt;
 			}
-			return DateTime.Parse(this.GetFieldSpan(ordinal), culture);
+			return DateTime.Parse(this.GetFieldSpan(ordinal), culture, style);
 #else
 			var dateStr = this.GetString(ordinal);
-			if (format != null && DateTime.TryParseExact(dateStr, format, culture, DateTimeStyles.None, out var dt))
+			if (format != null && DateTime.TryParseExact(dateStr, format, culture, style, out var dt))
 			{
 				return dt;
 			}
-			return DateTime.Parse(dateStr, culture);
+			return DateTime.Parse(dateStr, culture, style);
 #endif
 		}
 
@@ -1145,13 +1147,13 @@ namespace Sylvan.Data.Csv
 			var span = this.GetField(ordinal);
 			var col = this.columns[ordinal];
 
-			switch (col.BinaryEncoding)
+			var enc = col.ColumnBinaryEncoding ?? this.binaryEncoding;
+			switch (enc)
 			{
-				case BinaryEncoding.None:
 				case BinaryEncoding.Base64:
 					return GetBase64Length(span);
 				case BinaryEncoding.Hexadecimal:
-					return GetHexLength(span);
+					return GetHexLength(span, out _);
 			}
 			throw new NotSupportedException(); // TODO: improve error message.
 		}
@@ -1169,11 +1171,17 @@ namespace Sylvan.Data.Csv
 			return dataLen;
 		}
 
-		static int GetHexLength(CharSpan span)
+		static int GetHexLength(CharSpan span, out bool hasPrefix)
 		{
+			hasPrefix = false;
 			var l = span.length;
 			// must be divisible by 1
 			if (l % 2 != 0) throw new FormatException();
+			if (l >= 2 && char.ToLowerInvariant(span[1]) == 'x' && span[0] == '0')
+			{
+				hasPrefix = true;
+				l -= 2;
+			}
 			return l / 2;
 		}
 
@@ -1248,10 +1256,6 @@ namespace Sylvan.Data.Csv
 			return IsDBNull(ordinal) ? CompleteTrue : CompleteFalse;
 		}
 
-
-
-
-
 		readonly static Task<bool> CompleteTrue = Task.FromResult(true);
 		readonly static Task<bool> CompleteFalse = Task.FromResult(false);
 
@@ -1271,19 +1275,12 @@ namespace Sylvan.Data.Csv
 			return SchemaTable.GetSchemaTable(this.GetColumnSchema());
 		}
 
-		enum BinaryEncoding
-		{
-			Unknown = -1,
-			None = 0,
-			Base64 = 1,
-			Hexadecimal = 2,
-		}
-
 		class CsvColumn : DbColumn
 		{
 			public string? Format { get; }
 
-			public BinaryEncoding BinaryEncoding { get; }
+			// encoding specified at the column level, fallback to the options-spec if null
+			public BinaryEncoding? ColumnBinaryEncoding { get; }
 
 			public string? TrueString { get; }
 
@@ -1326,7 +1323,7 @@ namespace Sylvan.Data.Csv
 				this.Format = schema?[nameof(Format)] as string;
 				if (this.DataType == typeof(byte[]))
 				{
-					this.BinaryEncoding = GetBinaryEncoding(this.Format);
+					this.ColumnBinaryEncoding = GetBinaryEncoding(this.Format);
 				}
 				if (this.DataType == typeof(bool) && this.Format != null)
 				{
@@ -1338,22 +1335,25 @@ namespace Sylvan.Data.Csv
 					else
 					{
 						this.TrueString = this.Format.Substring(0, idx);
+						this.TrueString = this.TrueString.Length == 0 ? null : this.TrueString;
 						this.FalseString = this.Format.Substring(idx + 1);
+						this.FalseString = this.FalseString.Length == 0 ? null : this.FalseString;
 					}
-
 				}
 			}
 
-			BinaryEncoding GetBinaryEncoding(string? format)
+			BinaryEncoding? GetBinaryEncoding(string? format)
 			{
-				if (format == null || StringComparer.OrdinalIgnoreCase.Equals("base64", format))
+				if (format == null)
+					return null;
+				if (StringComparer.OrdinalIgnoreCase.Equals("base64", format))
 					return BinaryEncoding.Base64;
 				if (StringComparer.OrdinalIgnoreCase.Equals("hex", format))
 					return BinaryEncoding.Hexadecimal;
 
 				// for unknown encoding spec, allow initialize but any access
 				// to the column as a binary value will produce a NotSupportedException.
-				return BinaryEncoding.Unknown;
+				return 0;
 			}
 
 			/// <inheritdoc/>
@@ -1372,7 +1372,18 @@ namespace Sylvan.Data.Csv
 			}
 		}
 
+#if NETSTANDARD2_1
 
+		/// <summary>
+		/// Gets a span containing the current record data, including the line ending.
+		/// </summary>
+		public ReadOnlySpan<char> GetRawRecordSpan()
+		{
+			var len = this.idx - this.recordStart;
+			return this.buffer.AsSpan().Slice(this.recordStart, len);
+		}
+
+#endif
 
 		/// <summary>
 		/// Copies the raw record data from the buffer.
@@ -1380,8 +1391,7 @@ namespace Sylvan.Data.Csv
 		/// <param name="buffer">The buffer to receive the data, or null to query the required size.</param>
 		/// <param name="offset">The offset into the buffer to start writing.</param>
 		/// <returns>The length of the record data.</returns>
-		// TODO: do I want to expose this publicly?
-		private int GetRawRecord(char[]? buffer, int offset)
+		public int GetRawRecord(char[]? buffer, int offset)
 		{
 			var len = this.idx - this.recordStart;
 			if (buffer != null)

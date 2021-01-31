@@ -106,21 +106,20 @@ String pooling is performed by an external function so that the pool can be shar
 
 _Binary data_
 
-CsvDataReader and CsvWriter both support binary data encoded as base64 or hexadecimal.
-Base64 is the default, but can be overridden by providing a schema specifying hex format.
+CsvDataReader supports reading binary data encoded as base64 or hexadecimal, base64 is the default.
+
 ```C#
 
 var r = new StringReader("Name,Data\nTest,ABCDEF123456");
-var schema = Schema.Parse(",:binary{hex}");
-var opts = new CsvDataREaderOptions{ Schema = new CsvSchema(schema) };
+var opts = new CsvDataReaderOptions{ BinaryEncoding = BinaryEncoding.Hexadecimal };
 var csv = CsvDataReader.Create(r, opts);
 csv.Read();
-// query the size by passing null buffer
+// it is possible to query the required size by passing a null buffer
 var len = csv.GetBytes(1, null, 0, 0);
 var buffer = new byte[len];
 csv.GetBytes(1, buffer, 0, len);
 
-// Alterernately, you can call GetValue:
+// Alterernately, call GetValue in which case the buffer to be allocated internally:
 (byte[])csv.GetValue(1);
 
 ```
