@@ -9,7 +9,7 @@ namespace Sylvan.BuildTools.Data.Tests
 		public SylvanDataCodeGenTests(ITestOutputHelper testOutputHelper)
 			: base(testOutputHelper) { }
 
-		[Fact(Skip = "This test is flakey, and it works in practice.")]
+		[Fact(Skip = "This test is flakey (MSBuild unit test), but it works in practice.")]
 		public void BuildTest()
 		{
 			var exepath = BuildProject("Data/SeriesTest/Project.csproj");
