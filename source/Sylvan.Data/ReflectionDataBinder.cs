@@ -11,7 +11,7 @@ namespace Sylvan.Data
 {
 	// A DataBinder implementatin that uses reflection.
 	// This was created merely to compare performance with CompiledDataBinder.
-	sealed class ReflectionDataBinder<T> : DataBinder<T>
+	sealed class ReflectionDataBinder<T> : IDataBinder<T>
 	{
 		readonly ReadOnlyCollection<DbColumn> schema;
 		readonly DbColumn[] columns;
@@ -134,7 +134,7 @@ namespace Sylvan.Data
 			this.propBinders = propBinderList.ToArray();
 		}
 
-		public override void Bind(IDataRecord record, T item)
+		void IDataBinder<T>.Bind(IDataRecord record, T item)
 		{
 			foreach (var pb in propBinders)
 			{

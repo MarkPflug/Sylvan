@@ -771,20 +771,20 @@ namespace Sylvan.Data.Csv
 		public override DateTime GetDateTime(int ordinal)
 		{
 			var format = columns[ordinal].Format ?? this.dateFormat;
-
+			var style = DateTimeStyles.AdjustToUniversal;
 #if NETSTANDARD2_1
-			if (format != null && DateTime.TryParseExact(this.GetFieldSpan(ordinal), format.AsSpan(), culture, DateTimeStyles.AdjustToUniversal, out var dt))
+			if (format != null && DateTime.TryParseExact(this.GetFieldSpan(ordinal), format.AsSpan(), culture, style, out var dt))
 			{
 				return dt;
 			}
-			return DateTime.Parse(this.GetFieldSpan(ordinal), culture);
+			return DateTime.Parse(this.GetFieldSpan(ordinal), culture, style);
 #else
 			var dateStr = this.GetString(ordinal);
-			if (format != null && DateTime.TryParseExact(dateStr, format, culture, DateTimeStyles.None, out var dt))
+			if (format != null && DateTime.TryParseExact(dateStr, format, culture, style, out var dt))
 			{
 				return dt;
 			}
-			return DateTime.Parse(dateStr, culture);
+			return DateTime.Parse(dateStr, culture, style);
 #endif
 		}
 

@@ -88,7 +88,7 @@ namespace Sylvan.Data
 		public void Test2()
 		{
 			var schema = BuildSchema();
-			var binder = new CompiledDataBinder<MyDataRecord>(schema);
+			var binder = new CompiledDataBinder<MyDataRecord>(DataBinderOptions.Default, schema);
 
 			var csvData = "Id,Name,Date\n1,Test,2020-08-12\n";
 			var tr = new StringReader(csvData);
@@ -108,7 +108,7 @@ namespace Sylvan.Data
 			var tr = new StringReader(csvData);
 			DbDataReader data = CsvDataReader.Create(tr);
 
-			var binder = new CompiledDataBinder<MyDataRecord>(data.GetColumnSchema());
+			var binder = new CompiledDataBinder<MyDataRecord>(DataBinderOptions.Default, data.GetColumnSchema());
 
 			while (data.Read())
 			{
@@ -121,7 +121,7 @@ namespace Sylvan.Data
 		{
 			var tr = new StringReader("Name,Value\nA,12.3\nB,\n");
 			var dr = CsvDataReader.Create(tr);
-			var binder = new CompiledDataBinder<NumericNullRecord>(dr.GetColumnSchema());
+			var binder = new CompiledDataBinder<NumericNullRecord>(DataBinderOptions.Default, dr.GetColumnSchema());
 
 			while (dr.Read())
 			{
@@ -178,7 +178,7 @@ namespace Sylvan.Data
 			var opts = new CsvDataReaderOptions() { Schema = new CsvSchema(schema) };
 			var data = CsvDataReader.Create(tr, opts);
 
-			var binder = new CompiledDataBinder<EnumRecord>(data.GetColumnSchema());
+			var binder = new CompiledDataBinder<EnumRecord>(DataBinderOptions.Default, data.GetColumnSchema());
 
 			while (data.Read())
 			{
@@ -196,7 +196,7 @@ namespace Sylvan.Data
 			var opts = new CsvDataReaderOptions() { Schema = new CsvSchema(schema) };
 			var data = CsvDataReader.Create(tr, opts);
 
-			var binder = new CompiledDataBinder<EnumRecord>(data.GetColumnSchema());
+			var binder = new CompiledDataBinder<EnumRecord>(DataBinderOptions.Default, data.GetColumnSchema());
 
 			Assert.True(data.Read());
 
@@ -217,7 +217,7 @@ namespace Sylvan.Data
 			var opts = new CsvDataReaderOptions() { Schema = new CsvSchema(schema) };
 			var data = CsvDataReader.Create(tr, opts);
 
-			var binder = new CompiledDataBinder<EnumRecord>(data.GetColumnSchema());
+			var binder = new CompiledDataBinder<EnumRecord>(DataBinderOptions.Default, data.GetColumnSchema());
 
 			Assert.True(data.Read());
 
@@ -233,14 +233,13 @@ namespace Sylvan.Data
 		{
 			var schema = Schema.Parse("Id:int,Name,{Integer}>Values*:int");
 			var cols = schema.GetColumnSchema();
-			var binderFactory = DataBinder<SeriesRecord>.CreateFactory(cols);
 
 			var csvData = "Id,Name,1,2,3\n1,Test,7,8,9\n2,abc,11,12,13\n";
 			var tr = new StringReader(csvData);
 			var opts = new CsvDataReaderOptions() { Schema = new CsvSchema(cols) };
 			DbDataReader data = CsvDataReader.Create(tr, opts);
 
-			var binder = binderFactory.CreateBinder(data.GetColumnSchema());
+			var binder = DataBinder.Create<SeriesRecord>(data, schema);
 
 			Assert.True(data.Read());
 			var item = binder.GetRecord(data);
@@ -257,13 +256,13 @@ namespace Sylvan.Data
 			var schema = Schema.Parse(schemaSpec);
 			var cols = schema.GetColumnSchema();
 
-			var binderFactory = DataBinder<SeriesDateRecord>.CreateFactory(cols);
+			
 
 			var csvData = "Id,Name,2020-09-19,2020-09-20,2020-09-21,2020-09-22\n1,Test,7,8,9,10\n";
 			var tr = new StringReader(csvData);
 			var opts = new CsvDataReaderOptions() { Schema = new CsvSchema(schema) };
 			DbDataReader data = CsvDataReader.Create(tr, opts);
-			var binder = binderFactory.CreateBinder(data.GetColumnSchema());
+			var binder = DataBinder.Create<SeriesDateRecord>(data);
 
 			while (data.Read())
 			{
