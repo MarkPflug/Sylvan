@@ -53,7 +53,8 @@ namespace Sylvan.BuildTools.Data
 					sw.WriteLine("using System.Collections.ObjectModel;");
 					sw.WriteLine("using System.Data;");
 					sw.WriteLine("using System.Data.Common;");
-					
+					sw.WriteLine("using System.Runtime.Serialization;");
+
 					sw.WriteLine("class " + typeName + " {");
 					var colSchema = schema.GetColumnSchema();
 					int unnamedCounter = 1;
@@ -114,7 +115,7 @@ namespace Sylvan.BuildTools.Data
 
 					sw.WriteLine("public static IEnumerable<" + typeName + "> Read(string filename, CsvDataReaderOptions opts, Action<IDataRecord,Exception> errorHandler = null) {");
 					sw.WriteLine("using var csv = CsvDataReader.Create(filename, opts);");
-					sw.WriteLine("var binder = DataBinder<" + typeName + ">.Create(ColumnSchema, csv.GetColumnSchema());");
+					sw.WriteLine("var binder = DataBinder.Create<" + typeName + ">(csv);");
 
 					sw.WriteLine("while(csv.Read()) {");
 					sw.WriteLine("var item = new " + typeName + "();");
