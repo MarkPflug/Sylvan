@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Data;
@@ -12,6 +13,57 @@ namespace Sylvan.Data
 	/// </summary>
 	public sealed partial class Schema : IEnumerable<Schema.Column>, IDbColumnSchemaGenerator
 	{
+		static T? GetValue<T>(DataRow row, string name)
+		{
+			if (row.Table.Columns.Contains(name))
+			{
+				object obj = row[name];
+				if (obj is T)
+				{
+					return (T)obj;
+				}
+			}
+			return default;
+		}
+
+		internal static Schema FromSchemaTable(DataTable dt)
+		{
+			var builder = 
+				new Builder();
+
+			foreach(DataRow row in dt.Rows)
+			{
+				var cb = new Column.Builder();
+				cb.AllowDBNull = GetValue<bool?>(row, SchemaTableColumn.AllowDBNull);
+				cb.ColumnName = GetValue<string>(row, SchemaTableColumn.ColumnName) ?? string.Empty;
+				cb.ColumnOrdinal = GetValue<int?>(row, SchemaTableColumn.ColumnOrdinal);
+				cb.DataType = GetValue<Type>(row, SchemaTableColumn.DataType);
+				builder.Add(cb);				
+			}
+
+			return builder.Build();			
+		}
+
+		internal static Schema GetWeakSchema(IDataReader dr)
+		{
+			var builder = new Builder();
+
+			for(int i = 0; i < dr.FieldCount; i++)
+			{
+				var name = dr.GetName(i);
+				var type = dr.GetFieldType(i);
+				
+				var cb = new Column.Builder();
+				// without a schema, have to assume can be null.
+				cb.AllowDBNull = true;
+				cb.ColumnName = name ?? string.Empty;
+				cb.ColumnOrdinal = i;
+				cb.DataType = type ?? typeof(object);
+				builder.Add(cb);
+			}
+
+			return builder.Build();
+		}
 
 		internal const string DateSeriesMarker = "{Date}";
 		internal const string IntegerSeriesMarker = "{Integer}";

@@ -71,36 +71,41 @@ namespace Sylvan.Data
 
 	public static partial class DataBinder
 	{
-		public static IDataBinder<T> Create<T>(IDataReader dr, DataBinderOptions? opts = null)
+		// make every effort to construct a schema.
+		static ReadOnlyCollection<DbColumn> GetSchema(IDataReader dr)
 		{
-			ReadOnlyCollection<DbColumn>? schema = null;
 			if (dr is DbDataReader ddr && ddr.CanGetColumnSchema())
 			{
-				schema = ddr.GetColumnSchema();
+				return ddr.GetColumnSchema();
 			}
 			else
 			{
-				throw new NotImplementedException();
-			}
+				DataTable? schemaTable = null;
+				try
+				{
+					// it isn't uncommon for implementations to ignore providing a schema.
+					// typically they'll throw NotSupportedException.
+					schemaTable = dr.GetSchemaTable();
+				}
+				catch { }
 
+				if (schemaTable != null) {
+					return Schema.FromSchemaTable(schemaTable).GetColumnSchema();
+				}
+			}
+			return Schema.GetWeakSchema(dr).GetColumnSchema();
+		}
+
+		public static IDataBinder<T> Create<T>(IDataReader dr, DataBinderOptions? opts = null)
+		{
 			opts = opts ?? new DataBinderOptions();
-			return new CompiledDataBinder<T>(opts, schema);
+			return new CompiledDataBinder<T>(opts, GetSchema(dr));
 		}
 
 		public static IDataBinder<T> Create<T>(IDataReader dr, ReadOnlyCollection<DbColumn> logicalSchema, DataBinderOptions? opts = null)
 		{
-			ReadOnlyCollection<DbColumn>? schema = null;
-			if (dr is DbDataReader ddr && ddr.CanGetColumnSchema())
-			{
-				schema = ddr.GetColumnSchema();
-			}
-			else
-			{
-				throw new NotImplementedException();
-			}
-
 			opts = opts ?? new DataBinderOptions();
-			return new CompiledDataBinder<T>(opts, schema, logicalSchema);
+			return new CompiledDataBinder<T>(opts, GetSchema(dr), logicalSchema);
 		}
 	}
 }
