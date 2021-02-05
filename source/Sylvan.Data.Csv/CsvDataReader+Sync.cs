@@ -1,9 +1,42 @@
 ﻿using System;
+using System.IO;
+using System.Text;
 
 namespace Sylvan.Data.Csv
 {
 	partial class CsvDataReader
 	{
+		/// <summary>
+		/// Creates a new CsvDataReader.
+		/// </summary>
+		/// <param name="filename">The name of a file containing CSV data.</param>
+		/// <param name="options">The options to configure the reader, or null to use the default options.</param>
+		/// <returns>A CsvDataReader instance.</returns>
+		public static CsvDataReader Create(string filename, CsvDataReaderOptions? options = null)
+		{
+			if (filename == null) throw new ArgumentNullException(nameof(filename));
+			// TextReader must be owned when we open it.
+			if (options?.OwnsReader == false) throw new CsvConfigurationException();
+
+			var bufferSize = options?.BufferSize ?? options?.Buffer?.Length ?? CsvDataReaderOptions.Default.BufferSize;
+			bufferSize = Math.Min(bufferSize, Environment.SystemPageSize);
+			var reader = new StreamReader(filename, Encoding.Default, true, bufferSize);
+			var csv = new CsvDataReader(reader, options);
+			csv.InitializeAsync(options?.Schema).GetAwaiter().GetResult();
+			return csv;
+		}
+
+		/// <summary>
+		/// Creates a new CsvDataReader.
+		/// </summary>
+		/// <param name="reader">The TextReader for the delimited data.</param>
+		/// <param name="options">The options to configure the reader, or null to use the default options.</param>
+		/// <returns>A CsvDataReader instance.</returns>
+		public static CsvDataReader Create(TextReader reader, CsvDataReaderOptions? options = null)
+		{
+			return CreateAsync(reader, options).GetAwaiter().GetResult();
+		}
+
 		bool NextRecord()
 		{
 			this.curFieldCount = 0;

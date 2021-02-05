@@ -1,4 +1,6 @@
 ﻿using System;
+using System.IO;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -6,6 +8,41 @@ namespace Sylvan.Data.Csv
 {
 	partial class CsvDataReader
 	{
+		/// <summary>
+		/// Creates a new CsvDataReader asynchronously.                                                                                          
+		/// </summary>
+		/// <param name="filename">The name of a file containing CSV data.</param>
+		/// <param name="options">The options to configure the reader, or null to use the default options.</param>
+		/// <returns>A task representing the asynchronous creation of a CsvDataReader instance.</returns>
+		public static async Task<CsvDataReader> CreateAsync(string filename, CsvDataReaderOptions? options = null)
+		{
+			if (filename == null) throw new ArgumentNullException(nameof(filename));
+			// TextReader must be owned when we open it.
+			if (options?.OwnsReader == false) throw new CsvConfigurationException();
+
+			var bufferSize = options?.BufferSize ?? options?.Buffer?.Length ?? CsvDataReaderOptions.Default.BufferSize;
+			bufferSize = Math.Max(bufferSize, Environment.SystemPageSize);
+			var stream = new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize * 2, FileOptions.SequentialScan | FileOptions.Asynchronous);
+			var reader = new StreamReader(stream, Encoding.Default, true, bufferSize);
+			var csv = new CsvDataReader(reader, options);
+			await csv.InitializeAsync(options?.Schema);
+			return csv;
+		}
+
+		/// <summary>
+		/// Creates a new CsvDataReader asynchronously.
+		/// </summary>
+		/// <param name="reader">The TextReader for the delimited data.</param>
+		/// <param name="options">The options to configure the reader, or null to use the default options.</param>
+		/// <returns>A task representing the asynchronous creation of a CsvDataReader instance.</returns>
+		public static async Task<CsvDataReader> CreateAsync(TextReader reader, CsvDataReaderOptions? options = null)
+		{
+			if (reader == null) throw new ArgumentNullException(nameof(reader));
+			var csv = new CsvDataReader(reader, options);
+			await csv.InitializeAsync(options?.Schema);
+			return csv;
+		}
+
 		async Task<bool> NextRecordAsync()
 		{
 			this.curFieldCount = 0;

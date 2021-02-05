@@ -6,20 +6,20 @@ namespace Sylvan.Data.Csv
 	/// <summary>
 	/// Options for configuring a CsvWriter.
 	/// </summary>
-	public sealed class CsvWriterOptions
+	public sealed class CsvDataWriterOptions
 	{
-		internal static CsvWriterOptions Default = new CsvWriterOptions();
+		internal static CsvDataWriterOptions Default = new CsvDataWriterOptions();
 
 		const char DefaultDelimiter = ',';
 		const char DefaultQuote = '"';
 		const char DefaultEscape = '"';
-		const int DefaultBufferSize = 0x4000;
+		const int DefaultBufferSize = 0x10000;
 		const int MinBufferSize = 0x80;
 
 		/// <summary>
 		/// Creates a CsvWriterOptions with the default values.
 		/// </summary>
-		public CsvWriterOptions()
+		public CsvDataWriterOptions()
 		{
 			this.Delimiter = DefaultDelimiter;
 			this.Quote = DefaultQuote;

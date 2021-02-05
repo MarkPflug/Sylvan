@@ -8,7 +8,7 @@ namespace Sylvan.Data.Csv
 	/// <summary>
 	/// Writes delimited data to a TextWriter.
 	/// </summary>
-	public sealed class CsvWriter :
+	sealed class CsvWriter :
 		IDisposable
 #if NETSTANDARD2_1
 		, IAsyncDisposable
@@ -36,7 +36,7 @@ namespace Sylvan.Data.Csv
 		/// </summary>
 		/// <param name="writer">The TextWriter to receive the delimited data.</param>
 		/// <param name="options">The options to configure the writer.</param>
-		public CsvWriter(TextWriter writer, CsvWriterOptions? options = null)
+		public CsvWriter(TextWriter writer, CsvDataWriterOptions? options = null)
 		{
 			if (writer == null) throw new ArgumentNullException(nameof(writer));
 			if (options != null)
@@ -45,7 +45,7 @@ namespace Sylvan.Data.Csv
 			}
 			else
 			{
-				options = CsvWriterOptions.Default;
+				options = CsvDataWriterOptions.Default;
 			}
 
 			this.writer = writer;

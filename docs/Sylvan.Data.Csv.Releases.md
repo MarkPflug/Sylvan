@@ -1,5 +1,10 @@
 # Sylvan.Data.Csv Release Notes
 
+_0.10.0_
+- Removed CsvWriter. CsvDataWriter will continue to exist.
+- CsvWriterOptions renamed to CsvDataWriterOptions.
+- Performance improvements for real-world async scenarios.
+
 _0.9.2_
 - Add support for per-column boolean format specification.
 - Add CsvDataReader.GetRawRecord and GetRawRecordSpan methods.

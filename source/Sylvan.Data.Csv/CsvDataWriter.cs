@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Data.Common;
 using System.IO;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -42,20 +43,21 @@ namespace Sylvan.Data.Csv
 		/// </summary>
 		/// <param name="path">The path of the file to write.</param>
 		/// <param name="options">The options used to configure the writer, or null to use the defaults.</param>
-		public CsvDataWriter(string path, CsvWriterOptions? options = null)
+		public CsvDataWriter(string path, CsvDataWriterOptions? options = null)
 		{
 			if (options?.OwnsWriter == false) throw new CsvConfigurationException();
-			var writer = File.CreateText(path);
+			
 			if (options != null)
 			{
 				options.Validate();
 			}
 			else
 			{
-				options = CsvWriterOptions.Default;
+				options = CsvDataWriterOptions.Default;
 			}
-
-			this.writer = new CsvWriter(writer, options);
+			var stream = File.Create(path, options.BufferSize * 2, FileOptions.SequentialScan | FileOptions.Asynchronous);
+			var tw = new StreamWriter(stream, Encoding.UTF8);
+			this.writer = new CsvWriter(tw, options);
 		}
 
 		/// <summary>
@@ -63,7 +65,7 @@ namespace Sylvan.Data.Csv
 		/// </summary>
 		/// <param name="writer">The TextWriter to receive the delimited data.</param>
 		/// <param name="options">The options used to configure the writer, or null to use the defaults.</param>
-		public CsvDataWriter(TextWriter writer, CsvWriterOptions? options = null)
+		public CsvDataWriter(TextWriter writer, CsvDataWriterOptions? options = null)
 		{
 			if (writer == null) throw new ArgumentNullException(nameof(writer));
 			if (options != null)
@@ -72,7 +74,7 @@ namespace Sylvan.Data.Csv
 			}
 			else
 			{
-				options = CsvWriterOptions.Default;
+				options = CsvDataWriterOptions.Default;
 			}
 
 			this.writer = new CsvWriter(writer, options);
