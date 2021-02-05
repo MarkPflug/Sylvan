@@ -39,6 +39,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Docs", "Docs", "{BF19FE51-6183-4B10-888C-B85E3BFBA9C0}"
 	ProjectSection(SolutionItems) = preProject
 		..\docs\Sylvan.BuildTools.Data.md = ..\docs\Sylvan.BuildTools.Data.md
+		..\docs\Sylvan.Common.md = ..\docs\Sylvan.Common.md
 		..\docs\Sylvan.Data.Csv.Design.md = ..\docs\Sylvan.Data.Csv.Design.md
 		..\docs\Sylvan.Data.Csv.md = ..\docs\Sylvan.Data.Csv.md
 		..\docs\Sylvan.Data.Csv.Releases.md = ..\docs\Sylvan.Data.Csv.Releases.md

@@ -1,5 +1,4 @@
-﻿using Sylvan.Benchmarks;
-using System;
+﻿using System;
 using System.IO;
 using System.Text;
 using Xunit;
@@ -28,12 +27,13 @@ namespace Sylvan.IO
 			Assert.Equal(data.Length * Count, str.Length);
 		}
 
-		[Fact]
-		public void Test2()
-		{
-			var msb = new MemoryStreamBenchmarks();
-			msb.Count = 1000;
-			msb.PooledMemoryStream();
-		}
+//#if NET5_0
+//		[Fact]
+//		public void Test2()
+//		{
+//			var msb = new Sylvan.Benchmarks.MemoryStreamBenchmarks();
+//			msb.PooledMemoryStream();
+//		}
+//#endif
 	}
 }

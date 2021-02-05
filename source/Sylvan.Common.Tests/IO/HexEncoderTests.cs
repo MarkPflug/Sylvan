@@ -1,5 +1,4 @@
-﻿using Sylvan.Benchmarks;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text;
 using Xunit;
@@ -34,11 +33,13 @@ namespace Sylvan.IO
 			Assert.Equal(EncoderResult.Flush, r);
 		}
 
-		[Fact]
-		public void Test3()
-		{
-			new HexEncoderBenchmarks().SylvanEncoderStream();
-		}
+//#if NET5_0
+//		[Fact]
+//		public void Test3()
+//		{
+//			new Sylvan.Benchmarks.HexEncoderBenchmarks().SylvanEncoderStream();
+//		}
+//#endif
 	}
 }
 

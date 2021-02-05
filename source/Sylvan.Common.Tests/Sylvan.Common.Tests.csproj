@@ -9,7 +9,7 @@
   <ItemGroup>
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="5.0.0" />
 
-    <ProjectReference Include="..\Sylvan.Benchmarks\Sylvan.Benchmarks.csproj" />
+    <ProjectReference Condition="$(TargetFramework) == 'net5.0'" Include="..\Sylvan.Benchmarks\Sylvan.Benchmarks.csproj" />
     <ProjectReference Include="..\Sylvan.Common\Sylvan.Common.csproj" />
   </ItemGroup>
 

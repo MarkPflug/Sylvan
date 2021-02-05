@@ -16,9 +16,17 @@ namespace Sylvan.IO
 	/// </remarks>
 	public sealed class PooledMemoryStream : Stream
 	{
-		const int DefaultBlockShift = 12; // default to 4k blocks
+		static ArrayPool<byte> DefaultPool = ArrayPool<byte>.Shared;
+
+		public static void SetDefaultPool(ArrayPool<byte> pool)
+		{
+			if (pool == null) throw new ArgumentNullException(nameof(pool));
+			DefaultPool = pool;
+		}
+
+		const int DefaultBlockShift = 16; // default to 64k blocks
 		const int InitialBlockCount = 8;
-		
+
 		readonly ArrayPool<byte> bufferPool;
 		readonly int blockShift;
 		readonly int blockSize;
@@ -27,14 +35,13 @@ namespace Sylvan.IO
 
 		long length;
 		long position;
-		
 
 		byte[]?[] blocks;
 
 		/// <summary>
 		/// Creates a PooledMemoryStream.
 		/// </summary>
-		public PooledMemoryStream() : this(ArrayPool<byte>.Shared, DefaultBlockShift, false)
+		public PooledMemoryStream() : this(DefaultPool, DefaultBlockShift, false)
 		{
 		}
 
@@ -231,8 +238,8 @@ namespace Sylvan.IO
 
 			while (position < length)
 			{
-				var rem = length - position;
 				cancellationToken.ThrowIfCancellationRequested();
+				var rem = length - position;
 				var blockIdx = position >> blockShift;
 				var block = this.blocks[blockIdx]!;
 				var blockOffset = (int)(position & blockMask);
@@ -246,15 +253,34 @@ namespace Sylvan.IO
 				position += blockLen;
 			}
 		}
+#if NETSTANDARD2_1
+		public override void CopyTo(Stream destination, int bufferSize)
+		{
+			if (destination == null) throw new ArgumentNullException(nameof(destination));
 
+			while (position < length)
+			{
+				var rem = length - position;
+				var blockIdx = position >> blockShift;
+				var block = this.blocks[blockIdx]!;
+				var blockOffset = (int)(position & blockMask);
+				var blockCount = blockSize - blockOffset;
+				var blockLen = rem < blockCount ? (int)rem : blockCount;
+				destination.Write(block, blockOffset, blockLen);
+				position += blockLen;
+			}
+		}
+#endif
 		/// <inheritdoc/>
 		protected override void Dispose(bool disposing)
 		{
 			base.Dispose(disposing);
-			foreach (var block in this.blocks)
+			for (int i = 0; i < this.blocks.Length; i++)
 			{
+				var block = this.blocks[i];
 				if (block != null)
 					this.bufferPool.Return(block, clearOnReturn);
+				this.blocks[i] = null;
 			}
 		}
 	}
