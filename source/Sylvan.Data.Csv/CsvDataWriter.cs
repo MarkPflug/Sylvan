@@ -3,7 +3,6 @@ using System.Data.Common;
 using System.Globalization;
 using System.IO;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace Sylvan.Data.Csv
 {
@@ -13,7 +12,7 @@ namespace Sylvan.Data.Csv
 	public sealed partial class CsvDataWriter
 		: IDisposable
 #if NETSTANDARD2_1
-	, IAsyncDisposable
+	    , IAsyncDisposable
 #endif
 	{
 		class FieldInfo
@@ -49,7 +48,7 @@ namespace Sylvan.Data.Csv
 		readonly CultureInfo culture;
 
 		char[] prepareBuffer;
-		//byte[]? dataBuffer = null;
+		byte[]? dataBuffer = null;
 		readonly char[] buffer;
 		readonly int bufferSize;
 		int pos;
@@ -136,6 +135,7 @@ namespace Sylvan.Data.Csv
 				}
 				Array.Resize(ref this.prepareBuffer, worstCaseLenth);
 			}
+
 			var buffer = this.prepareBuffer;
 			var p = 0;
 			buffer[p++] = quote;
@@ -144,7 +144,7 @@ namespace Sylvan.Data.Csv
 			{
 				var c = str[i];
 
-				if (c == delimiter || c == '\r' || c == '\n' || c == quote)
+				if (c == delimiter || c == quote || c == '\r' || c == '\n')
 				{
 					isQuoted = true;
 					if (c == quote || c == escape)
@@ -174,7 +174,6 @@ namespace Sylvan.Data.Csv
 			RequiresEscaping,
 			Complete,
 		}
-
 
 		// this can return either Complete or InsufficientSpace
 		WriteResult WriteField(DbDataReader reader, FieldInfo[] fieldTypes, int i)
@@ -234,22 +233,22 @@ namespace Sylvan.Data.Csv
 					result = WriteResult.Complete;
 					break;
 				default:
-					//if (type == typeof(byte[]))
-					//{
-					//	if (dataBuffer == null)
-					//	{
-					//		dataBuffer = new byte[Base64EncSize];
-					//	}
-					//	var idx = 0;
-					//	AssertBinaryPrereq(0);
-					//	int len = 0;
-					//	while ((len = (int)reader.GetBytes(i, idx, dataBuffer, 0, Base64EncSize)) != 0)
-					//	{
-					//		WriteBinaryValue(dataBuffer, len);
-					//		idx += len;
-					//	}
-					//	break;
-					//}
+					if (type == typeof(byte[]))
+					{
+						if (dataBuffer == null)
+						{
+							dataBuffer = new byte[Base64EncSize];
+						}
+						var idx = 0;
+						AssertBinaryPrereq(0);
+						int len = 0;
+						while ((len = (int)reader.GetBytes(i, idx, dataBuffer, 0, Base64EncSize)) != 0)
+						{
+							WriteBinaryValue(dataBuffer, len);
+							idx += len;
+						}
+						break;
+					}
 					if (type == typeof(Guid))
 					{
 						var guid = reader.GetGuid(i);
@@ -448,41 +447,6 @@ namespace Sylvan.Data.Csv
 			return WriteValue(str);
 		}
 
-		WriteResult WriteValueInvariant(float value)
-		{
-#if NETSTANDARD2_1
-			var span = buffer.AsSpan()[pos..bufferSize];
-			if (value.TryFormat(span, out int c, provider: culture))
-			{
-				pos += c;
-				return WriteResult.Complete;
-			}
-			return WriteResult.InsufficientSpace;
-#else
-			var str = value.ToString(culture);
-			return WriteValue(str);
-#endif
-		}
-
-		WriteResult WriteValueOptimistic(float value)
-		{
-			if (invariantCulture)
-			{
-				return WriteValueInvariant(value);
-			}
-			return WriteResult.RequiresEscaping;
-		}
-
-		WriteResult WriteValue(float value)
-		{
-			if (invariantCulture)
-			{
-				return WriteValueInvariant(value);
-			}
-			var str = value.ToString(culture);
-			return WriteValue(str);
-		}
-
 		WriteResult WriteValueInvariant(double value)
 		{
 #if NETSTANDARD2_1
@@ -573,23 +537,6 @@ namespace Sylvan.Data.Csv
 			return r;
 		}
 
-		//WriteResult WriteField(byte[] buffer, int offset, int length)
-		//{
-		//	var size = (length * 4 / 3) + 1;
-
-		//	if (size > this.buffer.Length)
-		//	{
-		//		throw new ArgumentOutOfRangeException(nameof(length));
-		//	}
-
-		//	StartField(size);
-
-		//	AssertBinaryPrereq();
-
-		//	var len = Convert.ToBase64CharArray(buffer, offset, length, this.buffer, pos, Base64FormattingOptions.None);
-		//	pos += len;
-		//}
-
 		WriteResult WriteField(int value)
 		{
 			var r = WriteValueOptimistic(value);
@@ -607,7 +554,7 @@ namespace Sylvan.Data.Csv
 				return WriteResult.InsufficientSpace;
 			}
 			var r = WriteValueOptimistic(value);
-			if(r == WriteResult.RequiresEscaping)
+			if (r == WriteResult.RequiresEscaping)
 			{
 				return WriteValue(value);
 			}
@@ -620,7 +567,7 @@ namespace Sylvan.Data.Csv
 				return WriteResult.Complete;
 
 			var r = WriteValueOptimistic(value!);
-			if(r == WriteResult.RequiresEscaping)
+			if (r == WriteResult.RequiresEscaping)
 			{
 				return WriteValue(value!);
 			}
