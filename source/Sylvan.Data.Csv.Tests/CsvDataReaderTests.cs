@@ -979,7 +979,7 @@ namespace Sylvan.Data.Csv
 			var options =
 				new CsvDataReaderOptions
 				{
-					ImplicitQuotes = true,
+					CsvStyle = CsvStyle.Unquoted,
 					Escape = '\\'
 				};
 

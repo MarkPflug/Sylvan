@@ -176,7 +176,7 @@ namespace Sylvan.Data.Csv
 			this.hasHeaders = options.HasHeaders;
 			this.autoDetectDelimiter = options.Delimiter == null;
 			this.delimiter = options.Delimiter ?? '\0';
-			this.implicitQuotes = options.ImplicitQuotes;
+			this.implicitQuotes = options.CsvStyle == CsvStyle.Unquoted;
 			this.quote = options.Quote;
 			this.escape = options.Escape;
 			this.dateFormat = options.DateFormat;
