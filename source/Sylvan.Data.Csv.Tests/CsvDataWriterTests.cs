@@ -1,7 +1,5 @@
-using System;
 using System.Data;
 using System.IO;
-using System.Threading.Tasks;
 using Xunit;
 
 namespace Sylvan.Data.Csv
@@ -9,13 +7,13 @@ namespace Sylvan.Data.Csv
 	public class CsvDataWriterTests
 	{
 		[Fact]
-		public async Task Simple()
+		public void Simple()
 		{
 			var dr = TestData.GetData();
 
 			var sw = new StringWriter();
 			var csv = new CsvDataWriter(sw);
-			await csv.WriteAsync(dr);
+			csv.Write(dr);
 		}
 
 		[Fact]
@@ -29,21 +27,21 @@ namespace Sylvan.Data.Csv
 		}
 
 		[Fact]
-		public async Task Schema()
+		public void Schema()
 		{
 			var dr = TestData.GetTypedData();
 			var sw = new StringWriter();
 			var csv = new CsvDataWriter(sw);
-			await csv.WriteAsync(dr);
+			csv.Write(dr);
 		}
 
 		[Fact]
-		public async Task Binary()
+		public void Binary()
 		{
 			var dr = TestData.GetBinaryData();
 			var sw = new StringWriter();
 			using var csv = new CsvDataWriter(sw);
-			await csv.WriteAsync(dr);
+			csv.Write(dr);
 			var str = sw.ToString();
 		}
 

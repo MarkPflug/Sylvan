@@ -14,16 +14,7 @@ namespace Sylvan.Data.Csv
 		/// <returns>A CsvDataReader instance.</returns>
 		public static CsvDataReader Create(string filename, CsvDataReaderOptions? options = null)
 		{
-			if (filename == null) throw new ArgumentNullException(nameof(filename));
-			// TextReader must be owned when we open it.
-			if (options?.OwnsReader == false) throw new CsvConfigurationException();
-
-			var bufferSize = options?.BufferSize ?? options?.Buffer?.Length ?? CsvDataReaderOptions.Default.BufferSize;
-			bufferSize = Math.Max(bufferSize, Environment.SystemPageSize);
-			var reader = new StreamReader(filename, Encoding.Default, true, bufferSize);
-			var csv = new CsvDataReader(reader, options);
-			csv.InitializeAsync(options?.Schema).GetAwaiter().GetResult();
-			return csv;
+			return CreateAsync(filename, options).GetAwaiter().GetResult();
 		}
 
 		/// <summary>

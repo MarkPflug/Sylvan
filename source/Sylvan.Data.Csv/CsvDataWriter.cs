@@ -13,7 +13,7 @@ namespace Sylvan.Data.Csv
 	public sealed partial class CsvDataWriter
 		: IDisposable
 #if NETSTANDARD2_1
-	//, IAsyncDisposable
+	, IAsyncDisposable
 #endif
 	{
 		class FieldInfo
@@ -49,11 +49,11 @@ namespace Sylvan.Data.Csv
 		readonly CultureInfo culture;
 
 		char[] prepareBuffer;
-		byte[]? dataBuffer = null;
+		//byte[]? dataBuffer = null;
 		readonly char[] buffer;
 		readonly int bufferSize;
 		int pos;
-		
+
 		readonly bool invariantCulture;
 		readonly bool ownsWriter;
 		bool disposedValue;
@@ -185,7 +185,6 @@ namespace Sylvan.Data.Csv
 
 			if (allowNull && reader.IsDBNull(i))
 			{
-				WriteField();
 				return WriteResult.Complete;
 			}
 
@@ -231,7 +230,8 @@ namespace Sylvan.Data.Csv
 					break;
 				case TypeCode.Empty:
 				case TypeCode.DBNull:
-					WriteField();
+					// nothing to do.
+					result = WriteResult.Complete;
 					break;
 				default:
 					//if (type == typeof(byte[]))
@@ -294,11 +294,6 @@ namespace Sylvan.Data.Csv
 				WriteValueInvariant(value);
 			}
 			return WriteResult.Complete;
-		}
-
-		WriteResult WriteField(byte[] value)
-		{
-			return this.WriteField(value, 0, value.Length);
 		}
 
 		WriteResult WriteValueOptimistic(string str)
@@ -543,7 +538,7 @@ namespace Sylvan.Data.Csv
 			{
 				throw new InvalidOperationException();
 			}
-			if(size > buffer.Length)
+			if (size > buffer.Length)
 				throw new InvalidOperationException();
 		}
 
@@ -570,7 +565,7 @@ namespace Sylvan.Data.Csv
 			if (!IsAvailable(64))
 				return WriteResult.InsufficientSpace;
 			var r = WriteValueOptimistic(value);
-			if(r == WriteResult.RequiresEscaping)
+			if (r == WriteResult.RequiresEscaping)
 			{
 
 				return WriteValue(value);
@@ -578,22 +573,22 @@ namespace Sylvan.Data.Csv
 			return r;
 		}
 
-		WriteResult WriteField(byte[] buffer, int offset, int length)
-		{
-			var size = (length * 4 / 3) + 1;
+		//WriteResult WriteField(byte[] buffer, int offset, int length)
+		//{
+		//	var size = (length * 4 / 3) + 1;
 
-			if (size > this.buffer.Length)
-			{
-				throw new ArgumentOutOfRangeException(nameof(length));
-			}
+		//	if (size > this.buffer.Length)
+		//	{
+		//		throw new ArgumentOutOfRangeException(nameof(length));
+		//	}
 
-			StartField(size);
+		//	StartField(size);
 
-			AssertBinaryPrereq();
+		//	AssertBinaryPrereq();
 
-			var len = Convert.ToBase64CharArray(buffer, offset, length, this.buffer, pos, Base64FormattingOptions.None);
-			pos += len;
-		}
+		//	var len = Convert.ToBase64CharArray(buffer, offset, length, this.buffer, pos, Base64FormattingOptions.None);
+		//	pos += len;
+		//}
 
 		WriteResult WriteField(int value)
 		{
@@ -605,18 +600,18 @@ namespace Sylvan.Data.Csv
 			return WriteResult.Complete;
 		}
 
-		void WriteField(DateTime value)
+		WriteResult WriteField(DateTime value)
 		{
-			StartField(64);
-			if (WriteValueOptimistic(value) == WriteResult.Complete)
-				return;
-
-			WriteValue(value);
-		}
-
-		WriteResult WriteField()
-		{
-			return WriteResult.Complete;
+			if (!IsAvailable(64))
+			{
+				return WriteResult.InsufficientSpace;
+			}
+			var r = WriteValueOptimistic(value);
+			if(r == WriteResult.RequiresEscaping)
+			{
+				return WriteValue(value);
+			}
+			return r;
 		}
 
 		WriteResult WriteField(string? value)
@@ -624,21 +619,12 @@ namespace Sylvan.Data.Csv
 			if (string.IsNullOrEmpty(value))
 				return WriteResult.Complete;
 
-			bool optimistic = true;
-			if (optimistic)
+			var r = WriteValueOptimistic(value!);
+			if(r == WriteResult.RequiresEscaping)
 			{
-				switch (WriteValueOptimistic(value))
-				{
-					case WriteResult.Complete:
-						return;
-					case WriteResult.InsufficientSpace:
-						goto flush;
-				}
+				return WriteValue(value!);
 			}
-
-			if (WriteValue(value) == WriteResult.InsufficientSpace)
-				goto flush;
-			return;
+			return r;
 		}
 
 

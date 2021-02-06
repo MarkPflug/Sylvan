@@ -105,14 +105,14 @@ namespace Sylvan.Data.Csv
 		//	}
 		//}
 
-		[Benchmark]
-		public async Task SylvanDataAsync()
-		{
-			var tw = TextWriter.Null;
-			var dr = TestData.GetTestDataReader();
-			var csv = new CsvDataWriter(tw);
-			await csv.WriteAsync(dr);
-		}
+		//[Benchmark]
+		//public async Task SylvanDataAsync()
+		//{
+		//	var tw = TextWriter.Null;
+		//	var dr = TestData.GetTestDataReader();
+		//	var csv = new CsvDataWriter(tw);
+		//	await csv.WriteAsync(dr);
+		//}
 
 		[Benchmark]
 		public void SylvanDataSync()
