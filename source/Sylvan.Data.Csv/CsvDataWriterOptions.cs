@@ -31,7 +31,13 @@ namespace Sylvan.Data.Csv
 			this.TrueString = bool.TrueString;
 			this.FalseString = bool.FalseString;
 			this.DateFormat = "yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'FFFFFFF";
+			this.WriteHeaders = true;
 		}
+
+		/// <summary>
+		/// Indicates if the header row should be written.
+		/// </summary>
+		public bool WriteHeaders { get; set; }
 
 		/// <summary>
 		/// The string to write for boolean true values. The default is "True".
