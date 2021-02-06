@@ -1,10 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netstandard2.0;netstandard2.1;net5.0</TargetFrameworks>
+    <TargetFrameworks>netstandard2.0;netstandard2.1</TargetFrameworks>
     <RootNamespace>Sylvan</RootNamespace>
     <Description>A collection of common utility types.</Description>
-    <VersionPrefix>0.2.1</VersionPrefix>
+    <VersionPrefix>0.3.0</VersionPrefix>
+    <VersionSuffix>B0001</VersionSuffix>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <!--<GenerateDocumentationFile>true</GenerateDocumentationFile>-->

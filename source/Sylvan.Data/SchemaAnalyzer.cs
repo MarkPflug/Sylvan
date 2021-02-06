@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace Sylvan.Data
@@ -14,9 +16,12 @@ namespace Sylvan.Data
 		{
 			this.AnalyzeRowCount = 10000;
 			this.ColumnSizer = ColumnSize.Human;
+			this.DetectSeries = false;
 		}
 
 		public int AnalyzeRowCount { get; set; }
+
+		public bool DetectSeries { get; set; }
 
 		public IColumnSizeStrategy ColumnSizer { get; set; }
 	}
@@ -96,12 +101,14 @@ namespace Sylvan.Data
 	{
 		int rowCount;
 		IColumnSizeStrategy sizer;
+		bool detectSeries;
 
 		public SchemaAnalyzer(SchemaAnalyzerOptions? options = null)
 		{
 			options ??= SchemaAnalyzerOptions.Default;
 			this.rowCount = options.AnalyzeRowCount;
 			this.sizer = options.ColumnSizer;
+			this.detectSeries = options.DetectSeries;
 		}
 
 		public AnalysisResult Analyze(DbDataReader dataReader)
@@ -128,7 +135,7 @@ namespace Sylvan.Data
 			}
 			sw.Stop();
 
-			return new AnalysisResult(colInfos);
+			return new AnalysisResult(detectSeries, colInfos);
 		}
 	}
 
@@ -158,12 +165,13 @@ namespace Sylvan.Data
 					isFloat = true;
 					break;
 				case TypeCode.Decimal:
+					isDecimal = true;
 					break;
 				case TypeCode.DateTime:
 					isDateTime = isDate = true;
 					break;
 				case TypeCode.String:
-					isBoolean = isInt = isFloat = isDate = isDateTime = isGuid = true;
+					isBoolean = isInt = isFloat = isDecimal = isDate = isDateTime = isGuid = true;
 					break;
 				default:
 					if (type == typeof(byte[]))
@@ -184,6 +192,10 @@ namespace Sylvan.Data
 			intMin = long.MaxValue;
 			floatMax = double.MinValue;
 			floatMin = double.MaxValue;
+			decimalMin = decimal.MaxValue;
+			decimalMax = decimal.MinValue;
+			decimalScaleMin = int.MaxValue;
+			decimalScaleMax = int.MinValue;
 			floatHasFractionalPart = false;
 			dateMin = DateTime.MaxValue;
 			dateMax = DateTime.MinValue;
@@ -192,8 +204,7 @@ namespace Sylvan.Data
 			stringLenTotal = 0;
 			isAscii = true;
 
-
-			this.valueCount = new Dictionary<string, int>();
+			this.valueCount = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 		}
 
 		public bool AllowDbNull => isNullable;
@@ -205,7 +216,7 @@ namespace Sylvan.Data
 		bool isAscii;
 		int ordinal;
 		string? name;
-		bool isBoolean, isInt, isFloat, isDate, isDateTime, isGuid;
+		bool isBoolean, isInt, isFloat, isDecimal, isDate, isDateTime, isGuid;
 		bool dateHasFractionalSeconds;
 #pragma warning disable CS0414
 		bool floatHasFractionalPart;
@@ -219,6 +230,8 @@ namespace Sylvan.Data
 
 		long intMin, intMax;
 		double floatMin, floatMax;
+		decimal decimalMin, decimalMax;
+		int decimalScaleMin, decimalScaleMax;
 		DateTime dateMin, dateMax;
 		int stringLenMax;
 		int stringLenMin;
@@ -310,6 +323,17 @@ namespace Sylvan.Data
 										isFloat = false;
 									}
 								}
+								if (isDecimal)
+								{
+									if (decimal.TryParse(stringValue, out var d))
+									{
+										decimalValue = d;
+									}
+									else
+									{
+										isFloat = false;
+									}
+								}
 								if (isInt)
 								{
 									if (long.TryParse(stringValue, out var i))
@@ -375,6 +399,17 @@ namespace Sylvan.Data
 				}
 			}
 
+			if (isDecimal && decimalValue.HasValue)
+			{
+				var dec = decimalValue.Value;
+
+				decimalMin = Math.Min(decimalMin, dec);
+				decimalMax = Math.Max(decimalMax, dec);
+				var scale = GetScale(dec);
+				decimalScaleMin = Math.Min(decimalScaleMin, scale);
+				decimalScaleMax = Math.Max(decimalScaleMax, scale);
+			}
+
 			if (isInt && intValue.HasValue)
 			{
 				intMin = Math.Min(intMin, intValue.Value);
@@ -400,33 +435,61 @@ namespace Sylvan.Data
 				stringLenMax = Math.Max(stringLenMax, len);
 				stringLenMin = Math.Min(stringLenMin, len);
 				stringLenTotal += len;
-				if (len == 0)
+				if (len == 0 || string.IsNullOrWhiteSpace(stringValue))
 				{
 					emptyStringCount++;
 				}
-
-				if (isAscii)
+				else
 				{
-					foreach (var c in stringValue)
+					if (isAscii)
 					{
-						if (c >= 128)
+						foreach (var c in stringValue)
 						{
-							isAscii = false;
-							break;
+							if (c >= 128)
+							{
+								isAscii = false;
+								break;
+							}
+						}
+					}
+
+					if (this.valueCount.TryGetValue(stringValue, out int count))
+					{
+						isUnique = false;
+						this.valueCount[stringValue] = count + 1;
+					}
+					else
+					{
+						if (!string.IsNullOrWhiteSpace(stringValue))
+						{
+							this.valueCount[stringValue] = 1;
 						}
 					}
 				}
-
-				if (this.valueCount.TryGetValue(stringValue, out int count))
-				{
-					isUnique = false;
-					this.valueCount[stringValue] = count + 1;
-				}
-				else
-				{
-					this.valueCount[stringValue] = 1;
-				}
 			}
+		}
+
+		static int GetScale(decimal d)
+		{
+			return new DecimalScale(d).Scale;
+		}
+
+		[StructLayout(LayoutKind.Explicit)]
+		struct DecimalScale
+		{
+			public DecimalScale(decimal value)
+			{
+				this = default;
+				this.d = value;
+			}
+
+			[FieldOffset(0)]
+			decimal d;
+
+			[FieldOffset(0)]
+			int flags;
+
+			public int Scale => (flags >> 16) & 0xff;
 		}
 
 		const int DefaultStringSize = 128;
@@ -439,7 +502,7 @@ namespace Sylvan.Data
 			Date = 2,
 			Integer = 4,
 			Long = 8,
-			Float = 16,
+			//Float = 16,
 			Double = 32,
 			Decimal = 32,
 			String = 128,
@@ -479,18 +542,15 @@ namespace Sylvan.Data
 			{
 				var type =
 					intMin < int.MinValue || intMax > int.MaxValue
-					? ColType.Long | ColType.Float | ColType.Double | ColType.Decimal
-					: ColType.Integer | ColType.Long | ColType.Float | ColType.Double | ColType.Decimal;
+					? ColType.Long | ColType.Double | ColType.Decimal
+					: ColType.Integer | ColType.Long | ColType.Double | ColType.Decimal;
 
 				return type;
 			}
 
 			if (this.isFloat)
 			{
-				return
-					floatMin < float.MinValue || floatMax > float.MaxValue
-					? ColType.Double | ColType.Decimal
-					: ColType.Float | ColType.Double | ColType.Decimal;
+				return ColType.Double | ColType.Decimal;
 			}
 
 			return ColType.String;
@@ -534,6 +594,12 @@ namespace Sylvan.Data
 
 			if (this.isInt)
 			{
+				if (intMin == 0 && intMax == 1 && count > 2)
+				{
+					// no format needed, will just parse as int
+					// TODO: rethink this, perhaps a format string would be slightly faster.
+					return new Schema.Column.Builder(name, typeof(bool), isNullable);
+				}
 				var type =
 					intMin < int.MinValue || intMax > int.MaxValue
 					? typeof(long)
@@ -546,14 +612,49 @@ namespace Sylvan.Data
 
 			if (this.isFloat)
 			{
-				var type =
-					floatMin < float.MinValue || floatMax > float.MaxValue
-					? typeof(double)
-					: typeof(float);
-				return new Schema.Column.Builder(name, type, isNullable);
+				if (isDecimal)
+				{
+					if (IsDecimalHeader(this.name) || this.IsDecimalRange())
+					{
+						return new Schema.Column.Builder(name, typeof(decimal), isNullable);
+					}
+				}
+
+				// never bother with float, even if it appears it would suffice.
+				return new Schema.Column.Builder(name, typeof(double), isNullable);
 			}
 
 			var len = stringLenMax;
+			// check to see if this might be a boolean
+			if (len < 6 && valueCount.Count <= 2)
+			{
+				string? t = null, f = null;
+				foreach (var s in TrueStrings)
+				{
+					if (valueCount.ContainsKey(s))
+					{
+						t = s;
+						break;
+					}
+				}
+				foreach (var s in FalseStrings)
+				{
+					if (valueCount.ContainsKey(s))
+					{
+						f = s;
+						break;
+					}
+				}
+				if (t != null || f != null)
+				{
+					return new Schema.Column.Builder(name, typeof(bool), isNullable || emptyStringCount > 0)
+					{
+						CommonDataType = System.Data.DbType.Boolean,
+						Format = t + "|" + f,
+					};
+				}
+			}
+
 			return new Schema.Column.Builder(name, typeof(string), isNullable)
 			{
 				ColumnSize = len,
@@ -562,6 +663,33 @@ namespace Sylvan.Data
 				IsUnique = isUnique
 			};
 		}
+
+		bool IsDecimalRange()
+		{
+			return this.decimalScaleMax <= 6;
+		}
+
+		// TODO: consider localization?
+		static string[] TrueStrings = new[] { "y", "yes", "t", "true" };
+		static string[] FalseStrings = new[] { "n", "no", "f", "false" };
+
+		static bool IsDecimalHeader(string? name)
+		{
+			if (name == null) return false;
+			var clean = Regex.Replace(name, "[^a-z]", " ", RegexOptions.IgnoreCase);
+			foreach (var str in DecimalStrings)
+			{
+				if (clean.IndexOf(str, StringComparison.OrdinalIgnoreCase) >= 0)
+				{
+					return true;
+				}
+			}
+			return false;
+		}
+
+		// look for these strings in the header to try to make a determination about appropriate type
+		static string[] DecimalStrings = new[] { "amount", "revenue", "price", "cost" };
+		//static string[] DoubleStrings = new[] { "lat", "long", "elev", "length", "area", "volume",  };
 	}
 
 	[Flags]

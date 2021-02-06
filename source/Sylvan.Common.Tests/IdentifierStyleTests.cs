@@ -19,6 +19,11 @@ namespace Sylvan
 		[InlineData("CLR_TYPE", "CLR,TYPE")]
 		[InlineData("covid19", "covid,19")]
 		[InlineData("covid19record", "covid,19,record")]
+		[InlineData("REPORT2010", "REPORT,2010")]
+		[InlineData("REPORT_2010", "REPORT,2010")]
+		[InlineData("REPORT2010FOO", "REPORT,2010,FOO")]
+		[InlineData("REPORT_2010_FOO", "REPORT,2010,FOO")]
+		[InlineData("Report 12 - 12", "Report,12,12")]
 		public void GetSegments(string input, string segments)
 		{
 			var parts = segments.Split(',');
@@ -46,6 +51,10 @@ namespace Sylvan
 		[InlineData("CLR_TYPE", "ClrType")]
 		[InlineData("covid19", "Covid19")]
 		[InlineData("covid19record", "Covid19Record")]
+		[InlineData("REPORT2020FOO", "Report2020Foo")]
+		[InlineData("REPORT2020Foo", "REPORT2020Foo")]
+		[InlineData("REPORT 12 - 12", "Report12_12")]
+		[InlineData("Netstandard2.1", "Netstandard2_1")]
 		public void PascalCase(string input, string expected)
 		{
 			var style = new PascalCaseStyle();
@@ -66,6 +75,7 @@ namespace Sylvan
 		[InlineData("DB Null", "dbNull")]
 		[InlineData("CLRType", "clrType")]
 		[InlineData("CLR_TYPE", "clrType")]
+		[InlineData("REPORT 12 - 12", "report12_12")]
 		public void CamelCase(string input, string expected)
 		{
 			var style = new CamelCaseStyle();
@@ -86,6 +96,7 @@ namespace Sylvan
 		[InlineData("DB Null", "DB_Null")]
 		[InlineData("CLRType", "CLR_Type")]
 		[InlineData("CLR_TYPE", "Clr_Type")]
+		[InlineData("REPORT 12 - 12", "Report_12_12")]
 		public void UnderscoreStyle(string input, string expected)
 		{
 			var style = new UnderscoreStyle(CasingStyle.TitleCase);
@@ -106,6 +117,7 @@ namespace Sylvan
 		[InlineData("DB Null", "db_null")]
 		[InlineData("CLRType", "clr_type")]
 		[InlineData("CLR_TYPE", "clr_type")]
+		[InlineData("REPORT 12 - 12", "report_12_12")]
 		public void UnderscoreLowerStyle(string input, string expected)
 		{
 			var style = new UnderscoreStyle(CasingStyle.LowerCase);

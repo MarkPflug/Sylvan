@@ -9,7 +9,7 @@
     <Year>$([System.DateTime]::UtcNow.Year)</Year>
     <Copyright>© $(Year) $(Owner)</Copyright>
     <PackageLicenseFile>license.txt</PackageLicenseFile>
-    <LangVersion>8.0</LangVersion>
+    <LangVersion>9.0</LangVersion>
 
     <RepositoryUrl>https://github.com/MarkPflug/Sylvan</RepositoryUrl>
     <RepositoryType>git</RepositoryType>

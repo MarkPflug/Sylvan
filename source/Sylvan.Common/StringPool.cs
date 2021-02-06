@@ -7,7 +7,7 @@ namespace Sylvan
 	/// <summary>
 	/// An IStringFactory implementation that provides string de-duping capabilities..
 	/// </summary>
-	public sealed partial class StringPool : IStringFactory
+	public sealed partial class StringPool
 	{
 		const int DefaultCapacity = 64;
 		const int DefaultSizeLimit = 32;

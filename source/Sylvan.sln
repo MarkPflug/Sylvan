@@ -33,6 +33,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Build", "Build", "{70EFA271
 		..\build\Coverage.proj = ..\build\Coverage.proj
 		..\Directory.Build.props = ..\Directory.Build.props
 		..\Directory.Build.targets = ..\Directory.Build.targets
+		..\.github\workflows\dotnet.yml = ..\.github\workflows\dotnet.yml
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Docs", "Docs", "{BF19FE51-6183-4B10-888C-B85E3BFBA9C0}"
@@ -51,6 +52,12 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sylvan.Data.XBase", "Sylvan.Data.XBase\Sylvan.Data.XBase.csproj", "{E4C6FE26-BB63-448A-A0F1-B81B4E83597B}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sylvan.Data.XBase.Tests", "Sylvan.Data.XBase.Tests\Sylvan.Data.XBase.Tests.csproj", "{8B707398-D57B-47CF-B858-9052E60AC4A9}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Csv", "Csv", "{AEE4C9CD-23ED-4C22-BFEF-AA4E0B5CD2FC}"
+	ProjectSection(SolutionItems) = preProject
+		..\docs\Csv\Options.md = ..\docs\Csv\Options.md
+		..\docs\Csv\Schema.md = ..\docs\Csv\Schema.md
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -231,6 +238,7 @@ Global
 		{277AE92E-A25E-4C9F-B6FC-5172CA3E283D} = {38AEC6F9-6E57-4C17-ACDD-ACF310AA2537}
 		{D4616E66-28EF-49E7-8CC5-351D8457312D} = {395AEB56-67B5-4510-A19C-9E8811062C87}
 		{8B707398-D57B-47CF-B858-9052E60AC4A9} = {395AEB56-67B5-4510-A19C-9E8811062C87}
+		{AEE4C9CD-23ED-4C22-BFEF-AA4E0B5CD2FC} = {BF19FE51-6183-4B10-888C-B85E3BFBA9C0}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {DBE90730-1E35-44B9-9C20-707675F7BD3A}

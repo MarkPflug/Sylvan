@@ -8,24 +8,12 @@ using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.Serialization;
 using System.Text.RegularExpressions;
 
 namespace Sylvan.Data
 {
-	sealed class CompiledDataBinderFactory<T> : BinderFactory<T>
-	{
-		ReadOnlyCollection<DbColumn> metaSchema;
 
-		public CompiledDataBinderFactory(ReadOnlyCollection<DbColumn> metaSchema)
-		{
-			this.metaSchema = metaSchema;
-		}
-
-		public override IDataBinder<T> CreateBinder(ReadOnlyCollection<DbColumn> schema)
-		{
-			return new CompiledDataBinder<T>(metaSchema, schema);
-		}
-	}
 
 	sealed class CompiledDataBinder<T> : IDataBinder<T>
 	{
@@ -36,49 +24,19 @@ namespace Sylvan.Data
 
 		static readonly Type drType = typeof(IDataRecord);
 
-		static MethodInfo GetAccessorMethod(Type type)
-		{
-			switch (Type.GetTypeCode(type))
-			{
-				case TypeCode.Boolean:
-					return drType.GetMethod("GetBoolean")!;
-				case TypeCode.Byte:
-					return drType.GetMethod("GetByte")!;
-				case TypeCode.Int16:
-					return drType.GetMethod("GetInt16")!;
-				case TypeCode.Int32:
-					return drType.GetMethod("GetInt32")!;
-				case TypeCode.Int64:
-					return drType.GetMethod("GetInt64")!;
-				case TypeCode.DateTime:
-					return drType.GetMethod("GetDateTime")!;
-				case TypeCode.Char:
-					return drType.GetMethod("GetChar")!;
-				case TypeCode.String:
-					return drType.GetMethod("GetString")!;
-				case TypeCode.Single:
-					return drType.GetMethod("GetFloat")!;
-				case TypeCode.Double:
-					return drType.GetMethod("GetDouble")!;
-				case TypeCode.Decimal:
-					return drType.GetMethod("GetDecimal")!;
-				default:
-					if (type == typeof(Guid))
-					{
-						return drType.GetMethod("GetGuid")!;
-					}
-					// TODO: byte[]? char[]?
-					break;
-			}
-
-			throw new NotSupportedException();
-		}
-
-		internal CompiledDataBinder(ReadOnlyCollection<DbColumn> physicalSchema) : this(physicalSchema, physicalSchema)
+		internal CompiledDataBinder(
+			DataBinderOptions opts,
+			ReadOnlyCollection<DbColumn> physicalSchema
+		) : this(opts, physicalSchema, physicalSchema)
 		{
 		}
 
-		internal CompiledDataBinder(ReadOnlyCollection<DbColumn> logicalSchema, ReadOnlyCollection<DbColumn> physicalSchema)
+
+		internal CompiledDataBinder(
+			DataBinderOptions opts,
+			ReadOnlyCollection<DbColumn> physicalSchema,
+			ReadOnlyCollection<DbColumn> logicalSchema
+		)
 		{
 			// A couple notable optimizations:
 			// All access is done via strongly-typed Get[Type] (GetInt32, GetString, etc) methods
@@ -89,25 +47,43 @@ namespace Sylvan.Data
 			// stores contextual state used by the binder.
 			var state = new List<object>();
 
-			this.cultureInfo = CultureInfo.InvariantCulture;
+			this.cultureInfo = opts.Culture ?? CultureInfo.InvariantCulture;
 
-			var ordinalMap =
-				logicalSchema
-				.Where(c => !string.IsNullOrEmpty(c.ColumnName))
-				.ToDictionary(p => p.ColumnName, p => p);
+			var colNamer = opts.ColumnNamer;
+
+			var namedCols = logicalSchema.Where(c => !string.IsNullOrEmpty(c.ColumnName)).ToList();
+			var nameMap =
+				namedCols
+				.ToDictionary(p => p.ColumnName, p => p, StringComparer.OrdinalIgnoreCase);
+
+			if (colNamer != null) {
+				foreach (var col in namedCols) {
+					var ordinal = col.ColumnOrdinal;
+					var name = col.ColumnName;
+					var cleanName = colNamer(name, ordinal ?? -1); //TODO
+					if (cleanName != null && !nameMap.ContainsKey(cleanName))
+					{
+						nameMap.Add(cleanName, col);
+					}
+				}
+			}
+
+			logicalSchema
+				.Where(c => !string.IsNullOrEmpty(c.ColumnName));
+
 
 			var seriesMap =
 				logicalSchema
 				.OfType<Schema.Column>()
 				.Where(c => c.IsSeries == true)
-				.ToDictionary(p => string.IsNullOrEmpty(p.SeriesName) ? "Values" : p.SeriesName, p => p);
+				.ToDictionary(p => string.IsNullOrEmpty(p.SeriesName) ? "Values" : p.SeriesName, p => p, StringComparer.OrdinalIgnoreCase);
 
 			DbColumn? GetCol(int? idx, string? name)
 			{
 				if (!string.IsNullOrEmpty(name))
 				{
 					// interesting that this needs to be annoted with not-null
-					if (ordinalMap.TryGetValue(name!, out var c))
+					if (nameMap.TryGetValue(name!, out var c))
 					{
 						return c;
 					}
@@ -148,7 +124,7 @@ namespace Sylvan.Data
 			var tempStrExpr = Expression.Variable(typeof(string));
 			locals.Add(tempStrExpr);
 
-			
+
 
 			// var cultureInfo = context.cultureInfo;
 			bodyExpressions.Add(
@@ -177,8 +153,9 @@ namespace Sylvan.Data
 
 			foreach (var property in recordType.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
 			{
-				var columnOrdinal = property.GetCustomAttribute<ColumnOrdinalAttribute>()?.Ordinal;
-				var columnName = property.GetCustomAttribute<ColumnNameAttribute>()?.Name ?? property.Name;
+				var memberAttribute = property.GetCustomAttribute<DataMemberAttribute>();
+				var columnOrdinal = memberAttribute?.Order;
+				var columnName = memberAttribute?.Name ?? property.Name;
 
 				var col = GetCol(columnOrdinal, columnName);
 				if (col == null)
@@ -186,8 +163,6 @@ namespace Sylvan.Data
 					// TODO: potentially add an argument to throw if there is an unbound property?
 					continue;
 				}
-
-				
 
 				var ordinal = col.ColumnOrdinal ?? columnOrdinal;
 
@@ -206,7 +181,7 @@ namespace Sylvan.Data
 
 				var targetType = setter.GetParameters()[0].ParameterType!;
 
-				var accessorMethod = GetAccessorMethod(col.DataType!);
+				var accessorMethod = DataBinder.GetAccessorMethod(col.DataType!);
 
 				var ordinalExpr = Expression.Constant(ordinal, typeof(int));
 				Expression getterExpr = Expression.Call(recordParam, accessorMethod, ordinalExpr);
@@ -237,25 +212,30 @@ namespace Sylvan.Data
 
 					if (targetType.IsEnum)
 					{
+						// for enums there are two supported scenarios
+						// binding by name (string)
+						// and binding by value (numeric).
 						var enumBaseType = Enum.GetUnderlyingType(targetType);
 						if (sourceType == enumBaseType)
 						{
 							expr = Expression.Convert(getterExpr, targetType);
+							// TODO: validate that the value is valid for the enum?
 						}
 						else
 						{
 							if (sourceType == typeof(string))
 							{
+								// This method provides its own validation
 								expr =
 									Expression.Call(
-										EnumParseMethod.MakeGenericMethod(targetType),
+										DataBinder.EnumParseMethod.MakeGenericMethod(targetType),
 										getterExpr
 									);
 							}
 							else
 							{
-								throw new NotSupportedException();
 								// not sure what else would be supportable here.
+								throw new NotSupportedException();
 							}
 						}
 					}
@@ -273,7 +253,9 @@ namespace Sylvan.Data
 							}
 							else
 							{
-								throw new NotSupportedException();
+								// TODO: should this only happen if the getterExpr is "object"?
+								// what else could it be at this point?
+								expr = Expression.Convert(getterExpr, targetType);
 							}
 						}
 					}
@@ -303,7 +285,7 @@ namespace Sylvan.Data
 										Expression.Assign(tempVar, getterExpr),
 										Expression.Condition(
 											Expression.Call(
-												IsNullStringMethod,
+												DataBinder.IsNullStringMethod,
 												tempVar
 											),
 											Expression.Default(nullableType),
@@ -355,8 +337,8 @@ namespace Sylvan.Data
 		}
 
 		static Expression BindSeries(
-			PropertyInfo property, 
-			Schema.Column column, 
+			PropertyInfo property,
+			Schema.Column column,
 			ReadOnlyCollection<DbColumn> physicalSchema,
 			List<object> state,
 			Expression stateParam,
@@ -466,7 +448,7 @@ namespace Sylvan.Data
 			//Empty = 0,
 			-1,
 			//Object = 1,
-			-1,
+			15,
 			//DBNull = 2,
 			-1,
 			//Boolean = 3,
@@ -504,8 +486,8 @@ namespace Sylvan.Data
 		};
 
 		// TODO: validate this table.
-		static byte[] Conversion = new byte[16 * 15] {
-			// Boolean, Char, SByte, Byte, Int16, UInt16, Int32, UInt32, Int64, UInt64, Single, Double, Decimal, DateTime, String, PAD
+		static byte[] Conversion = new byte[16 * 16] {
+			// Boolean, Char, SByte, Byte, Int16, UInt16, Int32, UInt32, Int64, UInt64, Single, Double, Decimal, DateTime, String, Object
 			//Boolean = 3,
 			1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 3, 0,
 			//Char = 4,
@@ -535,7 +517,9 @@ namespace Sylvan.Data
 			//DateTime = 16
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 3, 0,
 			//String = 18
-			5, 0, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 1, 0,
+			5, 0, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 1, 5,
+			//Object = 1
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0,
 		};
 
 		static ConversionType GetConversionType(TypeCode src, TypeCode dst)
@@ -677,18 +661,6 @@ namespace Sylvan.Data
 			return Activator.CreateInstance(accessorType, cols)!;
 		}
 
-		static MethodInfo EnumParseMethod =
-			typeof(BinderMethods)
-			.GetMethod("ParseEnum", BindingFlags.NonPublic | BindingFlags.Static)!;
-
-		static MethodInfo ChangeTypeMethod =
-			typeof(BinderMethods)
-			.GetMethod("ChangeType", BindingFlags.NonPublic | BindingFlags.Static)!;
-
-		static MethodInfo IsNullStringMethod =
-			typeof(BinderMethods)
-			.GetMethod("IsNullString", BindingFlags.NonPublic | BindingFlags.Static)!;
-
 		void IDataBinder<T>.Bind(IDataRecord record, T item)
 		{
 			var context = new BinderContext(this.cultureInfo, this.state);
@@ -697,44 +669,5 @@ namespace Sylvan.Data
 		}
 	}
 
-	static class BinderMethods
-	{
-		internal static bool IsNullString(string str)
-		{
-			return string.IsNullOrWhiteSpace(str);
-		}
 
-		internal static object ChangeType(object value, Type type)
-		{
-			return Convert.ChangeType(value, type, CultureInfo.InvariantCulture);
-		}
-
-		internal static TE ParseEnum<TE>(string value) where TE : struct, Enum
-		{
-			if (Enum.TryParse(value, true, out TE e))
-			{
-				return e;
-			}
-			else
-			{
-				throw new InvalidEnumValueDataBinderException(typeof(TE), value);
-			}
-		}
-	}
-
-	public class DataBinderException : Exception
-	{
-	}
-
-	public sealed class InvalidEnumValueDataBinderException : DataBinderException
-	{
-		public string Value { get; }
-		public Type EnumType { get; }
-
-		internal InvalidEnumValueDataBinderException(Type enumType, string value)
-		{
-			this.EnumType = enumType;
-			this.Value = value;
-		}
-	}
 }

@@ -10,7 +10,8 @@ namespace Sylvan.Data.Csv
 		{
 			var data = "Id,Name,Col1,Col2,Col3\r\n1,Test,1,2,3";
 			var csv = CsvDataReader.Create(new StringReader(data));
-			var a = new SchemaAnalyzer();
+			var opts = new SchemaAnalyzerOptions { DetectSeries = true };
+			var a = new SchemaAnalyzer(opts);
 			var result = a.Analyze(csv);
 
 			var schema = result.GetSchema().GetColumnSchema();
@@ -26,7 +27,9 @@ namespace Sylvan.Data.Csv
 		{
 			var data = "Id,Name,Col1,Col2,Col3\r\n1,Test,1,2,3.77";
 			var csv = CsvDataReader.Create(new StringReader(data));
-			var a = new SchemaAnalyzer();
+
+			var opts = new SchemaAnalyzerOptions { DetectSeries = true };
+			var a = new SchemaAnalyzer(opts);
 			var result = a.Analyze(csv);
 
 			var schema = result.GetSchema().GetColumnSchema();
@@ -34,7 +37,7 @@ namespace Sylvan.Data.Csv
 			Assert.Equal("Id", schema[0].ColumnName);
 			Assert.Equal("Name", schema[1].ColumnName);
 			Assert.Equal("Col*", schema[2].ColumnName);
-			Assert.Equal(typeof(float), schema[2].DataType);
+			Assert.Equal(typeof(double), schema[2].DataType);
 		}
 
 		[Fact]

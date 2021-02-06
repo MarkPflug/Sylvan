@@ -2,6 +2,7 @@
 using System.Collections.ObjectModel;
 using System.Data;
 using System.Data.Common;
+using System.Globalization;
 
 namespace Sylvan.Data
 {
@@ -18,32 +19,22 @@ namespace Sylvan.Data
 		}
 	}
 
-	[AttributeUsage(AttributeTargets.Property | AttributeTargets.Field)]
-	public sealed class ColumnOrdinalAttribute : Attribute
-	{
-		public int Ordinal { get; }
-		public ColumnOrdinalAttribute(int ordinal)
-		{
-			this.Ordinal = ordinal;
-		}
-	}
-
-	[AttributeUsage(AttributeTargets.Property | AttributeTargets.Field)]
-	public sealed class ColumnNameAttribute : Attribute
-	{
-		public string Name { get; }
-		public ColumnNameAttribute(string name)
-		{
-			this.Name = name;
-		}
-	}
-
 	public static class DataBinderExtensions
 	{
-		public static T GetRecord<T>(this IDataBinder<T> binder, IDataRecord record) where T : new()
+		public static T GetRecord<T>(this IDataBinder<T> binder, IDataRecord record, Func<IDataRecord, Exception, bool>? errorHandler = null) where T : new()
 		{
 			var t = new T();
-			binder.Bind(record, t);
+			try
+			{
+				binder.Bind(record, t);
+			}
+			catch (Exception e) when (errorHandler != null)
+			{
+				if (!errorHandler(record, e))
+				{
+					throw;
+				}
+			}
 			return t;
 		}
 	}
@@ -58,23 +49,63 @@ namespace Sylvan.Data
 		public abstract IDataBinder<T> CreateBinder(ReadOnlyCollection<DbColumn> schema);
 	}
 
-	public abstract class DataBinder<T> : IDataBinder<T>
+	public sealed class DataBinderOptions
 	{
-		public static IDataBinder<T> Create(ReadOnlyCollection<DbColumn> physicalSchema)
+		internal static readonly DataBinderOptions Default = new DataBinderOptions();
+		//public bool ReaderAllowsDynamicAccess { get; set; }
+		public CultureInfo Culture { get; set; }
+
+#warning how do I name this?
+		// TODO: should this even exist? or should I have a way to auto-map the schema?
+		public Func<string, int, string?>? ColumnNamer { get; set; }
+
+		public DataBindMode BindMode { get; set; }
+
+		public DataBinderOptions()
 		{
-			return CreateFactory(physicalSchema).CreateBinder(physicalSchema);
+			this.Culture = CultureInfo.InvariantCulture;
+			this.ColumnNamer = DataBinder.DefaultNameMapping;
+			this.BindMode = DataBindMode.Neither;
+		}
+	}
+
+	public static partial class DataBinder
+	{
+		// make every effort to construct a schema.
+		static ReadOnlyCollection<DbColumn> GetSchema(IDataReader dr)
+		{
+			if (dr is DbDataReader ddr && ddr.CanGetColumnSchema())
+			{
+				return ddr.GetColumnSchema();
+			}
+			else
+			{
+				DataTable? schemaTable = null;
+				try
+				{
+					// it isn't uncommon for implementations to ignore providing a schema.
+					// typically they'll throw NotSupportedException.
+					schemaTable = dr.GetSchemaTable();
+				}
+				catch { }
+
+				if (schemaTable != null) {
+					return Schema.FromSchemaTable(schemaTable).GetColumnSchema();
+				}
+			}
+			return Schema.GetWeakSchema(dr).GetColumnSchema();
 		}
 
-		public static IDataBinder<T> Create(ReadOnlyCollection<DbColumn> logicalSchema, ReadOnlyCollection<DbColumn> physicalSchema)
+		public static IDataBinder<T> Create<T>(IDataReader dr, DataBinderOptions? opts = null)
 		{
-			return CreateFactory(logicalSchema).CreateBinder(physicalSchema);
+			opts = opts ?? new DataBinderOptions();
+			return new CompiledDataBinder<T>(opts, GetSchema(dr));
 		}
 
-		public static BinderFactory<T> CreateFactory(ReadOnlyCollection<DbColumn> logicalSchema)
+		public static IDataBinder<T> Create<T>(IDataReader dr, ReadOnlyCollection<DbColumn> logicalSchema, DataBinderOptions? opts = null)
 		{
-			return new CompiledDataBinderFactory<T>(logicalSchema);
+			opts = opts ?? new DataBinderOptions();
+			return new CompiledDataBinder<T>(opts, GetSchema(dr), logicalSchema);
 		}
-
-		public abstract void Bind(IDataRecord record, T item);
 	}
 }

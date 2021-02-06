@@ -12,6 +12,22 @@ namespace Sylvan.Data.Csv
 	public delegate string StringFactory(char[] buffer, int offset, int length);
 
 	/// <summary>
+	/// Gets the binary encoding used when reading fields with GetBytes.
+	/// </summary>
+	public enum BinaryEncoding
+	{
+		/// <summary>
+		/// Reads values as base64, does not support whitespace in values.
+		/// </summary>
+		Base64 = 1,
+
+		/// <summary>
+		/// Read values as hexadecimal, allows optional "0x" prefix.
+		/// </summary>
+		Hexadecimal = 2,
+	}
+
+	/// <summary>
 	/// Options for configuring a CsvDataReader.
 	/// </summary>
 	public sealed class CsvDataReaderOptions
@@ -46,7 +62,13 @@ namespace Sylvan.Data.Csv
 			this.DateFormat = null;
 
 			this.StringFactory = null;
+			this.BinaryEncoding = BinaryEncoding.Base64;
 		}
+
+		/// <summary>
+		/// 
+		/// </summary>
+		public BinaryEncoding BinaryEncoding { get; set; }
 
 		/// <summary>
 		/// A string factory function which can de-dupe strings on construction. Defaults to null.

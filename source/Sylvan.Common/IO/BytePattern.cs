@@ -3,7 +3,6 @@ using System.Collections.Generic;
 
 namespace Sylvan.IO
 {
-	
 	/// <summary>
 	/// Implements a boyer-moore search algorithm to find sequences of bytes.
 	/// </summary>

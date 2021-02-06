@@ -16,7 +16,7 @@ namespace Sylvan.Data.Csv
 	/// <summary>
 	/// A data reader for delimited text data.
 	/// </summary>
-	public sealed class CsvDataReader : DbDataReader, IDbColumnSchemaGenerator
+	public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerator
 	{
 		static readonly char[] AutoDetectDelimiters = new[] { ',', '\t', ';', '|' };
 
@@ -107,6 +107,7 @@ namespace Sylvan.Data.Csv
 		readonly CultureInfo culture;
 		readonly string? dateFormat;
 		readonly string? trueString, falseString;
+		readonly BinaryEncoding binaryEncoding;
 		readonly bool hasHeaders;
 		readonly StringFactory stringFactory;
 
@@ -190,6 +191,7 @@ namespace Sylvan.Data.Csv
 			this.columns = Array.Empty<CsvColumn>();
 			this.culture = options.Culture;
 			this.ownsReader = options.OwnsReader;
+			this.binaryEncoding = options.BinaryEncoding;
 			this.stringFactory = options.StringFactory ?? new StringFactory((char[] b, int o, int l) => new string(b, o, l));
 		}
 
@@ -282,51 +284,7 @@ namespace Sylvan.Data.Csv
 			this.state = State.Initialized;
 		}
 
-		async Task<bool> NextRecordAsync()
-		{
-			this.curFieldCount = 0;
-			this.recordStart = this.idx;
 
-			if (this.idx >= bufferEnd)
-			{
-				await FillBufferAsync();
-				if (idx == bufferEnd)
-				{
-					return false;
-				}
-			}
-
-			int fieldIdx = 0;
-			while (true)
-			{
-				var result = ReadField(fieldIdx);
-
-				if (result == ReadResult.True)
-				{
-					fieldIdx++;
-					continue;
-				}
-				if (result == ReadResult.False)
-				{
-					return true;
-				}
-				if (result == ReadResult.Incomplete)
-				{
-					// we were unable to read an entire record out of the buffer synchronously
-					if (recordStart == 0)
-					{
-						// if we consumed the entire buffer reading this record, then this is an exceptional situation
-						// we expect a record to be able to fit entirely within the buffer.
-						throw new CsvRecordTooLargeException(this.RowNumber, fieldIdx, null, null);
-					}
-					else
-					{
-						await FillBufferAsync();
-						// after filling the buffer, we will resume reading fields from where we left off.
-					}
-				}
-			}
-		}
 
 		// attempt to read a field. 
 		// returns True if there are more in record (hit delimiter), 
@@ -569,29 +527,6 @@ namespace Sylvan.Data.Csv
 			return ReadResult.False;
 		}
 
-		async Task<int> FillBufferAsync()
-		{
-			var buffer = this.buffer;
-			if (recordStart != 0)
-			{
-				// move any pending data to the front of the buffer.
-				Array.Copy(buffer, recordStart, buffer, 0, bufferEnd - recordStart);
-			}
-
-			bufferEnd -= recordStart;
-			idx -= recordStart;
-			recordStart = 0;
-
-			var count = buffer.Length - bufferEnd;
-			var c = await reader.ReadBlockAsync(buffer, bufferEnd, count);
-			bufferEnd += c;
-			if (c < count)
-			{
-				atEndOfText = true;
-			}
-			return c;
-		}
-
 		/// <inheritdoc/>
 		public override object this[int ordinal] => this.GetValue(ordinal);
 
@@ -630,14 +565,16 @@ namespace Sylvan.Data.Csv
 			// true not null, false null. True string true, anything else false.
 			// false not null, false null. True string true, anything else false.
 			// both null. 
-
+			var col = this.columns[ordinal];
+			var trueString = col.TrueString ?? this.trueString;
+			var falseString = col.FalseString ?? this.falseString;
 #if NETSTANDARD2_1
 			var span = this.GetFieldSpan(ordinal);
-			if (trueString != null && span.Equals(this.trueString.AsSpan(), StringComparison.OrdinalIgnoreCase))
+			if (trueString != null && span.Equals(trueString.AsSpan(), StringComparison.OrdinalIgnoreCase))
 			{
 				return true;
 			}
-			if (falseString != null && span.Equals(this.falseString.AsSpan(), StringComparison.OrdinalIgnoreCase))
+			if (falseString != null && span.Equals(falseString.AsSpan(), StringComparison.OrdinalIgnoreCase))
 			{
 				return false;
 			}
@@ -654,11 +591,11 @@ namespace Sylvan.Data.Csv
 			}
 #else
 			var str = this.GetString(ordinal);
-			if (trueString != null && str.Equals(this.trueString, StringComparison.OrdinalIgnoreCase))
+			if (trueString != null && str.Equals(trueString, StringComparison.OrdinalIgnoreCase))
 			{
 				return true;
 			}
-			if (falseString != null && str.Equals(this.falseString, StringComparison.OrdinalIgnoreCase))
+			if (falseString != null && str.Equals(falseString, StringComparison.OrdinalIgnoreCase))
 			{
 				return false;
 			}
@@ -700,6 +637,21 @@ namespace Sylvan.Data.Csv
 			}
 			if (dataOffset > int.MaxValue) throw new ArgumentOutOfRangeException(nameof(dataOffset));
 
+			var col = this.columns[ordinal];
+			var encoding = col.ColumnBinaryEncoding ?? this.binaryEncoding;
+
+			switch (encoding)
+			{
+				case BinaryEncoding.Base64:
+					return GetBytesBase64(ordinal, (int)dataOffset, buffer, bufferOffset, length);
+				case BinaryEncoding.Hexadecimal:
+					return GetBytesHex(ordinal, (int)dataOffset, buffer, bufferOffset, length);
+			}
+			throw new NotSupportedException();// TODO: improve error message.
+		}
+
+		int GetBytesBase64(int ordinal, int dataOffset, byte[] buffer, int bufferOffset, int length)
+		{
 			if (scratch == null)
 			{
 				scratch = new byte[3];
@@ -782,6 +734,58 @@ namespace Sylvan.Data.Csv
 			return oOff - bufferOffset;
 		}
 
+		int GetBytesHex(int ordinal, int dataOffset, byte[] buffer, int bufferOffset, int length)
+		{
+			var cs = GetField(ordinal);
+			var b = cs.buffer;
+			var o = cs.offset;
+
+			bool hasPrefix;
+			var outLen = GetHexLength(cs, out hasPrefix);
+			if (hasPrefix)
+			{
+				o += 2;
+			}
+
+			var c = Math.Min(outLen - dataOffset, length);
+
+			const int Invalid = 255;
+						
+			var bo = o;
+			for (int i = 0; i < c; i++)
+			{
+				var cc = b[bo++];
+				var v = HexValue(cc);
+				if (v == Invalid)
+					throw new FormatException();
+				buffer[bufferOffset + i] = (byte)(v << 4);
+				cc = b[bo++];
+				v = HexValue(cc);
+				if (v == Invalid)
+					throw new FormatException();
+				buffer[bufferOffset + i] |= (byte)v;
+			}
+			return c;
+		}
+
+		static readonly byte[] HexMap = new byte[]
+			{
+				255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+				255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+				255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+				  0,   1,   2,   3,   4,   5,   6,   7,   8,   9, 255, 255, 255, 255, 255, 255,
+				255,  10,  11,  12,  13,  14,  15, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+				255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+				255,  10,  11,  12,  13,  14,  15, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+				255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+			};
+
+		static int HexValue(char c)
+		{
+			if (c > 128) return -1;
+			return HexMap[c];
+		}
+
 		void FromBase64Chars(char[] chars, int charsOffset, int charsLen, byte[] bytes, int bytesOffset, out int bytesWritten)
 		{
 #if NETSTANDARD2_1
@@ -828,20 +832,20 @@ namespace Sylvan.Data.Csv
 		public override DateTime GetDateTime(int ordinal)
 		{
 			var format = columns[ordinal].Format ?? this.dateFormat;
-
+			var style = DateTimeStyles.AdjustToUniversal;
 #if NETSTANDARD2_1
-			if (format != null && DateTime.TryParseExact(this.GetFieldSpan(ordinal), format.AsSpan(), culture, DateTimeStyles.AdjustToUniversal, out var dt))
+			if (format != null && DateTime.TryParseExact(this.GetFieldSpan(ordinal), format.AsSpan(), culture, style, out var dt))
 			{
 				return dt;
 			}
-			return DateTime.Parse(this.GetFieldSpan(ordinal), culture);
+			return DateTime.Parse(this.GetFieldSpan(ordinal), culture, style);
 #else
 			var dateStr = this.GetString(ordinal);
-			if (format != null && DateTime.TryParseExact(dateStr, format, culture, DateTimeStyles.None, out var dt))
+			if (format != null && DateTime.TryParseExact(dateStr, format, culture, style, out var dt))
 			{
 				return dt;
 			}
-			return DateTime.Parse(dateStr, culture);
+			return DateTime.Parse(dateStr, culture, style);
 #endif
 		}
 
@@ -1205,13 +1209,44 @@ namespace Sylvan.Data.Csv
 		int GetBinaryLength(int ordinal)
 		{
 			var span = this.GetField(ordinal);
+			var col = this.columns[ordinal];
+
+			var enc = col.ColumnBinaryEncoding ?? this.binaryEncoding;
+			switch (enc)
+			{
+				case BinaryEncoding.Base64:
+					return GetBase64Length(span);
+				case BinaryEncoding.Hexadecimal:
+					return GetHexLength(span, out _);
+			}
+			throw new NotSupportedException(); // TODO: improve error message.
+		}
+
+		static int GetBase64Length(CharSpan span)
+		{
 			var l = span.length;
+			// must be divisible by 4
+			if (l % 4 != 0) throw new FormatException();
 			var rem = 0;
 			if (span[l - 1] == '=') rem++;
 			if (span[l - 2] == '=') rem++;
 			var dataLen = l / 4 * 3;
 			dataLen -= rem;
 			return dataLen;
+		}
+
+		static int GetHexLength(CharSpan span, out bool hasPrefix)
+		{
+			hasPrefix = false;
+			var l = span.length;
+			// must be divisible by 1
+			if (l % 2 != 0) throw new FormatException();
+			if (l >= 2 && char.ToLowerInvariant(span[1]) == 'x' && span[0] == '0')
+			{
+				hasPrefix = true;
+				l -= 2;
+			}
+			return l / 2;
 		}
 
 		int GetCharLength(int ordinal)
@@ -1285,55 +1320,8 @@ namespace Sylvan.Data.Csv
 			return IsDBNull(ordinal) ? CompleteTrue : CompleteFalse;
 		}
 
-		/// <inheritdoc/>
-		public override bool NextResult()
-		{
-			state = State.End;
-			return false;
-		}
-
-		/// <inheritdoc/>
-		public override Task<bool> NextResultAsync(CancellationToken cancellationToken)
-		{
-			state = State.End;
-			return CompleteFalse;
-		}
-
 		readonly static Task<bool> CompleteTrue = Task.FromResult(true);
 		readonly static Task<bool> CompleteFalse = Task.FromResult(false);
-
-		/// <inheritdoc/>
-		public override Task<bool> ReadAsync(CancellationToken cancellationToken)
-		{
-			cancellationToken.ThrowIfCancellationRequested();
-			this.rowNumber++;
-			if (this.state == State.Open)
-			{
-				return this.NextRecordAsync();
-			}
-			else if (this.state == State.Initialized)
-			{
-				// after initizialization, the first record would already be in the buffer
-				// if hasRows is true.
-				if (hasRows)
-				{
-					this.state = State.Open;
-					return CompleteTrue;
-				}
-				else
-				{
-					this.state = State.End;
-				}
-			}
-			this.rowNumber = -1;
-			return CompleteFalse;
-		}
-
-		/// <inheritdoc/>
-		public override bool Read()
-		{
-			return this.ReadAsync().GetAwaiter().GetResult();
-		}
 
 		/// <summary>
 		/// Gets a collection of DbColumns describing the schema of the data reader.
@@ -1354,6 +1342,13 @@ namespace Sylvan.Data.Csv
 		class CsvColumn : DbColumn
 		{
 			public string? Format { get; }
+
+			// encoding specified at the column level, fallback to the options-spec if null
+			public BinaryEncoding? ColumnBinaryEncoding { get; }
+
+			public string? TrueString { get; }
+
+			public string? FalseString { get; }
 
 			public CsvColumn(string? name, int ordinal, DbColumn? schema = null)
 			{
@@ -1390,6 +1385,39 @@ namespace Sylvan.Data.Csv
 				this.BaseCatalogName = schema?.BaseCatalogName;
 				this.UdtAssemblyQualifiedName = schema?.UdtAssemblyQualifiedName;
 				this.Format = schema?[nameof(Format)] as string;
+				if (this.DataType == typeof(byte[]))
+				{
+					this.ColumnBinaryEncoding = GetBinaryEncoding(this.Format);
+				}
+				if (this.DataType == typeof(bool) && this.Format != null)
+				{
+					var idx = this.Format.IndexOf("|");
+					if (idx == -1)
+					{
+						this.TrueString = this.Format;
+					}
+					else
+					{
+						this.TrueString = this.Format.Substring(0, idx);
+						this.TrueString = this.TrueString.Length == 0 ? null : this.TrueString;
+						this.FalseString = this.Format.Substring(idx + 1);
+						this.FalseString = this.FalseString.Length == 0 ? null : this.FalseString;
+					}
+				}
+			}
+
+			BinaryEncoding? GetBinaryEncoding(string? format)
+			{
+				if (format == null)
+					return null;
+				if (StringComparer.OrdinalIgnoreCase.Equals("base64", format))
+					return BinaryEncoding.Base64;
+				if (StringComparer.OrdinalIgnoreCase.Equals("hex", format))
+					return BinaryEncoding.Hexadecimal;
+
+				// for unknown encoding spec, allow initialize but any access
+				// to the column as a binary value will produce a NotSupportedException.
+				return 0;
 			}
 
 			/// <inheritdoc/>
@@ -1408,29 +1436,15 @@ namespace Sylvan.Data.Csv
 			}
 		}
 
-		/// <inheritdoc/>
-		public override void Close()
-		{
-			if (this.state != State.Closed)
-			{
-				if (ownsReader)
-					this.reader.Dispose();
-				this.state = State.Closed;
-			}
-		}
-
 #if NETSTANDARD2_1
 
-		/// <inheritdoc/>
-		public override Task CloseAsync()
+		/// <summary>
+		/// Gets a span containing the current record data, including the line ending.
+		/// </summary>
+		public ReadOnlySpan<char> GetRawRecordSpan()
 		{
-			if (this.state != State.Closed)
-			{
-				if (ownsReader)
-					this.reader.Dispose();
-				this.state = State.Closed;
-			}
-			return Task.CompletedTask;
+			var len = this.idx - this.recordStart;
+			return this.buffer.AsSpan().Slice(this.recordStart, len);
 		}
 
 #endif
@@ -1441,8 +1455,7 @@ namespace Sylvan.Data.Csv
 		/// <param name="buffer">The buffer to receive the data, or null to query the required size.</param>
 		/// <param name="offset">The offset into the buffer to start writing.</param>
 		/// <returns>The length of the record data.</returns>
-		// TODO: do I want to expose this publicly?
-		private int GetRawRecord(char[]? buffer, int offset)
+		public int GetRawRecord(char[]? buffer, int offset)
 		{
 			var len = this.idx - this.recordStart;
 			if (buffer != null)

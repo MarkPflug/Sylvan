@@ -1,4 +1,15 @@
 # Sylvan.Data.Csv Release Notes
+
+_0.9.2_
+- Add support for per-column boolean format specification.
+- Add CsvDataReader.GetRawRecord and GetRawRecordSpan methods.
+- Configure binary encoding for whole file via options.
+- Add support for tolerating "0x" prefix on hex encoded values.
+
+_0.9.1_
+- Add support for hexadecimal encoded binary data.
+- Performance improvement for synchronous accessors.
+
 _0.9.0_
 
 - Collapse AutoDetect (`bool`) and Delimiter (`char`) options into Delimiter (`char?`).

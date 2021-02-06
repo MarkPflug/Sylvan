@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
 
-    <VersionPrefix>0.2.0</VersionPrefix>
+    <VersionPrefix>0.2.1</VersionPrefix>
     <Description>CSV data access build tools.</Description>
     <NoPackageAnalysis>true</NoPackageAnalysis>
     <BuildOutputTargetFolder>build</BuildOutputTargetFolder>    
@@ -27,15 +27,15 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Sylvan.Common\Sylvan.Common.csproj"/>
+    <ProjectReference Include="..\Sylvan.Common\Sylvan.Common.csproj" />
     <ProjectReference Include="..\Sylvan.Data.Csv\Sylvan.Data.Csv.csproj" />
     <ProjectReference Include="..\Sylvan.Data\Sylvan.Data.csproj" />
   </ItemGroup>
   
   <Target Name="PackRefs" BeforeTargets="_GetPackageFiles">
     <ItemGroup>
-      <Content Include="$(TargetPath)" PackagePath="build"/>
-      <Content Include="@(UserRuntimeAssembly)" PackagePath="build"/>
+      <Content Include="$(TargetPath)" PackagePath="build" />
+      <Content Include="@(UserRuntimeAssembly)" PackagePath="build" />
     </ItemGroup>
   </Target>
 </Project>

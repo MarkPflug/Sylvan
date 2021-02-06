@@ -712,6 +712,43 @@ namespace Sylvan.Data.Csv
 			Assert.Equal(new DateTime(2020, 8, 5), csv.GetDateTime(0));
 		}
 
+		[Fact]
+		public void Date2()
+		{
+			using var tr = new StringReader("Date\n03/24/2021\n3/3/2021\n12/3/2021\n");
+
+			var csv = CsvDataReader.Create(tr);
+			DateTime d;
+			Assert.True(csv.Read());
+			d = csv.GetDateTime(0);
+			Assert.Equal(new DateTime(2021, 3, 24), d);
+			Assert.Equal(DateTimeKind.Unspecified, d.Kind);
+			Assert.True(csv.Read());
+			d = csv.GetDateTime(0);
+			Assert.Equal(new DateTime(2021, 3, 3), d);
+			Assert.Equal(DateTimeKind.Unspecified, d.Kind);
+			Assert.True(csv.Read());
+			d = csv.GetDateTime(0);
+			Assert.Equal(new DateTime(2021, 12, 3), d);
+			Assert.Equal(DateTimeKind.Unspecified, d.Kind);
+		}
+
+		[Fact]
+		public void Date3()
+		{
+			using var tr = new StringReader("Date\n2020-01-01T00:00:00Z\n2020-01-01T00:00:00");
+			var csv = CsvDataReader.Create(tr);
+			DateTime d;
+			Assert.True(csv.Read());
+			d = csv.GetDateTime(0);
+			Assert.Equal(DateTimeKind.Utc, d.Kind);
+			Assert.Equal(new DateTime(2020, 1, 1), d);
+			Assert.True(csv.Read());
+			d = csv.GetDateTime(0);
+			Assert.Equal(DateTimeKind.Unspecified, d.Kind);
+			Assert.Equal(new DateTime(2020, 1, 1), d);
+		}
+
 
 		//[Fact]
 		//public void DeDupeString()
@@ -940,7 +977,8 @@ namespace Sylvan.Data.Csv
 		{
 			using var reader = new StringReader(input);
 			var options =
-				new CsvDataReaderOptions {
+				new CsvDataReaderOptions
+				{
 					ImplicitQuotes = true,
 					Escape = '\\'
 				};
@@ -950,6 +988,127 @@ namespace Sylvan.Data.Csv
 			Assert.Equal(a, csv.GetString(0));
 			Assert.Equal(b, csv.GetString(1));
 			Assert.False(csv.Read());
+		}
+
+		[Fact]
+		public void BinaryB64Err()
+		{
+			using var reader = new StringReader("Name,Value\r\nrow1,####");
+			var csv = CsvDataReader.Create(reader);
+			csv.Read();
+			var buf = new byte[0x100];
+			var len = csv.GetBytes(1, 0, null, 0, 0);
+			Assert.Equal(3, len);
+			Assert.Throws<FormatException>(() => csv.GetBytes(1, 0, buf, 0, buf.Length));
+		}
+
+		[Fact]
+		public void BinaryHex()
+		{
+			var schema = Schema.Parse(",:binary{hex}");
+			using var reader = new StringReader("Name,Value\r\nrow1,0102030405060708");
+			var csv = CsvDataReader.Create(reader, new CsvDataReaderOptions { Schema = new CsvSchema(schema) });
+			csv.Read();
+			var len = csv.GetBytes(1, 0, null, 0, 0);
+			Assert.Equal(8, len);
+			var buf = new byte[len];
+			len = csv.GetBytes(1, 0, buf, 0, buf.Length);
+			Assert.Equal(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 }, buf);
+		}
+
+		[Fact]
+		public void BinaryHex2()
+		{
+			var schema = Schema.Parse(",:binary{hex}");
+			using var reader = new StringReader("Name,Value\r\nrow1,012");
+			var csv = CsvDataReader.Create(reader, new CsvDataReaderOptions { Schema = new CsvSchema(schema) });
+			csv.Read();
+			Assert.Throws<FormatException>(() => csv.GetBytes(1, 0, null, 0, 0));
+
+			var buf = new byte[2];
+			Assert.Throws<FormatException>(() => csv.GetBytes(1, 0, buf, 0, buf.Length));
+		}
+
+		[Fact]
+		public void BinaryHex3()
+		{
+			var schema = Schema.Parse(",:binary{hex}");
+			using var reader = new StringReader("Name,Value\r\nrow1,zz");
+			var csv = CsvDataReader.Create(reader, new CsvDataReaderOptions { Schema = new CsvSchema(schema) });
+			csv.Read();
+			var len = csv.GetBytes(1, 0, null, 0, 0);
+			Assert.Equal(1, len);
+			var buf = new byte[len];
+			Assert.Throws<FormatException>(() => csv.GetBytes(1, 0, buf, 0, buf.Length));
+		}
+
+		[Fact]
+		public void BinaryHexPrefix()
+		{
+			
+			using var reader = new StringReader("Name,Value\r\nrow1,0x01020304");
+			var csv = CsvDataReader.Create(reader, new CsvDataReaderOptions { BinaryEncoding = BinaryEncoding.Hexadecimal });
+			csv.Read();
+			var len = (int)csv.GetBytes(1, 0, null, 0, 0);
+			Assert.Equal(4, len);
+			var buf = new byte[len];
+			csv.GetBytes(1, 0, buf, 0, len);
+			Assert.Equal(new byte[] { 1, 2, 3, 4}, buf);
+
+		}
+
+		class VersionObj
+		{
+			public string Name { get; private set; }
+			public int Num { get; private set; }
+			public Version Ver { get; private set; }
+
+		}
+
+		[Fact]
+		public void Ver()
+		{
+			using var reader = new StringReader("Name,Num,Ver\r\nrow1,12,1.2.3.4");
+			var csv = CsvDataReader.Create(reader);
+			var binder = DataBinder.Create<VersionObj>(csv);
+			while (csv.Read())
+			{
+				var f = new VersionObj();
+				binder.Bind(csv, f);
+			}
+		}
+
+
+		class BinaryObj
+		{
+			public string Name { get; private set; }
+			public byte[] Data { get; private set; }
+		}
+
+		[Fact]
+		public void BinBindTest()
+		{
+			var schema = Schema.Parse(",:binary{hex}");
+			using var reader = new StringReader("Name,Data\r\nrow1,0102030405060708");
+			var csv = CsvDataReader.Create(reader, new CsvDataReaderOptions { Schema = new CsvSchema(schema) });
+			var binder = DataBinder.Create<BinaryObj>(csv);
+			while (csv.Read())
+			{
+				var f = new BinaryObj();
+				binder.Bind(csv, f);
+			}
+		}
+
+		[Fact]
+		public void UnknownBinaryTest()
+		{
+			var schema = Schema.Parse(",:binary{unk}");
+			using var reader = new StringReader("Name,Data\r\nrow1,0102030405060708");
+			var csv = CsvDataReader.Create(reader, new CsvDataReaderOptions { Schema = new CsvSchema(schema) });
+			while (csv.Read())
+			{
+				Assert.Throws<NotSupportedException>(() => csv.GetValue(1));
+			}
 		}
 	}
 }

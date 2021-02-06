@@ -23,7 +23,7 @@ namespace Sylvan.Data.Csv
 		/// The ordinal of the field containing the malformed data.
 		/// </summary>
 		public int FieldOrdinal { get; }
-	}
+	}	
 
 	/// <summary>
 	/// The exception that is thrown when the configuration options specify invalid options.

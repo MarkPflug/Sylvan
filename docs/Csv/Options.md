@@ -4,7 +4,7 @@ The CsvDataReader accepts several options that control it's behavior. If no opti
 
 __HasHeaders__
 
-Indicates if the first row of the file contains header names. This defaults to true. In the absense of a header row, and without providing a schema that includes column names, the columns can only be accessed ordinally.
+Indicates if the first row of the file contains header names. Defaults to true. In the absense of a header row, and without providing a schema that includes column names, columns can only be accessed ordinally. In the even that the header row defines duplicate column names, the duplicate columns cannot be accessed by name, GetName(int ordinal) will throw an exception.
 
 __Delimiter__ (`char?`)
 
@@ -24,13 +24,17 @@ A string representing the `true` and/or `false` value when reading boolean field
 
 These defaults to `null`, which attempt to parse the values as the default "true"/"false" string, then fallback to parsing the field as an integer where `0` is intrepreted as `false`, and all other integer values as `true`.
 
-If either `TrueString` or `FalseString` are non-null, then that value is the singular, case-insensitive, string that will be interpreted as the associated boolean value. If only one of the two is assigned, this allows all other values to be interpreted as the negation. If both are assigned, any value that is not one or the other will result in a `FormatException` being thrown.
+If either `TrueString` or `FalseString` are non-null, then that value is the singular, case-insensitive string that will be interpreted as the associated boolean value. If only one of the two is assigned it causes all other values to be interpreted as the negation. If both are assigned any value that is not one or the other will result in a `FormatException` being thrown.
 
 __DateFormat__
 
 The format string used to parse `DateTime` values. This defaults to null, which will result in values being parsed using the provide `CultureInfo`.
 
 Some CSV data sources use a compact date format like `"yyyyMMdd"` which cannot be parsed by default date parsing behavior, in which case this option allows parsing such values.
+
+__BinaryEncoding__
+
+The encoding format used to interpret binary data, either Base64 or Hexadecimal. Hexadicmal values can optionally be prefixed with "0x".
 
 __BufferSize__
 
@@ -69,9 +73,9 @@ __StringFactory__
 
 The StringFactory option allows providing a custom mechanism for string construction. The default of `null`, will result in strings being constructed normally, each call to GetString will produce a new value. The intent of this option is allowing deduplication of strings during parsing. CSV files often contain very repetetive strings; city or state names, for example, and by providing a custom `StringFactory` implementation these strings can be de-duped as they are read. This can be significantly more efficient than de-duping after the fact with a `HashSet<string>` for example.
 
-Providing a string factory can affect performance both positively, and adversely depending on how much duplication there is in the file, and of course depends on the implementation of the factory method iteself.
+Providing a string factory can affect performance both positively, and adversely depending on how much duplication there is in the file, and of course depends on the implementation of the factory method itself.
 
-The `Sylvan.Data.Csv` library does not provide an implementation, but the `Sylvan.Common` package includes a `StringPool` type that can be used to provide an implementation of the string factory. The length parameter to `StringPool` controls the limit beyond which de-dupe will not be attempted. Identifying dupes takes some time and longer strings are less likely to be duplicated, so this values allows tuning speed/memory.
+The `Sylvan.Data.Csv` library does not provide an implementation, but the `Sylvan.Common` package includes a `StringPool` type that can be used to provide an implementation of the string factory. The length parameter to `StringPool` controls the limit beyond which de-dupe will not be attempted. Identifying dupes takes some time and longer strings are less likely to be duplicated, so this value allows tuning speed/memory.
 
 ```C#
 
