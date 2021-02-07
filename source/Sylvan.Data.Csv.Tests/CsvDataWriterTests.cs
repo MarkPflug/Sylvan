@@ -9,7 +9,11 @@ namespace Sylvan.Data.Csv
 {
 	public class CsvDataWriterTests
 	{
+		// use \n for newlines to make assertions easier
 		static CsvDataWriterOptions TestOptions = new CsvDataWriterOptions { NewLine = "\n" };
+
+		// a culture that uses ',' for numeric decimal separator
+		static CultureInfo ItalianCulture = CultureInfo.GetCultureInfoByIetfLanguageTag("it-IT");
 
 		static string GetCsv<T>(IEnumerable<T> data)
 		{
@@ -82,7 +86,7 @@ namespace Sylvan.Data.Csv
 			Assert.Equal("Name,Date\nDate1,2021-02-06T00:00:00\nDate2,2021-02-07T00:00:00\n", csv);
 		}
 
-		static CultureInfo Italian = CultureInfo.GetCultureInfoByIetfLanguageTag("it-IT");
+		
 
 		[Fact]
 		public void WriteQuote()
@@ -107,7 +111,7 @@ namespace Sylvan.Data.Csv
 		public void CultureCommaDecimalPoint()
 		{
 			var sw = new StringWriter();
-			var csv = new CsvDataWriter(sw, new CsvDataWriterOptions { NewLine = "\n", Culture = Italian });
+			var csv = new CsvDataWriter(sw, new CsvDataWriterOptions { NewLine = "\n", Culture = ItalianCulture });
 
 			var dr = new[]
 			{
@@ -123,7 +127,7 @@ namespace Sylvan.Data.Csv
 		public void CultureCommaDecimalPoint2()
 		{
 			var sw = new StringWriter();
-			var csv = new CsvDataWriter(sw, new CsvDataWriterOptions { NewLine = "\n", Culture = Italian, Delimiter = ';' });
+			var csv = new CsvDataWriter(sw, new CsvDataWriterOptions { NewLine = "\n", Culture = ItalianCulture, Delimiter = ';' });
 
 			var dr = new[]
 			{
@@ -133,35 +137,6 @@ namespace Sylvan.Data.Csv
 			csv.Write(dr.AsDataReader());
 			var str = sw.ToString();
 			Assert.Equal("Name;Value\nA;12,34\n", str);
-		}
-
-		static CultureInfo GetCustomCulture()
-		{
-			var custom = (CultureInfo)CultureInfo.InvariantCulture.Clone();
-			custom.NumberFormat.NumberDecimalSeparator = ",";
-			custom.NumberFormat.NumberGroupSeparator = ".";
-			return custom;
-		}
-
-		[Fact]
-		public void CultureTest()
-		{
-			var c = GetCustomCulture();
-			var str = 1234.5.ToString("#,#.#######", c);
-		}
-	}
-
-	class TestCultureInfo : CultureInfo
-	{
-		public TestCultureInfo() : base(CurrentCulture.LCID)
-		{
-
-		}
-
-		public override NumberFormatInfo NumberFormat
-		{
-			get => base.NumberFormat;
-			set => base.NumberFormat = value;
 		}
 	}
 }

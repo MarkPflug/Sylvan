@@ -12,7 +12,7 @@ namespace Sylvan.Data.Csv
 	public sealed partial class CsvDataWriter
 		: IDisposable
 #if NETSTANDARD2_1
-	    , IAsyncDisposable
+		, IAsyncDisposable
 #endif
 	{
 		class FieldInfo
@@ -26,12 +26,6 @@ namespace Sylvan.Data.Csv
 			public bool allowNull;
 			public Type type;
 			public TypeCode typeCode;
-		}
-
-		enum FieldState
-		{
-			Start,
-			Done,
 		}
 
 		readonly TextWriter writer;
@@ -60,8 +54,8 @@ namespace Sylvan.Data.Csv
 		static TextWriter GetWriter(string fileName, CsvDataWriterOptions? options)
 		{
 			var bufferSize = options?.BufferSize ?? options?.Buffer?.Length ?? CsvDataWriterOptions.Default.BufferSize;
-			var stream = File.Create(fileName, bufferSize * 2, FileOptions.SequentialScan | FileOptions.Asynchronous);
-			return new StreamWriter(stream, Encoding.UTF8);
+			var fs = new FileStream(fileName, FileMode.Create, FileAccess.Write, FileShare.Read, bufferSize, FileOptions.SequentialScan | FileOptions.Asynchronous);
+			return new StreamWriter(fs, Encoding.UTF8, bufferSize);
 		}
 
 		/// <summary>
