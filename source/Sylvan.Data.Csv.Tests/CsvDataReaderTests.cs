@@ -1,4 +1,3 @@
-using Sylvan.Benchmarks;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -14,20 +13,6 @@ namespace Sylvan.Data.Csv
 {
 	public class CsvDataReaderTests
 	{
-		[Fact]
-		public void SylvanBench()
-		{
-			var b = new CsvDataBinderBenchmarks();
-			b.SylvanBench();
-		}
-
-		[Fact]
-		public async Task SylvanSchemaBench()
-		{
-			var b = new CsvReaderBenchmarks();
-			await b.SylvanSchema();
-		}
-
 		[Fact]
 		public void FinalCRTest()
 		{

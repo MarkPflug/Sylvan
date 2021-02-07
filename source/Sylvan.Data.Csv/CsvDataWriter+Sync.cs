@@ -101,7 +101,7 @@ namespace Sylvan.Data.Csv
 				EndRecord();
 			}
 			// flush any pending data on the way out.
-			// await writer.FlushAsync();
+			FlushBuffer();
 			return row;
 		}
 

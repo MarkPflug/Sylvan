@@ -156,6 +156,8 @@ namespace Sylvan.Data
 
 				static bool IsSupported(Type type)
 				{
+					if (type == typeof(byte[]) || type == typeof(char[])) return true;
+
 					if (type.IsArray) return false;
 					if (type.IsPrimitive) return true;
 					if (type == typeof(DateTime) || type == typeof(Guid)) return true;
