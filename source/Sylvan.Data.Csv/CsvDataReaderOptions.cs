@@ -28,6 +28,22 @@ namespace Sylvan.Data.Csv
 	}
 
 	/// <summary>
+	/// The CSV quoting and escaping styles.
+	/// </summary>
+	public enum CsvStyle
+	{
+		/// <summary>
+		/// Parses using the standard RFC4180 mode.
+		/// </summary>
+		Standard = 1,
+
+		/// <summary>
+		/// Interprets fields as if they are implicitly quoted. Delimiters and new lines within fields are preceeded by an escape character.
+		/// </summary>
+		Unquoted = 2,
+	}
+
+	/// <summary>
 	/// Options for configuring a CsvDataReader.
 	/// </summary>
 	public sealed class CsvDataReaderOptions
@@ -48,6 +64,7 @@ namespace Sylvan.Data.Csv
 		{
 			this.HasHeaders = true;
 			this.delimiter = null;
+			this.CsvStyle = CsvStyle.Standard;
 			this.Quote = DefaultQuote;
 			this.Escape = DefaultEscape;
 			this.BufferSize = DefaultBufferSize;
@@ -116,6 +133,11 @@ namespace Sylvan.Data.Csv
 		/// Specifies the character used for quoting fields. Defaults to '"'.
 		/// </summary>
 		public char Quote { get; set; }
+
+		/// <summary>
+		/// Indicates the CSV parsing style, defaults to Standard.
+		/// </summary>
+		public CsvStyle CsvStyle { get; set; }
 
 		/// <summary>
 		/// Specifies the character used for escaping characters in quoted fields. Defaults to '"'.

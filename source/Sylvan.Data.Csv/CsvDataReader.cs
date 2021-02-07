@@ -47,6 +47,7 @@ namespace Sylvan.Data.Csv
 			Unquoted = 0,
 			Quoted = 1,
 			BrokenQuotes = 2,
+			ImplicitQuotes = 3,
 		}
 
 		struct FieldInfo
@@ -98,6 +99,7 @@ namespace Sylvan.Data.Csv
 
 		// options:
 		char delimiter;
+		readonly bool implicitQuotes;
 		readonly char quote;
 		readonly char escape;
 		readonly bool ownsReader;
@@ -174,6 +176,7 @@ namespace Sylvan.Data.Csv
 			this.hasHeaders = options.HasHeaders;
 			this.autoDetectDelimiter = options.Delimiter == null;
 			this.delimiter = options.Delimiter ?? '\0';
+			this.implicitQuotes = options.CsvStyle == CsvStyle.Unquoted;
 			this.quote = options.Quote;
 			this.escape = options.Escape;
 			this.dateFormat = options.DateFormat;
@@ -287,7 +290,6 @@ namespace Sylvan.Data.Csv
 		// returns True if there are more in record (hit delimiter), 
 		// False if last in record (hit eol/eof), 
 		// or Incomplete if we exhausted the buffer before finding the end of the record.
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		ReadResult ReadField(int fieldIdx)
 		{
 			char c;
@@ -301,68 +303,114 @@ namespace Sylvan.Data.Csv
 			bool last = false;
 			bool complete = false;
 
-			if (idx < bufferEnd)
+			if (implicitQuotes)
 			{
-				c = buffer[idx];
-				if (c == quote)
+				// consume quoted field.
+				while (idx < bufferEnd)
 				{
-					idx++;
-					closeQuoteIdx = idx;
-					// consume quoted field.
-					while (idx < bufferEnd)
+					c = buffer[idx++];
+					if (c == escape)
 					{
-						c = buffer[idx++];
-						if (c == escape)
+						if (idx < bufferEnd)
 						{
-							if (idx < bufferEnd)
+							c = buffer[idx++]; // the escaped char
+							if (IsEndOfLine(c))
 							{
-								c = buffer[idx++]; // the escaped char
-								if (c == escape || c == quote)
+								// if the escape preceed an EOL, we might have to consume 2 chars
+								var r = ConsumeLineEnd(buffer, ref idx);
+								if (r == ReadResult.Incomplete)
 								{
-									escapeCount++;
-									continue;
+									return ReadResult.Incomplete;
+								}
+							}
+							escapeCount++;
+							continue;
+						}
+						else
+						{
+							if (atEndOfText)
+							{
+								// TODO: not sure what to do here.
+								escapeCount++;
+								break;
+							}
+							return ReadResult.Incomplete;
+						}
+					}
+					if (c == delimiter || IsEndOfLine(c))
+					{
+						// HACK: "unread" the delimiter/eol, and let the normal code path handle it
+						idx--;
+						break;
+					}
+				}
+			}
+			else
+			{
+				if (idx < bufferEnd)
+				{
+					c = buffer[idx];
+					if (c == quote)
+					{
+						idx++;
+						closeQuoteIdx = idx;
+
+						// consume quoted field.
+						while (idx < bufferEnd)
+						{
+							c = buffer[idx++];
+							if (c == escape)
+							{
+								if (idx < bufferEnd)
+								{
+									c = buffer[idx++]; // the escaped char
+									if (c == escape || c == quote)
+									{
+										escapeCount++;
+										continue;
+									}
+									else
+									if (escape == quote)
+									{
+										idx--;
+										closeQuoteIdx = idx;
+										// the quote (escape) we just saw was a the closing quote
+										break;
+									}
 								}
 								else
-								if (escape == quote)
 								{
-									idx--;
-									closeQuoteIdx = idx;
-									// the quote (escape) we just saw was a the closing quote
-									break;
+									if (atEndOfText)
+									{
+										break;
+									}
+									return ReadResult.Incomplete;
 								}
 							}
-							else
-							{
-								if (atEndOfText)
-								{
-									break;
-								}
-								return ReadResult.Incomplete;
-							}
-						}
 
-						if (c == quote)
-						{
-							// immediately after the quote should be a delimiter, eol, or eof, but...
-							// we can simply treat the remainder of the record like a normal unquoted field
-							// we are currently positioned on the quote, the next while loop will consume it
-							closeQuoteIdx = idx;
-							break;
-						}
-						if (IsEndOfLine(c))
-						{
-							idx--;
-							var r = ConsumeLineEnd(buffer, ref idx);
-							if (r == ReadResult.Incomplete)
+							if (c == quote)
 							{
-								return ReadResult.Incomplete;
+								// immediately after the quote should be a delimiter, eol, or eof, but...
+								// we can simply treat the remainder of the record like a normal unquoted field
+								// we are currently positioned on the quote, the next while loop will consume it
+								closeQuoteIdx = idx;
+								break;
 							}
-							else
+							if (IsEndOfLine(c))
 							{
-								// continue on. We are inside a quoted string, so the newline is part of the value.
+								idx--;
+								var r = ConsumeLineEnd(buffer, ref idx);
+								if (r == ReadResult.Incomplete)
+								{
+									return ReadResult.Incomplete;
+								}
+								else
+								{
+									// continue on. We are inside a quoted string, so the newline is part of the value.
+								}
 							}
-						}
-					} // we exit this loop when we reach the closing quote.
+						} // we exit this loop when we reach the closing quote.
+					}
 				}
 			}
 
@@ -408,12 +456,25 @@ namespace Sylvan.Data.Csv
 				if (fieldIdx < fieldCount)
 				{
 					ref var fi = ref fieldInfos[fieldIdx];
-					fi.quoteState =
-						closeQuoteIdx == -1
-						? QuoteState.Unquoted
-						: fieldEnd == (closeQuoteIdx - recordStart)
-						? QuoteState.Quoted
-						: QuoteState.BrokenQuotes;
+
+					if (implicitQuotes)
+					{
+						fi.quoteState =
+							escapeCount == 0
+							? QuoteState.Unquoted
+							: QuoteState.ImplicitQuotes;
+					}
+					else
+					{
+						fi.quoteState =
+							closeQuoteIdx == -1
+							? QuoteState.Unquoted
+							: fieldEnd == (closeQuoteIdx - recordStart)
+							? QuoteState.Quoted
+							: QuoteState.BrokenQuotes;
+					}
+
+
 					fi.escapeCount = escapeCount;
 					fi.endIdx = complete ? fieldEnd : (idx - recordStart);
 				}
@@ -1026,8 +1087,11 @@ namespace Sylvan.Data.Csv
 			if (fi.quoteState != QuoteState.Unquoted)
 			{
 				// if there are no escapes, we can just "trim" the quotes off
-				offset += 1;
-				len -= 2;
+				if (fi.quoteState != QuoteState.ImplicitQuotes)
+				{
+					offset += 1;
+					len -= 2;
+				}
 
 				if (fi.quoteState == QuoteState.Quoted && fi.escapeCount == 0)
 				{

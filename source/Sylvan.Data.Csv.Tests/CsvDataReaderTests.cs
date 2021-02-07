@@ -968,6 +968,28 @@ namespace Sylvan.Data.Csv
 			Assert.Equal(6, len);
 		}
 
+		[Theory]
+		[InlineData("N,V\na\\,b,c\n", "a,b", "c")]
+		[InlineData("N,V\na\\\nb,c\n", "a\nb", "c")]
+		[InlineData("N,V\na\\\r\nb\n", "a\r\nb", "")]
+		[InlineData("N,V\na\\\r\nb", "a\r\nb", "")]
+		public void ImpliedQuote(string input, string a, string b)
+		{
+			using var reader = new StringReader(input);
+			var options =
+				new CsvDataReaderOptions
+				{
+					CsvStyle = CsvStyle.Unquoted,
+					Escape = '\\'
+				};
+
+			var csv = CsvDataReader.Create(reader, options);
+			Assert.True(csv.Read());
+			Assert.Equal(a, csv.GetString(0));
+			Assert.Equal(b, csv.GetString(1));
+			Assert.False(csv.Read());
+		}
+
 		[Fact]
 		public void BinaryB64Err()
 		{
