@@ -1,6 +1,6 @@
 # Sylvan.Data.Csv Release Notes
 _0.10.0_
-- Adds support for ImplicitQuotes CSV parsing style where fields with delimiters and newlines don't use quotes, but only use escaping.
+- Adds support for Unquoted CSV parsing style where fields with delimiters and newlines don't use quotes, but only use escaping.
 
 _0.9.2_
 - Add support for per-column boolean format specification.
