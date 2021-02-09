@@ -48,8 +48,6 @@ namespace Sylvan.Data.Csv
 		readonly int bufferSize;
 		int pos;
 
-		bool[] needsEscape;
-
 		readonly bool invariantCulture;
 
 		bool disposedValue;
@@ -119,11 +117,6 @@ namespace Sylvan.Data.Csv
 			this.bufferSize = options.BufferSize;
 			this.buffer = options.Buffer ?? new char[bufferSize];
 			this.pos = 0;
-			this.needsEscape = new bool[128];
-			this.needsEscape[quote] = true;
-			this.needsEscape[delimiter] = true;
-			this.needsEscape['\r'] = true;
-			this.needsEscape['\n'] = true;
 		}
 
 		const int Base64EncSize = 3 * 256; // must be a multiple of 3.
@@ -305,24 +298,21 @@ namespace Sylvan.Data.Csv
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		WriteResult WriteValueOptimistic(string str)
 		{
-			var ne = this.needsEscape;
 			var buffer = this.buffer;
-			var bl = buffer.Length;
 			var pos = this.pos;
+			if(pos + str.Length >= buffer.Length)
+				return WriteResult.InsufficientSpace;
+
 			for (int i = 0; i < str.Length; i++)
 			{
 				var c = str[i];
-				if (ne[c & 0x7f] && c < 128)
+				if (c == delimiter || c == quote || c == '\n' || c == '\r')
 				{
 					return WriteResult.RequiresEscaping;
 				}
-				if (pos == bl)
-				{
-					return WriteResult.InsufficientSpace;
-				}
-				buffer[pos++] = c;
+				buffer[pos + i] = c;
 			}
-			this.pos = pos;
+			this.pos += str.Length;
 			return WriteResult.Complete;
 		}
 
