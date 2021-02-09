@@ -10,7 +10,7 @@ namespace Sylvan.Data.Csv
 		/// </summary>
 		/// <param name="reader">The DbDataReader to be written.</param>
 		/// <returns>A task representing the asynchronous write operation.</returns>
-		public long Write(DbDataReader reader)
+		public virtual long Write(DbDataReader reader)
 		{
 			var c = reader.FieldCount;
 			var fieldTypes = new FieldInfo[c];

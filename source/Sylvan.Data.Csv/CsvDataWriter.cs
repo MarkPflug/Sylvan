@@ -9,7 +9,7 @@ namespace Sylvan.Data.Csv
 	/// <summary>
 	/// Writes data from a DbDataReader as delimited values to a TextWriter.
 	/// </summary>
-	public sealed partial class CsvDataWriter
+	public partial class CsvDataWriter
 		: IDisposable
 #if NETSTANDARD2_1
 		, IAsyncDisposable
@@ -46,9 +46,11 @@ namespace Sylvan.Data.Csv
 		readonly char[] buffer;
 		readonly int bufferSize;
 		int pos;
+		
+		bool[] needsEscape;
 
 		readonly bool invariantCulture;
-		readonly bool ownsWriter;
+	
 		bool disposedValue;
 
 		static TextWriter GetWriter(string fileName, CsvDataWriterOptions? options)
@@ -63,9 +65,10 @@ namespace Sylvan.Data.Csv
 		/// </summary>
 		/// <param name="fileName">The path of the file to write.</param>
 		/// <param name="options">The options used to configure the writer, or null to use the defaults.</param>
-		public CsvDataWriter(string fileName, CsvDataWriterOptions? options = null)
-			: this(GetWriter(fileName, options), options)
+		public static CsvDataWriter Create(string fileName, CsvDataWriterOptions? options = null)
 		{
+			var writer = GetWriter(fileName, options);
+			return new CsvDataWriter(writer, options);
 		}
 
 		/// <summary>
@@ -73,7 +76,12 @@ namespace Sylvan.Data.Csv
 		/// </summary>
 		/// <param name="writer">The TextWriter to receive the delimited data.</param>
 		/// <param name="options">The options used to configure the writer, or null to use the defaults.</param>
-		public CsvDataWriter(TextWriter writer, CsvDataWriterOptions? options = null)
+		public static CsvDataWriter Create(TextWriter writer, CsvDataWriterOptions? options = null)
+		{
+			return new CsvDataWriter(writer, options);
+		}
+
+		CsvDataWriter(TextWriter writer, CsvDataWriterOptions? options = null)
 		{
 			if (writer == null) throw new ArgumentNullException(nameof(writer));
 			if (options != null)
@@ -98,7 +106,7 @@ namespace Sylvan.Data.Csv
 			this.writer = writer;
 			this.trueString = options.TrueString;
 			this.falseString = options.FalseString;
-			this.dateTimeFormat = options.DateFormat;
+			this.dateTimeFormat = options.DateTimeFormat;
 			this.writeHeaders = options.WriteHeaders;
 			this.delimiter = options.Delimiter;
 			this.quote = options.Quote;
@@ -108,9 +116,13 @@ namespace Sylvan.Data.Csv
 			this.invariantCulture = this.culture == CultureInfo.InvariantCulture;
 			this.prepareBuffer = new char[0x100];
 			this.bufferSize = options.BufferSize;
-			this.buffer = options.Buffer ?? new char[bufferSize];
-			this.ownsWriter = options.OwnsWriter;
+			this.buffer = options.Buffer ?? new char[bufferSize];			
 			this.pos = 0;
+			this.needsEscape = new bool[128];
+			this.needsEscape[quote] = true;
+			this.needsEscape[delimiter] = true;
+			this.needsEscape['\r'] = true;
+			this.needsEscape['\n'] = true;
 		}
 
 		const int Base64EncSize = 3 * 256; // must be a multiple of 3.
@@ -172,8 +184,6 @@ namespace Sylvan.Data.Csv
 		// this can return either Complete or InsufficientSpace
 		WriteResult WriteField(DbDataReader reader, FieldInfo[] fieldTypes, int i)
 		{
-			var type = fieldTypes[i].type;
-			var typeCode = fieldTypes[i].typeCode;
 			var allowNull = fieldTypes[i].allowNull;
 
 			if (allowNull && reader.IsDBNull(i))
@@ -185,6 +195,7 @@ namespace Sylvan.Data.Csv
 			string? str;
 			WriteResult result = WriteResult.Complete;
 
+			var typeCode = fieldTypes[i].typeCode;
 			switch (typeCode)
 			{
 				case TypeCode.Boolean:
@@ -193,7 +204,8 @@ namespace Sylvan.Data.Csv
 					break;
 				case TypeCode.String:
 					str = reader.GetString(i);
-					goto str;
+					result = WriteField(str);
+					break;
 				case TypeCode.Byte:
 					intVal = reader.GetByte(i);
 					goto intVal;
@@ -227,6 +239,7 @@ namespace Sylvan.Data.Csv
 					result = WriteResult.Complete;
 					break;
 				default:
+					var type = fieldTypes[i].type;
 					if (type == typeof(byte[]))
 					{
 						if (dataBuffer == null)
@@ -249,8 +262,7 @@ namespace Sylvan.Data.Csv
 						WriteField(guid);
 						break;
 					}
-					str = reader.GetValue(i)?.ToString();
-				str:
+					str = reader.GetValue(i)?.ToString() ?? string.Empty;
 					result = WriteField(str);
 					break;
 			}
@@ -292,11 +304,11 @@ namespace Sylvan.Data.Csv
 		WriteResult WriteValueOptimistic(string str)
 		{
 			var start = pos;
-
+			var ne = this.needsEscape;
 			for (int i = 0; i < str.Length; i++)
 			{
 				var c = str[i];
-				if (c == delimiter || c == quote || c == '\r' || c == '\n')
+				if (c < 128 && ne[c])
 				{
 					pos = start;
 					return WriteResult.RequiresEscaping;
@@ -555,15 +567,12 @@ namespace Sylvan.Data.Csv
 			return r;
 		}
 
-		WriteResult WriteField(string? value)
+		WriteResult WriteField(string value)
 		{
-			if (string.IsNullOrEmpty(value))
-				return WriteResult.Complete;
-
-			var r = WriteValueOptimistic(value!);
+			var r = WriteValueOptimistic(value);
 			if (r == WriteResult.RequiresEscaping)
 			{
-				return WriteValue(value!);
+				return WriteValue(value);
 			}
 			return r;
 		}

@@ -27,10 +27,10 @@ namespace Sylvan.Data.Csv
 			this.NewLine = Environment.NewLine;
 			this.BufferSize = DefaultBufferSize;
 			this.Culture = CultureInfo.InvariantCulture;
-			this.OwnsWriter = true;
 			this.TrueString = bool.TrueString;
 			this.FalseString = bool.FalseString;
-			this.DateFormat = "yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'FFFFFFF";
+			this.DateTimeFormat = "yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'FFFFFFF";
+			this.DateFormat = "yyyy'-'MM'-'dd";
 			this.WriteHeaders = true;
 		}
 
@@ -51,6 +51,11 @@ namespace Sylvan.Data.Csv
 
 		/// <summary>
 		/// The format string used when writing DateTime values. The default is \"yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'FFFFFFF\".
+		/// </summary>
+		public string? DateTimeFormat { get; set; }
+
+		/// <summary>
+		/// The format string used when writing DateTime values that have to time component. The default is \"yyyy'-'MM'-'dd\".
 		/// </summary>
 		public string? DateFormat { get; set; }
 
@@ -90,11 +95,6 @@ namespace Sylvan.Data.Csv
 		/// The CultureInfo to use when writing values. The default is the InvariantCulture.
 		/// </summary>
 		public CultureInfo Culture { get; set; }
-
-		/// <summary>
-		/// Indicates if the TextWriter should be closed when the CsvWriter is closed. The default is true.
-		/// </summary>
-		public bool OwnsWriter { get; set; }
 
 		internal void Validate()
 		{

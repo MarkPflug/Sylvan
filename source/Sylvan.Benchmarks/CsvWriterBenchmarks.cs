@@ -52,7 +52,7 @@ namespace Sylvan.Data.Csv
 		{
 			var tw = TextWriter.Null;
 			var dr = TestData.GetTestDataReader();
-			var csv = new CsvDataWriter(tw);
+			var csv = CsvDataWriter.Create(tw);
 			await csv.WriteAsync(dr);
 		}
 
@@ -61,7 +61,7 @@ namespace Sylvan.Data.Csv
 		{
 			var tw = TextWriter.Null;
 			var dr = TestData.GetTestDataReader();
-			var csv = new CsvDataWriter(tw);
+			var csv = CsvDataWriter.Create(tw);
 			csv.Write(dr);
 		}
 	}

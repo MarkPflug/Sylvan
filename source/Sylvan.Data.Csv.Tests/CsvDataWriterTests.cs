@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data.Common;
 using System.Globalization;
 using System.IO;
+using System.Xml;
 using Xunit;
 
 namespace Sylvan.Data.Csv
@@ -24,7 +25,7 @@ namespace Sylvan.Data.Csv
 		static string GetCsv(DbDataReader dr)
 		{
 			var sw = new StringWriter();
-			var csv = new CsvDataWriter(sw, TestOptions);
+			var csv = CsvDataWriter.Create(sw, TestOptions);
 			csv.Write(dr);
 			return sw.ToString();
 		}
@@ -111,7 +112,7 @@ namespace Sylvan.Data.Csv
 		public void CultureCommaDecimalPoint()
 		{
 			var sw = new StringWriter();
-			var csv = new CsvDataWriter(sw, new CsvDataWriterOptions { NewLine = "\n", Culture = ItalianCulture });
+			var csv = CsvDataWriter.Create(sw, new CsvDataWriterOptions { NewLine = "\n", Culture = ItalianCulture });
 
 			var dr = new[]
 			{
@@ -127,7 +128,7 @@ namespace Sylvan.Data.Csv
 		public void CultureCommaDecimalPoint2()
 		{
 			var sw = new StringWriter();
-			var csv = new CsvDataWriter(sw, new CsvDataWriterOptions { NewLine = "\n", Culture = ItalianCulture, Delimiter = ';' });
+			var csv = CsvDataWriter.Create(sw, new CsvDataWriterOptions { NewLine = "\n", Culture = ItalianCulture, Delimiter = ';' });
 
 			var dr = new[]
 			{

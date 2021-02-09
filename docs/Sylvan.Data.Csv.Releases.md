@@ -5,6 +5,7 @@ _0.10.0_
 - CsvWriterOptions renamed to CsvDataWriterOptions.
 - Add WriteHeader option to CsvDataWriterOptions.
 - Performance improvements for real-world usage scenarios. Micro-benchmark measurements remain stable.
+- CsvDataWriter constructor removed and replaced with static Create function.
 
 _0.9.2_
 - Add support for per-column boolean format specification.

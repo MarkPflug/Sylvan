@@ -13,7 +13,7 @@ namespace Sylvan.Data.Csv
 		/// <param name="reader">The DbDataReader to be written.</param>
 		/// <param name="cancel">A cancellation token to cancel the asynchronous operation.</param>
 		/// <returns>A task representing the asynchronous write operation.</returns>
-		public async Task<long> WriteAsync(DbDataReader reader, CancellationToken cancel = default)
+		public virtual async Task<long> WriteAsync(DbDataReader reader, CancellationToken cancel = default)
 		{
 			var c = reader.FieldCount;
 			var fieldTypes = new FieldInfo[c];
