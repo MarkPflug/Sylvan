@@ -42,7 +42,6 @@ namespace Sylvan.Data.Csv
 
 		readonly CultureInfo culture;
 
-		char[] prepareBuffer;
 		byte[]? dataBuffer = null;
 		readonly char[] buffer;
 		readonly int bufferSize;
@@ -113,60 +112,12 @@ namespace Sylvan.Data.Csv
 			this.newLine = options.NewLine;
 			this.culture = options.Culture;
 			this.invariantCulture = this.culture == CultureInfo.InvariantCulture;
-			this.prepareBuffer = new char[0x100];
 			this.bufferSize = options.BufferSize;
 			this.buffer = options.Buffer ?? new char[bufferSize];
 			this.pos = 0;
 		}
 
 		const int Base64EncSize = 3 * 256; // must be a multiple of 3.
-
-		void PrepareValue(string str, out int o, out int l)
-		{
-			var worstCaseLenth = str.Length * 2 + 2;
-			// at worst, we'll have to escape every character and put quotes around it
-
-			if (this.prepareBuffer.Length < worstCaseLenth)
-			{
-				if (str.Length > bufferSize)
-				{
-					// the value being written is too large to fit in the buffer
-					throw new ArgumentOutOfRangeException();
-				}
-				Array.Resize(ref this.prepareBuffer, worstCaseLenth);
-			}
-
-			var buffer = this.prepareBuffer;
-			var p = 0;
-			buffer[p++] = quote;
-			bool isQuoted = false;
-			for (int i = 0; i < str.Length; i++)
-			{
-				var c = str[i];
-
-				if (c == delimiter || c == quote || c == '\r' || c == '\n')
-				{
-					isQuoted = true;
-					if (c == quote || c == escape)
-					{
-						buffer[p++] = escape;
-					}
-				}
-				buffer[p++] = c;
-			}
-			buffer[p++] = quote;
-
-			if (isQuoted)
-			{
-				o = 0;
-				l = p;
-			}
-			else
-			{
-				o = 1;
-				l = p - 2;
-			}
-		}
 
 		enum WriteResult
 		{
@@ -263,11 +214,37 @@ namespace Sylvan.Data.Csv
 			return result;
 		}
 
-		WriteResult WriteValue(string str)
+		WriteResult WriteQuoted(string str)
 		{
-			int o, l;
-			PrepareValue(str, out o, out l);
-			return WriteValue(this.prepareBuffer, o, l);
+			var buffer = this.buffer;
+			var p = this.pos;
+			// require at least room for the 2 quotes and 1 escape.
+			if (p + str.Length + 3 >= buffer.Length)
+				return WriteResult.InsufficientSpace;
+
+			buffer[p++] = quote; // range guarded by previous if
+			for (int i = 0; i < str.Length; i++)
+			{
+				var c = str[i];
+
+				if (c == delimiter || c == quote || c == '\r' || c == '\n')
+				{
+					if (c == quote || c == escape)
+					{
+						if (p == buffer.Length)
+							return WriteResult.InsufficientSpace;
+						buffer[p++] = escape;
+					}
+				}
+				if (p == buffer.Length)
+					return WriteResult.InsufficientSpace;
+				buffer[p++] = c;
+			}
+			if (p == buffer.Length)
+				return WriteResult.InsufficientSpace;
+			buffer[p++] = quote;
+			this.pos = p;
+			return WriteResult.Complete;
 		}
 
 		WriteResult WriteValue(char[] buffer, int o, int l)
@@ -286,7 +263,7 @@ namespace Sylvan.Data.Csv
 			// keep it fast/allocation-free in the sane case.
 			if (delimiter == '-' || quote == '-')
 			{
-				WriteValue(value.ToString());
+				WriteQuoted(value.ToString());
 			}
 			else
 			{
@@ -328,7 +305,7 @@ namespace Sylvan.Data.Csv
 			return WriteResult.InsufficientSpace;
 #else
 			var str = value.ToString(culture);
-			return WriteValue(str);
+			return WriteField(str);
 #endif
 		}
 
@@ -348,7 +325,7 @@ namespace Sylvan.Data.Csv
 				return WriteValueInvariant(value);
 			}
 			var str = value.ToString();
-			return WriteValue(str);
+			return WriteField(str);
 		}
 
 		WriteResult WriteValueInvariant(long value)
@@ -363,7 +340,7 @@ namespace Sylvan.Data.Csv
 			return WriteResult.InsufficientSpace;
 #else
 			var str = value.ToString(culture);
-			return WriteValue(str);
+			return WriteField(str);
 #endif
 		}
 
@@ -383,7 +360,7 @@ namespace Sylvan.Data.Csv
 				return WriteValueInvariant(value);
 			}
 			var str = value.ToString(culture);
-			return WriteValue(str);
+			return WriteField(str);
 		}
 
 		WriteResult WriteValueInvariant(DateTime value)
@@ -403,7 +380,7 @@ namespace Sylvan.Data.Csv
 				? value.ToString(culture)
 				: value.ToString(dateTimeFormat, culture);
 
-			return WriteValue(str);
+			return WriteField(str);
 #endif
 		}
 
@@ -419,7 +396,7 @@ namespace Sylvan.Data.Csv
 			return WriteResult.InsufficientSpace;
 #else
 			var str = value.ToString();
-			return WriteValue(str);
+			return WriteField(str);
 #endif
 		}
 
@@ -443,7 +420,7 @@ namespace Sylvan.Data.Csv
 				? value.ToString(culture)
 				: value.ToString(dateTimeFormat, culture);
 
-			return WriteValue(str);
+			return WriteField(str);
 		}
 
 		WriteResult WriteValueInvariant(double value)
@@ -458,7 +435,7 @@ namespace Sylvan.Data.Csv
 			return WriteResult.InsufficientSpace;
 #else
 			var str = value.ToString(culture);
-			return WriteValue(str);
+			return WriteField(str);
 #endif
 		}
 
@@ -478,7 +455,7 @@ namespace Sylvan.Data.Csv
 				return WriteValueInvariant(value);
 			}
 			var str = value.ToString(culture);
-			return WriteValue(str);
+			return WriteField(str);
 		}
 
 		// this should only be called in scenarios where we know there is enough room.
@@ -513,14 +490,7 @@ namespace Sylvan.Data.Csv
 		WriteResult WriteField(bool value)
 		{
 			var str = value ? trueString : falseString;
-			if (!IsAvailable(str.Length))
-				return WriteResult.InsufficientSpace;
-			var r = WriteValueOptimistic(str);
-			if (r == WriteResult.RequiresEscaping)
-			{
-				return WriteValue(str);
-			}
-			return r;
+			return WriteField(str);
 		}
 
 		WriteResult WriteField(double value)
@@ -565,11 +535,10 @@ namespace Sylvan.Data.Csv
 			var r = WriteValueOptimistic(value);
 			if (r == WriteResult.RequiresEscaping)
 			{
-				return WriteValue(value);
+				return WriteQuoted(value);
 			}
 			return r;
 		}
-
 
 		int WriteBinaryValue(byte[] buffer, int len)
 		{
