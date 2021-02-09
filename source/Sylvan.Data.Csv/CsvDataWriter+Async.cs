@@ -40,7 +40,7 @@ namespace Sylvan.Data.Csv
 					{
 						if (pos + 1 >= bufferSize)
 						{
-							await FlushBufferAsync();
+							await FlushBufferAsync().ConfigureAwait(false);
 						}
 						buffer[pos++] = delimiter;
 					}
@@ -49,7 +49,7 @@ namespace Sylvan.Data.Csv
 					result = WriteField(header);
 					if (result == WriteResult.InsufficientSpace)
 					{
-						await FlushBufferAsync();
+						await FlushBufferAsync().ConfigureAwait(false);
 						result = WriteField(header);
 						if (result == WriteResult.InsufficientSpace)
 							throw new Exception();
@@ -58,7 +58,7 @@ namespace Sylvan.Data.Csv
 
 				if (pos + 2 >= bufferSize)
 				{
-					await FlushBufferAsync();
+					await FlushBufferAsync().ConfigureAwait(false);
 				}
 				EndRecord();
 			}
@@ -76,7 +76,7 @@ namespace Sylvan.Data.Csv
 					{
 						if (pos + 1 >= bufferSize)
 						{
-							await FlushBufferAsync();
+							await FlushBufferAsync().ConfigureAwait(false);
 						}
 						buffer[pos++] = delimiter;
 					}
@@ -88,7 +88,7 @@ namespace Sylvan.Data.Csv
 							goto success;
 						if (r == WriteResult.InsufficientSpace)
 						{
-							await FlushBufferAsync();
+							await FlushBufferAsync().ConfigureAwait(false);
 							continue;
 						}
 					}
@@ -100,29 +100,20 @@ namespace Sylvan.Data.Csv
 
 				if (pos + 2 >= bufferSize)
 				{
-					await FlushBufferAsync();
+					await FlushBufferAsync().ConfigureAwait(false);
 				}
 				EndRecord();
 			}
 			// flush any pending data on the way out.
-			await FlushBufferAsync();
+			await FlushBufferAsync().ConfigureAwait(false);
 			return row;
 		}
 
 		async Task FlushBufferAsync()
 		{
 			if (this.pos == 0) return;
-			await writer.WriteAsync(buffer, 0, pos);
+			await writer.WriteAsync(buffer, 0, pos).ConfigureAwait(false);
 			pos = 0;
-		}
-
-		/// <summary>
-		/// Asynchronously flushes any pending data to the output writer.
-		/// </summary>
-		/// <returns>A task representing the asynchronous operation.</returns>
-		public Task FlushAsync()
-		{
-			return FlushBufferAsync();
 		}
 
 #if NETSTANDARD2_1

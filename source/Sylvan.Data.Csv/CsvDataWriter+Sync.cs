@@ -112,14 +112,6 @@ namespace Sylvan.Data.Csv
 			pos = 0;
 		}
 
-		/// <summary>
-		/// Flushes any pending data to the output writer.
-		/// </summary>
-		public void Flush()
-		{
-			FlushBuffer();
-		}
-
 		void IDisposable.Dispose()
 		{
 			GC.SuppressFinalize(this);
