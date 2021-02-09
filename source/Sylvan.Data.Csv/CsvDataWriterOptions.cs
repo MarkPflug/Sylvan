@@ -104,7 +104,10 @@ namespace Sylvan.Data.Csv
 				Quote == Delimiter ||
 				(NewLine != "\r" && NewLine != "\n" && NewLine != "\r\n") ||
 				TrueString == FalseString ||
-				(Buffer != null && Buffer.Length < MinBufferSize);
+				(Buffer != null && Buffer.Length < MinBufferSize) ||
+				Delimiter >= 128 ||
+				Quote >= 128 ||
+				Escape >= 128;
 			if (invalid)
 				throw new CsvConfigurationException();
 		}

@@ -2,6 +2,7 @@
 using System.Data.Common;
 using System.Globalization;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace Sylvan.Data.Csv
@@ -46,11 +47,11 @@ namespace Sylvan.Data.Csv
 		readonly char[] buffer;
 		readonly int bufferSize;
 		int pos;
-		
+
 		bool[] needsEscape;
 
 		readonly bool invariantCulture;
-	
+
 		bool disposedValue;
 
 		static TextWriter GetWriter(string fileName, CsvDataWriterOptions? options)
@@ -116,7 +117,7 @@ namespace Sylvan.Data.Csv
 			this.invariantCulture = this.culture == CultureInfo.InvariantCulture;
 			this.prepareBuffer = new char[0x100];
 			this.bufferSize = options.BufferSize;
-			this.buffer = options.Buffer ?? new char[bufferSize];			
+			this.buffer = options.Buffer ?? new char[bufferSize];
 			this.pos = 0;
 			this.needsEscape = new bool[128];
 			this.needsEscape[quote] = true;
@@ -301,25 +302,27 @@ namespace Sylvan.Data.Csv
 			return WriteResult.Complete;
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		WriteResult WriteValueOptimistic(string str)
 		{
-			var start = pos;
 			var ne = this.needsEscape;
+			var buffer = this.buffer;
+			var bl = buffer.Length;
+			var pos = this.pos;
 			for (int i = 0; i < str.Length; i++)
 			{
 				var c = str[i];
-				if (c < 128 && ne[c])
+				if (ne[c & 0x7f] && c < 128)
 				{
-					pos = start;
 					return WriteResult.RequiresEscaping;
 				}
-				if (pos == bufferSize)
+				if (pos == bl)
 				{
-					pos = start;
 					return WriteResult.InsufficientSpace;
 				}
 				buffer[pos++] = c;
 			}
+			this.pos = pos;
 			return WriteResult.Complete;
 		}
 
