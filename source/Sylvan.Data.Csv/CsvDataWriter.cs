@@ -42,9 +42,8 @@ namespace Sylvan.Data.Csv
 
 		readonly CultureInfo culture;
 
-		byte[]? dataBuffer = null;
+		byte[] dataBuffer = Array.Empty<byte>();
 		readonly char[] buffer;
-		readonly int bufferSize;
 		int pos;
 
 		readonly bool invariantCulture;
@@ -81,27 +80,10 @@ namespace Sylvan.Data.Csv
 
 		CsvDataWriter(TextWriter writer, CsvDataWriterOptions? options = null)
 		{
-			if (writer == null) throw new ArgumentNullException(nameof(writer));
-			if (options != null)
-			{
-				options.Validate();
-			}
-			else
-			{
-				options = CsvDataWriterOptions.Default;
-			}
+			options = options ?? CsvDataWriterOptions.Default;
+			options.Validate();
 
-			if (writer == null) throw new ArgumentNullException(nameof(writer));
-			if (options != null)
-			{
-				options.Validate();
-			}
-			else
-			{
-				options = CsvDataWriterOptions.Default;
-			}
-
-			this.writer = writer;
+			this.writer = writer ?? throw new ArgumentNullException(nameof(writer));
 			this.trueString = options.TrueString;
 			this.falseString = options.FalseString;
 			this.dateTimeFormat = options.DateTimeFormat;
@@ -112,8 +94,7 @@ namespace Sylvan.Data.Csv
 			this.newLine = options.NewLine;
 			this.culture = options.Culture;
 			this.invariantCulture = this.culture == CultureInfo.InvariantCulture;
-			this.bufferSize = options.BufferSize;
-			this.buffer = options.Buffer ?? new char[bufferSize];
+			this.buffer = options.Buffer ?? new char[options.BufferSize];
 			this.pos = 0;
 		}
 
@@ -187,13 +168,13 @@ namespace Sylvan.Data.Csv
 					var type = fieldTypes[i].type;
 					if (type == typeof(byte[]))
 					{
-						if (dataBuffer == null)
+						if (dataBuffer.Length == 0)
 						{
 							dataBuffer = new byte[Base64EncSize];
 						}
 						var idx = 0;
 						AssertBinaryPrereq(0);
-						int len = 0;
+						int len;
 						while ((len = (int)reader.GetBytes(i, idx, dataBuffer, 0, Base64EncSize)) != 0)
 						{
 							WriteBinaryValue(dataBuffer, len);
@@ -249,7 +230,7 @@ namespace Sylvan.Data.Csv
 
 		WriteResult WriteValue(char[] buffer, int o, int l)
 		{
-			if (pos + l >= bufferSize) return WriteResult.InsufficientSpace;
+			if (pos + l >= buffer.Length) return WriteResult.InsufficientSpace;
 
 			Array.Copy(buffer, o, this.buffer, pos, l);
 			pos += l;
@@ -277,7 +258,7 @@ namespace Sylvan.Data.Csv
 		{
 			var buffer = this.buffer;
 			var pos = this.pos;
-			if(pos + str.Length >= buffer.Length)
+			if (pos + str.Length >= buffer.Length)
 				return WriteResult.InsufficientSpace;
 
 			for (int i = 0; i < str.Length; i++)
@@ -296,7 +277,7 @@ namespace Sylvan.Data.Csv
 		WriteResult WriteValueInvariant(int value)
 		{
 #if NETSTANDARD2_1
-			var span = buffer.AsSpan()[pos..bufferSize];
+			var span = buffer.AsSpan()[pos..];
 			if (value.TryFormat(span, out int c, provider: culture))
 			{
 				pos += c;
@@ -331,7 +312,7 @@ namespace Sylvan.Data.Csv
 		WriteResult WriteValueInvariant(long value)
 		{
 #if NETSTANDARD2_1
-			var span = buffer.AsSpan()[pos..bufferSize];
+			var span = buffer.AsSpan()[pos..];
 			if (value.TryFormat(span, out int c, provider: culture))
 			{
 				pos += c;
@@ -366,7 +347,7 @@ namespace Sylvan.Data.Csv
 		WriteResult WriteValueInvariant(DateTime value)
 		{
 #if NETSTANDARD2_1
-			var span = buffer.AsSpan()[pos..bufferSize];
+			var span = buffer.AsSpan()[pos..];
 
 			if (value.TryFormat(span, out int c, this.dateTimeFormat.AsSpan(), culture))
 			{
@@ -387,7 +368,7 @@ namespace Sylvan.Data.Csv
 		WriteResult WriteValueInvariant(Guid value)
 		{
 #if NETSTANDARD2_1
-			var span = buffer.AsSpan()[pos..bufferSize];
+			var span = buffer.AsSpan()[pos..];
 			if (value.TryFormat(span, out int c))
 			{
 				pos += c;
@@ -426,7 +407,7 @@ namespace Sylvan.Data.Csv
 		WriteResult WriteValueInvariant(double value)
 		{
 #if NETSTANDARD2_1
-			var span = buffer.AsSpan()[pos..bufferSize];
+			var span = buffer.AsSpan()[pos..];
 			if (value.TryFormat(span, out int c, provider: culture))
 			{
 				pos += c;
@@ -468,7 +449,7 @@ namespace Sylvan.Data.Csv
 
 		bool IsAvailable(int size)
 		{
-			return pos + size < bufferSize;
+			return pos + size < buffer.Length;
 		}
 
 		void AssertBinaryPrereq(int size)

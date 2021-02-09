@@ -18,7 +18,7 @@ namespace Sylvan.Data.Csv
 			var schema = (reader as IDbColumnSchemaGenerator)?.GetColumnSchema();
 
 			char[] buffer = this.buffer;
-			int bufferSize = this.bufferSize;
+			int bufferSize = this.buffer.Length;
 
 			WriteResult result;
 
