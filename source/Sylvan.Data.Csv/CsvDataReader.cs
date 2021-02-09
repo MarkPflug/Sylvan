@@ -141,37 +141,7 @@ namespace Sylvan.Data.Csv
 			this.stringFactory = options.StringFactory ?? new StringFactory((char[] b, int o, int l) => new string(b, o, l));
 		}
 
-		async Task InitializeAsync(ICsvSchemaProvider? schema)
-		{
-			state = State.Initializing;
-			if (autoDetectDelimiter)
-			{
-				await FillBufferAsync();
-				var c = DetectDelimiter();
-				this.delimiter = c;
-			}
-			// if the user specified that there are headers
-			// read them, and use them to determine fieldCount.
-			if (hasHeaders)
-			{
-				if (await NextRecordAsync())
-				{
-					InitializeSchema(schema);
-				}
-				else
-				{
-					throw new CsvMissingHeadersException();
-				}
-			}
-
-			// read the first row of data to determine fieldCount (if there were no headers)
-			// and support calling HasRows before Read is first called.
-			this.hasRows = await NextRecordAsync();
-			if (hasHeaders == false)
-			{
-				InitializeSchema(schema);
-			}
-		}
+		
 
 		char DetectDelimiter()
 		{

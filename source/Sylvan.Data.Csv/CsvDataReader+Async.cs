@@ -24,7 +24,7 @@ namespace Sylvan.Data.Csv
 			bufferSize = Math.Max(bufferSize, Environment.SystemPageSize);
 			var reader = new StreamReader(filename, Encoding.Default, true, bufferSize);
 			var csv = new CsvDataReader(reader, options);
-			await csv.InitializeAsync(options?.Schema);
+			await csv.InitializeAsync(options?.Schema).ConfigureAwait(false);
 			return csv;
 		}
 
@@ -38,8 +38,40 @@ namespace Sylvan.Data.Csv
 		{
 			if (reader == null) throw new ArgumentNullException(nameof(reader));
 			var csv = new CsvDataReader(reader, options);
-			await csv.InitializeAsync(options?.Schema);
+			await csv.InitializeAsync(options?.Schema).ConfigureAwait(false);
 			return csv;
+		}
+
+		async Task InitializeAsync(ICsvSchemaProvider? schema)
+		{
+			state = State.Initializing;
+			if (autoDetectDelimiter)
+			{
+				await FillBufferAsync().ConfigureAwait(false);
+				var c = DetectDelimiter();
+				this.delimiter = c;
+			}
+			// if the user specified that there are headers
+			// read them, and use them to determine fieldCount.
+			if (hasHeaders)
+			{
+				if (await NextRecordAsync().ConfigureAwait(false))
+				{
+					InitializeSchema(schema);
+				}
+				else
+				{
+					throw new CsvMissingHeadersException();
+				}
+			}
+
+			// read the first row of data to determine fieldCount (if there were no headers)
+			// and support calling HasRows before Read is first called.
+			this.hasRows = await NextRecordAsync().ConfigureAwait(false);
+			if (hasHeaders == false)
+			{
+				InitializeSchema(schema);
+			}
 		}
 
 		async Task<bool> NextRecordAsync()
@@ -49,7 +81,7 @@ namespace Sylvan.Data.Csv
 
 			if (this.idx >= bufferEnd)
 			{
-				await FillBufferAsync();
+				await FillBufferAsync().ConfigureAwait(false);
 				if (idx == bufferEnd)
 				{
 					return false;
@@ -81,7 +113,7 @@ namespace Sylvan.Data.Csv
 					}
 					else
 					{
-						await FillBufferAsync();
+						await FillBufferAsync().ConfigureAwait(false);
 						// after filling the buffer, we will resume reading fields from where we left off.
 					}
 				}
@@ -102,7 +134,7 @@ namespace Sylvan.Data.Csv
 			recordStart = 0;
 
 			var count = buffer.Length - bufferEnd;
-			var c = await reader.ReadBlockAsync(buffer, bufferEnd, count);
+			var c = await reader.ReadBlockAsync(buffer, bufferEnd, count).ConfigureAwait(false);
 			bufferEnd += c;
 			if (c < count)
 			{
@@ -110,7 +142,6 @@ namespace Sylvan.Data.Csv
 			}
 			return c;
 		}
-
 
 		/// <inheritdoc/>
 		public override Task<bool> ReadAsync(CancellationToken cancellationToken)
