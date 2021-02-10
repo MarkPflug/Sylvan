@@ -52,7 +52,7 @@ namespace Sylvan.Data.Csv
 						await FlushBufferAsync().ConfigureAwait(false);
 						result = WriteField(header);
 						if (result == WriteResult.InsufficientSpace)
-							throw new Exception();
+							throw new CsvRecordTooLargeException(0, i);
 					}
 				}
 
@@ -94,7 +94,7 @@ namespace Sylvan.Data.Csv
 					}
 					// we arrive here only when there isn't enough room in the buffer
 					// to hold the field.				
-					throw new Exception();
+					throw new CsvRecordTooLargeException(row, i);
 				success:;
 				}
 
