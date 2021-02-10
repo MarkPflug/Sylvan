@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Data.Common;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -29,6 +30,16 @@ namespace Sylvan.Data.Csv
 			public TypeCode typeCode;
 		}
 
+		enum WriteResult
+		{
+			InsufficientSpace = 1,
+			RequiresEscaping,
+			Complete,
+		}
+
+		// Size of the buffer used for base64 encoding, must be a multiple of 3.
+		const int Base64EncSize = 3 * 256;
+
 		readonly TextWriter writer;
 		readonly bool writeHeaders;
 		readonly char delimiter;
@@ -46,9 +57,11 @@ namespace Sylvan.Data.Csv
 		readonly char[] buffer;
 		int pos;
 
-		readonly bool invariantCulture;
-
 		bool disposedValue;
+
+		readonly bool fastDouble;
+		readonly bool fastInt;
+		readonly bool fastDate;
 
 		static TextWriter GetWriter(string fileName, CsvDataWriterOptions? options)
 		{
@@ -82,7 +95,6 @@ namespace Sylvan.Data.Csv
 		{
 			options = options ?? CsvDataWriterOptions.Default;
 			options.Validate();
-
 			this.writer = writer ?? throw new ArgumentNullException(nameof(writer));
 			this.trueString = options.TrueString;
 			this.falseString = options.FalseString;
@@ -93,18 +105,13 @@ namespace Sylvan.Data.Csv
 			this.escape = options.Escape;
 			this.newLine = options.NewLine;
 			this.culture = options.Culture;
-			this.invariantCulture = this.culture == CultureInfo.InvariantCulture;
 			this.buffer = options.Buffer ?? new char[options.BufferSize];
 			this.pos = 0;
-		}
 
-		const int Base64EncSize = 3 * 256; // must be a multiple of 3.
-
-		enum WriteResult
-		{
-			InsufficientSpace = 1,
-			RequiresEscaping,
-			Complete,
+			var isInvariantCulture = this.culture == CultureInfo.InvariantCulture;
+			this.fastDouble = isInvariantCulture && delimiter != '.' && quote != '.';
+			this.fastInt = isInvariantCulture && delimiter != '-' && quote != '-';
+			this.fastDate = isInvariantCulture && delimiter == ',' && quote == '\"';
 		}
 
 		// this can return either Complete or InsufficientSpace
@@ -173,19 +180,31 @@ namespace Sylvan.Data.Csv
 							dataBuffer = new byte[Base64EncSize];
 						}
 						var idx = 0;
-						AssertBinaryPrereq(0);
+						if (IsBase64Symbol(delimiter) || IsBase64Symbol(quote))
+						{
+							throw new InvalidOperationException();
+						}
 						int len;
+						var pos = this.pos;
 						while ((len = (int)reader.GetBytes(i, idx, dataBuffer, 0, Base64EncSize)) != 0)
 						{
-							WriteBinaryValue(dataBuffer, len);
+							var req = (len + 2) / 3 * 4;
+							if (pos + req >= buffer.Length)
+								return WriteResult.InsufficientSpace;
+
+							var c = Convert.ToBase64CharArray(dataBuffer, 0, len, this.buffer, pos);
+							
 							idx += len;
+							pos += c;
 						}
+						this.pos = pos;
+						result = WriteResult.Complete;
 						break;
 					}
 					if (type == typeof(Guid))
 					{
 						var guid = reader.GetGuid(i);
-						WriteField(guid);
+						result = WriteField(guid);
 						break;
 					}
 					str = reader.GetValue(i)?.ToString() ?? string.Empty;
@@ -193,6 +212,126 @@ namespace Sylvan.Data.Csv
 					break;
 			}
 			return result;
+		}
+
+		// this should only be called in scenarios where we know there is enough room.
+		void EndRecord()
+		{
+			var nl = this.newLine;
+			for (int i = 0; i < nl.Length; i++)
+				buffer[pos++] = nl[i];
+		}
+			
+
+		static bool IsBase64Symbol(char c)
+		{
+			return c == '+' || c == '/' || c == '=';
+		}
+
+		WriteResult WriteField(Guid value)
+		{
+			return WriteField(value.ToString());
+		}
+
+		WriteResult WriteField(bool value)
+		{
+			var str = value ? trueString : falseString;
+			return WriteField(str);
+		}
+
+		WriteResult WriteField(double value)
+		{
+#if NETSTANDARD2_1
+			if(fastDouble)
+			{
+				if(value.TryFormat(buffer.AsSpan()[pos..], out int len, default, culture))
+				{
+					pos += len;
+					return WriteResult.Complete;
+				}
+				return WriteResult.InsufficientSpace;
+			}
+#endif
+			return WriteField(value.ToString(culture));
+		}
+
+		WriteResult WriteField(long value)
+		{
+#if NETSTANDARD2_1
+			if(fastInt)
+			{
+				if(value.TryFormat(buffer.AsSpan()[pos..], out int len, default, culture))
+				{
+					pos += len;
+					return WriteResult.Complete;
+				}
+				return WriteResult.InsufficientSpace;
+			}
+#endif
+			return WriteField(value.ToString(culture));
+		}
+
+		WriteResult WriteField(int value)
+		{
+#if NETSTANDARD2_1
+			if(fastInt)
+			{
+				if(value.TryFormat(buffer.AsSpan()[pos..], out int len, default, culture))
+				{
+					pos += len;
+					return WriteResult.Complete;
+				}
+				return WriteResult.InsufficientSpace;
+			}
+#endif
+			return WriteField(value.ToString(culture));
+		}
+
+		WriteResult WriteField(DateTime value)
+		{
+#if NETSTANDARD2_1
+			if (fastDate)
+			{
+				if (value.TryFormat(buffer.AsSpan()[pos..], out int len, dateTimeFormat, culture))
+				{
+					pos += len;
+					return WriteResult.Complete;
+				}
+				return WriteResult.InsufficientSpace;
+			}
+#endif
+			return WriteField(value.ToString(dateTimeFormat, culture));
+		}
+
+		WriteResult WriteField(string value)
+		{
+			var r = WriteValueOptimistic(value);
+			if (r == WriteResult.RequiresEscaping)
+			{
+				return WriteQuoted(value);
+			}
+			return r;
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		WriteResult WriteValueOptimistic(string str)
+		{
+			var buffer = this.buffer;
+			var pos = this.pos;
+			if (pos + str.Length >= buffer.Length)
+				return WriteResult.InsufficientSpace;
+
+			for (int i = 0; i < str.Length; i++)
+			{
+				var c = str[i];
+				if (c == delimiter || c == quote || c == '\n' || c == '\r')
+				{
+					return WriteResult.RequiresEscaping;
+				}
+				buffer[pos + i] = c;
+			}
+			this.pos += str.Length;
+			return WriteResult.Complete;
 		}
 
 		WriteResult WriteQuoted(string str)
@@ -228,304 +367,6 @@ namespace Sylvan.Data.Csv
 			return WriteResult.Complete;
 		}
 
-		WriteResult WriteValue(char[] buffer, int o, int l)
-		{
-			if (pos + l >= buffer.Length) return WriteResult.InsufficientSpace;
-
-			Array.Copy(buffer, o, this.buffer, pos, l);
-			pos += l;
-			return WriteResult.Complete;
-		}
-
-		WriteResult WriteField(Guid value)
-		{
-			if (!IsAvailable(64)) return WriteResult.InsufficientSpace;
-
-			// keep it fast/allocation-free in the sane case.
-			if (delimiter == '-' || quote == '-')
-			{
-				WriteQuoted(value.ToString());
-			}
-			else
-			{
-				WriteValueInvariant(value);
-			}
-			return WriteResult.Complete;
-		}
-
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		WriteResult WriteValueOptimistic(string str)
-		{
-			var buffer = this.buffer;
-			var pos = this.pos;
-			if (pos + str.Length >= buffer.Length)
-				return WriteResult.InsufficientSpace;
-
-			for (int i = 0; i < str.Length; i++)
-			{
-				var c = str[i];
-				if (c == delimiter || c == quote || c == '\n' || c == '\r')
-				{
-					return WriteResult.RequiresEscaping;
-				}
-				buffer[pos + i] = c;
-			}
-			this.pos += str.Length;
-			return WriteResult.Complete;
-		}
-
-		WriteResult WriteValueInvariant(int value)
-		{
-#if NETSTANDARD2_1
-			var span = buffer.AsSpan()[pos..];
-			if (value.TryFormat(span, out int c, provider: culture))
-			{
-				pos += c;
-				return WriteResult.Complete;
-			}
-			return WriteResult.InsufficientSpace;
-#else
-			var str = value.ToString(culture);
-			return WriteField(str);
-#endif
-		}
-
-		WriteResult WriteValueOptimistic(int value)
-		{
-			if (invariantCulture)
-			{
-				return WriteValueInvariant(value);
-			}
-			return WriteResult.RequiresEscaping;
-		}
-
-		WriteResult WriteValue(int value)
-		{
-			if (invariantCulture)
-			{
-				return WriteValueInvariant(value);
-			}
-			var str = value.ToString();
-			return WriteField(str);
-		}
-
-		WriteResult WriteValueInvariant(long value)
-		{
-#if NETSTANDARD2_1
-			var span = buffer.AsSpan()[pos..];
-			if (value.TryFormat(span, out int c, provider: culture))
-			{
-				pos += c;
-				return WriteResult.Complete;
-			}
-			return WriteResult.InsufficientSpace;
-#else
-			var str = value.ToString(culture);
-			return WriteField(str);
-#endif
-		}
-
-		WriteResult WriteValueOptimistic(long value)
-		{
-			if (invariantCulture)
-			{
-				return WriteValueInvariant(value);
-			}
-			return WriteResult.RequiresEscaping;
-		}
-
-		WriteResult WriteValue(long value)
-		{
-			if (invariantCulture)
-			{
-				return WriteValueInvariant(value);
-			}
-			var str = value.ToString(culture);
-			return WriteField(str);
-		}
-
-		WriteResult WriteValueInvariant(DateTime value)
-		{
-#if NETSTANDARD2_1
-			var span = buffer.AsSpan()[pos..];
-
-			if (value.TryFormat(span, out int c, this.dateTimeFormat.AsSpan(), culture))
-			{
-				pos += c;
-				return WriteResult.Complete;
-			}
-			return WriteResult.InsufficientSpace;
-#else
-			var str =
-				dateTimeFormat == null
-				? value.ToString(culture)
-				: value.ToString(dateTimeFormat, culture);
-
-			return WriteField(str);
-#endif
-		}
-
-		WriteResult WriteValueInvariant(Guid value)
-		{
-#if NETSTANDARD2_1
-			var span = buffer.AsSpan()[pos..];
-			if (value.TryFormat(span, out int c))
-			{
-				pos += c;
-				return WriteResult.Complete;
-			}
-			return WriteResult.InsufficientSpace;
-#else
-			var str = value.ToString();
-			return WriteField(str);
-#endif
-		}
-
-		WriteResult WriteValueOptimistic(DateTime value)
-		{
-			if (invariantCulture)
-			{
-				return WriteValueInvariant(value);
-			}
-			return WriteResult.RequiresEscaping;
-		}
-
-		WriteResult WriteValue(DateTime value)
-		{
-			if (invariantCulture)
-			{
-				return WriteValueInvariant(value);
-			}
-			var str =
-				this.dateTimeFormat == null
-				? value.ToString(culture)
-				: value.ToString(dateTimeFormat, culture);
-
-			return WriteField(str);
-		}
-
-		WriteResult WriteValueInvariant(double value)
-		{
-#if NETSTANDARD2_1
-			var span = buffer.AsSpan()[pos..];
-			if (value.TryFormat(span, out int c, provider: culture))
-			{
-				pos += c;
-				return WriteResult.Complete;
-			}
-			return WriteResult.InsufficientSpace;
-#else
-			var str = value.ToString(culture);
-			return WriteField(str);
-#endif
-		}
-
-		WriteResult WriteValueOptimistic(double value)
-		{
-			if (invariantCulture && delimiter != '.')
-			{
-				return WriteValueInvariant(value);
-			}
-			return WriteResult.RequiresEscaping;
-		}
-
-		WriteResult WriteValue(double value)
-		{
-			if (invariantCulture)
-			{
-				return WriteValueInvariant(value);
-			}
-			var str = value.ToString(culture);
-			return WriteField(str);
-		}
-
-		// this should only be called in scenarios where we know there is enough room.
-		void EndRecord()
-		{
-			var nl = this.newLine;
-			for (int i = 0; i < nl.Length; i++)
-				buffer[pos++] = nl[i];
-		}
-
-		bool IsAvailable(int size)
-		{
-			return pos + size < buffer.Length;
-		}
-
-		void AssertBinaryPrereq(int size)
-		{
-			// punt these crazy scenarios.
-			if (IsBase64Symbol(delimiter) || IsBase64Symbol(quote))
-			{
-				throw new InvalidOperationException();
-			}
-			if (size > buffer.Length)
-				throw new InvalidOperationException();
-		}
-
-		static bool IsBase64Symbol(char c)
-		{
-			return c == '+' || c == '/' || c == '=';
-		}
-
-		WriteResult WriteField(bool value)
-		{
-			var str = value ? trueString : falseString;
-			return WriteField(str);
-		}
-
-		WriteResult WriteField(double value)
-		{
-			if (!IsAvailable(64))
-				return WriteResult.InsufficientSpace;
-			var r = WriteValueOptimistic(value);
-			if (r == WriteResult.RequiresEscaping)
-			{
-
-				return WriteValue(value);
-			}
-			return r;
-		}
-
-		WriteResult WriteField(int value)
-		{
-			var r = WriteValueOptimistic(value);
-			if (r == WriteResult.RequiresEscaping)
-			{
-				WriteValue(value);
-			}
-			return WriteResult.Complete;
-		}
-
-		WriteResult WriteField(DateTime value)
-		{
-			if (!IsAvailable(64))
-			{
-				return WriteResult.InsufficientSpace;
-			}
-			var r = WriteValueOptimistic(value);
-			if (r == WriteResult.RequiresEscaping)
-			{
-				return WriteValue(value);
-			}
-			return r;
-		}
-
-		WriteResult WriteField(string value)
-		{
-			var r = WriteValueOptimistic(value);
-			if (r == WriteResult.RequiresEscaping)
-			{
-				return WriteQuoted(value);
-			}
-			return r;
-		}
-
-		int WriteBinaryValue(byte[] buffer, int len)
-		{
-			var written = Convert.ToBase64CharArray(buffer, 0, len, this.buffer, pos);
-			pos += written;
-			return written;
-		}
+		
 	}
 }
