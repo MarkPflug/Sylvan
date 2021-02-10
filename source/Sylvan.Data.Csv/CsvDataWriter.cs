@@ -62,11 +62,6 @@ namespace Sylvan.Data.Csv
 		readonly bool fastInt;
 		readonly bool fastDate;
 
-		static TextWriter GetWriter(string fileName, CsvDataWriterOptions options)
-		{
-			return new StreamWriter(fileName, false, Encoding.UTF8, options.BufferSize);
-		}
-
 		/// <summary>
 		/// Creates a new CsvDataWriter.
 		/// </summary>
@@ -75,7 +70,7 @@ namespace Sylvan.Data.Csv
 		public static CsvDataWriter Create(string fileName, CsvDataWriterOptions? options = null)
 		{
 			options = options ?? CsvDataWriterOptions.Default;
-			var writer = GetWriter(fileName, options);
+			var writer = new StreamWriter(fileName, false, Encoding.UTF8);
 			return new CsvDataWriter(writer, options);
 		}
 
