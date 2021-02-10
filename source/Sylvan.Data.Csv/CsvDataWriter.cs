@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Data.Common;
-using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -366,7 +365,5 @@ namespace Sylvan.Data.Csv
 			this.pos = p;
 			return WriteResult.Complete;
 		}
-
-		
 	}
 }

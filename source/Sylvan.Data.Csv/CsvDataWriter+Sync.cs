@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Data.Common;
+using System.IO;
+using System.Threading.Tasks;
 
 namespace Sylvan.Data.Csv
 {
