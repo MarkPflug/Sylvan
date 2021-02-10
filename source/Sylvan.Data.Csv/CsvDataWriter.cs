@@ -62,11 +62,9 @@ namespace Sylvan.Data.Csv
 		readonly bool fastInt;
 		readonly bool fastDate;
 
-		static TextWriter GetWriter(string fileName, CsvDataWriterOptions? options)
+		static TextWriter GetWriter(string fileName, CsvDataWriterOptions options)
 		{
-			var bufferSize = options?.BufferSize ?? options?.Buffer?.Length ?? CsvDataWriterOptions.Default.BufferSize;
-			var fs = new FileStream(fileName, FileMode.Create, FileAccess.Write, FileShare.Read, bufferSize, FileOptions.SequentialScan | FileOptions.Asynchronous);
-			return new StreamWriter(fs, Encoding.UTF8, bufferSize);
+			return new StreamWriter(fileName, false, Encoding.UTF8, options.BufferSize);
 		}
 
 		/// <summary>
@@ -76,6 +74,7 @@ namespace Sylvan.Data.Csv
 		/// <param name="options">The options used to configure the writer, or null to use the defaults.</param>
 		public static CsvDataWriter Create(string fileName, CsvDataWriterOptions? options = null)
 		{
+			options = options ?? CsvDataWriterOptions.Default;
 			var writer = GetWriter(fileName, options);
 			return new CsvDataWriter(writer, options);
 		}
@@ -87,6 +86,7 @@ namespace Sylvan.Data.Csv
 		/// <param name="options">The options used to configure the writer, or null to use the defaults.</param>
 		public static CsvDataWriter Create(TextWriter writer, CsvDataWriterOptions? options = null)
 		{
+			options = options ?? CsvDataWriterOptions.Default;
 			return new CsvDataWriter(writer, options);
 		}
 
