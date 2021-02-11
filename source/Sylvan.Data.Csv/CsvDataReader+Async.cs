@@ -57,6 +57,7 @@ namespace Sylvan.Data.Csv
 			{
 				if (await NextRecordAsync().ConfigureAwait(false))
 				{
+					this.fieldCount = this.curFieldCount;
 					InitializeSchema(schema);
 				}
 				else
@@ -70,6 +71,7 @@ namespace Sylvan.Data.Csv
 			this.hasRows = await NextRecordAsync().ConfigureAwait(false);
 			if (hasHeaders == false)
 			{
+				this.fieldCount = this.curFieldCount;
 				InitializeSchema(schema);
 			}
 		}

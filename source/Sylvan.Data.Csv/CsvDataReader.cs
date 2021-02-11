@@ -357,41 +357,37 @@ namespace Sylvan.Data.Csv
 
 			if (complete || atEndOfText)
 			{
-				if (state == State.Initializing)
+				if (fieldIdx >= fieldInfos.Length)
 				{
-					if (fieldIdx >= fieldInfos.Length)
-					{
-						// this resize is constrained by the fact that the record has to fit in one row
-						Array.Resize(ref fieldInfos, fieldInfos.Length * 2);
-					}
-					fieldCount++;
+					// this resize is constrained by the fact that the record has to fit in one row
+					Array.Resize(ref fieldInfos, fieldInfos.Length * 2);
 				}
+				
 				curFieldCount++;
-				if (fieldIdx < fieldCount)
+				
+				ref var fi = ref fieldInfos[fieldIdx];
+
+				if (implicitQuotes)
 				{
-					ref var fi = ref fieldInfos[fieldIdx];
-
-					if (implicitQuotes)
-					{
-						fi.quoteState =
-							escapeCount == 0
-							? QuoteState.Unquoted
-							: QuoteState.ImplicitQuotes;
-					}
-					else
-					{
-						fi.quoteState =
-							closeQuoteIdx == -1
-							? QuoteState.Unquoted
-							: fieldEnd == (closeQuoteIdx - recordStart)
-							? QuoteState.Quoted
-							: QuoteState.BrokenQuotes;
-					}
-
-
-					fi.escapeCount = escapeCount;
-					fi.endIdx = complete ? fieldEnd : (idx - recordStart);
+					fi.quoteState =
+						escapeCount == 0
+						? QuoteState.Unquoted
+						: QuoteState.ImplicitQuotes;
 				}
+				else
+				{
+					fi.quoteState =
+						closeQuoteIdx == -1
+						? QuoteState.Unquoted
+						: fieldEnd == (closeQuoteIdx - recordStart)
+						? QuoteState.Quoted
+						: QuoteState.BrokenQuotes;
+				}
+
+
+				fi.escapeCount = escapeCount;
+				fi.endIdx = complete ? fieldEnd : (idx - recordStart);
+				
 				this.idx = idx;
 
 				if (complete)
