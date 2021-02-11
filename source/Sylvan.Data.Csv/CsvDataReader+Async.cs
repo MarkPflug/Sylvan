@@ -48,11 +48,40 @@ namespace Sylvan.Data.Csv
 			return csv;
 		}
 
+		bool ShouldSkip(char[] buffer, int offset, int length)
+		{
+			if (length == 0)
+			{
+				return true;
+			}
+			return false;
+		}
+
 		async Task<bool> InitializeAsync()
 		{
 			result++;
 			state = State.Initializing;
 			await FillBufferAsync().ConfigureAwait(false);
+
+			bool skip = true;
+			while (skip)
+			{
+				skip = false;
+				if (bufferEnd == 0) break;
+				for (int i = idx; i < bufferEnd; i++)
+				{
+					var c = buffer[i];
+					if (IsEndOfLine(c))
+					{
+						if (ShouldSkip(buffer, idx, i - idx))
+						{
+							skip = true;
+							idx = i+1;
+						}
+						break;
+					}
+				}
+			}
 
 			if (autoDetectDelimiter)
 			{
@@ -83,7 +112,7 @@ namespace Sylvan.Data.Csv
 				this.fieldCount = this.curFieldCount;
 				InitializeSchema();
 			}
-			
+
 			return true;
 		}
 
@@ -164,7 +193,7 @@ namespace Sylvan.Data.Csv
 			if (this.state == State.Open)
 			{
 				var success = await this.NextRecordAsync();
-				if(this.curFieldCount != this.fieldCount)
+				if (this.curFieldCount != this.fieldCount)
 				{
 					this.curFieldCount = 0;
 					this.idx = recordStart;
@@ -194,7 +223,7 @@ namespace Sylvan.Data.Csv
 		/// <inheritdoc/>
 		public override async Task<bool> NextResultAsync(CancellationToken cancellationToken)
 		{
-			while(await ReadAsync(cancellationToken));
+			while (await ReadAsync(cancellationToken)) ;
 			return await InitializeAsync();
 		}
 
