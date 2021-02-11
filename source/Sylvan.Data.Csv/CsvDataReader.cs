@@ -7,6 +7,7 @@ using System.Data.Common;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -84,6 +85,7 @@ namespace Sylvan.Data.Csv
 		readonly TextReader reader;
 		bool hasRows;
 		readonly char[] buffer;
+		int result;
 		int idx;
 		int bufferEnd;
 		int recordStart;
@@ -94,22 +96,23 @@ namespace Sylvan.Data.Csv
 		int rowNumber;
 		byte[]? scratch;
 		FieldInfo[] fieldInfos;
-		readonly Dictionary<string, int> headerMap;
 		CsvColumn[] columns;
+		bool autoDetectDelimiter;
 
+		readonly Dictionary<string, int> headerMap;
 		// options:
 		char delimiter;
-		readonly bool implicitQuotes;
 		readonly char quote;
 		readonly char escape;
 		readonly bool ownsReader;
-		readonly bool autoDetectDelimiter;
+		readonly bool implicitQuotes;
 		readonly CultureInfo culture;
 		readonly string? dateFormat;
 		readonly string? trueString, falseString;
 		readonly BinaryEncoding binaryEncoding;
 		readonly bool hasHeaders;
 		readonly StringFactory stringFactory;
+		readonly ICsvSchemaProvider? schema;
 
 		private CsvDataReader(TextReader reader, CsvDataReaderOptions? options = null)
 		{
@@ -128,6 +131,7 @@ namespace Sylvan.Data.Csv
 			this.dateFormat = options.DateFormat;
 			this.trueString = options.TrueString;
 			this.falseString = options.FalseString;
+			this.result = -1;
 			this.recordStart = 0;
 			this.bufferEnd = 0;
 			this.idx = 0;
@@ -139,8 +143,8 @@ namespace Sylvan.Data.Csv
 			this.ownsReader = options.OwnsReader;
 			this.binaryEncoding = options.BinaryEncoding;
 			this.stringFactory = options.StringFactory ?? new StringFactory((char[] b, int o, int l) => new string(b, o, l));
+			this.schema = options.Schema;
 		}
-
 		
 
 		char DetectDelimiter()
@@ -149,8 +153,14 @@ namespace Sylvan.Data.Csv
 			for (int i = 0; i < bufferEnd; i++)
 			{
 				var c = buffer[i];
-				if (c == '\n' || c == '\r')
+				if (c == '\n' || c == '\r') {
+					var x = counts.Sum();
+					if(x == 0)
+					{
+						continue;
+					}
 					break;
+				}
 				for (int d = 0; d < AutoDetectDelimiters.Length; d++)
 				{
 					if (c == AutoDetectDelimiters[d])
@@ -172,7 +182,7 @@ namespace Sylvan.Data.Csv
 			return AutoDetectDelimiters[maxIdx];
 		}
 
-		void InitializeSchema(ICsvSchemaProvider? schema)
+		void InitializeSchema()
 		{
 			columns = new CsvColumn[this.fieldCount];
 			for (int i = 0; i < this.fieldCount; i++)

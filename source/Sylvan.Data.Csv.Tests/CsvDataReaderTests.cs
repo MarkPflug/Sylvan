@@ -140,14 +140,13 @@ namespace Sylvan.Data.Csv
 			using (var reader = File.OpenText("Data/Quote.csv"))
 			{
 				var csv = await CsvDataReader.CreateAsync(reader);
-				Assert.Equal(5, csv.FieldCount);
+				Assert.Equal(4, csv.FieldCount);
 				Assert.True(csv.HasRows);
 				Assert.Equal(0, csv.RowNumber);
 				Assert.Equal("Id", csv.GetName(0));
 				Assert.Equal("Name", csv.GetName(1));
 				Assert.Equal("Value", csv.GetName(2));
 				Assert.Equal("Date", csv.GetName(3));
-				Assert.Equal("Original, Origin", csv.GetName(4));
 				Assert.True(await csv.ReadAsync());
 				Assert.Equal(1, csv.RowNumber);
 				Assert.Equal("1", csv[0]);
@@ -166,7 +165,6 @@ namespace Sylvan.Data.Csv
 				Assert.Equal("Comma", csv[1]);
 				Assert.Equal("Quite, Common", csv[2]);
 				Assert.Equal("2020-05-29", csv[3]);
-				Assert.Equal("", csv[4]);
 				Assert.False(await csv.ReadAsync());
 			}
 		}

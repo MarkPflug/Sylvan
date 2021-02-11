@@ -24,7 +24,10 @@ namespace Sylvan.Data.Csv
 			bufferSize = Math.Max(bufferSize, Environment.SystemPageSize);
 			var reader = new StreamReader(filename, Encoding.Default, true, bufferSize);
 			var csv = new CsvDataReader(reader, options);
-			await csv.InitializeAsync(options?.Schema).ConfigureAwait(false);
+			if (!await csv.InitializeAsync(options?.Schema).ConfigureAwait(false))
+			{
+				throw new CsvMissingHeadersException();
+			}
 			return csv;
 		}
 
@@ -38,11 +41,14 @@ namespace Sylvan.Data.Csv
 		{
 			if (reader == null) throw new ArgumentNullException(nameof(reader));
 			var csv = new CsvDataReader(reader, options);
-			await csv.InitializeAsync(options?.Schema).ConfigureAwait(false);
+			if (!await csv.InitializeAsync(options?.Schema).ConfigureAwait(false))
+			{
+				throw new CsvMissingHeadersException();
+			}
 			return csv;
 		}
 
-		async Task InitializeAsync(ICsvSchemaProvider? schema)
+		async Task<bool> InitializeAsync(ICsvSchemaProvider? schema)
 		{
 			state = State.Initializing;
 			if (autoDetectDelimiter)
@@ -50,6 +56,7 @@ namespace Sylvan.Data.Csv
 				await FillBufferAsync().ConfigureAwait(false);
 				var c = DetectDelimiter();
 				this.delimiter = c;
+				autoDetectDelimiter = false;
 			}
 			// if the user specified that there are headers
 			// read them, and use them to determine fieldCount.
@@ -58,11 +65,11 @@ namespace Sylvan.Data.Csv
 				if (await NextRecordAsync().ConfigureAwait(false))
 				{
 					this.fieldCount = this.curFieldCount;
-					InitializeSchema(schema);
+					InitializeSchema();
 				}
 				else
 				{
-					throw new CsvMissingHeadersException();
+					return false;
 				}
 			}
 
@@ -72,8 +79,10 @@ namespace Sylvan.Data.Csv
 			if (hasHeaders == false)
 			{
 				this.fieldCount = this.curFieldCount;
-				InitializeSchema(schema);
+				InitializeSchema();
 			}
+			result++;
+			return true;
 		}
 
 		async Task<bool> NextRecordAsync()
@@ -146,13 +155,19 @@ namespace Sylvan.Data.Csv
 		}
 
 		/// <inheritdoc/>
-		public override Task<bool> ReadAsync(CancellationToken cancellationToken)
+		public override async Task<bool> ReadAsync(CancellationToken cancellationToken)
 		{
 			cancellationToken.ThrowIfCancellationRequested();
 			this.rowNumber++;
 			if (this.state == State.Open)
 			{
-				return this.NextRecordAsync();
+				var success = await this.NextRecordAsync();
+				if(this.curFieldCount != this.fieldCount)
+				{
+					this.state = State.End;
+					return false;
+				}
+				return success;
 			}
 			else if (this.state == State.Initialized)
 			{
@@ -161,7 +176,7 @@ namespace Sylvan.Data.Csv
 				if (hasRows)
 				{
 					this.state = State.Open;
-					return CompleteTrue;
+					return true;
 				}
 				else
 				{
@@ -169,14 +184,14 @@ namespace Sylvan.Data.Csv
 				}
 			}
 			this.rowNumber = -1;
-			return CompleteFalse;
+			return false;
 		}
 
 		/// <inheritdoc/>
-		public override Task<bool> NextResultAsync(CancellationToken cancellationToken)
+		public override async Task<bool> NextResultAsync(CancellationToken cancellationToken)
 		{
-			state = State.End;
-			return CompleteFalse;
+			while(await ReadAsync(cancellationToken));
+			return await InitializeAsync(schema);
 		}
 
 #if NETSTANDARD2_1
