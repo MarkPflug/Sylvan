@@ -48,11 +48,16 @@ namespace Sylvan.Data.Csv
 			return csv;
 		}
 
-		bool ShouldSkip(char[] buffer, int offset, int length)
+		static bool ShouldSkip(char[] buffer, int offset, int length)
 		{
-			if (length == 0)
+			if (length == 0) return true;
+			for (int i = 0; i < length; i++)
 			{
-				return true;
+				var c = buffer[offset + i];
+				if (!char.IsWhiteSpace(c))
+				{
+					return false;
+				}
 			}
 			return false;
 		}
@@ -76,7 +81,7 @@ namespace Sylvan.Data.Csv
 						if (ShouldSkip(buffer, idx, i - idx))
 						{
 							skip = true;
-							idx = i+1;
+							idx = i + 1;
 						}
 						break;
 					}
