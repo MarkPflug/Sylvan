@@ -28,6 +28,11 @@ namespace Sylvan.Data.Csv
 			return CreateAsync(reader, options).GetAwaiter().GetResult();
 		}
 
+		bool Initialize()
+		{
+			return this.InitializeAsync().GetAwaiter().GetResult();
+		}
+
 		bool NextRecord()
 		{
 			this.curFieldCount = 0;
@@ -104,7 +109,15 @@ namespace Sylvan.Data.Csv
 			this.rowNumber++;
 			if (this.state == State.Open)
 			{
-				return this.NextRecord();
+				var success = this.NextRecord();
+				if (this.curFieldCount != this.fieldCount)
+				{
+					this.curFieldCount = 0;
+					this.idx = recordStart;
+					this.state = State.End;
+					return false;
+				}
+				return success;
 			}
 			else if (this.state == State.Initialized)
 			{
@@ -127,8 +140,8 @@ namespace Sylvan.Data.Csv
 		/// <inheritdoc/>
 		public override bool NextResult()
 		{
-			state = State.End;
-			return false;
+			while (Read());
+			return Initialize();
 		}
 
 		/// <inheritdoc/>

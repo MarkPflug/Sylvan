@@ -150,7 +150,7 @@ namespace Sylvan.Data.Csv
 		char DetectDelimiter()
 		{
 			int[] counts = new int[AutoDetectDelimiters.Length];
-			for (int i = 0; i < bufferEnd; i++)
+			for (int i = recordStart; i < bufferEnd; i++)
 			{
 				var c = buffer[i];
 				if (c == '\n' || c == '\r') {

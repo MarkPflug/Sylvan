@@ -1093,5 +1093,48 @@ namespace Sylvan.Data.Csv
 				Assert.Throws<NotSupportedException>(() => csv.GetValue(1));
 			}
 		}
+
+		[Fact]
+		public void MRS()
+		{
+			using var reader = new StringReader("A,B\ntest,1\n\nC,D\ntest2,2");
+			var csv = CsvDataReader.Create(reader);
+			Assert.Equal("A", csv.GetName(0));
+			Assert.Equal("B", csv.GetName(1));
+			Assert.True(csv.Read());
+			Assert.Equal("test", csv.GetString(0));
+			Assert.False(csv.Read());
+			Assert.True(csv.NextResult());
+			Assert.True(csv.Read());
+			Assert.Equal("C", csv.GetName(0));
+			Assert.Equal("D", csv.GetName(1));
+			Assert.Equal("test2", csv.GetString(0));
+			Assert.Equal("2", csv.GetString(1));
+			Assert.False(csv.Read());
+			Assert.False(csv.NextResult());
+		}
+
+		[Fact]
+		public void MRS2()
+		{
+			using var reader = new StringReader("A,B\n1,2\nC,D,E\n3,4,5");
+			var csv = CsvDataReader.Create(reader);
+			Assert.Equal("A", csv.GetName(0));
+			Assert.Equal("B", csv.GetName(1));
+			Assert.True(csv.Read());
+			Assert.Equal("1", csv.GetString(0));
+			Assert.Equal("2", csv.GetString(1));
+			Assert.False(csv.Read());
+			Assert.True(csv.NextResult());
+			Assert.True(csv.Read());
+			Assert.Equal("C", csv.GetName(0));
+			Assert.Equal("D", csv.GetName(1));
+			Assert.Equal("E", csv.GetName(2));
+			Assert.Equal("3", csv.GetString(0));
+			Assert.Equal("4", csv.GetString(1));
+			Assert.Equal("5", csv.GetString(2));
+			Assert.False(csv.Read());
+			Assert.False(csv.NextResult());
+		}
 	}
 }

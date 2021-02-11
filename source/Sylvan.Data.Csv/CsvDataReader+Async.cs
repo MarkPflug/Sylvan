@@ -24,7 +24,7 @@ namespace Sylvan.Data.Csv
 			bufferSize = Math.Max(bufferSize, Environment.SystemPageSize);
 			var reader = new StreamReader(filename, Encoding.Default, true, bufferSize);
 			var csv = new CsvDataReader(reader, options);
-			if (!await csv.InitializeAsync(options?.Schema).ConfigureAwait(false))
+			if (!await csv.InitializeAsync().ConfigureAwait(false))
 			{
 				throw new CsvMissingHeadersException();
 			}
@@ -41,23 +41,25 @@ namespace Sylvan.Data.Csv
 		{
 			if (reader == null) throw new ArgumentNullException(nameof(reader));
 			var csv = new CsvDataReader(reader, options);
-			if (!await csv.InitializeAsync(options?.Schema).ConfigureAwait(false))
+			if (!await csv.InitializeAsync().ConfigureAwait(false))
 			{
 				throw new CsvMissingHeadersException();
 			}
 			return csv;
 		}
 
-		async Task<bool> InitializeAsync(ICsvSchemaProvider? schema)
+		async Task<bool> InitializeAsync()
 		{
+			result++;
 			state = State.Initializing;
+			await FillBufferAsync().ConfigureAwait(false);
+
 			if (autoDetectDelimiter)
 			{
-				await FillBufferAsync().ConfigureAwait(false);
 				var c = DetectDelimiter();
 				this.delimiter = c;
-				autoDetectDelimiter = false;
 			}
+
 			// if the user specified that there are headers
 			// read them, and use them to determine fieldCount.
 			if (hasHeaders)
@@ -81,7 +83,7 @@ namespace Sylvan.Data.Csv
 				this.fieldCount = this.curFieldCount;
 				InitializeSchema();
 			}
-			result++;
+			
 			return true;
 		}
 
@@ -164,6 +166,8 @@ namespace Sylvan.Data.Csv
 				var success = await this.NextRecordAsync();
 				if(this.curFieldCount != this.fieldCount)
 				{
+					this.curFieldCount = 0;
+					this.idx = recordStart;
 					this.state = State.End;
 					return false;
 				}
@@ -191,7 +195,7 @@ namespace Sylvan.Data.Csv
 		public override async Task<bool> NextResultAsync(CancellationToken cancellationToken)
 		{
 			while(await ReadAsync(cancellationToken));
-			return await InitializeAsync(schema);
+			return await InitializeAsync();
 		}
 
 #if NETSTANDARD2_1

@@ -151,7 +151,7 @@ _Extra Fields_
 
 Extra fields, meaning a row that contains more columns than the header column, will be ignored. 
 Extra fields can be identified by comparing the RowFieldCount to FieldCount. 
-There is no way to access the parsed extra fields via the `CsvDataReader`.
+Extra field values can be accessed by ordinal.
 
 _Malformed Fields_
 
