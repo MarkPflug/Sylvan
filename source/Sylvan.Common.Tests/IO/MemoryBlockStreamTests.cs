@@ -1,6 +1,4 @@
-﻿using Sylvan.Benchmarks;
-using System;
-using System.IO;
+﻿using System.IO;
 using System.Text;
 using Xunit;
 
@@ -26,14 +24,6 @@ namespace Sylvan.IO
 			var r = new StreamReader(s, Encoding.ASCII);
 			var str = r.ReadToEnd();
 			Assert.Equal(data.Length * Count, str.Length);
-		}
-
-		[Fact]
-		public void Test2()
-		{
-			var msb = new MemoryStreamBenchmarks();
-			msb.Count = 1000;
-			msb.PooledMemoryStream();
 		}
 	}
 }

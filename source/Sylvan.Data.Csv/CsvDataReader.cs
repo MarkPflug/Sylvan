@@ -113,6 +113,7 @@ namespace Sylvan.Data.Csv
 		readonly bool hasHeaders;
 		readonly StringFactory stringFactory;
 		readonly ICsvSchemaProvider? schema;
+		readonly ResultSetMode resultSetMode;
 
 		private CsvDataReader(TextReader reader, CsvDataReaderOptions? options = null)
 		{
@@ -144,6 +145,7 @@ namespace Sylvan.Data.Csv
 			this.binaryEncoding = options.BinaryEncoding;
 			this.stringFactory = options.StringFactory ?? new StringFactory((char[] b, int o, int l) => new string(b, o, l));
 			this.schema = options.Schema;
+			this.resultSetMode = options.ResultSetMode;
 		}
 		
 

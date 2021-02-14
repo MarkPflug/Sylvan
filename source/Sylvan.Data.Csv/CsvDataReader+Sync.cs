@@ -110,7 +110,7 @@ namespace Sylvan.Data.Csv
 			if (this.state == State.Open)
 			{
 				var success = this.NextRecord();
-				if (this.curFieldCount != this.fieldCount)
+				if (this.resultSetMode == ResultSetMode.MultiResult && this.curFieldCount != this.fieldCount)
 				{
 					this.curFieldCount = 0;
 					this.idx = recordStart;

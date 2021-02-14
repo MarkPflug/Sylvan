@@ -1028,7 +1028,7 @@ namespace Sylvan.Data.Csv
 		[Fact]
 		public void BinaryHexPrefix()
 		{
-			
+
 			using var reader = new StringReader("Name,Value\r\nrow1,0x01020304");
 			var csv = CsvDataReader.Create(reader, new CsvDataReaderOptions { BinaryEncoding = BinaryEncoding.Hexadecimal });
 			csv.Read();
@@ -1036,7 +1036,7 @@ namespace Sylvan.Data.Csv
 			Assert.Equal(4, len);
 			var buf = new byte[len];
 			csv.GetBytes(1, 0, buf, 0, len);
-			Assert.Equal(new byte[] { 1, 2, 3, 4}, buf);
+			Assert.Equal(new byte[] { 1, 2, 3, 4 }, buf);
 
 		}
 
@@ -1098,7 +1098,7 @@ namespace Sylvan.Data.Csv
 		public void MRS()
 		{
 			using var reader = new StringReader("A,B\ntest,1\n\nC,D\ntest2,2");
-			var csv = CsvDataReader.Create(reader);
+			var csv = CsvDataReader.Create(reader, new CsvDataReaderOptions { ResultSetMode = ResultSetMode.MultiResult });
 			Assert.Equal("A", csv.GetName(0));
 			Assert.Equal("B", csv.GetName(1));
 			Assert.True(csv.Read());
@@ -1118,7 +1118,7 @@ namespace Sylvan.Data.Csv
 		public void MRS2()
 		{
 			using var reader = new StringReader("A,B\n1,2\nC,D,E\n3,4,5");
-			var csv = CsvDataReader.Create(reader);
+			var csv = CsvDataReader.Create(reader, new CsvDataReaderOptions { ResultSetMode = ResultSetMode.MultiResult });
 			Assert.Equal("A", csv.GetName(0));
 			Assert.Equal("B", csv.GetName(1));
 			Assert.True(csv.Read());
