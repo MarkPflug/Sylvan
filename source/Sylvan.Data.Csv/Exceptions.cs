@@ -43,7 +43,7 @@ namespace Sylvan.Data.Csv
 	/// </remarks>
 	public sealed class CsvRecordTooLargeException : CsvFormatException
 	{
-		internal CsvRecordTooLargeException(int row, int ordinal, string? msg, Exception? inner) 
+		internal CsvRecordTooLargeException(int row, int ordinal, string? msg = null, Exception? inner = null) 
 			: base(row, ordinal, msg, inner) { }
 	}
 

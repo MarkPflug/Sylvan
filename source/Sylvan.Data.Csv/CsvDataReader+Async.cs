@@ -1,4 +1,6 @@
 ﻿using System;
+using System.IO;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -6,6 +8,72 @@ namespace Sylvan.Data.Csv
 {
 	partial class CsvDataReader
 	{
+		/// <summary>
+		/// Creates a new CsvDataReader asynchronously.                                                                                          
+		/// </summary>
+		/// <param name="filename">The name of a file containing CSV data.</param>
+		/// <param name="options">The options to configure the reader, or null to use the default options.</param>
+		/// <returns>A task representing the asynchronous creation of a CsvDataReader instance.</returns>
+		public static async Task<CsvDataReader> CreateAsync(string filename, CsvDataReaderOptions? options = null)
+		{
+			if (filename == null) throw new ArgumentNullException(nameof(filename));
+			// TextReader must be owned when we open it.
+			if (options?.OwnsReader == false) throw new CsvConfigurationException();
+
+			var bufferSize = options?.BufferSize ?? options?.Buffer?.Length ?? CsvDataReaderOptions.Default.BufferSize;
+			bufferSize = Math.Max(bufferSize, Environment.SystemPageSize);
+			var reader = new StreamReader(filename, Encoding.Default, true, bufferSize);
+			var csv = new CsvDataReader(reader, options);
+			await csv.InitializeAsync(options?.Schema).ConfigureAwait(false);
+			return csv;
+		}
+
+		/// <summary>
+		/// Creates a new CsvDataReader asynchronously.
+		/// </summary>
+		/// <param name="reader">The TextReader for the delimited data.</param>
+		/// <param name="options">The options to configure the reader, or null to use the default options.</param>
+		/// <returns>A task representing the asynchronous creation of a CsvDataReader instance.</returns>
+		public static async Task<CsvDataReader> CreateAsync(TextReader reader, CsvDataReaderOptions? options = null)
+		{
+			if (reader == null) throw new ArgumentNullException(nameof(reader));
+			var csv = new CsvDataReader(reader, options);
+			await csv.InitializeAsync(options?.Schema).ConfigureAwait(false);
+			return csv;
+		}
+
+		async Task InitializeAsync(ICsvSchemaProvider? schema)
+		{
+			state = State.Initializing;
+			if (autoDetectDelimiter)
+			{
+				await FillBufferAsync().ConfigureAwait(false);
+				var c = DetectDelimiter();
+				this.delimiter = c;
+			}
+			// if the user specified that there are headers
+			// read them, and use them to determine fieldCount.
+			if (hasHeaders)
+			{
+				if (await NextRecordAsync().ConfigureAwait(false))
+				{
+					InitializeSchema(schema);
+				}
+				else
+				{
+					throw new CsvMissingHeadersException();
+				}
+			}
+
+			// read the first row of data to determine fieldCount (if there were no headers)
+			// and support calling HasRows before Read is first called.
+			this.hasRows = await NextRecordAsync().ConfigureAwait(false);
+			if (hasHeaders == false)
+			{
+				InitializeSchema(schema);
+			}
+		}
+
 		async Task<bool> NextRecordAsync()
 		{
 			this.curFieldCount = 0;
@@ -13,7 +81,7 @@ namespace Sylvan.Data.Csv
 
 			if (this.idx >= bufferEnd)
 			{
-				await FillBufferAsync();
+				await FillBufferAsync().ConfigureAwait(false);
 				if (idx == bufferEnd)
 				{
 					return false;
@@ -45,7 +113,7 @@ namespace Sylvan.Data.Csv
 					}
 					else
 					{
-						await FillBufferAsync();
+						await FillBufferAsync().ConfigureAwait(false);
 						// after filling the buffer, we will resume reading fields from where we left off.
 					}
 				}
@@ -66,7 +134,7 @@ namespace Sylvan.Data.Csv
 			recordStart = 0;
 
 			var count = buffer.Length - bufferEnd;
-			var c = await reader.ReadBlockAsync(buffer, bufferEnd, count);
+			var c = await reader.ReadBlockAsync(buffer, bufferEnd, count).ConfigureAwait(false);
 			bufferEnd += c;
 			if (c < count)
 			{
@@ -74,7 +142,6 @@ namespace Sylvan.Data.Csv
 			}
 			return c;
 		}
-
 
 		/// <inheritdoc/>
 		public override Task<bool> ReadAsync(CancellationToken cancellationToken)

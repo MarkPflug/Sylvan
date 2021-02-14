@@ -1,9 +1,33 @@
 ﻿using System;
+using System.IO;
+using System.Text;
 
 namespace Sylvan.Data.Csv
 {
 	partial class CsvDataReader
 	{
+		/// <summary>
+		/// Creates a new CsvDataReader.
+		/// </summary>
+		/// <param name="filename">The name of a file containing CSV data.</param>
+		/// <param name="options">The options to configure the reader, or null to use the default options.</param>
+		/// <returns>A CsvDataReader instance.</returns>
+		public static CsvDataReader Create(string filename, CsvDataReaderOptions? options = null)
+		{
+			return CreateAsync(filename, options).GetAwaiter().GetResult();
+		}
+
+		/// <summary>
+		/// Creates a new CsvDataReader.
+		/// </summary>
+		/// <param name="reader">The TextReader for the delimited data.</param>
+		/// <param name="options">The options to configure the reader, or null to use the default options.</param>
+		/// <returns>A CsvDataReader instance.</returns>
+		public static CsvDataReader Create(TextReader reader, CsvDataReaderOptions? options = null)
+		{
+			return CreateAsync(reader, options).GetAwaiter().GetResult();
+		}
+
 		bool NextRecord()
 		{
 			this.curFieldCount = 0;

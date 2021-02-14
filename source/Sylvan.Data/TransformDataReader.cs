@@ -3,6 +3,8 @@ using System.Collections;
 using System.Collections.ObjectModel;
 using System.Data;
 using System.Data.Common;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Sylvan.Data
 {
@@ -199,6 +201,20 @@ namespace Sylvan.Data
 			// For DataReaders that support it (sqlclient)
 			// the shape of the next result set would need
 			// a new transformation.
+			return false;
+		}
+
+		public override async Task<bool> ReadAsync(CancellationToken cancellationToken)
+		{
+			while (await this.reader.ReadAsync(cancellationToken))
+			{
+				underlyingRow++;
+				if (this.predicate(this))
+				{
+					row++;
+					return true;
+				}
+			}
 			return false;
 		}
 

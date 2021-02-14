@@ -187,7 +187,10 @@ namespace Sylvan.Data.Csv
 				Delimiter == Quote ||
 				BufferSize < MinBufferSize ||
 				(StringComparer.OrdinalIgnoreCase.Equals(TrueString, FalseString) && TrueString != null) ||
-				(Buffer != null && Buffer.Length < MinBufferSize);
+				(Buffer != null && Buffer.Length < MinBufferSize) ||
+				Delimiter >= 128 ||
+				Quote >= 128 ||
+				Escape >= 128;
 			if (invalid)
 				throw new CsvConfigurationException();
 		}

@@ -1,6 +1,11 @@
 # Sylvan.Data.Csv Release Notes
 _0.10.0_
 - Adds support for Unquoted CSV parsing style where fields with delimiters and newlines don't use quotes, but only use escaping.
+- Removed CsvWriter. CsvDataWriter will continue to exist.
+- CsvWriterOptions renamed to CsvDataWriterOptions.
+- Add WriteHeader option to CsvDataWriterOptions.
+- Performance improvements for real-world usage scenarios. Micro-benchmark measurements remain stable.
+- CsvDataWriter constructor removed and replaced with static Create function.
 
 _0.9.2_
 - Add support for per-column boolean format specification.
