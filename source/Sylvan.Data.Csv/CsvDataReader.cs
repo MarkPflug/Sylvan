@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -111,13 +112,31 @@ namespace Sylvan.Data.Csv
 		readonly bool hasHeaders;
 		readonly StringFactory stringFactory;
 
+		static int GetBufferSize(TextReader reader, CsvDataReaderOptions options)
+		{
+			var bufferLen = options.BufferSize;
+			// utf8 bytes can only get shorter when converted to characters
+			// so if we can determine an underlying stream length, then we can allocate
+			// a smaller buffer.
+			if (reader is StreamReader sr && sr.CurrentEncoding.CodePage == Encoding.UTF8.CodePage)
+			{
+				var s = sr.BaseStream;
+				if (s.CanSeek && s.Length < bufferLen)
+				{
+					bufferLen = (int)s.Length;
+				}
+			}
+			return bufferLen;
+		}
+
 		private CsvDataReader(TextReader reader, CsvDataReaderOptions? options = null)
 		{
 			if (options != null)
 				options.Validate();
 			options ??= CsvDataReaderOptions.Default;
 			this.reader = reader;
-			this.buffer = options.Buffer ?? new char[options.BufferSize];
+			var bufferLen = GetBufferSize(reader, options);
+			this.buffer = options.Buffer ?? new char[bufferLen];
 
 			this.hasHeaders = options.HasHeaders;
 			this.autoDetectDelimiter = options.Delimiter == null;
@@ -140,8 +159,6 @@ namespace Sylvan.Data.Csv
 			this.binaryEncoding = options.BinaryEncoding;
 			this.stringFactory = options.StringFactory ?? new StringFactory((char[] b, int o, int l) => new string(b, o, l));
 		}
-
-		
 
 		char DetectDelimiter()
 		{
@@ -664,7 +681,7 @@ namespace Sylvan.Data.Csv
 			var c = Math.Min(outLen - dataOffset, length);
 
 			const int Invalid = 255;
-						
+
 			var bo = o;
 			for (int i = 0; i < c; i++)
 			{
