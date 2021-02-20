@@ -13,7 +13,7 @@ namespace Sylvan.Tools
 	class SystemInfoTool
 	{
 		const string DateFormat = "yyyy-MM-dd HH:mm:ss";
-		
+
 		public static void Main()
 		{
 			using var trm = new ColorConsole();
@@ -44,7 +44,7 @@ namespace Sylvan.Tools
 			iw.Value("ProcessorCount", Environment.ProcessorCount.ToString());
 			iw.Value("SystemPageSize", Environment.SystemPageSize.ToString());
 			iw.Value("OSPlatform", Environment.Is64BitOperatingSystem ? "64" : "32");
-			
+
 			var tickCount = Environment.TickCount64;
 			iw.Value("SystemStarted", DateTime.Now.AddMilliseconds(-tickCount).ToString(DateFormat) + " (local)");
 			iw.Value("SystemUpTime", TimeSpan.FromMilliseconds(tickCount).ToString(@"d\.hh\:mm\:ss\.fff"));
@@ -55,7 +55,8 @@ namespace Sylvan.Tools
 			{
 				iw.Value("Total", FormatSize(mi.Total));
 				iw.Value("Available", FormatSize(mi.Available));
-			} else
+			}
+			else
 			{
 				iw.Value("Total", "unknown");
 				iw.Value("Available", "unknown");
@@ -83,16 +84,14 @@ namespace Sylvan.Tools
 
 				if (drive.IsReady)
 				{
-					try
+					iw.Value("Label", drive.VolumeLabel);
+					iw.Value("Format", drive.DriveFormat ?? "Unknown");
+					iw.Value("Size", FormatSize(drive.TotalSize));
+					iw.Value("Free", FormatSize(drive.AvailableFreeSpace));
+					var clusterSize = drive.GetClusterSize();
+					if (clusterSize > 0)
 					{
-						iw.Value("Label", drive.VolumeLabel);
-						iw.Value("Format", drive.DriveFormat ?? "Unknown");
-						iw.Value("Size", FormatSize(drive.TotalSize));
-						iw.Value("Free", FormatSize(drive.AvailableFreeSpace));
-					}
-					catch
-					{
-
+						iw.Value("Allocation", clusterSize.ToString());
 					}
 				}
 			}
