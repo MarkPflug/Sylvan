@@ -41,6 +41,8 @@ namespace Sylvan.Data.Csv
 		/// Interprets fields as if they are implicitly quoted. Delimiters and new lines within fields are preceeded by an escape character.
 		/// </summary>
 		Unquoted = 2,
+
+		// Lax = 17, // DPR
 	}
 
 	/// <summary>
