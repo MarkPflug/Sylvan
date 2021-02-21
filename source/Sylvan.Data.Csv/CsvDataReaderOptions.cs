@@ -43,6 +43,11 @@ namespace Sylvan.Data.Csv
 		Unquoted = 2,
 	}
 
+	enum UnsupportedStyle
+	{
+		Lax = 1024,
+	}
+
 	/// <summary>
 	/// Options for configuring a CsvDataReader.
 	/// </summary>

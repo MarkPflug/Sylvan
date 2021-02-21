@@ -100,7 +100,7 @@ namespace Sylvan.Data.Csv
 
 		// options:
 		char delimiter;
-		readonly bool implicitQuotes;
+		readonly CsvStyle style;
 		readonly char quote;
 		readonly char escape;
 		readonly bool ownsReader;
@@ -141,7 +141,7 @@ namespace Sylvan.Data.Csv
 			this.hasHeaders = options.HasHeaders;
 			this.autoDetectDelimiter = options.Delimiter == null;
 			this.delimiter = options.Delimiter ?? '\0';
-			this.implicitQuotes = options.CsvStyle == CsvStyle.Unquoted;
+			this.style = options.CsvStyle;
 			this.quote = options.Quote;
 			this.escape = options.Escape;
 			this.dateFormat = options.DateFormat;
@@ -234,7 +234,7 @@ namespace Sylvan.Data.Csv
 			bool last = false;
 			bool complete = false;
 
-			if (implicitQuotes)
+			if (style == CsvStyle.Unquoted)
 			{
 				// consume quoted field.
 				while (idx < bufferEnd)
@@ -388,7 +388,7 @@ namespace Sylvan.Data.Csv
 				{
 					ref var fi = ref fieldInfos[fieldIdx];
 
-					if (implicitQuotes)
+					if (style == CsvStyle.Unquoted)
 					{
 						fi.quoteState =
 							escapeCount == 0
@@ -397,14 +397,29 @@ namespace Sylvan.Data.Csv
 					}
 					else
 					{
-						fi.quoteState =
-							closeQuoteIdx == -1
-							? QuoteState.Unquoted
-							: fieldEnd == (closeQuoteIdx - recordStart)
-							? QuoteState.Quoted
-							: QuoteState.BrokenQuotes;
+						if (closeQuoteIdx == -1)
+						{
+							fi.quoteState = QuoteState.Unquoted;
+						}
+						else
+						{
+							if (fieldEnd == (closeQuoteIdx - recordStart))
+							{
+								fi.quoteState = QuoteState.Quoted;
+							}
+							else
+							{
+								if ((int)style == (int) UnsupportedStyle.Lax)
+								{
+									fi.quoteState = QuoteState.BrokenQuotes;
+								}
+								else
+								{
+									throw new CsvFormatException(this.rowNumber, fieldIdx);
+								}
+							}
+						}
 					}
-
 
 					fi.escapeCount = escapeCount;
 					fi.endIdx = complete ? fieldEnd : (idx - recordStart);
