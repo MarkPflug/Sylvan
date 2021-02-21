@@ -1,8 +1,4 @@
-﻿using Sylvan.Benchmarks;
-using System;
-using System.Collections.Generic;
-using System.Text;
-using Xunit;
+﻿using Xunit;
 
 namespace Sylvan.IO
 {
@@ -33,13 +29,5 @@ namespace Sylvan.IO
 			Assert.Equal(8, o);
 			Assert.Equal(EncoderResult.Flush, r);
 		}
-
-		[Fact]
-		public void Test3()
-		{
-			new HexEncoderBenchmarks().SylvanEncoderStream();
-		}
 	}
 }
-
-

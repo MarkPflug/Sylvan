@@ -867,13 +867,29 @@ namespace Sylvan.Data.Csv
 		}
 
 		[Fact]
+		public void BadQuoteFirstRow()
+		{
+			using var tr = new StringReader("Name,Value\nA,\"B\"C\n");
+			var ex = Assert.Throws<CsvFormatException>(() => CsvDataReader.Create(tr, new CsvDataReaderOptions { Schema = CsvSchema.Nullable }));
+			Assert.Equal(1, ex.RowNumber);
+		}
+
+		[Fact]
+		public void BadQuoteHeader()
+		{
+			using var tr = new StringReader("Name,\"Va\"lue\nA,\"B\"C\n");
+			var ex = Assert.Throws<CsvFormatException>(() => CsvDataReader.Create(tr, new CsvDataReaderOptions { Schema = CsvSchema.Nullable }));
+			Assert.Equal(0, ex.RowNumber);
+		}
+
+		[Fact]
 		public void BadQuote()
 		{
-			using var tr = new StringReader("Name,Value\r\nA\"\"B,\"And\"more,\r\n");
-			var csv = CsvDataReader.Create(tr, new CsvDataReaderOptions { Schema = CsvSchema.Nullable, CsvStyle = (CsvStyle)17 });
+			using var tr = new StringReader("Name,Value\nA\"\"B,b,\nA\"\"B,\"And\"more,\n");
+			var csv = CsvDataReader.Create(tr, new CsvDataReaderOptions { Schema = CsvSchema.Nullable });
 			Assert.True(csv.Read());
 			Assert.Equal("A\"\"B", csv.GetString(0));
-			Assert.Equal("Andmore", csv.GetString(1));
+			Assert.Throws<CsvFormatException>(() => csv.Read());
 		}
 
 		[Fact]

@@ -415,7 +415,8 @@ namespace Sylvan.Data.Csv
 								}
 								else
 								{
-									throw new CsvFormatException(this.rowNumber, fieldIdx);
+									var rowNumber = this.rowNumber == 0 && this.state == State.Initialized ? 1 : this.rowNumber;
+									throw new CsvFormatException(rowNumber, fieldIdx);
 								}
 							}
 						}

@@ -1,5 +1,4 @@
-﻿using Sylvan.Benchmarks;
-using System;
+﻿using System;
 using System.IO;
 using System.Text;
 using Xunit;
@@ -31,16 +30,9 @@ namespace Sylvan.IO
 			s.Close();
 			ms.Position = 0;
 			var str = Encoding.ASCII.GetString(ms.GetBuffer(), 0, (int) ms.Length);
-			var datar = Convert.FromBase64String(str);
-			var debug = Encoding.ASCII.GetString(datar);
+			var data = Convert.FromBase64String(str);
 
-			Assert.Equal(inputData, datar);
-		}
-
-		[Fact]
-		public void Benchmark()
-		{
-			new Base64Benchmarks().SylvanEncoderStream();
+			Assert.Equal(inputData, data);
 		}
 	}
 }
