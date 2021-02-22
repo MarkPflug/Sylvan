@@ -41,8 +41,6 @@ namespace Sylvan.Data.Csv
 		/// Interprets fields as if they are implicitly quoted. Delimiters and new lines within fields are preceeded by an escape character.
 		/// </summary>
 		Unquoted = 2,
-
-		// Lax = 17, // DPR
 	}
 
 	/// <summary>
@@ -54,7 +52,7 @@ namespace Sylvan.Data.Csv
 
 		const char DefaultQuote = '"';
 		const char DefaultEscape = '"';
-		const int DefaultBufferSize = 0x10000;
+		const int DefaultBufferSize = 0x1000;
 		const int MinBufferSize = 0x80;
 
 		char? delimiter;
@@ -149,7 +147,6 @@ namespace Sylvan.Data.Csv
 		/// <summary>
 		/// The size of buffer to use when reading records.
 		/// A record must fit within a single buffer, otherwise an exception is thrown.
-		/// The default buffer size is 64kb.
 		/// </summary>
 		public int BufferSize { get; set; }
 

@@ -13,7 +13,7 @@ namespace Sylvan.Data.Csv
 		const char DefaultDelimiter = ',';
 		const char DefaultQuote = '"';
 		const char DefaultEscape = '"';
-		const int DefaultBufferSize = 0x10000;
+		const int DefaultBufferSize = 0x1000;
 		const int MinBufferSize = 0x80;
 
 		/// <summary>
@@ -81,7 +81,7 @@ namespace Sylvan.Data.Csv
 		public string NewLine { get; set; }
 
 		/// <summary>
-		/// The buffer size to use for writing values. The default is 32kb.
+		/// The buffer size to use for writing values.
 		/// </summary>
 		public int BufferSize { get; set; }
 

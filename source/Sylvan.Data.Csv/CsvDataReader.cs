@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -46,7 +47,6 @@ namespace Sylvan.Data.Csv
 		{
 			Unquoted = 0,
 			Quoted = 1,
-			BrokenQuotes = 2,
 			ImplicitQuotes = 3,
 		}
 
@@ -111,13 +111,31 @@ namespace Sylvan.Data.Csv
 		readonly bool hasHeaders;
 		readonly StringFactory stringFactory;
 
+		static int GetBufferSize(TextReader reader, CsvDataReaderOptions options)
+		{
+			var bufferLen = options.BufferSize;
+			// utf8 bytes can only get shorter when converted to characters
+			// so if we can determine an underlying stream length, then we can allocate
+			// a smaller buffer.
+			if (reader is StreamReader sr && sr.CurrentEncoding.CodePage == Encoding.UTF8.CodePage)
+			{
+				var s = sr.BaseStream;
+				if (s.CanSeek && s.Length < bufferLen)
+				{
+					bufferLen = (int)s.Length;
+				}
+			}
+			return bufferLen;
+		}
+
 		private CsvDataReader(TextReader reader, CsvDataReaderOptions? options = null)
 		{
 			if (options != null)
 				options.Validate();
 			options ??= CsvDataReaderOptions.Default;
 			this.reader = reader;
-			this.buffer = options.Buffer ?? new char[options.BufferSize];
+			var bufferLen = GetBufferSize(reader, options);
+			this.buffer = options.Buffer ?? new char[bufferLen];
 
 			this.hasHeaders = options.HasHeaders;
 			this.autoDetectDelimiter = options.Delimiter == null;
@@ -140,8 +158,6 @@ namespace Sylvan.Data.Csv
 			this.binaryEncoding = options.BinaryEncoding;
 			this.stringFactory = options.StringFactory ?? new StringFactory((char[] b, int o, int l) => new string(b, o, l));
 		}
-
-
 
 		char DetectDelimiter()
 		{
@@ -386,21 +402,15 @@ namespace Sylvan.Data.Csv
 						}
 						else
 						{
-							if(fieldEnd == (closeQuoteIdx - recordStart))
+							if (fieldEnd == (closeQuoteIdx - recordStart))
 							{
 								fi.quoteState = QuoteState.Quoted;
 							}
 							else
 							{
-								// I've decided I don't want to support this
-								if ((int)style == 17) 
-								{
-									fi.quoteState = QuoteState.BrokenQuotes;
-								} else
-								{
-									throw new CsvFormatException(this.rowNumber, fieldIdx);
-								}
-							}							
+								var rowNumber = this.rowNumber == 0 && this.state == State.Initialized ? 1 : this.rowNumber;
+								throw new CsvFormatException(rowNumber, fieldIdx);
+							}
 						}
 					}
 
