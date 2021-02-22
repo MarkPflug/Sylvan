@@ -31,7 +31,6 @@ namespace Sylvan.IO
 			ms.Position = 0;
 			var str = Encoding.ASCII.GetString(ms.GetBuffer(), 0, (int) ms.Length);
 			var data = Convert.FromBase64String(str);
-			var debug = Encoding.ASCII.GetString(data);
 
 			Assert.Equal(inputData, data);
 		}

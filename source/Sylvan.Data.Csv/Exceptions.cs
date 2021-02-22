@@ -5,9 +5,9 @@ namespace Sylvan.Data.Csv
 	/// <summary>
 	/// The exception that is thrown when CSV data is malformed.
 	/// </summary>
-	public class CsvFormatException : Exception
+	public class CsvFormatException : FormatException
 	{
-		internal CsvFormatException(int row, int ordinal, string? msg, Exception? inner) 
+		internal CsvFormatException(int row, int ordinal, string? msg = null, Exception? inner = null) 
 			: base(msg, inner)
 		{
 			this.RowNumber = row;

@@ -6,7 +6,6 @@ namespace Sylvan.IO
 {
 	public class MemoryBlockStreamTests
 	{
-
 		[Fact]
 		public void Test1()
 		{

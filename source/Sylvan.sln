@@ -38,6 +38,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Build", "Build", "{70EFA271
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Docs", "Docs", "{BF19FE51-6183-4B10-888C-B85E3BFBA9C0}"
 	ProjectSection(SolutionItems) = preProject
+		..\readme.md = ..\readme.md
 		..\docs\Sylvan.BuildTools.Data.md = ..\docs\Sylvan.BuildTools.Data.md
 		..\docs\Sylvan.Data.Csv.md = ..\docs\Sylvan.Data.Csv.md
 		..\docs\Sylvan.Data.Csv.Releases.md = ..\docs\Sylvan.Data.Csv.Releases.md

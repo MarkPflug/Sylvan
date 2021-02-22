@@ -325,29 +325,6 @@ namespace Sylvan.Data.Csv
 		}
 
 		[Fact]
-		public void Broken()
-		{
-			using (var reader = File.OpenText("Data/Broken.csv"))
-			{
-				var csv = CsvDataReader.Create(reader);
-				Assert.Equal(2, csv.FieldCount);
-				Assert.True(csv.HasRows);
-				Assert.Equal(0, csv.RowNumber);
-				Assert.Equal("A", csv.GetName(0));
-				Assert.Equal("B", csv.GetName(1));
-				Assert.True(csv.Read());
-				Assert.Equal(1, csv.RowNumber);
-				Assert.Equal("ab", csv[0]);
-				Assert.Equal("c", csv[1]);
-				Assert.True(csv.Read());
-				Assert.Equal(2, csv.RowNumber);
-				Assert.Equal("d\"e\"f", csv[0]);
-				Assert.Equal("gh\"i", csv[1]);
-				Assert.False(csv.Read());
-			}
-		}
-
-		[Fact]
 		public void CustomSchema()
 		{
 			using var sr = TestData.GetTextReader();
@@ -888,13 +865,29 @@ namespace Sylvan.Data.Csv
 		}
 
 		[Fact]
+		public void BadQuoteFirstRow()
+		{
+			using var tr = new StringReader("Name,Value\nA,\"B\"C\n");
+			var ex = Assert.Throws<CsvFormatException>(() => CsvDataReader.Create(tr, new CsvDataReaderOptions { Schema = CsvSchema.Nullable }));
+			Assert.Equal(1, ex.RowNumber);
+		}
+
+		[Fact]
+		public void BadQuoteHeader()
+		{
+			using var tr = new StringReader("Name,\"Va\"lue\nA,\"B\"C\n");
+			var ex = Assert.Throws<CsvFormatException>(() => CsvDataReader.Create(tr, new CsvDataReaderOptions { Schema = CsvSchema.Nullable }));
+			Assert.Equal(0, ex.RowNumber);
+		}
+
+		[Fact]
 		public void BadQuote()
 		{
-			using var tr = new StringReader("Name,Value\r\nA\"\"B,\"And\"more,\r\n");
+			using var tr = new StringReader("Name,Value\nA\"\"B,b,\nA\"\"B,\"And\"more,\n");
 			var csv = CsvDataReader.Create(tr, new CsvDataReaderOptions { Schema = CsvSchema.Nullable });
 			Assert.True(csv.Read());
 			Assert.Equal("A\"\"B", csv.GetString(0));
-			Assert.Equal("Andmore", csv.GetString(1));
+			Assert.Throws<CsvFormatException>(() => csv.Read());
 		}
 
 		[Fact]
@@ -1092,6 +1085,15 @@ namespace Sylvan.Data.Csv
 			{
 				Assert.Throws<NotSupportedException>(() => csv.GetValue(1));
 			}
+		}
+
+		[Fact]
+		public void QuoteHandling()
+		{
+			using var reader = new StringReader("Name\r\n\b\r\n\"quoted\"field,");
+			var csv = CsvDataReader.Create(reader);
+			Assert.True(csv.Read());
+			Assert.Throws<CsvFormatException>(() => csv.Read());
 		}
 
 		[Fact]

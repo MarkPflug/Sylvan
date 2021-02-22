@@ -9,6 +9,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -47,7 +48,6 @@ namespace Sylvan.Data.Csv
 		{
 			Unquoted = 0,
 			Quoted = 1,
-			BrokenQuotes = 2,
 			ImplicitQuotes = 3,
 		}
 
@@ -102,10 +102,10 @@ namespace Sylvan.Data.Csv
 		readonly Dictionary<string, int> headerMap;
 		// options:
 		char delimiter;
+		readonly CsvStyle style;
 		readonly char quote;
 		readonly char escape;
 		readonly bool ownsReader;
-		readonly bool implicitQuotes;
 		readonly CultureInfo culture;
 		readonly string? dateFormat;
 		readonly string? trueString, falseString;
@@ -115,18 +115,36 @@ namespace Sylvan.Data.Csv
 		readonly ICsvSchemaProvider? schema;
 		readonly ResultSetMode resultSetMode;
 
+		static int GetBufferSize(TextReader reader, CsvDataReaderOptions options)
+		{
+			var bufferLen = options.BufferSize;
+			// utf8 bytes can only get shorter when converted to characters
+			// so if we can determine an underlying stream length, then we can allocate
+			// a smaller buffer.
+			if (reader is StreamReader sr && sr.CurrentEncoding.CodePage == Encoding.UTF8.CodePage)
+			{
+				var s = sr.BaseStream;
+				if (s.CanSeek && s.Length < bufferLen)
+				{
+					bufferLen = (int)s.Length;
+				}
+			}
+			return bufferLen;
+		}
+
 		private CsvDataReader(TextReader reader, CsvDataReaderOptions? options = null)
 		{
 			if (options != null)
 				options.Validate();
 			options ??= CsvDataReaderOptions.Default;
 			this.reader = reader;
-			this.buffer = options.Buffer ?? new char[options.BufferSize];
+			var bufferLen = GetBufferSize(reader, options);
+			this.buffer = options.Buffer ?? new char[bufferLen];
 
 			this.hasHeaders = options.HasHeaders;
 			this.autoDetectDelimiter = options.Delimiter == null;
 			this.delimiter = options.Delimiter ?? '\0';
-			this.implicitQuotes = options.CsvStyle == CsvStyle.Unquoted;
+			this.style = options.CsvStyle;
 			this.quote = options.Quote;
 			this.escape = options.Escape;
 			this.dateFormat = options.DateFormat;
@@ -147,7 +165,6 @@ namespace Sylvan.Data.Csv
 			this.schema = options.Schema;
 			this.resultSetMode = options.ResultSetMode;
 		}
-		
 
 		char DetectDelimiter()
 		{
@@ -229,7 +246,7 @@ namespace Sylvan.Data.Csv
 			bool last = false;
 			bool complete = false;
 
-			if (implicitQuotes)
+			if (style == CsvStyle.Unquoted)
 			{
 				// consume quoted field.
 				while (idx < bufferEnd)
@@ -379,7 +396,7 @@ namespace Sylvan.Data.Csv
 				
 				ref var fi = ref fieldInfos[fieldIdx];
 
-				if (implicitQuotes)
+				if (style == CsvStyle.Unquoted)
 				{
 					fi.quoteState =
 						escapeCount == 0
@@ -388,18 +405,26 @@ namespace Sylvan.Data.Csv
 				}
 				else
 				{
-					fi.quoteState =
-						closeQuoteIdx == -1
-						? QuoteState.Unquoted
-						: fieldEnd == (closeQuoteIdx - recordStart)
-						? QuoteState.Quoted
-						: QuoteState.BrokenQuotes;
+					if (closeQuoteIdx == -1)
+					{
+						fi.quoteState = QuoteState.Unquoted;
+					}
+					else
+					{
+						if (fieldEnd == (closeQuoteIdx - recordStart))
+						{
+							fi.quoteState = QuoteState.Quoted;
+						}
+						else
+						{
+							var rowNumber = this.rowNumber == 0 && this.state == State.Initialized ? 1 : this.rowNumber;
+							throw new CsvFormatException(rowNumber, fieldIdx);
+						}
+					}
 				}
-
 
 				fi.escapeCount = escapeCount;
 				fi.endIdx = complete ? fieldEnd : (idx - recordStart);
-				
 				this.idx = idx;
 
 				if (complete)
@@ -672,7 +697,7 @@ namespace Sylvan.Data.Csv
 			var c = Math.Min(outLen - dataOffset, length);
 
 			const int Invalid = 255;
-						
+
 			var bo = o;
 			for (int i = 0; i < c; i++)
 			{
