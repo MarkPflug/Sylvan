@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Data.Common;
 
@@ -9,10 +10,9 @@ namespace Sylvan.Data
 		/// <summary>
 		/// Builder for creating Schema.
 		/// </summary>
-		public class Builder
+		public class Builder : IEnumerable<Column.Builder>
 		{
-			List<Column.Builder>? columns;
-			List<Column.Builder> Columns => columns ?? throw new InvalidOperationException();
+			List<Column.Builder> columns;
 
 			/// <summary>
 			/// Creates a new Builder.
@@ -22,11 +22,13 @@ namespace Sylvan.Data
 				this.columns = new List<Column.Builder>();
 			}
 
+			public int Count { get => this.columns.Count; }
+
 			public Column.Builder this[int ordinal]
 			{
 				get
 				{
-					if (columns == null || ordinal < 0 || ordinal >= columns.Count)
+					if (ordinal < 0 || ordinal >= columns.Count)
 						throw new IndexOutOfRangeException();
 					return columns[ordinal];
 				}
@@ -46,13 +48,12 @@ namespace Sylvan.Data
 
 			public Builder Add(Column.Builder columnBuilder)
 			{
-				var builders = this.Columns;
-				var ordinal = builders.Count;
+				var ordinal = this.columns.Count;
 				
 				columnBuilder.BaseColumnOrdinal = columnBuilder.BaseColumnOrdinal ?? columnBuilder.ColumnOrdinal;
 				columnBuilder.ColumnOrdinal = ordinal;
 
-				builders.Add(columnBuilder);				
+				this.columns.Add(columnBuilder);				
 				return this;
 			}
 
@@ -72,15 +73,27 @@ namespace Sylvan.Data
 			/// </summary>
 			public Schema Build()
 			{
-				var builders = this.Columns;
+				var builders = this.columns;
 				var cols = new Column[builders.Count];
 				for (int i = 0; i < builders.Count; i++)
 				{
 					cols[i] = builders[i].Build();
 				}
-				this.columns = null;
 
 				return new Schema(cols);
+			}
+
+			public IEnumerator<Column.Builder> GetEnumerator()
+			{
+				foreach(var col in this.columns)
+				{
+					yield return col;
+				}
+			}
+
+			IEnumerator IEnumerable.GetEnumerator()
+			{
+				return this.GetEnumerator();
 			}
 		}
 	}
