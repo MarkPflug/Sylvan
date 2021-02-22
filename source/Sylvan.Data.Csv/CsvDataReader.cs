@@ -47,7 +47,6 @@ namespace Sylvan.Data.Csv
 		{
 			Unquoted = 0,
 			Quoted = 1,
-			BrokenQuotes = 2,
 			ImplicitQuotes = 3,
 		}
 
@@ -409,15 +408,8 @@ namespace Sylvan.Data.Csv
 							}
 							else
 							{
-								if ((int)style == (int) UnsupportedStyle.Lax)
-								{
-									fi.quoteState = QuoteState.BrokenQuotes;
-								}
-								else
-								{
-									var rowNumber = this.rowNumber == 0 && this.state == State.Initialized ? 1 : this.rowNumber;
-									throw new CsvFormatException(rowNumber, fieldIdx);
-								}
+								var rowNumber = this.rowNumber == 0 && this.state == State.Initialized ? 1 : this.rowNumber;
+								throw new CsvFormatException(rowNumber, fieldIdx);
 							}
 						}
 					}
