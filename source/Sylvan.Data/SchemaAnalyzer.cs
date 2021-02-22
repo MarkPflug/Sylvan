@@ -437,6 +437,7 @@ namespace Sylvan.Data
 				stringLenTotal += len;
 				if (len == 0 || string.IsNullOrWhiteSpace(stringValue))
 				{
+					nullCount++;
 					emptyStringCount++;
 				}
 				else
@@ -572,7 +573,7 @@ namespace Sylvan.Data
 		internal Schema.Column.Builder CreateColumnSchema()
 		{
 			var name = this.name ?? "";
-			if (nullCount == count)
+			if (nullCount == count )
 			{
 				// never saw any values, so no determination could be made
 				return new Schema.Column.Builder(name, typeof(string), true);

@@ -22,6 +22,16 @@ namespace Sylvan.Data
 				this.columns = new List<Column.Builder>();
 			}
 
+			public Column.Builder this[int ordinal]
+			{
+				get
+				{
+					if (columns == null || ordinal < 0 || ordinal >= columns.Count)
+						throw new IndexOutOfRangeException();
+					return columns[ordinal];
+				}
+			}
+
 			/// <summary>
 			/// Creates a new Builder.
 			/// </summary>
