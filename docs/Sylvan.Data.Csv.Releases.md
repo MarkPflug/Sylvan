@@ -7,6 +7,7 @@ _0.10.0_
 - Performance improvements for real-world usage scenarios. Micro-benchmark measurements remain stable.
 - CsvDataWriter constructor removed and replaced with static Create function.
 - Drop support for "broken quotes" mode. All reading is now strict.
+- Multiple result sets support.
 
 _0.9.2_
 - Add support for per-column boolean format specification.

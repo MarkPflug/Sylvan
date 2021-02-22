@@ -147,7 +147,9 @@ the same as if it were an empty string. Missing fields can be identified by comp
 
 _Extra Fields_
 
-Extra fields, meaning a row that contains more columns than the header column, can be ignored.  Extra fields can be identified by comparing the RowFieldCount to FieldCount. These fields can be accessed via the standard accessors.
+Extra fields, meaning a row that contains more columns than the header column, will be ignored. 
+Extra fields can be identified by comparing the RowFieldCount to FieldCount. 
+Extra field values can be accessed by ordinal.
 
 _Malformed Fields_
 

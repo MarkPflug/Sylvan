@@ -7,6 +7,7 @@ using System.Data.Common;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
@@ -84,6 +85,7 @@ namespace Sylvan.Data.Csv
 		readonly TextReader reader;
 		bool hasRows;
 		readonly char[] buffer;
+		int result;
 		int idx;
 		int bufferEnd;
 		int recordStart;
@@ -94,22 +96,24 @@ namespace Sylvan.Data.Csv
 		int rowNumber;
 		byte[]? scratch;
 		FieldInfo[] fieldInfos;
-		readonly Dictionary<string, int> headerMap;
 		CsvColumn[] columns;
+		bool autoDetectDelimiter;
 
+		readonly Dictionary<string, int> headerMap;
 		// options:
 		char delimiter;
 		readonly CsvStyle style;
 		readonly char quote;
 		readonly char escape;
 		readonly bool ownsReader;
-		readonly bool autoDetectDelimiter;
 		readonly CultureInfo culture;
 		readonly string? dateFormat;
 		readonly string? trueString, falseString;
 		readonly BinaryEncoding binaryEncoding;
 		readonly bool hasHeaders;
 		readonly StringFactory stringFactory;
+		readonly ICsvSchemaProvider? schema;
+		readonly ResultSetMode resultSetMode;
 
 		static int GetBufferSize(TextReader reader, CsvDataReaderOptions options)
 		{
@@ -146,6 +150,7 @@ namespace Sylvan.Data.Csv
 			this.dateFormat = options.DateFormat;
 			this.trueString = options.TrueString;
 			this.falseString = options.FalseString;
+			this.result = -1;
 			this.recordStart = 0;
 			this.bufferEnd = 0;
 			this.idx = 0;
@@ -157,16 +162,24 @@ namespace Sylvan.Data.Csv
 			this.ownsReader = options.OwnsReader;
 			this.binaryEncoding = options.BinaryEncoding;
 			this.stringFactory = options.StringFactory ?? new StringFactory((char[] b, int o, int l) => new string(b, o, l));
+			this.schema = options.Schema;
+			this.resultSetMode = options.ResultSetMode;
 		}
 
 		char DetectDelimiter()
 		{
 			int[] counts = new int[AutoDetectDelimiters.Length];
-			for (int i = 0; i < bufferEnd; i++)
+			for (int i = recordStart; i < bufferEnd; i++)
 			{
 				var c = buffer[i];
-				if (c == '\n' || c == '\r')
+				if (c == '\n' || c == '\r') {
+					var x = counts.Sum();
+					if(x == 0)
+					{
+						continue;
+					}
 					break;
+				}
 				for (int d = 0; d < AutoDetectDelimiters.Length; d++)
 				{
 					if (c == AutoDetectDelimiters[d])
@@ -188,7 +201,7 @@ namespace Sylvan.Data.Csv
 			return AutoDetectDelimiters[maxIdx];
 		}
 
-		void InitializeSchema(ICsvSchemaProvider? schema)
+		void InitializeSchema()
 		{
 			columns = new CsvColumn[this.fieldCount];
 			for (int i = 0; i < this.fieldCount; i++)
@@ -373,50 +386,45 @@ namespace Sylvan.Data.Csv
 
 			if (complete || atEndOfText)
 			{
-				if (state == State.Initializing)
+				if (fieldIdx >= fieldInfos.Length)
 				{
-					if (fieldIdx >= fieldInfos.Length)
-					{
-						// this resize is constrained by the fact that the record has to fit in one row
-						Array.Resize(ref fieldInfos, fieldInfos.Length * 2);
-					}
-					fieldCount++;
+					// this resize is constrained by the fact that the record has to fit in one row
+					Array.Resize(ref fieldInfos, fieldInfos.Length * 2);
 				}
+				
 				curFieldCount++;
-				if (fieldIdx < fieldCount)
-				{
-					ref var fi = ref fieldInfos[fieldIdx];
+				
+				ref var fi = ref fieldInfos[fieldIdx];
 
-					if (style == CsvStyle.Unquoted)
+				if (style == CsvStyle.Unquoted)
+				{
+					fi.quoteState =
+						escapeCount == 0
+						? QuoteState.Unquoted
+						: QuoteState.ImplicitQuotes;
+				}
+				else
+				{
+					if (closeQuoteIdx == -1)
 					{
-						fi.quoteState =
-							escapeCount == 0
-							? QuoteState.Unquoted
-							: QuoteState.ImplicitQuotes;
+						fi.quoteState = QuoteState.Unquoted;
 					}
 					else
 					{
-						if (closeQuoteIdx == -1)
+						if (fieldEnd == (closeQuoteIdx - recordStart))
 						{
-							fi.quoteState = QuoteState.Unquoted;
+							fi.quoteState = QuoteState.Quoted;
 						}
 						else
 						{
-							if (fieldEnd == (closeQuoteIdx - recordStart))
-							{
-								fi.quoteState = QuoteState.Quoted;
-							}
-							else
-							{
-								var rowNumber = this.rowNumber == 0 && this.state == State.Initialized ? 1 : this.rowNumber;
-								throw new CsvFormatException(rowNumber, fieldIdx);
-							}
+							var rowNumber = this.rowNumber == 0 && this.state == State.Initialized ? 1 : this.rowNumber;
+							throw new CsvFormatException(rowNumber, fieldIdx);
 						}
 					}
-
-					fi.escapeCount = escapeCount;
-					fi.endIdx = complete ? fieldEnd : (idx - recordStart);
 				}
+
+				fi.escapeCount = escapeCount;
+				fi.endIdx = complete ? fieldEnd : (idx - recordStart);
 				this.idx = idx;
 
 				if (complete)

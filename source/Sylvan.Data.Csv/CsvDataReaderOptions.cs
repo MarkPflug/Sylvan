@@ -28,6 +28,23 @@ namespace Sylvan.Data.Csv
 	}
 
 	/// <summary>
+	/// Specifies how result sets are interpreted within a CSV file.
+	/// </summary>
+	public enum ResultSetMode
+	{
+		/// <summary>
+		/// The entire file is interpreted as a single result set.
+		/// </summary>
+		SingleResult = 1,
+
+		/// <summary>
+		/// In multi result mode a new result set is identified by a change in column count.
+		/// Empty lines are skipped between result sets.
+		/// </summary>
+		MultiResult = 2,		
+	}
+
+	/// <summary>
 	/// The CSV quoting and escaping styles.
 	/// </summary>
 	public enum CsvStyle
@@ -79,10 +96,16 @@ namespace Sylvan.Data.Csv
 
 			this.StringFactory = null;
 			this.BinaryEncoding = BinaryEncoding.Base64;
+			this.ResultSetMode = ResultSetMode.SingleResult;
 		}
 
 		/// <summary>
-		/// 
+		/// Indicates the behavior of result transitions.
+		/// </summary>
+		public ResultSetMode ResultSetMode { get; set; }
+
+		/// <summary>
+		/// Indicates the binary encoding that should be used when writing binary columns.
 		/// </summary>
 		public BinaryEncoding BinaryEncoding { get; set; }
 

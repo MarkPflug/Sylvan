@@ -40,7 +40,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Docs", "Docs", "{BF19FE51-6
 	ProjectSection(SolutionItems) = preProject
 		..\readme.md = ..\readme.md
 		..\docs\Sylvan.BuildTools.Data.md = ..\docs\Sylvan.BuildTools.Data.md
-		..\docs\Sylvan.Data.Csv.Design.md = ..\docs\Sylvan.Data.Csv.Design.md
 		..\docs\Sylvan.Data.Csv.md = ..\docs\Sylvan.Data.Csv.md
 		..\docs\Sylvan.Data.Csv.Releases.md = ..\docs\Sylvan.Data.Csv.Releases.md
 		..\docs\Sylvan.Tools.SystemInfo.md = ..\docs\Sylvan.Tools.SystemInfo.md

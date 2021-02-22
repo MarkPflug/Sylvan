@@ -140,14 +140,13 @@ namespace Sylvan.Data.Csv
 			using (var reader = File.OpenText("Data/Quote.csv"))
 			{
 				var csv = await CsvDataReader.CreateAsync(reader);
-				Assert.Equal(5, csv.FieldCount);
+				Assert.Equal(4, csv.FieldCount);
 				Assert.True(csv.HasRows);
 				Assert.Equal(0, csv.RowNumber);
 				Assert.Equal("Id", csv.GetName(0));
 				Assert.Equal("Name", csv.GetName(1));
 				Assert.Equal("Value", csv.GetName(2));
 				Assert.Equal("Date", csv.GetName(3));
-				Assert.Equal("Original, Origin", csv.GetName(4));
 				Assert.True(await csv.ReadAsync());
 				Assert.Equal(1, csv.RowNumber);
 				Assert.Equal("1", csv[0]);
@@ -166,7 +165,6 @@ namespace Sylvan.Data.Csv
 				Assert.Equal("Comma", csv[1]);
 				Assert.Equal("Quite, Common", csv[2]);
 				Assert.Equal("2020-05-29", csv[3]);
-				Assert.Equal("", csv[4]);
 				Assert.False(await csv.ReadAsync());
 			}
 		}
@@ -1023,7 +1021,7 @@ namespace Sylvan.Data.Csv
 		[Fact]
 		public void BinaryHexPrefix()
 		{
-			
+
 			using var reader = new StringReader("Name,Value\r\nrow1,0x01020304");
 			var csv = CsvDataReader.Create(reader, new CsvDataReaderOptions { BinaryEncoding = BinaryEncoding.Hexadecimal });
 			csv.Read();
@@ -1031,7 +1029,7 @@ namespace Sylvan.Data.Csv
 			Assert.Equal(4, len);
 			var buf = new byte[len];
 			csv.GetBytes(1, 0, buf, 0, len);
-			Assert.Equal(new byte[] { 1, 2, 3, 4}, buf);
+			Assert.Equal(new byte[] { 1, 2, 3, 4 }, buf);
 
 		}
 
@@ -1096,6 +1094,49 @@ namespace Sylvan.Data.Csv
 			var csv = CsvDataReader.Create(reader);
 			Assert.True(csv.Read());
 			Assert.Throws<CsvFormatException>(() => csv.Read());
+		}
+
+		[Fact]
+		public void MRS()
+		{
+			using var reader = new StringReader("A,B\ntest,1\n\nC,D\ntest2,2");
+			var csv = CsvDataReader.Create(reader, new CsvDataReaderOptions { ResultSetMode = ResultSetMode.MultiResult });
+			Assert.Equal("A", csv.GetName(0));
+			Assert.Equal("B", csv.GetName(1));
+			Assert.True(csv.Read());
+			Assert.Equal("test", csv.GetString(0));
+			Assert.False(csv.Read());
+			Assert.True(csv.NextResult());
+			Assert.True(csv.Read());
+			Assert.Equal("C", csv.GetName(0));
+			Assert.Equal("D", csv.GetName(1));
+			Assert.Equal("test2", csv.GetString(0));
+			Assert.Equal("2", csv.GetString(1));
+			Assert.False(csv.Read());
+			Assert.False(csv.NextResult());
+		}
+
+		[Fact]
+		public void MRS2()
+		{
+			using var reader = new StringReader("A,B\n1,2\nC,D,E\n3,4,5");
+			var csv = CsvDataReader.Create(reader, new CsvDataReaderOptions { ResultSetMode = ResultSetMode.MultiResult });
+			Assert.Equal("A", csv.GetName(0));
+			Assert.Equal("B", csv.GetName(1));
+			Assert.True(csv.Read());
+			Assert.Equal("1", csv.GetString(0));
+			Assert.Equal("2", csv.GetString(1));
+			Assert.False(csv.Read());
+			Assert.True(csv.NextResult());
+			Assert.True(csv.Read());
+			Assert.Equal("C", csv.GetName(0));
+			Assert.Equal("D", csv.GetName(1));
+			Assert.Equal("E", csv.GetName(2));
+			Assert.Equal("3", csv.GetString(0));
+			Assert.Equal("4", csv.GetString(1));
+			Assert.Equal("5", csv.GetString(2));
+			Assert.False(csv.Read());
+			Assert.False(csv.NextResult());
 		}
 	}
 }
