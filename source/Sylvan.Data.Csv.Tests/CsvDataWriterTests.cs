@@ -16,7 +16,7 @@ namespace Sylvan.Data.Csv
 		// a culture that uses ',' for numeric decimal separator
 		static CultureInfo ItalianCulture = CultureInfo.GetCultureInfoByIetfLanguageTag("it-IT");
 
-		static string GetCsv<T>(IEnumerable<T> data)
+		static string GetCsv<T>(IEnumerable<T> data) where T : class
 		{
 			var dr = data.AsDataReader();
 			return GetCsv(dr);

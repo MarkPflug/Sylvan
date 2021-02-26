@@ -9,7 +9,7 @@ using System.Runtime.Serialization;
 
 namespace Sylvan.Data
 {
-	// A DataBinder implementatin that uses reflection.
+	// A DataBinder implementation that uses reflection.
 	// This was created merely to compare performance with CompiledDataBinder.
 	sealed class ReflectionDataBinder<T> : IDataBinder<T>
 	{

@@ -74,18 +74,12 @@ namespace Sylvan.Data
 		}
 
 		internal readonly static MethodInfo EnumParseMethod = GetBinderMethod("ParseEnum");
-		//internal readonly static MethodInfo ChangeTypeMethod = GetBinderMethod("ChangeType");
 		internal readonly static MethodInfo IsNullStringMethod = GetBinderMethod("IsNullString");
 
 		internal static bool IsNullString(string str)
 		{
 			return string.IsNullOrWhiteSpace(str);
 		}
-
-		//internal static object ChangeType(object value, Type type, CultureInfo culture)
-		//{
-		//	return Convert.ChangeType(value, type, culture);
-		//}
 
 		internal static TE ParseEnum<TE>(string value) where TE : struct, Enum
 		{
