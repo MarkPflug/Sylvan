@@ -105,6 +105,7 @@ namespace Sylvan.Data.Csv
 		readonly CsvStyle style;
 		readonly char quote;
 		readonly char escape;
+		readonly char comment;
 		readonly bool ownsReader;
 		readonly CultureInfo culture;
 		readonly string? dateFormat;
@@ -147,6 +148,7 @@ namespace Sylvan.Data.Csv
 			this.style = options.CsvStyle;
 			this.quote = options.Quote;
 			this.escape = options.Escape;
+			this.comment = options.Comment;
 			this.dateFormat = options.DateFormat;
 			this.trueString = options.TrueString;
 			this.falseString = options.FalseString;
@@ -434,6 +436,45 @@ namespace Sylvan.Data.Csv
 			}
 
 			return ReadResult.Incomplete;
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		ReadResult ReadComment()
+		{
+			var idx = this.idx;
+			var end = bufferEnd;
+			var buffer = this.buffer;
+			if (idx >= end && !atEndOfText)
+			{
+				return ReadResult.Incomplete;
+			}
+			var c = buffer[idx];
+			if (c == comment)
+			{
+				var start = idx;
+				int i = idx;
+				for (; i < end; i++)
+				{
+					c = buffer[i];
+					if (IsEndOfLine(c))
+					{
+						ConsumeLineEnd(buffer, ref i);
+						this.idx = i;
+						return ReadResult.True;
+					}
+				}
+				if (atEndOfText)
+				{
+					this.idx = i;
+					return ReadResult.True;
+				}
+				if (start == 0)
+				{
+					throw new CsvRecordTooLargeException(this.rowNumber, 0);
+				}
+				return ReadResult.Incomplete;
+			}
+			return ReadResult.False;
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
