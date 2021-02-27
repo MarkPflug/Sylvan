@@ -75,7 +75,7 @@ The StringFactory option allows providing a custom mechanism for string construc
 
 Providing a string factory can affect performance both positively, and adversely depending on how much duplication there is in the file, and of course depends on the implementation of the factory method itself.
 
-The `Sylvan.Data.Csv` library does not provide an implementation, but the `Sylvan.Common` package includes a `StringPool` type that can be used to provide an implementation of the string factory. The length parameter to `StringPool` controls the limit beyond which de-dupe will not be attempted. Identifying dupes takes some time and longer strings are less likely to be duplicated, so this value allows tuning speed/memory.
+The `Sylvan.Data.Csv` library does not provide a `StringFactory` implementation, but the `Sylvan.Common` package does via the `StringPool` type. The length parameter to `StringPool` controls the limit beyond which de-dupe will not be attempted. Identifying dupes takes some time and longer strings are less likely to be duplicated, so this value allows tuning speed/memory. The `StringPool` implementation doesn't evict strings, and is only intended to be short lived, for the duration of processing a small number of files.
 
 ```C#
 
@@ -87,10 +87,24 @@ var opts = new CsvDataReaderOptions {
 };
 
 var csv = CsvDataReader.Create("data.csv", opts);
-
 ```
 
-Another example might be -- if a file is known to contain a lot of single-character strings -- an implementation like the following:
+The `[Ben.StringIntern](https://github.com/benaadams/Ben.StringIntern)` package provides a robust implementation that has configurable options and exposes telemetry data. 
+
+```
+using Ben.Collections.Specialized;
+...
+
+var pool = new InternPool();
+
+var opts = new CsvDataReaderOptions {
+    StringFactory = (char[] b, int o, int l) => pool.Intern(b.AsSpan().Slice(o, l))
+};
+
+var csv = CsvDataReader.Create("data.csv", opts);
+```
+
+Another example might be -- if a file is known to contain a lot of single-character strings -- an implementation like the following that only caches single character strings:
 
 ```C#
 static readonly string[] pool = new string[128];
@@ -105,8 +119,7 @@ static string Pool(char[] buf, int offset, int length)
             return pool[c] ?? (pool[c] = ((char)c).ToString());	
         }			
     }
-    // anything else just construct normally
-    // or, you could call a nested 
+    // anything else just construct normally (or call a nested factory)
     return new string(buf, offset, length);
 }
 ```

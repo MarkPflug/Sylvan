@@ -125,7 +125,7 @@ namespace Sylvan.Data.Csv
 		{
 			this.curFieldCount = 0;
 			this.recordStart = this.idx;
-
+			start:
 			if (this.idx >= bufferEnd)
 			{
 				await FillBufferAsync().ConfigureAwait(false);
@@ -135,31 +135,45 @@ namespace Sylvan.Data.Csv
 				}
 			}
 
+			var result = ReadComment(buffer, ref this.idx);
+			switch (result)
+			{
+				case ReadResult.True:
+					goto start;
+				case ReadResult.False:
+					break;
+				case ReadResult.Incomplete:
+					// we were unable to read an entire record out of the buffer synchronously
+					if (recordStart == 0)
+					{
+						// if we consumed the entire buffer reading this record, then this is an exceptional situation
+						// we expect a record to be able to fit entirely within the buffer.
+						throw new CsvRecordTooLargeException(this.RowNumber, 0, null, null);
+					}
+					else
+					{
+						await FillBufferAsync().ConfigureAwait(false);
+						// after filling the buffer, we will resume reading fields from where we left off.
+					}
+
+					goto start;
+			}
+
 			int fieldIdx = 0;
 			while (true)
 			{
-				var cr = ReadComment(buffer, ref idx);
-				if (cr != ReadResult.False)
-				{
-					if (cr == ReadResult.True)
-					{
-						continue;
-					}
-				}
-				else
-				{
-					var result = ReadField(fieldIdx);
+				result = ReadField(fieldIdx);
 
-					if (result == ReadResult.True)
-					{
-						fieldIdx++;
-						continue;
-					}
-					if (result == ReadResult.False)
-					{
-						return true;
-					}
+				if (result == ReadResult.True)
+				{
+					fieldIdx++;
+					continue;
 				}
+				if (result == ReadResult.False)
+				{
+					return true;
+				}
+				
 				// we were unable to read an entire record out of the buffer synchronously
 				if (recordStart == 0)
 				{

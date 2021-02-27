@@ -441,11 +441,9 @@ namespace Sylvan.Data.Csv
 
 		ReadResult ReadComment(char[] buffer, ref int idx)
 		{
+			// only called in a context where we're definitely not
+			// at the end of the buffer.
 			var end = bufferEnd;
-			if (idx >= end && !atEndOfText)
-			{
-				return ReadResult.Incomplete;
-			}
 			var c = buffer[idx];
 			if (c == comment)
 			{
@@ -473,7 +471,7 @@ namespace Sylvan.Data.Csv
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		static bool IsEndOfLine(char c)
 		{
-			return c == '\r' || c == '\n';
+			return c == '\n' || c == '\r';
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
