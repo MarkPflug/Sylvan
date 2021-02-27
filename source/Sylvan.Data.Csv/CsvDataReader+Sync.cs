@@ -50,17 +50,17 @@ namespace Sylvan.Data.Csv
 			int fieldIdx = 0;
 			while (true)
 			{
-				var result = ReadComment();
-				if (result != ReadResult.False)
+				var cr = ReadComment(buffer, ref idx);
+				if (cr != ReadResult.False)
 				{
-					if (result == ReadResult.True)
+					if (cr == ReadResult.True)
 					{
 						continue;
 					}
 				}
 				else
 				{
-					result = ReadField(fieldIdx);
+					var result = ReadField(fieldIdx);
 
 					if (result == ReadResult.True)
 					{
@@ -88,7 +88,7 @@ namespace Sylvan.Data.Csv
 			}
 		}
 
-		
+
 
 		int FillBuffer()
 		{
@@ -151,7 +151,7 @@ namespace Sylvan.Data.Csv
 		/// <inheritdoc/>
 		public override bool NextResult()
 		{
-			while (Read());
+			while (Read()) ;
 			return Initialize();
 		}
 

@@ -174,9 +174,10 @@ namespace Sylvan.Data.Csv
 			for (int i = recordStart; i < bufferEnd; i++)
 			{
 				var c = buffer[i];
-				if (c == '\n' || c == '\r') {
+				if (c == '\n' || c == '\r')
+				{
 					var x = counts.Sum();
-					if(x == 0)
+					if (x == 0)
 					{
 						continue;
 					}
@@ -393,9 +394,9 @@ namespace Sylvan.Data.Csv
 					// this resize is constrained by the fact that the record has to fit in one row
 					Array.Resize(ref fieldInfos, fieldInfos.Length * 2);
 				}
-				
+
 				curFieldCount++;
-				
+
 				ref var fi = ref fieldInfos[fieldIdx];
 
 				if (style == CsvStyle.Unquoted)
@@ -438,12 +439,9 @@ namespace Sylvan.Data.Csv
 			return ReadResult.Incomplete;
 		}
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		ReadResult ReadComment()
+		ReadResult ReadComment(char[] buffer, ref int idx)
 		{
-			var idx = this.idx;
 			var end = bufferEnd;
-			var buffer = this.buffer;
 			if (idx >= end && !atEndOfText)
 			{
 				return ReadResult.Incomplete;
@@ -451,7 +449,6 @@ namespace Sylvan.Data.Csv
 			var c = buffer[idx];
 			if (c == comment)
 			{
-				var start = idx;
 				int i = idx;
 				for (; i < end; i++)
 				{
@@ -459,18 +456,14 @@ namespace Sylvan.Data.Csv
 					if (IsEndOfLine(c))
 					{
 						ConsumeLineEnd(buffer, ref i);
-						this.idx = i;
+						idx = i;
 						return ReadResult.True;
 					}
 				}
 				if (atEndOfText)
 				{
-					this.idx = i;
+					idx = i;
 					return ReadResult.True;
-				}
-				if (start == 0)
-				{
-					throw new CsvRecordTooLargeException(this.rowNumber, 0);
 				}
 				return ReadResult.Incomplete;
 			}
