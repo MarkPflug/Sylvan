@@ -22,7 +22,8 @@ namespace Sylvan.Data.Csv
 
 			var bufferSize = options?.BufferSize ?? options?.Buffer?.Length ?? CsvDataReaderOptions.Default.BufferSize;
 			bufferSize = Math.Max(bufferSize, Environment.SystemPageSize);
-			var reader = new StreamReader(filename, Encoding.Default, true, bufferSize);
+			var stream = new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize, FileOptions.SequentialScan | FileOptions.Asynchronous);
+			var reader = new StreamReader(stream, Encoding.Default, true, bufferSize);
 			var csv = new CsvDataReader(reader, options);
 			if (!await csv.InitializeAsync().ConfigureAwait(false))
 			{

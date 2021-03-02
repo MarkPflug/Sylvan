@@ -44,6 +44,7 @@ namespace Sylvan.Data.Csv
 		readonly char delimiter;
 		readonly char quote;
 		readonly char escape;
+		readonly char comment;
 		readonly string newLine;
 
 		readonly string trueString;
@@ -97,6 +98,7 @@ namespace Sylvan.Data.Csv
 			this.delimiter = options.Delimiter;
 			this.quote = options.Quote;
 			this.escape = options.Escape;
+			this.comment = options.Comment;
 			this.newLine = options.NewLine;
 			this.culture = options.Culture;
 			this.buffer = options.Buffer ?? new char[options.BufferSize];
@@ -131,7 +133,12 @@ namespace Sylvan.Data.Csv
 					break;
 				case TypeCode.String:
 					str = reader.GetString(i);
-					result = WriteField(str);
+					if(i == 0 && str.Length > 0 && str[0] == comment)
+					{
+						result = WriteQuoted(str);
+					} else {
+						result = WriteField(str);
+					}					
 					break;
 				case TypeCode.Byte:
 					intVal = reader.GetByte(i);

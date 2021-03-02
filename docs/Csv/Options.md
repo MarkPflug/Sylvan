@@ -89,7 +89,7 @@ var opts = new CsvDataReaderOptions {
 var csv = CsvDataReader.Create("data.csv", opts);
 ```
 
-The `[Ben.StringIntern](https://github.com/benaadams/Ben.StringIntern)` package provides a robust implementation that has configurable options and exposes telemetry data. 
+The `[Ben.StringIntern](https://github.com/benaadams/Ben.StringIntern)` package provides a robust implementation with configurable options and exposes telemetry data. This should be preferred if the string pool will be used beyond processing a single file.
 
 ```
 using Ben.Collections.Specialized;
