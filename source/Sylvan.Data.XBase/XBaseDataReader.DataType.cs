@@ -452,7 +452,6 @@ namespace Sylvan.Data.XBase
 
 			public override string GetString(XBaseDataReader dr, int ordinal)
 			{
-				//var str = dr.GetRecordChars(ordinal);
 				var col = dr.columns[ordinal];
 				var buf = dr.textBuffer;
 
@@ -576,7 +575,6 @@ namespace Sylvan.Data.XBase
 
 			public override int GetBytes(XBaseDataReader dr, int ordinal, int dataOffset, byte[] buffer, int bufferOffset, int length)
 			{
-				// todo: this is horribly inefficient.
 				var s = GetStream(dr, ordinal);
 				s.Seek(dataOffset, SeekOrigin.Begin);
 				return s.Read(buffer, bufferOffset, length);
@@ -662,10 +660,7 @@ namespace Sylvan.Data.XBase
 		static XBaseDataReader()
 		{
 			CodePageMap = new Dictionary<ushort, ushort>();
-
-			// https://stackoverflow.com/questions/52590941/how-to-interpret-the-language-driver-name-in-a-dbase-dbf-file
 			// maps the xBase header encoding number to the codePage number
-
 			ushort[] codePageData = new ushort[]
 			{
 				0x01, 437,
