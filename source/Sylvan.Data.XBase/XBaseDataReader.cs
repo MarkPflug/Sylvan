@@ -41,7 +41,6 @@ namespace Sylvan.Data.XBase
 
 	public sealed partial class XBaseDataReader : DbDataReader, IDbColumnSchemaGenerator
 	{
-
 		class XBaseColumn : DbColumn
 		{
 			internal int offset;
@@ -194,7 +193,6 @@ namespace Sylvan.Data.XBase
 			Binary = 0x04,
 			AutoIncrementing = 0x0c,
 		}
-
 
 		public static XBaseDataReader Create(Stream stream)
 		{
@@ -395,9 +393,6 @@ namespace Sylvan.Data.XBase
 			this.version = version;
 		}
 
-
-
-
 		string ReadZString(byte[] buffer, int offset, int maxLength)
 		{
 			int i;
@@ -460,8 +455,6 @@ namespace Sylvan.Data.XBase
 			var col = this.columns[ordinal];
 			return col.accessor.GetChars(this, ordinal, (int)dataOffset, buffer, bufferOffset, length);
 		}
-
-
 
 		public override string GetDataTypeName(int ordinal)
 		{
