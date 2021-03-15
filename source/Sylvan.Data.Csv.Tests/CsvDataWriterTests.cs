@@ -139,5 +139,22 @@ namespace Sylvan.Data.Csv
 			var str = sw.ToString();
 			Assert.Equal("Name;Value\nA;12,34\n", str);
 		}
+
+		[Fact]
+		public void Comment1()
+		{
+			var sw = new StringWriter();
+			var csv = CsvDataWriter.Create(sw, TestOptions);
+
+			var dr = new[]
+			{
+				new { Name = "#1", Value = "#2" },
+			};
+
+			csv.Write(dr.AsDataReader());
+			var str = sw.ToString();
+			Assert.Equal("Name,Value\n\"#1\",#2\n", str);
+		}
+
 	}
 }
