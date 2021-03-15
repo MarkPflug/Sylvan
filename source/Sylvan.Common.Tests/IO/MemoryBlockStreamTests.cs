@@ -1,5 +1,4 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using System.Text;
 using Xunit;
 
@@ -7,7 +6,6 @@ namespace Sylvan.IO
 {
 	public class MemoryBlockStreamTests
 	{
-
 		[Fact]
 		public void Test1()
 		{
@@ -26,14 +24,5 @@ namespace Sylvan.IO
 			var str = r.ReadToEnd();
 			Assert.Equal(data.Length * Count, str.Length);
 		}
-
-//#if NET5_0
-//		[Fact]
-//		public void Test2()
-//		{
-//			var msb = new Sylvan.Benchmarks.MemoryStreamBenchmarks();
-//			msb.PooledMemoryStream();
-//		}
-//#endif
 	}
 }

@@ -1,90 +1,160 @@
 using System;
-using System.Data;
+using System.Collections.Generic;
+using System.Data.Common;
+using System.Globalization;
 using System.IO;
-using System.Threading.Tasks;
+using System.Xml;
 using Xunit;
 
 namespace Sylvan.Data.Csv
 {
 	public class CsvDataWriterTests
 	{
-		[Fact]
-		public async Task Simple()
-		{
-			var dr = TestData.GetData();
+		// use \n for newlines to make assertions easier
+		static CsvDataWriterOptions TestOptions = new CsvDataWriterOptions { NewLine = "\n" };
 
+		// a culture that uses ',' for numeric decimal separator
+		static CultureInfo ItalianCulture = CultureInfo.GetCultureInfoByIetfLanguageTag("it-IT");
+
+		static string GetCsv<T>(IEnumerable<T> data)
+		{
+			var dr = data.AsDataReader();
+			return GetCsv(dr);
+		}
+
+		static string GetCsv(DbDataReader dr)
+		{
 			var sw = new StringWriter();
-			var csv = new CsvDataWriter(sw);
-			await csv.WriteAsync(dr);
+			var csv = CsvDataWriter.Create(sw, TestOptions);
+			csv.Write(dr);
+			return sw.ToString();
 		}
 
 		[Fact]
-		public void DataTable()
+		public void Simple()
 		{
-			var dr = TestData.GetData();
-			var dt = new DataTable();
-			dt.Load(dr);
-			Assert.Equal(3253, dt.Rows.Count);
-			Assert.Equal(85, dt.Columns.Count);
+			var data = new[]
+				{
+					new
+					{
+						Boolean = true,
+						Integer = int.MaxValue,
+						Double = 15.25,
+						Date = new DateTime(2020, 01, 01),
+						Text = "Abcd",
+					}
+				};
+
+			var csv = GetCsv(data);
+			var expected = "Boolean,Integer,Double,Date,Text\nTrue,2147483647,15.25,2020-01-01T00:00:00,Abcd\n";
+			Assert.Equal(expected, csv);
 		}
 
-		[Fact]
-		public async Task Schema()
-		{
-			var dr = TestData.GetTypedData();
-			var sw = new StringWriter();
-			var csv = new CsvDataWriter(sw);
-			await csv.WriteAsync(dr);
-		}
 
 		[Fact]
-		public async Task Binary()
+		public void Binary()
 		{
-			var dr = TestData.GetBinaryData();
-			var sw = new StringWriter();
-			using var csv = new CsvDataWriter(sw);
-			await csv.WriteAsync(dr);
-			var str = sw.ToString();
+			var data =
+				new[] {
+					 new {
+						  Name = "A",
+						  Value = new byte[] { 1, 2, 3, 4, 5 },
+					}
+				};
+
+			var csv = GetCsv(data);
+			Assert.Equal("Name,Value\nA,AQIDBAU=\n", csv);
 		}
 
 		[Fact]
 		public void WriteDate()
 		{
-			var sw = new StringWriter();
-			using (var csv = new CsvWriter(sw))
-			{
-				csv.WriteField(new DateTime(2020, 8, 7, 7, 45, 22));
-			}
-			var str = sw.ToString();
-			Assert.Equal("2020-08-07T07:45:22", str);
+			var data = new[]
+				{
+					new 
+					{
+						Name = "Date1", 
+						Date = new DateTime(2021, 2, 6),
+					},
+					new 
+					{
+						Name = "Date2", 
+						Date = new DateTime(2021, 2, 7),
+					},
+				};
+
+			var csv = GetCsv(data);
+			Assert.Equal("Name,Date\nDate1,2021-02-06T00:00:00\nDate2,2021-02-07T00:00:00\n", csv);
+		}
+
+		
+
+		[Fact]
+		public void WriteQuote()
+		{
+			var data = new[]
+				{
+					new
+					{
+						Text = "Test, 1",
+					},
+					new
+					{
+						Text = "\"test2\"",
+					},
+				};
+
+			var csv = GetCsv(data);
+			Assert.Equal("Text\n\"Test, 1\"\n\"\"\"test2\"\"\"\n", csv);
 		}
 
 		[Fact]
-		public void WriteDateCustom()
+		public void CultureCommaDecimalPoint()
 		{
 			var sw = new StringWriter();
-			using (var csv = new CsvWriter(sw, new CsvWriterOptions { DateFormat = "yyyyMMdd" }))
+			var csv = CsvDataWriter.Create(sw, new CsvDataWriterOptions { NewLine = "\n", Culture = ItalianCulture });
+
+			var dr = new[]
 			{
-				csv.WriteField(new DateTime(2020, 8, 7, 7, 45, 22));
-			}
+				new { Value = 12.34 },
+			};
+
+			csv.Write(dr.AsDataReader());
 			var str = sw.ToString();
-			Assert.Equal("20200807", str);
+			Assert.Equal("Value\n\"12,34\"\n", str);
 		}
-
-		class TypedObject
-		{
-			public int Id { get; set; }
-		}
-
 
 		[Fact]
-		public void WriteTypes()
+		public void CultureCommaDecimalPoint2()
 		{
-			var data = TestData.GetTypedData();
-			var tw = new StringWriter();
-			using var csv = new CsvDataWriter(tw);
-			csv.Write(data);
-			var str = tw.ToString();
+			var sw = new StringWriter();
+			var csv = CsvDataWriter.Create(sw, new CsvDataWriterOptions { NewLine = "\n", Culture = ItalianCulture, Delimiter = ';' });
+
+			var dr = new[]
+			{
+				new { Name= "A", Value = 12.34 },
+			};
+
+			csv.Write(dr.AsDataReader());
+			var str = sw.ToString();
+			Assert.Equal("Name;Value\nA;12,34\n", str);
 		}
+
+		[Fact]
+		public void Comment1()
+		{
+			var sw = new StringWriter();
+			var csv = CsvDataWriter.Create(sw, TestOptions);
+
+			var dr = new[]
+			{
+				new { Name = "#1", Value = "#2" },
+			};
+
+			csv.Write(dr.AsDataReader());
+			var str = sw.ToString();
+			Assert.Equal("Name,Value\n\"#1\",#2\n", str);
+		}
+
 	}
 }

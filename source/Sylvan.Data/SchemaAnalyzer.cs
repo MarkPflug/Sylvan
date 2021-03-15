@@ -187,7 +187,6 @@ namespace Sylvan.Data
 
 			isNullable = false;
 			dateHasFractionalSeconds = false;
-			isUnique = true;
 			intMax = long.MinValue;
 			intMin = long.MaxValue;
 			floatMax = double.MinValue;
@@ -222,7 +221,6 @@ namespace Sylvan.Data
 		bool floatHasFractionalPart;
 #pragma warning restore
 		bool isNullable;
-		bool isUnique;
 
 		int count;
 		int nullCount;
@@ -437,6 +435,7 @@ namespace Sylvan.Data
 				stringLenTotal += len;
 				if (len == 0 || string.IsNullOrWhiteSpace(stringValue))
 				{
+					nullCount++;
 					emptyStringCount++;
 				}
 				else
@@ -453,16 +452,18 @@ namespace Sylvan.Data
 						}
 					}
 
-					if (this.valueCount.TryGetValue(stringValue, out int count))
+					if (this.valueCount.Count < 100)
 					{
-						isUnique = false;
-						this.valueCount[stringValue] = count + 1;
-					}
-					else
-					{
-						if (!string.IsNullOrWhiteSpace(stringValue))
+						if (this.valueCount.TryGetValue(stringValue, out int count))
 						{
-							this.valueCount[stringValue] = 1;
+							this.valueCount[stringValue] = count + 1;
+						}
+						else
+						{
+							if (!string.IsNullOrWhiteSpace(stringValue))
+							{
+								this.valueCount[stringValue] = 1;
+							}
 						}
 					}
 				}
@@ -572,7 +573,7 @@ namespace Sylvan.Data
 		internal Schema.Column.Builder CreateColumnSchema()
 		{
 			var name = this.name ?? "";
-			if (nullCount == count)
+			if (nullCount == count )
 			{
 				// never saw any values, so no determination could be made
 				return new Schema.Column.Builder(name, typeof(string), true);
@@ -604,10 +605,7 @@ namespace Sylvan.Data
 					intMin < int.MinValue || intMax > int.MaxValue
 					? typeof(long)
 					: typeof(int);
-				return new Schema.Column.Builder(name, type, isNullable)
-				{
-					IsUnique = isUnique
-				};
+				return new Schema.Column.Builder(name, type, isNullable);
 			}
 
 			if (this.isFloat)
@@ -660,7 +658,6 @@ namespace Sylvan.Data
 				ColumnSize = len,
 				NumericPrecision = isAscii ? 2 : 1,
 				CommonDataType = isAscii ? System.Data.DbType.AnsiString : System.Data.DbType.String,
-				IsUnique = isUnique
 			};
 		}
 

@@ -108,7 +108,6 @@ Combined_Key,
 
 		public static DbDataReader GetData()
 		{
-
 			return CsvDataReader.Create(GetTextReader());
 		}
 

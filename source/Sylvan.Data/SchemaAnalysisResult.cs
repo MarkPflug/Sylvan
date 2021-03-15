@@ -42,8 +42,7 @@ namespace Sylvan.Data
 				var col = columns[i];
 
 				if (series?.seriesStart == i)
-				{
-					int idx = i;
+				{					
 					string? prefix = series.prefix;
 					var types = col.GetColType();
 					var allowNull = false;

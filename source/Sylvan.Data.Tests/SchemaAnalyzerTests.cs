@@ -9,14 +9,14 @@ namespace Sylvan.Data
 		[Fact]
 		public static void StringSchema()
 		{
-			//var data = TestData.GetData();
-			//var a = new SchemaAnalyzer();
-			//var result = a.Analyze(data);
-			//var schema = new Schema(result.GetSchema());
-			//var spec = schema.ToString();
+			var data = TestData.GetData();
+			var a = new SchemaAnalyzer();
+			var result = a.Analyze(data);
+			var schema = new Schema(result.GetSchema());
+			var spec = schema.ToString();
 
-			//var ss = Schema.Parse(spec);
-			//Assert.NotNull(ss);
+			var ss = Schema.Parse(spec);
+			Assert.NotNull(ss);
 		}
 
 		[Fact]
@@ -60,6 +60,38 @@ namespace Sylvan.Data
 
 			var ss = Schema.Parse(spec);
 			Assert.NotNull(ss);
+		}
+
+		[Fact]
+		public static void UnknownType()
+		{
+			var data = "a,b\n1,\n2,\n3,\n";
+			using var csv = CsvDataReader.Create(new StringReader(data));
+
+			var a = new SchemaAnalyzer();
+			var result = a.Analyze(csv);
+			var schema = result.GetSchema();
+			var cols = schema.GetColumnSchema();
+			Assert.Equal(typeof(int), cols[0].DataType);
+			Assert.Equal(typeof(string), cols[1].DataType);
+			Assert.Equal(true, cols[1].AllowDBNull);
+			Assert.Equal((int?)null, cols[1].ColumnSize);
+		}
+
+		[Fact]
+		public static void StringSize()
+		{
+			var data = "a,b\n1,asdf\n2,qwer\n3,zxcv\n";
+			using var csv = CsvDataReader.Create(new StringReader(data));
+
+			var a = new SchemaAnalyzer();
+			var result = a.Analyze(csv);
+			var schema = result.GetSchema();
+			var cols = schema.GetColumnSchema();
+			Assert.Equal(typeof(int), cols[0].DataType);
+			Assert.Equal(typeof(string), cols[1].DataType);
+			Assert.Equal(false, cols[1].AllowDBNull);
+			Assert.Equal(4, cols[1].ColumnSize);
 		}
 	}
 }

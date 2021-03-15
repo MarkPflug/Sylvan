@@ -7,7 +7,9 @@ using System.Data.Common;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -46,7 +48,7 @@ namespace Sylvan.Data.Csv
 		{
 			Unquoted = 0,
 			Quoted = 1,
-			BrokenQuotes = 2,
+			ImplicitQuotes = 3,
 		}
 
 		struct FieldInfo
@@ -83,6 +85,7 @@ namespace Sylvan.Data.Csv
 		readonly TextReader reader;
 		bool hasRows;
 		readonly char[] buffer;
+		int result;
 		int idx;
 		int bufferEnd;
 		int recordStart;
@@ -93,74 +96,41 @@ namespace Sylvan.Data.Csv
 		int rowNumber;
 		byte[]? scratch;
 		FieldInfo[] fieldInfos;
-		readonly Dictionary<string, int> headerMap;
 		CsvColumn[] columns;
+		bool autoDetectDelimiter;
 
+		readonly Dictionary<string, int> headerMap;
 		// options:
 		char delimiter;
+		readonly CsvStyle style;
 		readonly char quote;
 		readonly char escape;
+		readonly char comment;
 		readonly bool ownsReader;
-		readonly bool autoDetectDelimiter;
 		readonly CultureInfo culture;
 		readonly string? dateFormat;
 		readonly string? trueString, falseString;
 		readonly BinaryEncoding binaryEncoding;
 		readonly bool hasHeaders;
 		readonly StringFactory stringFactory;
+		readonly ICsvSchemaProvider? schema;
+		readonly ResultSetMode resultSetMode;
 
-		/// <summary>
-		/// Creates a new CsvDataReader.
-		/// </summary>
-		/// <param name="filename">The name of a file containing CSV data.</param>
-		/// <param name="options">The options to configure the reader, or null to use the default options.</param>
-		/// <returns>A CsvDataReader instance.</returns>
-		public static CsvDataReader Create(string filename, CsvDataReaderOptions? options = null)
+		static int GetBufferSize(TextReader reader, CsvDataReaderOptions options)
 		{
-			return CreateAsync(filename, options).GetAwaiter().GetResult();
-		}
-
-		/// <summary>
-		/// Creates a new CsvDataReader.
-		/// </summary>
-		/// <param name="reader">The TextReader for the delimited data.</param>
-		/// <param name="options">The options to configure the reader, or null to use the default options.</param>
-		/// <returns>A CsvDataReader instance.</returns>
-		public static CsvDataReader Create(TextReader reader, CsvDataReaderOptions? options = null)
-		{
-			return CreateAsync(reader, options).GetAwaiter().GetResult();
-		}
-
-		/// <summary>
-		/// Creates a new CsvDataReader asynchronously.                                                                                          
-		/// </summary>
-		/// <param name="filename">The name of a file containing CSV data.</param>
-		/// <param name="options">The options to configure the reader, or null to use the default options.</param>
-		/// <returns>A task representing the asynchronous creation of a CsvDataReader instance.</returns>
-		public static async Task<CsvDataReader> CreateAsync(string filename, CsvDataReaderOptions? options = null)
-		{
-			if (filename == null) throw new ArgumentNullException(nameof(filename));
-			// TextReader must be owned when we open it.
-			if (options?.OwnsReader == false) throw new CsvConfigurationException();
-
-			var reader = File.OpenText(filename);
-			var csv = new CsvDataReader(reader, options);
-			await csv.InitializeAsync(options?.Schema);
-			return csv;
-		}
-
-		/// <summary>
-		/// Creates a new CsvDataReader asynchronously.
-		/// </summary>
-		/// <param name="reader">The TextReader for the delimited data.</param>
-		/// <param name="options">The options to configure the reader, or null to use the default options.</param>
-		/// <returns>A task representing the asynchronous creation of a CsvDataReader instance.</returns>
-		public static async Task<CsvDataReader> CreateAsync(TextReader reader, CsvDataReaderOptions? options = null)
-		{
-			if (reader == null) throw new ArgumentNullException(nameof(reader));
-			var csv = new CsvDataReader(reader, options);
-			await csv.InitializeAsync(options?.Schema);
-			return csv;
+			var bufferLen = options.BufferSize;
+			// utf8 bytes can only get shorter when converted to characters
+			// so if we can determine an underlying stream length, then we can allocate
+			// a smaller buffer.
+			if (reader is StreamReader sr && sr.CurrentEncoding.CodePage == Encoding.UTF8.CodePage)
+			{
+				var s = sr.BaseStream;
+				if (s.CanSeek && s.Length < bufferLen)
+				{
+					bufferLen = (int)s.Length;
+				}
+			}
+			return bufferLen;
 		}
 
 		private CsvDataReader(TextReader reader, CsvDataReaderOptions? options = null)
@@ -169,16 +139,20 @@ namespace Sylvan.Data.Csv
 				options.Validate();
 			options ??= CsvDataReaderOptions.Default;
 			this.reader = reader;
-			this.buffer = options.Buffer ?? new char[options.BufferSize];
+			var bufferLen = GetBufferSize(reader, options);
+			this.buffer = options.Buffer ?? new char[bufferLen];
 
 			this.hasHeaders = options.HasHeaders;
 			this.autoDetectDelimiter = options.Delimiter == null;
 			this.delimiter = options.Delimiter ?? '\0';
+			this.style = options.CsvStyle;
 			this.quote = options.Quote;
 			this.escape = options.Escape;
+			this.comment = options.Comment;
 			this.dateFormat = options.DateFormat;
 			this.trueString = options.TrueString;
 			this.falseString = options.FalseString;
+			this.result = -1;
 			this.recordStart = 0;
 			this.bufferEnd = 0;
 			this.idx = 0;
@@ -190,48 +164,25 @@ namespace Sylvan.Data.Csv
 			this.ownsReader = options.OwnsReader;
 			this.binaryEncoding = options.BinaryEncoding;
 			this.stringFactory = options.StringFactory ?? new StringFactory((char[] b, int o, int l) => new string(b, o, l));
-		}
-
-		async Task InitializeAsync(ICsvSchemaProvider? schema)
-		{
-			state = State.Initializing;
-			if (autoDetectDelimiter)
-			{
-				await FillBufferAsync();
-				var c = DetectDelimiter();
-				this.delimiter = c;
-			}
-			// if the user specified that there are headers
-			// read them, and use them to determine fieldCount.
-			if (hasHeaders)
-			{
-				if (await NextRecordAsync())
-				{
-					InitializeSchema(schema);
-				}
-				else
-				{
-					throw new CsvMissingHeadersException();
-				}
-			}
-
-			// read the first row of data to determine fieldCount (if there were no headers)
-			// and support calling HasRows before Read is first called.
-			this.hasRows = await NextRecordAsync();
-			if (hasHeaders == false)
-			{
-				InitializeSchema(schema);
-			}
+			this.schema = options.Schema;
+			this.resultSetMode = options.ResultSetMode;
 		}
 
 		char DetectDelimiter()
 		{
 			int[] counts = new int[AutoDetectDelimiters.Length];
-			for (int i = 0; i < bufferEnd; i++)
+			for (int i = recordStart; i < bufferEnd; i++)
 			{
 				var c = buffer[i];
 				if (c == '\n' || c == '\r')
+				{
+					var x = counts.Sum();
+					if (x == 0)
+					{
+						continue;
+					}
 					break;
+				}
 				for (int d = 0; d < AutoDetectDelimiters.Length; d++)
 				{
 					if (c == AutoDetectDelimiters[d])
@@ -253,7 +204,7 @@ namespace Sylvan.Data.Csv
 			return AutoDetectDelimiters[maxIdx];
 		}
 
-		void InitializeSchema(ICsvSchemaProvider? schema)
+		void InitializeSchema()
 		{
 			columns = new CsvColumn[this.fieldCount];
 			for (int i = 0; i < this.fieldCount; i++)
@@ -281,13 +232,10 @@ namespace Sylvan.Data.Csv
 			this.state = State.Initialized;
 		}
 
-
-
 		// attempt to read a field. 
 		// returns True if there are more in record (hit delimiter), 
 		// False if last in record (hit eol/eof), 
 		// or Incomplete if we exhausted the buffer before finding the end of the record.
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		ReadResult ReadField(int fieldIdx)
 		{
 			char c;
@@ -301,68 +249,114 @@ namespace Sylvan.Data.Csv
 			bool last = false;
 			bool complete = false;
 
-			if (idx < bufferEnd)
+			if (style == CsvStyle.Unquoted)
 			{
-				c = buffer[idx];
-				if (c == quote)
+				// consume quoted field.
+				while (idx < bufferEnd)
 				{
-					idx++;
-					closeQuoteIdx = idx;
-					// consume quoted field.
-					while (idx < bufferEnd)
+					c = buffer[idx++];
+					if (c == escape)
 					{
-						c = buffer[idx++];
-						if (c == escape)
+						if (idx < bufferEnd)
 						{
-							if (idx < bufferEnd)
+							c = buffer[idx++]; // the escaped char
+							if (IsEndOfLine(c))
 							{
-								c = buffer[idx++]; // the escaped char
-								if (c == escape || c == quote)
+								// if the escape preceed an EOL, we might have to consume 2 chars
+								var r = ConsumeLineEnd(buffer, ref idx);
+								if (r == ReadResult.Incomplete)
 								{
-									escapeCount++;
-									continue;
+									return ReadResult.Incomplete;
+								}
+							}
+							escapeCount++;
+							continue;
+						}
+						else
+						{
+							if (atEndOfText)
+							{
+								// TODO: not sure what to do here.
+								escapeCount++;
+								break;
+							}
+							return ReadResult.Incomplete;
+						}
+					}
+					if (c == delimiter || IsEndOfLine(c))
+					{
+						// HACK: "unread" the delimiter/eol, and let the normal code path handle it
+						idx--;
+						break;
+					}
+				}
+			}
+			else
+			{
+				if (idx < bufferEnd)
+				{
+					c = buffer[idx];
+					if (c == quote)
+					{
+						idx++;
+						closeQuoteIdx = idx;
+
+						// consume quoted field.
+						while (idx < bufferEnd)
+						{
+							c = buffer[idx++];
+							if (c == escape)
+							{
+								if (idx < bufferEnd)
+								{
+									c = buffer[idx++]; // the escaped char
+									if (c == escape || c == quote)
+									{
+										escapeCount++;
+										continue;
+									}
+									else
+									if (escape == quote)
+									{
+										idx--;
+										closeQuoteIdx = idx;
+										// the quote (escape) we just saw was a the closing quote
+										break;
+									}
 								}
 								else
-								if (escape == quote)
 								{
-									idx--;
-									closeQuoteIdx = idx;
-									// the quote (escape) we just saw was a the closing quote
-									break;
+									if (atEndOfText)
+									{
+										break;
+									}
+									return ReadResult.Incomplete;
 								}
 							}
-							else
-							{
-								if (atEndOfText)
-								{
-									break;
-								}
-								return ReadResult.Incomplete;
-							}
-						}
 
-						if (c == quote)
-						{
-							// immediately after the quote should be a delimiter, eol, or eof, but...
-							// we can simply treat the remainder of the record like a normal unquoted field
-							// we are currently positioned on the quote, the next while loop will consume it
-							closeQuoteIdx = idx;
-							break;
-						}
-						if (IsEndOfLine(c))
-						{
-							idx--;
-							var r = ConsumeLineEnd(buffer, ref idx);
-							if (r == ReadResult.Incomplete)
+							if (c == quote)
 							{
-								return ReadResult.Incomplete;
+								// immediately after the quote should be a delimiter, eol, or eof, but...
+								// we can simply treat the remainder of the record like a normal unquoted field
+								// we are currently positioned on the quote, the next while loop will consume it
+								closeQuoteIdx = idx;
+								break;
 							}
-							else
+							if (IsEndOfLine(c))
 							{
-								// continue on. We are inside a quoted string, so the newline is part of the value.
+								idx--;
+								var r = ConsumeLineEnd(buffer, ref idx);
+								if (r == ReadResult.Incomplete)
+								{
+									return ReadResult.Incomplete;
+								}
+								else
+								{
+									// continue on. We are inside a quoted string, so the newline is part of the value.
+								}
 							}
-						}
-					} // we exit this loop when we reach the closing quote.
+						} // we exit this loop when we reach the closing quote.
+					}
 				}
 			}
 
@@ -395,28 +389,45 @@ namespace Sylvan.Data.Csv
 
 			if (complete || atEndOfText)
 			{
-				if (state == State.Initializing)
+				if (fieldIdx >= fieldInfos.Length)
 				{
-					if (fieldIdx >= fieldInfos.Length)
-					{
-						// this resize is constrained by the fact that the record has to fit in one row
-						Array.Resize(ref fieldInfos, fieldInfos.Length * 2);
-					}
-					fieldCount++;
+					// this resize is constrained by the fact that the record has to fit in one row
+					Array.Resize(ref fieldInfos, fieldInfos.Length * 2);
 				}
+
 				curFieldCount++;
-				if (fieldIdx < fieldCount)
+
+				ref var fi = ref fieldInfos[fieldIdx];
+
+				if (style == CsvStyle.Unquoted)
 				{
-					ref var fi = ref fieldInfos[fieldIdx];
 					fi.quoteState =
-						closeQuoteIdx == -1
+						escapeCount == 0
 						? QuoteState.Unquoted
-						: fieldEnd == (closeQuoteIdx - recordStart)
-						? QuoteState.Quoted
-						: QuoteState.BrokenQuotes;
-					fi.escapeCount = escapeCount;
-					fi.endIdx = complete ? fieldEnd : (idx - recordStart);
+						: QuoteState.ImplicitQuotes;
 				}
+				else
+				{
+					if (closeQuoteIdx == -1)
+					{
+						fi.quoteState = QuoteState.Unquoted;
+					}
+					else
+					{
+						if (fieldEnd == (closeQuoteIdx - recordStart))
+						{
+							fi.quoteState = QuoteState.Quoted;
+						}
+						else
+						{
+							var rowNumber = this.rowNumber == 0 && this.state == State.Initialized ? 1 : this.rowNumber;
+							throw new CsvFormatException(rowNumber, fieldIdx);
+						}
+					}
+				}
+
+				fi.escapeCount = escapeCount;
+				fi.endIdx = complete ? fieldEnd : (idx - recordStart);
 				this.idx = idx;
 
 				if (complete)
@@ -428,10 +439,39 @@ namespace Sylvan.Data.Csv
 			return ReadResult.Incomplete;
 		}
 
+		ReadResult ReadComment(char[] buffer, ref int idx)
+		{
+			// only called in a context where we're definitely not
+			// at the end of the buffer.
+			var end = bufferEnd;
+			var c = buffer[idx];
+			if (c == comment)
+			{
+				int i = idx;
+				for (; i < end; i++)
+				{
+					c = buffer[i];
+					if (IsEndOfLine(c))
+					{
+						ConsumeLineEnd(buffer, ref i);
+						idx = i;
+						return ReadResult.True;
+					}
+				}
+				if (atEndOfText)
+				{
+					idx = i;
+					return ReadResult.True;
+				}
+				return ReadResult.Incomplete;
+			}
+			return ReadResult.False;
+		}
+
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		static bool IsEndOfLine(char c)
 		{
-			return c == '\r' || c == '\n';
+			return c == '\n' || c == '\r';
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -689,7 +729,7 @@ namespace Sylvan.Data.Csv
 			var c = Math.Min(outLen - dataOffset, length);
 
 			const int Invalid = 255;
-						
+
 			var bo = o;
 			for (int i = 0; i < c; i++)
 			{
@@ -1026,8 +1066,11 @@ namespace Sylvan.Data.Csv
 			if (fi.quoteState != QuoteState.Unquoted)
 			{
 				// if there are no escapes, we can just "trim" the quotes off
-				offset += 1;
-				len -= 2;
+				if (fi.quoteState != QuoteState.ImplicitQuotes)
+				{
+					offset += 1;
+					len -= 2;
+				}
 
 				if (fi.quoteState == QuoteState.Quoted && fi.escapeCount == 0)
 				{

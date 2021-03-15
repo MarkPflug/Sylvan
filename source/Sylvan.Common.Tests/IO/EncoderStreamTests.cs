@@ -29,19 +29,10 @@ namespace Sylvan.IO
 			s.Flush();
 			s.Close();
 			ms.Position = 0;
-			var str = Encoding.ASCII.GetString(ms.GetBuffer(), 0, (int)ms.Length);
-			var datar = Convert.FromBase64String(str);
-			var debug = Encoding.ASCII.GetString(datar);
+			var str = Encoding.ASCII.GetString(ms.GetBuffer(), 0, (int) ms.Length);
+			var data = Convert.FromBase64String(str);
 
-			Assert.Equal(inputData, datar);
+			Assert.Equal(inputData, data);
 		}
-
-//#if NET5_0
-//		[Fact]
-//		public void Benchmark()
-//		{
-//			new Sylvan.Benchmarks.Base64Benchmarks().SylvanEncoderStream();
-//		}
-//#endif
 	}
 }

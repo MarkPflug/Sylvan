@@ -1,15 +1,16 @@
 ﻿using System;
 using System.Data.Common;
+using System.Globalization;
 using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
+using System.Runtime.CompilerServices;
+using System.Text;
 
 namespace Sylvan.Data.Csv
 {
 	/// <summary>
 	/// Writes data from a DbDataReader as delimited values to a TextWriter.
 	/// </summary>
-	public sealed class CsvDataWriter
+	public partial class CsvDataWriter
 		: IDisposable
 #if NETSTANDARD2_1
 		, IAsyncDisposable
@@ -28,34 +29,50 @@ namespace Sylvan.Data.Csv
 			public TypeCode typeCode;
 		}
 
-		enum FieldState
+		enum WriteResult
 		{
-			Start,
-			Done,
+			InsufficientSpace = 1,
+			RequiresEscaping,
+			Complete,
 		}
 
-		readonly CsvWriter writer;
+		// Size of the buffer used for base64 encoding, must be a multiple of 3.
+		const int Base64EncSize = 3 * 256;
+
+		readonly TextWriter writer;
+		readonly bool writeHeaders;
+		readonly char delimiter;
+		readonly char quote;
+		readonly char escape;
+		readonly char comment;
+		readonly string newLine;
+
+		readonly string trueString;
+		readonly string falseString;
+		readonly string? dateTimeFormat;
+
+		readonly CultureInfo culture;
+
+		byte[] dataBuffer = Array.Empty<byte>();
+		readonly char[] buffer;
+		int pos;
+
 		bool disposedValue;
+
+		readonly bool fastDouble;
+		readonly bool fastInt;
+		readonly bool fastDate;
 
 		/// <summary>
 		/// Creates a new CsvDataWriter.
 		/// </summary>
-		/// <param name="path">The path of the file to write.</param>
+		/// <param name="fileName">The path of the file to write.</param>
 		/// <param name="options">The options used to configure the writer, or null to use the defaults.</param>
-		public CsvDataWriter(string path, CsvWriterOptions? options = null)
+		public static CsvDataWriter Create(string fileName, CsvDataWriterOptions? options = null)
 		{
-			if (options?.OwnsWriter == false) throw new CsvConfigurationException();
-			var writer = File.CreateText(path);
-			if (options != null)
-			{
-				options.Validate();
-			}
-			else
-			{
-				options = CsvWriterOptions.Default;
-			}
-
-			this.writer = new CsvWriter(writer, options);
+			options = options ?? CsvDataWriterOptions.Default;
+			var writer = new StreamWriter(fileName, false, Encoding.UTF8);
+			return new CsvDataWriter(writer, options);
 		}
 
 		/// <summary>
@@ -63,191 +80,292 @@ namespace Sylvan.Data.Csv
 		/// </summary>
 		/// <param name="writer">The TextWriter to receive the delimited data.</param>
 		/// <param name="options">The options used to configure the writer, or null to use the defaults.</param>
-		public CsvDataWriter(TextWriter writer, CsvWriterOptions? options = null)
+		public static CsvDataWriter Create(TextWriter writer, CsvDataWriterOptions? options = null)
 		{
-			if (writer == null) throw new ArgumentNullException(nameof(writer));
-			if (options != null)
-			{
-				options.Validate();
-			}
-			else
-			{
-				options = CsvWriterOptions.Default;
-			}
-
-			this.writer = new CsvWriter(writer, options);
+			options = options ?? CsvDataWriterOptions.Default;
+			return new CsvDataWriter(writer, options);
 		}
 
-		const int Base64EncSize = 3 * 256; // must be a multiple of 3.
-
-		/// <summary>
-		/// Asynchronously writes delimited data.
-		/// </summary>
-		/// <param name="reader">The DbDataReader to be written.</param>
-		/// <param name="cancel">A cancellation token to cancel the asynchronous operation.</param>
-		/// <returns>A task representing the asynchronous write operation.</returns>
-		public async Task<long> WriteAsync(DbDataReader reader, CancellationToken cancel = default)
+		CsvDataWriter(TextWriter writer, CsvDataWriterOptions? options = null)
 		{
-			var c = reader.FieldCount;
-			var fieldTypes = new FieldInfo[c];
+			options = options ?? CsvDataWriterOptions.Default;
+			options.Validate();
+			this.writer = writer ?? throw new ArgumentNullException(nameof(writer));
+			this.trueString = options.TrueString;
+			this.falseString = options.FalseString;
+			this.dateTimeFormat = options.DateTimeFormat;
+			this.writeHeaders = options.WriteHeaders;
+			this.delimiter = options.Delimiter;
+			this.quote = options.Quote;
+			this.escape = options.Escape;
+			this.comment = options.Comment;
+			this.newLine = options.NewLine;
+			this.culture = options.Culture;
+			this.buffer = options.Buffer ?? new char[options.BufferSize];
+			this.pos = 0;
 
-			var schema = (reader as IDbColumnSchemaGenerator)?.GetColumnSchema();
+			var isInvariantCulture = this.culture == CultureInfo.InvariantCulture;
+			this.fastDouble = isInvariantCulture && delimiter != '.' && quote != '.';
+			this.fastInt = isInvariantCulture && delimiter != '-' && quote != '-';
+			this.fastDate = isInvariantCulture && delimiter == ',' && quote == '\"';
+		}
 
-			byte[]? dataBuffer = null;
+		// this can return either Complete or InsufficientSpace
+		WriteResult WriteField(DbDataReader reader, FieldInfo[] fieldTypes, int i)
+		{
+			var allowNull = fieldTypes[i].allowNull;
 
-			for (int i = 0; i < c; i++)
+			if (allowNull && reader.IsDBNull(i))
 			{
-				var type = reader.GetFieldType(i);
-				var allowNull = schema?[i].AllowDBNull ?? true;
-				fieldTypes[i] = new FieldInfo(allowNull, type);
+				return WriteResult.Complete;
 			}
 
-			for (int i = 0; i < c; i++)
+			int intVal;
+			string? str;
+			WriteResult result = WriteResult.Complete;
+
+			var typeCode = fieldTypes[i].typeCode;
+			switch (typeCode)
 			{
-				var header = reader.GetName(i);
-				await writer.WriteFieldAsync(header);
-			}
-			await writer.EndRecordAsync();
-			int row = 0;
-			cancel.ThrowIfCancellationRequested();
-			while (await reader.ReadAsync(cancel))
-			{
-				row++;
-				int i = 0; // field
-				try
-				{
-					for (; i < c; i++)
+				case TypeCode.Boolean:
+					var boolVal = reader.GetBoolean(i);
+					result = WriteField(boolVal);
+					break;
+				case TypeCode.String:
+					str = reader.GetString(i);
+					if(i == 0 && str.Length > 0 && str[0] == comment)
 					{
-						var type = fieldTypes[i].type;
-						var typeCode = fieldTypes[i].typeCode;
-						var allowNull = fieldTypes[i].allowNull;
-
-						if (allowNull && await reader.IsDBNullAsync(i))
+						result = WriteQuoted(str);
+					} else {
+						result = WriteField(str);
+					}					
+					break;
+				case TypeCode.Byte:
+					intVal = reader.GetByte(i);
+					goto intVal;
+				case TypeCode.Int16:
+					intVal = reader.GetInt16(i);
+					goto intVal;
+				case TypeCode.Int32:
+					intVal = reader.GetInt32(i);
+				intVal:
+					result = WriteField(intVal);
+					break;
+				case TypeCode.Int64:
+					var longVal = reader.GetInt64(i);
+					WriteField(longVal);
+					break;
+				case TypeCode.DateTime:
+					var dateVal = reader.GetDateTime(i);
+					WriteField(dateVal);
+					break;
+				case TypeCode.Single:
+					var floatVal = reader.GetFloat(i);
+					WriteField(floatVal);
+					break;
+				case TypeCode.Double:
+					var doubleVal = reader.GetDouble(i);
+					WriteField(doubleVal);
+					break;
+				case TypeCode.Empty:
+				case TypeCode.DBNull:
+					// nothing to do.
+					result = WriteResult.Complete;
+					break;
+				default:
+					var type = fieldTypes[i].type;
+					if (type == typeof(byte[]))
+					{
+						if (dataBuffer.Length == 0)
 						{
-							await writer.WriteFieldAsync();
-							continue;
+							dataBuffer = new byte[Base64EncSize];
 						}
-						int intVal;
-						string? str;
-
-						switch (typeCode)
+						var idx = 0;
+						if (IsBase64Symbol(delimiter) || IsBase64Symbol(quote))
 						{
-							case TypeCode.Boolean:
-								var boolVal = reader.GetBoolean(i);
-								await writer.WriteFieldAsync(boolVal);
-								break;
-							case TypeCode.String:
-								str = reader.GetString(i);
-								goto str;
-							case TypeCode.Byte:
-								intVal = reader.GetByte(i);
-								goto intVal;
-							case TypeCode.Int16:
-								intVal = reader.GetInt16(i);
-								goto intVal;
-							case TypeCode.Int32:
-								intVal = reader.GetInt32(i);
-							intVal:
-								await writer.WriteFieldAsync(intVal);
-								break;
-							case TypeCode.Int64:
-								var longVal = reader.GetInt64(i);
-								await writer.WriteFieldAsync(longVal);
-								break;
-							case TypeCode.DateTime:
-								var dateVal = reader.GetDateTime(i);
-								await writer.WriteFieldAsync(dateVal);
-								break;
-							case TypeCode.Single:
-								var floatVal = reader.GetFloat(i);
-								await writer.WriteFieldAsync(floatVal);
-								break;
-							case TypeCode.Double:
-								var doubleVal = reader.GetDouble(i);
-								await writer.WriteFieldAsync(doubleVal);
-								break;
-							case TypeCode.Empty:
-							case TypeCode.DBNull:
-								await writer.WriteFieldAsync();
-								break;
-							default:
-								if (type == typeof(byte[]))
-								{
-									if (dataBuffer == null)
-									{
-										dataBuffer = new byte[Base64EncSize];
-									}
-									var idx = 0;
-									await writer.StartBinaryFieldAsync();
-									int len = 0;
-									while ((len = (int)reader.GetBytes(i, idx, dataBuffer, 0, Base64EncSize)) != 0)
-									{
-										writer.ContinueBinaryField(dataBuffer, len);
-										idx += len;
-									}
-									break;
-								}
-								if (type == typeof(Guid))
-								{
-									var guid = reader.GetGuid(i);
-									await writer.WriteFieldAsync(guid);
-									break;
-								}
-								str = reader.GetValue(i)?.ToString();
-							str:
-								await writer.WriteFieldAsync(str);
-								break;
+							throw new InvalidOperationException();
 						}
+						int len;
+						var pos = this.pos;
+						while ((len = (int)reader.GetBytes(i, idx, dataBuffer, 0, Base64EncSize)) != 0)
+						{
+							var req = (len + 2) / 3 * 4;
+							if (pos + req >= buffer.Length)
+								return WriteResult.InsufficientSpace;
+
+							var c = Convert.ToBase64CharArray(dataBuffer, 0, len, this.buffer, pos);
+							
+							idx += len;
+							pos += c;
+						}
+						this.pos = pos;
+						result = WriteResult.Complete;
+						break;
+					}
+					if (type == typeof(Guid))
+					{
+						var guid = reader.GetGuid(i);
+						result = WriteField(guid);
+						break;
+					}
+					str = reader.GetValue(i)?.ToString() ?? string.Empty;
+					result = WriteField(str);
+					break;
+			}
+			return result;
+		}
+
+		// this should only be called in scenarios where we know there is enough room.
+		void EndRecord()
+		{
+			var nl = this.newLine;
+			for (int i = 0; i < nl.Length; i++)
+				buffer[pos++] = nl[i];
+		}
+			
+
+		static bool IsBase64Symbol(char c)
+		{
+			return c == '+' || c == '/' || c == '=';
+		}
+
+		WriteResult WriteField(Guid value)
+		{
+			return WriteField(value.ToString());
+		}
+
+		WriteResult WriteField(bool value)
+		{
+			var str = value ? trueString : falseString;
+			return WriteField(str);
+		}
+
+		WriteResult WriteField(double value)
+		{
+#if NETSTANDARD2_1
+			if(fastDouble)
+			{
+				if(value.TryFormat(buffer.AsSpan()[pos..], out int len, default, culture))
+				{
+					pos += len;
+					return WriteResult.Complete;
+				}
+				return WriteResult.InsufficientSpace;
+			}
+#endif
+			return WriteField(value.ToString(culture));
+		}
+
+		WriteResult WriteField(long value)
+		{
+#if NETSTANDARD2_1
+			if(fastInt)
+			{
+				if(value.TryFormat(buffer.AsSpan()[pos..], out int len, default, culture))
+				{
+					pos += len;
+					return WriteResult.Complete;
+				}
+				return WriteResult.InsufficientSpace;
+			}
+#endif
+			return WriteField(value.ToString(culture));
+		}
+
+		WriteResult WriteField(int value)
+		{
+#if NETSTANDARD2_1
+			if(fastInt)
+			{
+				if(value.TryFormat(buffer.AsSpan()[pos..], out int len, default, culture))
+				{
+					pos += len;
+					return WriteResult.Complete;
+				}
+				return WriteResult.InsufficientSpace;
+			}
+#endif
+			return WriteField(value.ToString(culture));
+		}
+
+		WriteResult WriteField(DateTime value)
+		{
+#if NETSTANDARD2_1
+			if (fastDate)
+			{
+				if (value.TryFormat(buffer.AsSpan()[pos..], out int len, dateTimeFormat, culture))
+				{
+					pos += len;
+					return WriteResult.Complete;
+				}
+				return WriteResult.InsufficientSpace;
+			}
+#endif
+			return WriteField(value.ToString(dateTimeFormat, culture));
+		}
+
+		WriteResult WriteField(string value)
+		{
+			var r = WriteValueOptimistic(value);
+			if (r == WriteResult.RequiresEscaping)
+			{
+				return WriteQuoted(value);
+			}
+			return r;
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		WriteResult WriteValueOptimistic(string str)
+		{
+			var buffer = this.buffer;
+			var pos = this.pos;
+			if (pos + str.Length >= buffer.Length)
+				return WriteResult.InsufficientSpace;
+
+			for (int i = 0; i < str.Length; i++)
+			{
+				var c = str[i];
+				if (c == delimiter || c == quote || c == '\n' || c == '\r')
+				{
+					return WriteResult.RequiresEscaping;
+				}
+				buffer[pos + i] = c;
+			}
+			this.pos += str.Length;
+			return WriteResult.Complete;
+		}
+
+		WriteResult WriteQuoted(string str)
+		{
+			var buffer = this.buffer;
+			var p = this.pos;
+			// require at least room for the 2 quotes and 1 escape.
+			if (p + str.Length + 3 >= buffer.Length)
+				return WriteResult.InsufficientSpace;
+
+			buffer[p++] = quote; // range guarded by previous if
+			for (int i = 0; i < str.Length; i++)
+			{
+				var c = str[i];
+
+				if (c == delimiter || c == quote || c == '\r' || c == '\n')
+				{
+					if (c == quote || c == escape)
+					{
+						if (p == buffer.Length)
+							return WriteResult.InsufficientSpace;
+						buffer[p++] = escape;
 					}
 				}
-				catch (ArgumentOutOfRangeException e)
-				{
-					throw new CsvRecordTooLargeException(row, i, null, e);
-				}
-
-				await writer.EndRecordAsync();
-
-				cancel.ThrowIfCancellationRequested();
+				if (p == buffer.Length)
+					return WriteResult.InsufficientSpace;
+				buffer[p++] = c;
 			}
-			// flush any pending data on the way out.
-			await writer.FlushAsync();
-			return row;
+			if (p == buffer.Length)
+				return WriteResult.InsufficientSpace;
+			buffer[p++] = quote;
+			this.pos = p;
+			return WriteResult.Complete;
 		}
-
-		/// <summary>
-		/// Writes delimited data to the output.
-		/// </summary>
-		/// <param name="reader">The DbDataReader to be written.</param>
-		public long Write(DbDataReader reader)
-		{
-			return this.WriteAsync(reader).GetAwaiter().GetResult();			
-		}
-
-		private void Dispose(bool disposing)
-		{
-			if (!disposedValue)
-			{
-				if (disposing)
-				{
-					((IDisposable)this.writer).Dispose();
-				}
-
-				disposedValue = true;
-			}
-		}
-
-		void IDisposable.Dispose()
-		{
-			Dispose(disposing: true);
-			GC.SuppressFinalize(this);
-		}
-
-#if NETSTANDARD2_1
-		ValueTask IAsyncDisposable.DisposeAsync()
-		{
-			return ((IAsyncDisposable)this.writer).DisposeAsync();
-		}
-#endif
-
 	}
 }

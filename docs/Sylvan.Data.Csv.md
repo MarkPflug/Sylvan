@@ -138,9 +138,7 @@ Comments are not currently supported, and the CSV RFC 4180 makes no mention of c
 
 _Overlarge Records_
 
-There is one scenario where the CsvDataReader will fail to parse data: when a single record doesn't fit entirely within
-the internal buffer. The buffer size can be configured however, so unusually large records can be accomodated
-by providing a larger buffer. 
+CsvDataReader will fail to parse data in a record doesn't fit entirely within the internal buffer. The buffer size can be configured however, so unusually large records can be accomodated by providing a larger buffer. 
 
 _Missing Fields_
 
@@ -151,16 +149,9 @@ _Extra Fields_
 
 Extra fields, meaning a row that contains more columns than the header column, will be ignored. 
 Extra fields can be identified by comparing the RowFieldCount to FieldCount. 
-There is no way to access the parsed extra fields via the `CsvDataReader`.
+Extra field values can be accessed by ordinal.
 
 _Malformed Fields_
 
-A properly constructed and compliant CSV should quote and escape fields containing delimiters or quotes. 
-Improperly quoted fields will still be parsed from the file. If a field starts with a quote, it will
-be parsed as a quoted field until the closing quote is found, at which point it will resume un-escaped parsing mode.
+A properly constructed and compliant CSV should quote and escape fields containing delimiters or quotes, either by using RFC4180 standard mode, or by specifying the Unquoted style where characters are escaped instead of being quoted. Improperly quoted fields will result in a FormatException being thrown.
 
-Examples:
-
-`a\"\"b` > `a\"\"b` - not considered a quoted string.
-
-`\"a\"b\"` > `ab\"` - considered a malformed, quoted string.

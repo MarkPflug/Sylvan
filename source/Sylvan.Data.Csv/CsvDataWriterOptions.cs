@@ -6,32 +6,40 @@ namespace Sylvan.Data.Csv
 	/// <summary>
 	/// Options for configuring a CsvWriter.
 	/// </summary>
-	public sealed class CsvWriterOptions
+	public sealed class CsvDataWriterOptions
 	{
-		internal static CsvWriterOptions Default = new CsvWriterOptions();
+		internal static CsvDataWriterOptions Default = new CsvDataWriterOptions();
 
 		const char DefaultDelimiter = ',';
 		const char DefaultQuote = '"';
 		const char DefaultEscape = '"';
-		const int DefaultBufferSize = 0x4000;
+		const char DefaultComment = '#';
+		const int DefaultBufferSize = 0x1000;
 		const int MinBufferSize = 0x80;
 
 		/// <summary>
 		/// Creates a CsvWriterOptions with the default values.
 		/// </summary>
-		public CsvWriterOptions()
+		public CsvDataWriterOptions()
 		{
 			this.Delimiter = DefaultDelimiter;
 			this.Quote = DefaultQuote;
 			this.Escape = DefaultEscape;
+			this.Comment = DefaultComment;
 			this.NewLine = Environment.NewLine;
 			this.BufferSize = DefaultBufferSize;
 			this.Culture = CultureInfo.InvariantCulture;
-			this.OwnsWriter = true;
 			this.TrueString = bool.TrueString;
 			this.FalseString = bool.FalseString;
-			this.DateFormat = "yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'FFFFFFF";
+			this.DateTimeFormat = "yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'FFFFFFF";
+			this.DateFormat = "yyyy'-'MM'-'dd";
+			this.WriteHeaders = true;
 		}
+
+		/// <summary>
+		/// Indicates if the header row should be written.
+		/// </summary>
+		public bool WriteHeaders { get; set; }
 
 		/// <summary>
 		/// The string to write for boolean true values. The default is "True".
@@ -45,6 +53,11 @@ namespace Sylvan.Data.Csv
 
 		/// <summary>
 		/// The format string used when writing DateTime values. The default is \"yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'FFFFFFF\".
+		/// </summary>
+		public string? DateTimeFormat { get; set; }
+
+		/// <summary>
+		/// The format string used when writing DateTime values that have to time component. The default is \"yyyy'-'MM'-'dd\".
 		/// </summary>
 		public string? DateFormat { get; set; }
 
@@ -64,13 +77,18 @@ namespace Sylvan.Data.Csv
 		public char Escape { get; set; }
 
 		/// <summary>
+		/// The character used to indicate a comment line. The default is '#'.
+		/// </summary>
+		public char Comment { get; set; }
+
+		/// <summary>
 		/// The string to use for line breaks separating records. The default is Environment.NewLine.
 		/// Must be one of "\r", "\n", or "\r\n".
 		/// </summary>
 		public string NewLine { get; set; }
 
 		/// <summary>
-		/// The buffer size to use for writing values. The default is 32kb.
+		/// The buffer size to use for writing values.
 		/// </summary>
 		public int BufferSize { get; set; }
 
@@ -85,11 +103,6 @@ namespace Sylvan.Data.Csv
 		/// </summary>
 		public CultureInfo Culture { get; set; }
 
-		/// <summary>
-		/// Indicates if the TextWriter should be closed when the CsvWriter is closed. The default is true.
-		/// </summary>
-		public bool OwnsWriter { get; set; }
-
 		internal void Validate()
 		{
 			bool invalid =
@@ -98,7 +111,10 @@ namespace Sylvan.Data.Csv
 				Quote == Delimiter ||
 				(NewLine != "\r" && NewLine != "\n" && NewLine != "\r\n") ||
 				TrueString == FalseString ||
-				(Buffer != null && Buffer.Length < MinBufferSize);
+				(Buffer != null && Buffer.Length < MinBufferSize) ||
+				Delimiter >= 128 ||
+				Quote >= 128 ||
+				Escape >= 128;
 			if (invalid)
 				throw new CsvConfigurationException();
 		}

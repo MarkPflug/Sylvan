@@ -28,6 +28,39 @@ namespace Sylvan.Data.Csv
 	}
 
 	/// <summary>
+	/// Specifies how result sets are interpreted within a CSV file.
+	/// </summary>
+	public enum ResultSetMode
+	{
+		/// <summary>
+		/// The entire file is interpreted as a single result set.
+		/// </summary>
+		SingleResult = 1,
+
+		/// <summary>
+		/// In multi result mode a new result set is identified by a change in column count.
+		/// Empty lines are skipped between result sets.
+		/// </summary>
+		MultiResult = 2,		
+	}
+
+	/// <summary>
+	/// The CSV quoting and escaping styles.
+	/// </summary>
+	public enum CsvStyle
+	{
+		/// <summary>
+		/// Parses using the standard RFC4180 mode.
+		/// </summary>
+		Standard = 1,
+
+		/// <summary>
+		/// Interprets fields as if they are implicitly quoted. Delimiters and new lines within fields are preceeded by an escape character.
+		/// </summary>
+		Unquoted = 2,
+	}
+
+	/// <summary>
 	/// Options for configuring a CsvDataReader.
 	/// </summary>
 	public sealed class CsvDataReaderOptions
@@ -36,7 +69,8 @@ namespace Sylvan.Data.Csv
 
 		const char DefaultQuote = '"';
 		const char DefaultEscape = '"';
-		const int DefaultBufferSize = 0x10000;
+		const char DefaultComment = '#';
+		const int DefaultBufferSize = 0x1000;
 		const int MinBufferSize = 0x80;
 
 		char? delimiter;
@@ -48,8 +82,10 @@ namespace Sylvan.Data.Csv
 		{
 			this.HasHeaders = true;
 			this.delimiter = null;
+			this.CsvStyle = CsvStyle.Standard;
 			this.Quote = DefaultQuote;
 			this.Escape = DefaultEscape;
+			this.Comment = DefaultComment;
 			this.BufferSize = DefaultBufferSize;
 			this.HeaderComparer = StringComparer.Ordinal;
 			this.Culture = CultureInfo.InvariantCulture;
@@ -62,10 +98,16 @@ namespace Sylvan.Data.Csv
 
 			this.StringFactory = null;
 			this.BinaryEncoding = BinaryEncoding.Base64;
+			this.ResultSetMode = ResultSetMode.SingleResult;
 		}
 
 		/// <summary>
-		/// 
+		/// Indicates the behavior of result transitions.
+		/// </summary>
+		public ResultSetMode ResultSetMode { get; set; }
+
+		/// <summary>
+		/// Indicates the binary encoding that should be used when writing binary columns.
 		/// </summary>
 		public BinaryEncoding BinaryEncoding { get; set; }
 
@@ -118,6 +160,16 @@ namespace Sylvan.Data.Csv
 		public char Quote { get; set; }
 
 		/// <summary>
+		/// Specifies the character used to indicate a comment. Defaults to '#'.
+		/// </summary>
+		public char Comment { get; set; }
+
+		/// <summary>
+		/// Indicates the CSV parsing style, defaults to Standard.
+		/// </summary>
+		public CsvStyle CsvStyle { get; set; }
+
+		/// <summary>
 		/// Specifies the character used for escaping characters in quoted fields. Defaults to '"'.
 		/// </summary>
 		public char Escape { get; set; }
@@ -125,7 +177,6 @@ namespace Sylvan.Data.Csv
 		/// <summary>
 		/// The size of buffer to use when reading records.
 		/// A record must fit within a single buffer, otherwise an exception is thrown.
-		/// The default buffer size is 64kb.
 		/// </summary>
 		public int BufferSize { get; set; }
 
@@ -165,7 +216,10 @@ namespace Sylvan.Data.Csv
 				Delimiter == Quote ||
 				BufferSize < MinBufferSize ||
 				(StringComparer.OrdinalIgnoreCase.Equals(TrueString, FalseString) && TrueString != null) ||
-				(Buffer != null && Buffer.Length < MinBufferSize);
+				(Buffer != null && Buffer.Length < MinBufferSize) ||
+				Delimiter >= 128 ||
+				Quote >= 128 ||
+				Escape >= 128;
 			if (invalid)
 				throw new CsvConfigurationException();
 		}

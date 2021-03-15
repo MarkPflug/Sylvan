@@ -1,14 +1,56 @@
 ﻿using System;
+using System.IO;
+using System.Text;
 
 namespace Sylvan.Data.Csv
 {
 	partial class CsvDataReader
 	{
+		/// <summary>
+		/// Creates a new CsvDataReader.
+		/// </summary>
+		/// <param name="filename">The name of a file containing CSV data.</param>
+		/// <param name="options">The options to configure the reader, or null to use the default options.</param>
+		/// <returns>A CsvDataReader instance.</returns>
+		public static CsvDataReader Create(string filename, CsvDataReaderOptions? options = null)
+		{
+			if (filename == null) throw new ArgumentNullException(nameof(filename));
+			// TextReader must be owned when we open it.
+			if (options?.OwnsReader == false) throw new CsvConfigurationException();
+
+			var bufferSize = options?.BufferSize ?? options?.Buffer?.Length ?? CsvDataReaderOptions.Default.BufferSize;
+			bufferSize = Math.Max(bufferSize, Environment.SystemPageSize);
+			var stream = new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize, FileOptions.SequentialScan);
+			var reader = new StreamReader(stream, Encoding.Default, true, bufferSize);
+			var csv = new CsvDataReader(reader, options);
+			if (!csv.Initialize())
+			{
+				throw new CsvMissingHeadersException();
+			}
+			return csv;
+		}
+
+		/// <summary>
+		/// Creates a new CsvDataReader.
+		/// </summary>
+		/// <param name="reader">The TextReader for the delimited data.</param>
+		/// <param name="options">The options to configure the reader, or null to use the default options.</param>
+		/// <returns>A CsvDataReader instance.</returns>
+		public static CsvDataReader Create(TextReader reader, CsvDataReaderOptions? options = null)
+		{
+			return CreateAsync(reader, options).GetAwaiter().GetResult();
+		}
+
+		bool Initialize()
+		{
+			return this.InitializeAsync().GetAwaiter().GetResult();
+		}
+
 		bool NextRecord()
 		{
 			this.curFieldCount = 0;
 			this.recordStart = this.idx;
-
+			start:
 			if (this.idx >= bufferEnd)
 			{
 				FillBuffer();
@@ -18,10 +60,34 @@ namespace Sylvan.Data.Csv
 				}
 			}
 
+			var result = ReadComment(buffer, ref this.idx);
+			switch (result)
+			{
+				case ReadResult.True:
+					goto start;
+				case ReadResult.False:
+					break;
+				case ReadResult.Incomplete:
+					// we were unable to read an entire record out of the buffer synchronously
+					if (recordStart == 0)
+					{
+						// if we consumed the entire buffer reading this record, then this is an exceptional situation
+						// we expect a record to be able to fit entirely within the buffer.
+						throw new CsvRecordTooLargeException(this.RowNumber, 0, null, null);
+					}
+					else
+					{
+						FillBuffer();
+						// after filling the buffer, we will resume reading fields from where we left off.
+					}
+
+					goto start;
+			}
+
 			int fieldIdx = 0;
 			while (true)
 			{
-				var result = ReadField(fieldIdx);
+				result = ReadField(fieldIdx);
 
 				if (result == ReadResult.True)
 				{
@@ -32,23 +98,23 @@ namespace Sylvan.Data.Csv
 				{
 					return true;
 				}
-				if (result == ReadResult.Incomplete)
+				
+				// we were unable to read an entire record out of the buffer synchronously
+				if (recordStart == 0)
 				{
-					// we were unable to read an entire record out of the buffer synchronously
-					if (recordStart == 0)
-					{
-						// if we consumed the entire buffer reading this record, then this is an exceptional situation
-						// we expect a record to be able to fit entirely within the buffer.
-						throw new CsvRecordTooLargeException(this.RowNumber, fieldIdx, null, null);
-					}
-					else
-					{
-						FillBuffer();
-						// after filling the buffer, we will resume reading fields from where we left off.
-					}
+					// if we consumed the entire buffer reading this record, then this is an exceptional situation
+					// we expect a record to be able to fit entirely within the buffer.
+					throw new CsvRecordTooLargeException(this.RowNumber, fieldIdx, null, null);
+				}
+				else
+				{
+					FillBuffer();
+					// after filling the buffer, we will resume reading fields from where we left off.
 				}
 			}
 		}
+
+
 
 		int FillBuffer()
 		{
@@ -80,7 +146,15 @@ namespace Sylvan.Data.Csv
 			this.rowNumber++;
 			if (this.state == State.Open)
 			{
-				return this.NextRecord();
+				var success = this.NextRecord();
+				if (this.resultSetMode == ResultSetMode.MultiResult && this.curFieldCount != this.fieldCount)
+				{
+					this.curFieldCount = 0;
+					this.idx = recordStart;
+					this.state = State.End;
+					return false;
+				}
+				return success;
 			}
 			else if (this.state == State.Initialized)
 			{
@@ -103,8 +177,8 @@ namespace Sylvan.Data.Csv
 		/// <inheritdoc/>
 		public override bool NextResult()
 		{
-			state = State.End;
-			return false;
+			while (Read()) ;
+			return Initialize();
 		}
 
 		/// <inheritdoc/>
