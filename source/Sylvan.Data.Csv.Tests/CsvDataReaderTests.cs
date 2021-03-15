@@ -1190,8 +1190,8 @@ namespace Sylvan.Data.Csv
 			var csv = CsvDataReader.Create(reader);
 			Assert.True(csv.Read());
 			Assert.Equal(3, csv.FieldCount);
-			Assert.True(csv.Read());
 			Assert.Equal("#2", csv.GetString(1));
+			Assert.True(csv.Read());
 			Assert.False(csv.Read());
 		}
 
