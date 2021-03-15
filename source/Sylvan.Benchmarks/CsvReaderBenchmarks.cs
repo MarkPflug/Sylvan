@@ -17,7 +17,7 @@ namespace Sylvan.Benchmarks
 		{
 			this.pool = new StringPool().GetString;
 		}
-	
+
 		[Benchmark]
 		public void NaiveBroken()
 		{
@@ -110,7 +110,7 @@ namespace Sylvan.Benchmarks
 			using var tr = TestData.GetTextReader();
 			using var dr = CsvDataReader.Create(tr, new CsvDataReaderOptions { Schema = TestData.TestDataSchema, StringFactory = pool.GetString });
 			dr.ProcessData();
-		}	
+		}
 
 		[Benchmark]
 		public void SylvanSelect()

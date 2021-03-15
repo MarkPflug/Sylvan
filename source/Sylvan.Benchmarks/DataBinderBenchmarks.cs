@@ -18,7 +18,7 @@ namespace Sylvan.Benchmarks
 
 			public TestRecord()
 			{
-				this.columns = new[] { "B", "D", "V", "G", "I", "S"};
+				this.columns = new[] { "B", "D", "V", "G", "I", "S" };
 				this.types = new[] { typeof(bool), typeof(DateTime), typeof(double), typeof(Guid), typeof(int), typeof(string) };
 				this.ordinals = columns.Select((n, i) => new { Name = n, Index = i }).ToDictionary(p => p.Name, p => p.Index);
 
@@ -141,7 +141,7 @@ namespace Sylvan.Benchmarks
 
 			public object GetValue(int i)
 			{
-				switch(i)
+				switch (i)
 				{
 					case 0: return GetBoolean(i);
 					case 1: return GetDateTime(i);

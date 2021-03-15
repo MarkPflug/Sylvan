@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 
 namespace Sylvan.Diagnostics
 {
@@ -7,6 +8,7 @@ namespace Sylvan.Diagnostics
 		public PerformanceCounter(string name)
 		{
 			this.Name = name;
+			this.CreateTime = DateTime.UtcNow;
 		}
 
 		int count;
@@ -15,6 +17,17 @@ namespace Sylvan.Diagnostics
 
 		public int Count => count;
 
+		public DateTime CreateTime { get; }
+
+		public double AverageFrequency
+		{
+			get
+			{
+				var duration = DateTime.UtcNow - CreateTime;
+				return count / duration.TotalSeconds;
+			}
+		}
+
 		public void Increment()
 		{
 			Interlocked.Increment(ref count);
@@ -22,8 +35,7 @@ namespace Sylvan.Diagnostics
 
 		public override string ToString()
 		{
-			var count = this.count;
-			return $"Counter: {Name}, Count: {count}";
+			return $"Counter: {Name}, Count: {Count}, AvgFreq: {AverageFrequency}";
 		}
 	}
 }

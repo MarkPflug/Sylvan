@@ -122,7 +122,7 @@ namespace Sylvan.IO
 		/// <param name="data">The array to search.</param>
 		/// <param name="offset">The offset from which to start the search.</param>
 		/// <returns>The index, or -1 if no match is found.</returns>
-		public int Search(byte[] data, int offset)
+		public int Search(byte[] data, int offset = 0)
 		{
 			if (data == null) throw new ArgumentNullException(nameof(data));
 

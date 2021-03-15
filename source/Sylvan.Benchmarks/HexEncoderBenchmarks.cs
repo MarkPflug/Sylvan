@@ -8,7 +8,6 @@ using System.Text;
 
 namespace Sylvan.Benchmarks
 {
-	[SimpleJob(RuntimeMoniker.NetCoreApp31)]
 	[MemoryDiagnoser]
 	public class HexEncoderBenchmarks
 	{
@@ -29,7 +28,7 @@ namespace Sylvan.Benchmarks
 		{
 			var str = BitConverter.ToString(inputData);
 		}
-				
+
 		[Benchmark]
 		public void SylvanEncoderStream()
 		{

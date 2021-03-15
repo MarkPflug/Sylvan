@@ -24,7 +24,7 @@ namespace Sylvan.Benchmarks
 		[Benchmark]
 		public void SylvanBench()
 		{
-			
+
 			var dr = (CsvDataReader)TestData.GetDataWithSchema(o => { o.StringFactory = pool; });
 
 			var binder = DataBinder.Create<CovidRecord>(dr);

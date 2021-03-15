@@ -42,7 +42,7 @@ namespace Sylvan.Benchmarks
 		[Benchmark]
 		public void ObjectDataReaderCreateFast()
 		{
-			var fac = 
+			var fac =
 				ObjectDataReader
 				.BuildFactory<TestRecord>()
 				.AddColumn("Id", r => r.Id)

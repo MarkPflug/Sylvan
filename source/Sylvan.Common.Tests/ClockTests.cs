@@ -5,7 +5,6 @@ namespace Sylvan
 {
 	public class SystemClockTests
 	{
-
 		[Fact]
 		public void Test1()
 		{
