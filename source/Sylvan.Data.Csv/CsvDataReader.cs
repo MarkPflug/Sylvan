@@ -105,6 +105,7 @@ namespace Sylvan.Data.Csv
 		readonly CsvStyle style;
 		readonly char quote;
 		readonly char escape;
+		readonly char comment;
 		readonly bool ownsReader;
 		readonly CultureInfo culture;
 		readonly string? dateFormat;
@@ -147,6 +148,7 @@ namespace Sylvan.Data.Csv
 			this.style = options.CsvStyle;
 			this.quote = options.Quote;
 			this.escape = options.Escape;
+			this.comment = options.Comment;
 			this.dateFormat = options.DateFormat;
 			this.trueString = options.TrueString;
 			this.falseString = options.FalseString;
@@ -172,9 +174,10 @@ namespace Sylvan.Data.Csv
 			for (int i = recordStart; i < bufferEnd; i++)
 			{
 				var c = buffer[i];
-				if (c == '\n' || c == '\r') {
+				if (c == '\n' || c == '\r')
+				{
 					var x = counts.Sum();
-					if(x == 0)
+					if (x == 0)
 					{
 						continue;
 					}
@@ -391,9 +394,9 @@ namespace Sylvan.Data.Csv
 					// this resize is constrained by the fact that the record has to fit in one row
 					Array.Resize(ref fieldInfos, fieldInfos.Length * 2);
 				}
-				
+
 				curFieldCount++;
-				
+
 				ref var fi = ref fieldInfos[fieldIdx];
 
 				if (style == CsvStyle.Unquoted)
@@ -436,10 +439,39 @@ namespace Sylvan.Data.Csv
 			return ReadResult.Incomplete;
 		}
 
+		ReadResult ReadComment(char[] buffer, ref int idx)
+		{
+			// only called in a context where we're definitely not
+			// at the end of the buffer.
+			var end = bufferEnd;
+			var c = buffer[idx];
+			if (c == comment)
+			{
+				int i = idx;
+				for (; i < end; i++)
+				{
+					c = buffer[i];
+					if (IsEndOfLine(c))
+					{
+						ConsumeLineEnd(buffer, ref i);
+						idx = i;
+						return ReadResult.True;
+					}
+				}
+				if (atEndOfText)
+				{
+					idx = i;
+					return ReadResult.True;
+				}
+				return ReadResult.Incomplete;
+			}
+			return ReadResult.False;
+		}
+
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		static bool IsEndOfLine(char c)
 		{
-			return c == '\r' || c == '\n';
+			return c == '\n' || c == '\r';
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -14,7 +14,20 @@ namespace Sylvan.Data.Csv
 		/// <returns>A CsvDataReader instance.</returns>
 		public static CsvDataReader Create(string filename, CsvDataReaderOptions? options = null)
 		{
-			return CreateAsync(filename, options).GetAwaiter().GetResult();
+			if (filename == null) throw new ArgumentNullException(nameof(filename));
+			// TextReader must be owned when we open it.
+			if (options?.OwnsReader == false) throw new CsvConfigurationException();
+
+			var bufferSize = options?.BufferSize ?? options?.Buffer?.Length ?? CsvDataReaderOptions.Default.BufferSize;
+			bufferSize = Math.Max(bufferSize, Environment.SystemPageSize);
+			var stream = new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize, FileOptions.SequentialScan);
+			var reader = new StreamReader(stream, Encoding.Default, true, bufferSize);
+			var csv = new CsvDataReader(reader, options);
+			if (!csv.Initialize())
+			{
+				throw new CsvMissingHeadersException();
+			}
+			return csv;
 		}
 
 		/// <summary>
@@ -37,7 +50,7 @@ namespace Sylvan.Data.Csv
 		{
 			this.curFieldCount = 0;
 			this.recordStart = this.idx;
-
+			start:
 			if (this.idx >= bufferEnd)
 			{
 				FillBuffer();
@@ -47,10 +60,34 @@ namespace Sylvan.Data.Csv
 				}
 			}
 
+			var result = ReadComment(buffer, ref this.idx);
+			switch (result)
+			{
+				case ReadResult.True:
+					goto start;
+				case ReadResult.False:
+					break;
+				case ReadResult.Incomplete:
+					// we were unable to read an entire record out of the buffer synchronously
+					if (recordStart == 0)
+					{
+						// if we consumed the entire buffer reading this record, then this is an exceptional situation
+						// we expect a record to be able to fit entirely within the buffer.
+						throw new CsvRecordTooLargeException(this.RowNumber, 0, null, null);
+					}
+					else
+					{
+						FillBuffer();
+						// after filling the buffer, we will resume reading fields from where we left off.
+					}
+
+					goto start;
+			}
+
 			int fieldIdx = 0;
 			while (true)
 			{
-				var result = ReadField(fieldIdx);
+				result = ReadField(fieldIdx);
 
 				if (result == ReadResult.True)
 				{
@@ -61,23 +98,23 @@ namespace Sylvan.Data.Csv
 				{
 					return true;
 				}
-				if (result == ReadResult.Incomplete)
+				
+				// we were unable to read an entire record out of the buffer synchronously
+				if (recordStart == 0)
 				{
-					// we were unable to read an entire record out of the buffer synchronously
-					if (recordStart == 0)
-					{
-						// if we consumed the entire buffer reading this record, then this is an exceptional situation
-						// we expect a record to be able to fit entirely within the buffer.
-						throw new CsvRecordTooLargeException(this.RowNumber, fieldIdx, null, null);
-					}
-					else
-					{
-						FillBuffer();
-						// after filling the buffer, we will resume reading fields from where we left off.
-					}
+					// if we consumed the entire buffer reading this record, then this is an exceptional situation
+					// we expect a record to be able to fit entirely within the buffer.
+					throw new CsvRecordTooLargeException(this.RowNumber, fieldIdx, null, null);
+				}
+				else
+				{
+					FillBuffer();
+					// after filling the buffer, we will resume reading fields from where we left off.
 				}
 			}
 		}
+
+
 
 		int FillBuffer()
 		{
@@ -140,7 +177,7 @@ namespace Sylvan.Data.Csv
 		/// <inheritdoc/>
 		public override bool NextResult()
 		{
-			while (Read());
+			while (Read()) ;
 			return Initialize();
 		}
 

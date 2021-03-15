@@ -13,6 +13,7 @@ namespace Sylvan.Data.Csv
 		const char DefaultDelimiter = ',';
 		const char DefaultQuote = '"';
 		const char DefaultEscape = '"';
+		const char DefaultComment = '#';
 		const int DefaultBufferSize = 0x1000;
 		const int MinBufferSize = 0x80;
 
@@ -24,6 +25,7 @@ namespace Sylvan.Data.Csv
 			this.Delimiter = DefaultDelimiter;
 			this.Quote = DefaultQuote;
 			this.Escape = DefaultEscape;
+			this.Comment = DefaultComment;
 			this.NewLine = Environment.NewLine;
 			this.BufferSize = DefaultBufferSize;
 			this.Culture = CultureInfo.InvariantCulture;
@@ -73,6 +75,11 @@ namespace Sylvan.Data.Csv
 		/// The character to use for escaping in quoted fields fields. The default is '"'.
 		/// </summary>
 		public char Escape { get; set; }
+
+		/// <summary>
+		/// The character used to indicate a comment line. The default is '#'.
+		/// </summary>
+		public char Comment { get; set; }
 
 		/// <summary>
 		/// The string to use for line breaks separating records. The default is Environment.NewLine.

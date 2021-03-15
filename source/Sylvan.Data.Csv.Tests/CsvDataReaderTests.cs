@@ -1138,5 +1138,72 @@ namespace Sylvan.Data.Csv
 			Assert.False(csv.Read());
 			Assert.False(csv.NextResult());
 		}
+
+		[Fact]
+		public void CommentTest()
+		{
+			using var reader = new StringReader("#comment\na,b,c\n1,2,3\n4,5,6");
+			var csv = CsvDataReader.Create(reader);
+			Assert.True(csv.Read());
+			Assert.Equal(3, csv.FieldCount);
+			Assert.True(csv.Read());
+			Assert.False(csv.Read());
+		}
+
+		[Fact]
+		public void Comment2Test()
+		{
+			using var reader = new StringReader("a,b,c\n#comment\n1,2,3\n4,5,6");
+			var csv = CsvDataReader.Create(reader);
+			Assert.True(csv.Read());
+			Assert.Equal(3, csv.FieldCount);
+			Assert.True(csv.Read());
+			Assert.False(csv.Read());
+		}
+
+		[Fact]
+		public void Comment3Test()
+		{
+			using var reader = new StringReader("a,b,c\n1,2,3\n4,5,6\n#comment\n");
+			var csv = CsvDataReader.Create(reader);
+			Assert.True(csv.Read());
+			Assert.Equal(3, csv.FieldCount);
+			Assert.True(csv.Read());
+			Assert.False(csv.Read());
+		}
+
+		[Fact]
+		public void Comment4Test()
+		{
+			using var reader = new StringReader("a,b,c\n1,2,3\n4,5,6\n#comment");
+			var csv = CsvDataReader.Create(reader);
+			Assert.True(csv.Read());
+			Assert.Equal(3, csv.FieldCount);
+			Assert.True(csv.Read());
+			Assert.False(csv.Read());
+		}
+
+		[Fact]
+		public void Comment5Test()
+		{
+			using var reader = new StringReader("a,b,c\n1,#2,3\n4,5,6\n");
+			var csv = CsvDataReader.Create(reader);
+			Assert.True(csv.Read());
+			Assert.Equal(3, csv.FieldCount);
+			Assert.True(csv.Read());
+			Assert.Equal("#2", csv.GetString(1));
+			Assert.False(csv.Read());
+		}
+
+		[Fact]
+		public void Comment6Test()
+		{
+			using var reader = new StringReader("a,b,c\n1,2,3\n4,5,6\n");
+			var csv = CsvDataReader.Create(reader);
+			Assert.True(csv.Read());
+			Assert.Equal(3, csv.FieldCount);
+			Assert.True(csv.Read());
+			Assert.False(csv.Read());
+		}
 	}
 }
