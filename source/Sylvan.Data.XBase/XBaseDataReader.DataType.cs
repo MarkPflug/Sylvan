@@ -452,7 +452,6 @@ namespace Sylvan.Data.XBase
 
 			public override string GetString(XBaseDataReader dr, int ordinal)
 			{
-				//var str = dr.GetRecordChars(ordinal);
 				var col = dr.columns[ordinal];
 				var buf = dr.textBuffer;
 
@@ -464,8 +463,9 @@ namespace Sylvan.Data.XBase
 					if (buf[i] != ' ')
 						break;
 				}
+				i += 1;
 
-				return i <= 0 ? string.Empty : new string(buf, 0, i);
+				return i == 0 ? string.Empty : new string(buf, 0, i);
 			}
 		}
 
@@ -575,7 +575,6 @@ namespace Sylvan.Data.XBase
 
 			public override int GetBytes(XBaseDataReader dr, int ordinal, int dataOffset, byte[] buffer, int bufferOffset, int length)
 			{
-				// todo: this is horribly inefficient.
 				var s = GetStream(dr, ordinal);
 				s.Seek(dataOffset, SeekOrigin.Begin);
 				return s.Read(buffer, bufferOffset, length);
@@ -661,38 +660,77 @@ namespace Sylvan.Data.XBase
 		static XBaseDataReader()
 		{
 			CodePageMap = new Dictionary<ushort, ushort>();
-
 			// maps the xBase header encoding number to the codePage number
 			ushort[] codePageData = new ushort[]
 			{
-				 0x01, 437 ,
-				 0x69, 620 , // *
-				 0x6a, 737 ,
-				 0x02, 850 ,
-				 0x64, 852 ,
-				 0x6b, 857 ,
-				 0x67, 861 ,
-				 0x66, 865 ,
-				 0x65, 866 ,
-				 0x7c, 874 ,
-				 0x68, 895 , // *
-				 0x7b, 932 ,
-				 0x7a, 936 ,
-				 0x79, 949 ,
-				 0x78, 950 ,
-				 0xc8, 1250 ,
-				 0xc9, 1251 ,
-				 0x03, 1252 ,
-				 0xcb, 1253 ,
-				 0xca, 1254 ,
-				 0x7d, 1255 ,
-				 0x7e, 1256 ,
-				 0x7f, 65001, // TODO: Not sure about this one.
-				 0x04, 10000 ,
-				 0x98, 10006 ,
-				 0x96, 10007 ,
-				 0x97, 10029 ,
-
+				0x01, 437,
+				0x02, 850,
+				0x03, 1252,
+				0x04, 10000,
+				0x08, 865,       // Danish OEM
+				0x09, 437,       // Dutch OEM
+				0x0a, 850,       // Dutch OEM*
+				0x0b, 437,       // Finnish OEM
+				0x0d, 437,       // French OEM
+				0x0e, 850,       // French OEM*
+				0x0f, 437,       // German OEM
+				0x10, 850,       // German OEM*
+				0x11, 437,       // Italian OEM
+				0x12, 850,       // Italian OEM*
+				0x13, 932,       // Japanese Shift-JIS
+				0x14, 850,       // Spanish OEM*
+				0x15, 437,       // Swedish OEM
+				0x16, 850,       // Swedish OEM*
+				0x17, 865,       // Norwegian OEM
+				0x18, 437,       // Spanish OEM
+				0x19, 437,       // English OEM (Britain)
+				0x1a, 850,       // English OEM (Britain)*
+				0x1b, 437,       // English OEM (U.S.)
+				0x1c, 863,       // French OEM (Canada)
+				0x1d, 850,       // French OEM*
+				0x1f, 852,       // Czech OEM
+				0x22, 852,       // Hungarian OEM
+				0x23, 852,       // Polish OEM
+				0x24, 860,       // Portuguese OEM
+				0x25, 850,       // Portuguese OEM*
+				0x26, 866,       // Russian OEM
+				0x37, 850,       // English OEM (U.S.)*
+				0x40, 852,       // Romanian OEM
+				0x4d, 936,       // Chinese GBK (PRC)
+				0x4e, 949,       // Korean (ANSI/OEM)
+				0x4f, 950,       // Chinese Big5 (Taiwan)
+				0x50, 874,       // Thai (ANSI/OEM)
+				0x57, 1252,      // ANSI
+				0x58, 1252,      // Western European ANSI
+				0x59, 1252,      // Spanish ANSI
+				0x64, 852,       // Eastern European MS-DOS
+				0x65, 866,       // Russian MS-DOS
+				0x66, 865,       // Nordic MS-DOS
+				0x67, 861,       // Icelandic MS-DOS
+				0x68, 895, // *
+				0x69, 620, // *
+				0x6a, 737,       // Greek MS-DOS (437G)
+				0x6b, 857,       // Turkish MS-DOS
+				0x6c, 863,       // French-Canadian MS-DOS
+				0x78, 950,       // Taiwan Big 5
+				0x79, 949,       // Hangul (Wansung)
+				0x7a, 936,       // PRC GBK
+				0x7b, 932,       // Japanese Shift-JIS
+				0x7c, 874,       // Thai Windows/MS-DOS
+				0x7d, 1255,
+				0x7e, 1256,
+				0x7f, 65001, // TODO: Not sure about this one.
+				0x86, 737,       // Greek OEM
+				0x87, 852,       // Slovenian OEM
+				0x88, 857,       // Turkish OEM
+				0x96, 10007,
+				0x97, 10029,
+				0x98, 10006,
+				0xc8, 1250,      // Eastern European Windows
+				0xc9, 1251,      // Russian Windows
+				0xca, 1254,      // Turkish Windows
+				0xcb, 1253,      // Greek Windows
+				0xcc, 1257,      // Baltic Windows
 			};
 			// *: Not supported by the CodePagesEncodingProvider, unlikely that anyone would care.
 

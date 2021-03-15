@@ -59,8 +59,12 @@ https://www.dbf2002.com/dbf-file-format.html
 https://www.clicketyclick.dk/databases/xbase/format/index.html
 https://www.clicketyclick.dk/databases/xbase/format/dbf.html#DBF_NOTE_6_TARGET
 https://github.com/yellowfeather/DbfDataReader/issues/35
+[DBase language codes](https://stackoverflow.com/questions/52590941/how-to-interpret-the-language-driver-name-in-a-dbase-dbf-file)
 
 ### Shape files
 https://prd-tnm.s3.amazonaws.com/index.html?prefix=StagedProducts/GovtUnit/Shape/
 
 [US STATES](https://catalog.data.gov/dataset/tiger-line-shapefile-2017-nation-u-s-current-state-and-equivalent-national)
+
+### Notes:
+
