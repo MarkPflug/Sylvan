@@ -279,6 +279,8 @@ namespace Sylvan.Primitives
 						return new TypedPrimitive((Guid)value);
 					if (t == typeof(TimeSpan))
 						return new TypedPrimitive((TimeSpan)value);
+					if(t == typeof(DateTimeOffset))
+						return new TypedPrimitive((DateTimeOffset)value);
 					break;
 			}
 			throw new InvalidCastException();
@@ -342,6 +344,10 @@ namespace Sylvan.Primitives
 		{
 		}
 
+		public TypedPrimitive(DateTimeOffset value) : this(PrimitiveType.DateTimeOffset, value)
+		{
+		}
+
 		public TypedPrimitive(TimeSpan value) : this(PrimitiveType.TimeSpan, value)
 		{
 		}
@@ -356,7 +362,7 @@ namespace Sylvan.Primitives
 
 		#endregion
 
-		
+
 		public static implicit operator TypedPrimitive(bool value)
 		{
 			return new TypedPrimitive(value);

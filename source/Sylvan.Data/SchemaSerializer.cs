@@ -39,6 +39,7 @@ namespace Sylvan.Data
 			{
 				map.Add(type.ToString(), type);
 			}
+			map.Add("bool", DbType.Boolean);
 			map.Add("int", DbType.Int32);
 			map.Add("long", DbType.Int64);
 			map.Add("float", DbType.Single);
@@ -184,11 +185,12 @@ namespace Sylvan.Data
 				DbType.Int32 => "int",
 				DbType.Double => "double",
 				DbType.Decimal => "decimal",
+				DbType.Boolean => "bool",
 				_ => null
 			};
 			if (typeName == null)
 			{
-				typeName = col.DataTypeName ?? col.DataType?.Name;
+				typeName = col.DataType?.Name;
 			}
 			if (typeName != null)
 			{
@@ -218,20 +220,7 @@ namespace Sylvan.Data
 					w.Write("}");
 				}
 			}			
-		}
-
-		static string GetTypeName(DbType type)
-		{
-			switch (type)
-			{
-				case DbType.Int32:
-					return "int";
-				case DbType.String:
-					return "string";
-				default:
-					return type.ToString();
-			}
-		}
+		}				
 
 		static bool HasLength(DbType type)
 		{
