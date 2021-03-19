@@ -453,7 +453,11 @@ namespace Sylvan.Data.Csv
 					c = buffer[i];
 					if (IsEndOfLine(c))
 					{
-						ConsumeLineEnd(buffer, ref i);
+						var r = ConsumeLineEnd(buffer, ref i);
+						if (r == ReadResult.Incomplete)
+						{
+							return r;
+						}
 						idx = i;
 						return ReadResult.True;
 					}
