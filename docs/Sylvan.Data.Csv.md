@@ -5,7 +5,7 @@ My goal in creating this library was to make the fastest possible CSV parser
 without compromising reliability or usability. While there are a number of 
 excellent CSV parsers in the ecosystem, I had an idea for an optimization that 
 sent me down the rabbit hole of rolling my own. The result is Sylvan.Data.Csv, which 
-I believe is [currently the fastest](https://github.com/MarkPflug/CsvBenchmarks), and most memory efficient 
+I believe is [currently the fastest](https://github.com/MarkPflug/Benchmarks), and most memory efficient 
 CSV parser available as a Nuget package. I'll be the first to acknowledge that performance 
 in CSV parsers isn't the most important feature, correctness of implementation, and ease of use are paramount.
 Sylvan CSV has achieved high performance without sacrificing robustness or ease of use.
