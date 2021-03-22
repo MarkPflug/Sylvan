@@ -106,6 +106,7 @@ namespace Sylvan.Data.Csv
 		readonly char quote;
 		readonly char escape;
 		readonly char comment;
+		char minSafe;
 		readonly bool ownsReader;
 		readonly CultureInfo culture;
 		readonly string? dateFormat;
@@ -149,6 +150,7 @@ namespace Sylvan.Data.Csv
 			this.quote = options.Quote;
 			this.escape = options.Escape;
 			this.comment = options.Comment;
+
 			this.dateFormat = options.DateFormat;
 			this.trueString = options.TrueString;
 			this.falseString = options.FalseString;
@@ -363,27 +365,29 @@ namespace Sylvan.Data.Csv
 			while (idx < bufferEnd)
 			{
 				c = buffer[idx++];
-
-				if (c == delimiter)
+				if (c <= minSafe)
 				{
-					this.idx = idx;
-					fieldEnd = idx - 1 - recordStart;
-					complete = true;
-					break;
-				}
-				if (IsEndOfLine(c))
-				{
-					idx--;
-					var temp = idx;
-					var r = ConsumeLineEnd(buffer, ref idx);
-					if (r == ReadResult.Incomplete)
+					if (c == delimiter)
 					{
-						return ReadResult.Incomplete;
+						this.idx = idx;
+						fieldEnd = idx - 1 - recordStart;
+						complete = true;
+						break;
 					}
-					fieldEnd = temp - recordStart;
-					complete = true;
-					last = true;
-					break;
+					if (IsEndOfLine(c))
+					{
+						idx--;
+						var temp = idx;
+						var r = ConsumeLineEnd(buffer, ref idx);
+						if (r == ReadResult.Incomplete)
+						{
+							return ReadResult.Incomplete;
+						}
+						fieldEnd = temp - recordStart;
+						complete = true;
+						last = true;
+						break;
+					}
 				}
 			}
 
@@ -475,7 +479,7 @@ namespace Sylvan.Data.Csv
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		static bool IsEndOfLine(char c)
 		{
-			return c == '\n' || c == '\r';
+			return c <= '\r' && (c == '\n' || c == '\r');
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
