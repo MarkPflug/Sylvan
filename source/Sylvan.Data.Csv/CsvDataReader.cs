@@ -250,6 +250,7 @@ namespace Sylvan.Data.Csv
 			var buffer = this.buffer;
 			bool last = false;
 			bool complete = false;
+			char minSafe = this.minSafe;
 
 			if (style == CsvStyle.Unquoted)
 			{

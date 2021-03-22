@@ -93,8 +93,8 @@ namespace Sylvan.Data.Csv
 			{
 				var c = DetectDelimiter();
 				this.delimiter = c;
-				this.minSafe = delimiter < '\r' ? '\r' : delimiter;
-			}
+			} 
+			this.minSafe = delimiter < '\r' ? '\r' : delimiter;
 
 			// if the user specified that there are headers
 			// read them, and use them to determine fieldCount.
