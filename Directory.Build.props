@@ -9,20 +9,20 @@
     <Copyright>© 2021 $(Owner)</Copyright>
     <PackageLicenseFile>license.txt</PackageLicenseFile>
     <LangVersion>9.0</LangVersion>
-
-    <RepositoryUrl>https://github.com/MarkPflug/Sylvan</RepositoryUrl>
-    <RepositoryType>git</RepositoryType>
-    <PackageProjectUrl>$(RepositoryUrl)</PackageProjectUrl>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <WarningsNotAsErrors>CS1030;CA1835;$(WarningsNotAsErrors)</WarningsNotAsErrors>
   
-    <IsTestProject Condition="$(MSBuildProjectName.EndsWith('.Tests')) == 'true'">true</IsTestProject>
-    <SourceControlInformationFeatureSupported>true</SourceControlInformationFeatureSupported>
+    
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+    <EmbedAllSources>true</EmbedAllSources>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <DeterministicSourcePaths>true</DeterministicSourcePaths>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
-    <Deterministic>true</Deterministic>
+    
+    
+    <IsTestProject Condition="$(MSBuildProjectName.EndsWith('.Tests')) == 'true'">true</IsTestProject>
   </PropertyGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)license.txt" Pack="true" PackagePath="">
