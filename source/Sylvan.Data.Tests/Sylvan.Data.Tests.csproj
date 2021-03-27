@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFrameworks>net5.0;net461</TargetFrameworks>
@@ -12,6 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="System.ValueTuple" Version="4.5.0" />
     <PackageReference Update="Microsoft.NET.Test.Sdk" Version="16.8.3" />
   </ItemGroup>
 
