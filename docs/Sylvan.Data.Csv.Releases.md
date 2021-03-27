@@ -2,7 +2,6 @@
 
 _0.10.1_
 - Fix potential issue with reading a comment line where the newline sequence spans a buffer boundary.
-- Minor performance improvement for CsvDataReader.
 
 _0.10.0_
 - Adds support for Unquoted CSV parsing style where fields with delimiters and newlines don't use quotes, but only use escaping.
