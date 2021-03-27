@@ -2,6 +2,7 @@
   <PropertyGroup>
     <PackageTags>$(PackageTags);.NET;Sylvan</PackageTags>
   </PropertyGroup>
+  
   <Target Name="PrepareNupkg" BeforeTargets="ResolvePackageAssets">
     <!-- the package folder must exist before nuget restore runs -->
     <MakeDir Condition="!Exists($(PackageOutputPath))" Directories="$(PackageOutputPath)" />
@@ -12,6 +13,11 @@
     <CoverletOutput>$(ReportsDirectory)\$(MSBuildProjectName)\</CoverletOutput>
     <CoverletOutputFormat>json,cobertura</CoverletOutputFormat>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Build.Tasks.Git" Version="1.0.0" PrivateAssets="All"/>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All"/>  
+  </ItemGroup>
 
   <ItemGroup Condition="'$(IsTestProject)' == 'true'">
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.5.0" />
@@ -27,25 +33,11 @@
      Condition="$(VersionSuffix) == ''"
      Name="PackValidations" BeforeTargets="GenerateNuspec">
     <!-- 
-    Attempt to prevent myself from accidentally releaseing a debug build.
-    These are disabled for pre-release builds.
+    Attempt to prevent myself from accidentally releasing a debug build.
+    These checks are disabled for pre-release builds.
     -->
     <Error Condition="$(Configuration) != 'Release'" Text="Attempting to pack a debug build."/>
     <Error Condition="$(SourceRevisionId.Contains('-dirty'))" Text="Attempting to pack from a dirty repository."/>
   </Target>
-    
-  <Target Name="InitializeSourceControlInformation" BeforeTargets="PackValidations">
-    <Exec 
-      Command="git describe --long --always --dirty --exclude=*"
-      ConsoleToMsBuild="True"
-      IgnoreExitCode="False"
-      >
-      <Output PropertyName="SourceRevisionId" TaskParameter="ConsoleOutput"/>
-    </Exec>
-  </Target>
 
-  <!-- This target reports all compiler constants for the compilation -->
-  <Target Condition="false" Name="Symbols" BeforeTargets="CoreCompile">
-    <Error Text="$(DefineConstants)"/>
-  </Target>
 </Project>

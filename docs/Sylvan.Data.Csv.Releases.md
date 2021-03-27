@@ -1,4 +1,9 @@
 # Sylvan.Data.Csv Release Notes
+
+_0.10.1_
+- Fix potential issue with reading a comment line where the newline sequence spans a buffer boundary.
+- Add source link.
+
 _0.10.0_
 - Adds support for Unquoted CSV parsing style where fields with delimiters and newlines don't use quotes, but only use escaping.
 - Removed CsvWriter. CsvDataWriter will continue to exist.
