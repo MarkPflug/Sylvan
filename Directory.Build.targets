@@ -36,22 +36,8 @@
     Attempt to prevent myself from accidentally releasing a debug build.
     These checks are disabled for pre-release builds.
     -->
-    <!--<Error Condition="$(Configuration) != 'Release'" Text="Attempting to pack a debug build."/>
-    <Error Condition="$(SourceRevisionId.Contains('-dirty'))" Text="Attempting to pack from a dirty repository."/>-->
+    <Error Condition="$(Configuration) != 'Release'" Text="Attempting to pack a debug build."/>
+    <Error Condition="$(SourceRevisionId.Contains('-dirty'))" Text="Attempting to pack from a dirty repository."/>
   </Target>
-    
-  <!--<Target Name="InitializeSourceControlInformation" BeforeTargets="PackValidations">
-    <Exec 
-      Command="git describe -long -always -dirty -exclude=*"
-      ConsoleToMsBuild="True"
-      IgnoreExitCode="False"
-      >
-      <Output PropertyName="SourceRevisionId" TaskParameter="ConsoleOutput"/>
-    </Exec>
-  </Target>-->
 
-  <!-- This target reports all compiler constants for the compilation -->
-  <!--<Target Condition="false" Name="Symbols" BeforeTargets="CoreCompile">
-    <Error Text="$(DefineConstants)"/>
-  </Target>-->
 </Project>
