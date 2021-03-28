@@ -11,8 +11,9 @@
     <LangVersion>9.0</LangVersion>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <WarningsNotAsErrors>CS1030;CA1835;$(WarningsNotAsErrors)</WarningsNotAsErrors>
-  
     
+    <PackageProjectUrl>https://github.com/MarkPflug/Sylvan</PackageProjectUrl>
+
     <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
     <EmbedAllSources>true</EmbedAllSources>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
