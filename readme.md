@@ -14,7 +14,3 @@ An extremely fast, lightweight library for reading and writing delimited CSV dat
 ### Sylvan.Data.XBase
 A data reader for dBASE/FoxPro/Clipper .dbf files. 
 This is the format used to store metadata in [ESRI ShapeFiles](https://en.wikipedia.org/wiki/Shapefile).
-
-### [Sylvan.BuildTools.Data](docs/Sylvan.BuildTools.Data.md)
-Provides design time code generation for accessing CSV data files.
-Allows you to drop a .csv file into your project and get a strongly-typed data accessor for the data.

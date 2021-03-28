@@ -1,8 +1,0 @@
-﻿<Project>
-	<PropertyGroup>
-		<CodeGenTestRoot>../../../../bin/$(Configuration)/netstandard2.0/build/</CodeGenTestRoot>
-		<SylvanDataTaskAssembly>../Sylvan.BuildTools.Data.dll</SylvanDataTaskAssembly>
-	</PropertyGroup>
-
-	<Import Project="$(CodeGenTestRoot)Sylvan.BuildTools.Data.props"/>
-</Project>
