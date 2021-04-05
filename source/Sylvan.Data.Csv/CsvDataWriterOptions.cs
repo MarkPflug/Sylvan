@@ -31,8 +31,8 @@ namespace Sylvan.Data.Csv
 			this.Culture = CultureInfo.InvariantCulture;
 			this.TrueString = bool.TrueString;
 			this.FalseString = bool.FalseString;
-			this.DateTimeFormat = "yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'FFFFFFF";
-			this.DateFormat = "yyyy'-'MM'-'dd";
+			this.DateTimeFormat = "yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'FFFFFFFK";
+			this.DateFormat = this.DateTimeFormat;
 			this.WriteHeaders = true;
 		}
 

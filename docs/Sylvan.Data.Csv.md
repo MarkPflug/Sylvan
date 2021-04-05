@@ -50,6 +50,10 @@ await csvWriter.WriteAsync(dr);
 
 ```
 
+## Options
+
+The default behavior should be sufficient for many cases, and there are a number of [options](csv/Options.md) for configuring the behavior of the CSV data reader and writer.
+
 ## Null/Empty field handling
 
 By default, all fields are considered non-nullable strings. This means that an empty (or missing) field will

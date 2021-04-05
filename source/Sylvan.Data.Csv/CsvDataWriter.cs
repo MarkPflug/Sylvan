@@ -50,6 +50,7 @@ namespace Sylvan.Data.Csv
 		readonly string trueString;
 		readonly string falseString;
 		readonly string? dateTimeFormat;
+		readonly string? dateFormat;
 
 		readonly CultureInfo culture;
 
@@ -94,6 +95,7 @@ namespace Sylvan.Data.Csv
 			this.trueString = options.TrueString;
 			this.falseString = options.FalseString;
 			this.dateTimeFormat = options.DateTimeFormat;
+			this.dateFormat = options.DateFormat;
 			this.writeHeaders = options.WriteHeaders;
 			this.delimiter = options.Delimiter;
 			this.quote = options.Quote;
@@ -290,10 +292,11 @@ namespace Sylvan.Data.Csv
 
 		WriteResult WriteField(DateTime value)
 		{
+			var format = value.TimeOfDay == TimeSpan.Zero ? dateFormat : dateTimeFormat;
 #if NETSTANDARD2_1
 			if (fastDate)
 			{
-				if (value.TryFormat(buffer.AsSpan()[pos..], out int len, dateTimeFormat, culture))
+				if (value.TryFormat(buffer.AsSpan()[pos..], out int len, format, culture))
 				{
 					pos += len;
 					return WriteResult.Complete;
@@ -301,7 +304,7 @@ namespace Sylvan.Data.Csv
 				return WriteResult.InsufficientSpace;
 			}
 #endif
-			return WriteField(value.ToString(dateTimeFormat, culture));
+			return WriteField(value.ToString(format, culture));
 		}
 
 		WriteResult WriteField(string value)

@@ -114,6 +114,7 @@ namespace Sylvan.Data.Csv
 		readonly BinaryEncoding binaryEncoding;
 		readonly bool hasHeaders;
 		readonly StringFactory stringFactory;
+		readonly CommentHandler? commentHandler;
 		readonly ICsvSchemaProvider? schema;
 		readonly ResultSetMode resultSetMode;
 
@@ -166,6 +167,7 @@ namespace Sylvan.Data.Csv
 			this.ownsReader = options.OwnsReader;
 			this.binaryEncoding = options.BinaryEncoding;
 			this.stringFactory = options.StringFactory ?? new StringFactory((char[] b, int o, int l) => new string(b, o, l));
+			this.commentHandler = options.CommentHandler;
 			this.schema = options.Schema;
 			this.resultSetMode = options.ResultSetMode;
 		}
@@ -458,10 +460,17 @@ namespace Sylvan.Data.Csv
 					c = buffer[i];
 					if (IsEndOfLine(c))
 					{
+						var e = i;
 						var r = ConsumeLineEnd(buffer, ref i);
 						if (r == ReadResult.Incomplete)
 						{
 							return r;
+						}
+						if(this.commentHandler != null)
+						{
+							var s = idx + 1;
+							var str = new string(buffer, s, e - s);
+							this.commentHandler.HandleComment(this, str);
 						}
 						idx = i;
 						return ReadResult.True;
