@@ -12,6 +12,57 @@ namespace Sylvan.Data.Csv
 	public delegate string StringFactory(char[] buffer, int offset, int length);
 
 	/// <summary>
+	/// A callback handler to receive comments read from a CSV file.
+	/// </summary>
+	public abstract class CommentHandler
+	{
+		// NOTE: This class will probably appear overkill. Why not just pass a delegate?
+		// My intent is to allow this to potentially handle Span<char> overload in the future.
+		// Being implemented this way allows the code to remain binary backward compatible in
+		// that event. Add a virtual span-based method that delegates to the string-based abstract implementation.
+		// if the span-based is overridden, then it can avoid the allocation. Overkill? Oh, most definitely.
+
+		/// <summary>
+		/// The method that is called when comments are read.
+		/// </summary>
+		/// <param name="reader">The CsvDataReader.</param>
+		/// <param name="comment">The comment string.</param>
+		public abstract void HandleComment(CsvDataReader reader, string comment);
+
+		/// <summary>
+		/// Implicitly casts an Action to a CommentHandler.
+		/// </summary>
+		/// <param name="handler">The method to recive the comment.</param>
+		public static implicit operator CommentHandler(Action<CsvDataReader, string> handler)
+		{
+			return new StringCommentHandler(handler);
+		}
+
+		/// <summary>
+		/// Implicitly casts an Action to a CommentHandler.
+		/// </summary>
+		/// <param name="handler">The method to recive the comment.</param>
+		public static implicit operator CommentHandler(Action<string> handler)
+		{
+			return new StringCommentHandler((r, c) => handler(c));
+		}
+
+		sealed class StringCommentHandler : CommentHandler
+		{
+			Action<CsvDataReader, string> cb;
+			public StringCommentHandler(Action<CsvDataReader, string> cb)
+			{
+				this.cb = cb;
+			}
+
+			public override void HandleComment(CsvDataReader reader, string comment)
+			{
+				cb(reader, comment);
+			}
+		}
+	}
+
+	/// <summary>
 	/// Gets the binary encoding used when reading fields with GetBytes.
 	/// </summary>
 	public enum BinaryEncoding
@@ -97,6 +148,7 @@ namespace Sylvan.Data.Csv
 			this.DateFormat = null;
 
 			this.StringFactory = null;
+			this.CommentHandler = null;
 			this.BinaryEncoding = BinaryEncoding.Base64;
 			this.ResultSetMode = ResultSetMode.SingleResult;
 		}
@@ -115,6 +167,11 @@ namespace Sylvan.Data.Csv
 		/// A string factory function which can de-dupe strings on construction. Defaults to null.
 		/// </summary>
 		public StringFactory? StringFactory { get; set; }
+
+		/// <summary>
+		/// A callback method which will be called when a comment is found in the CSV.
+		/// </summary>
+		public CommentHandler? CommentHandler { get; set; }
 
 		/// <summary>
 		/// The string which represents true values when reading boolean. Defaults to null.

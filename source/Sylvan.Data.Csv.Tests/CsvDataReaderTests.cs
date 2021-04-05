@@ -1195,14 +1195,21 @@ namespace Sylvan.Data.Csv
 			Assert.False(csv.Read());
 		}
 
-		[Fact]
-		public void Comment6Test()
+		[Theory]
+		[InlineData("a,b,c\n#hello\n4,5,6\n", "hello")]
+		[InlineData("a,b,c\n#\n4,5,6\n", "")]
+		public void Comment6Test(string data, string result)
 		{
-			using var reader = new StringReader("a,b,c\n1,2,3\n4,5,6\n");
-			var csv = CsvDataReader.Create(reader);
+			using var reader = new StringReader(data);
+			string c = null;
+			int commentCount = 0;
+			Action<string> cb = (string comment) => { c = comment; commentCount++; };
+
+			var csv = CsvDataReader.Create(reader, new CsvDataReaderOptions { CommentHandler = cb });
 			Assert.True(csv.Read());
+			Assert.Equal(1, commentCount);
+			Assert.Equal(result, c);
 			Assert.Equal(3, csv.FieldCount);
-			Assert.True(csv.Read());
 			Assert.False(csv.Read());
 		}
 	}
