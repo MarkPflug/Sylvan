@@ -6,19 +6,6 @@ using System.Globalization;
 
 namespace Sylvan.Data
 {
-	//[AttributeUsage(AttributeTargets.Property | AttributeTargets.Field)]
-	//public sealed class ColumnSeriesAttribute : Attribute
-	//{
-	//	public string? SeriesPattern { get; }
-
-	//	public ColumnSeriesAttribute() { }
-
-	//	public ColumnSeriesAttribute(string seriesPattern)
-	//	{
-	//		this.SeriesPattern = seriesPattern;
-	//	}
-	//}
-
 	public static class DataBinderExtensions
 	{
 		public static T GetRecord<T>(this IDataBinder<T> binder, IDataRecord record, Func<IDataRecord, Exception, bool>? errorHandler = null) where T : new()

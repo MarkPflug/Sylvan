@@ -123,8 +123,11 @@ namespace Sylvan.Data
 		
 
 		// CALLED VIA REFLECTION DO NOT DELETE
-		static object GetSeriesAccessor<TK>(Schema.Column seriesCol, ReadOnlyCollection<DbColumn> physicalSchema)
+		static object GetSeriesAccessor<TK>(Schema.Column seriesCol, IEnumerable<DbColumn> physicalSchema, out IEnumerable<DbColumn> boundColumns)
 		{
+			var boundCols = new List<DbColumn>();
+			boundColumns = boundCols;
+
 			var fmt = seriesCol.SeriesHeaderFormat; //asdf{Date}qwer => ^asdf(.+)qwer$
 
 			var type = typeof(TK);
@@ -184,6 +187,7 @@ namespace Sylvan.Data
 					{
 						var ordinal = col.ColumnOrdinal!.Value;
 						cols.Add(new DataSeriesColumn<TK>(name, r.Value!, ordinal));
+						boundCols.Add(col);
 					}
 				}
 			}

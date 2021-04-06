@@ -43,11 +43,17 @@ namespace Sylvan.Data
 			// stores contextual state used by the binder.
 			var state = new List<object>();
 
+			var physicalColumns = new HashSet<DbColumn>();
+			foreach (var col in physicalSchema)
+			{
+				physicalColumns.Add(col);
+			}
+
 			this.cultureInfo = opts.Culture ?? CultureInfo.InvariantCulture;
 
 			var colNamer = opts.ColumnNamer;
 
-			var namedCols = logicalSchema.Where(c => !string.IsNullOrEmpty(c.ColumnName)).ToList();
+			var namedCols = physicalColumns.Where(c => !string.IsNullOrEmpty(c.ColumnName)).ToList();
 			var nameMap =
 				namedCols
 				.ToDictionary(p => p.ColumnName, p => p, StringComparer.OrdinalIgnoreCase);
@@ -65,9 +71,6 @@ namespace Sylvan.Data
 					}
 				}
 			}
-
-			//logicalSchema
-			//	.Where(c => !string.IsNullOrEmpty(c.ColumnName));
 
 			var seriesMap =
 				logicalSchema
@@ -91,7 +94,10 @@ namespace Sylvan.Data
 				}
 				if (idx != null)
 				{
-					return physicalSchema[idx.Value];
+					// TODO: this could be slow for a really huge data set.
+					// TODO: might want to use the index of the incoming collection
+					// rather than depending on the columnOrdinal being set.
+					return physicalColumns.FirstOrDefault(c => c.ColumnOrdinal == idx.Value);
 				}
 				return null;
 			}
@@ -144,8 +150,16 @@ namespace Sylvan.Data
 				)
 			);
 
-			foreach (var property in recordType.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
+			var properties =
+				recordType
+				.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
+				.ToDictionary(p => p.Name, p => p, StringComparer.OrdinalIgnoreCase);
+
+			foreach (var kvp in properties.ToArray())
 			{
+				var key = kvp.Key;
+				var property = kvp.Value;
+
 				var memberAttribute = property.GetCustomAttribute<DataMemberAttribute>();
 				var columnOrdinal = memberAttribute?.Order;
 				var columnName = memberAttribute?.Name ?? property.Name;
@@ -155,6 +169,12 @@ namespace Sylvan.Data
 				if (col == null)
 				{
 					// TODO: potentially add an argument to throw if there is an unbound property?
+					continue;
+				}
+
+				if (col is Schema.Column c && c.IsSeries == true)
+				{
+					// series get handled below after all normal properties are bound
 					continue;
 				}
 
@@ -238,33 +258,25 @@ namespace Sylvan.Data
 
 						if (expr == null)
 						{
-							if (col is Schema.Column c)
+							var ctor = targetType.GetConstructor(new Type[] { colType });
+							if (ctor != null)
 							{
-								expr = BindSeries(property, c, physicalSchema, state, stateVar, recordParam, itemParam);
-								bodyExpressions.Add(expr);
-								continue;
+								expr = Expression.New(
+									ctor,
+									Expression.MakeUnary(
+										ExpressionType.Convert,
+										getterExpr,
+										colType
+									)
+								);
 							}
 							else
 							{
-								var ctor = targetType.GetConstructor(new Type[] { colType });
-								if (ctor != null)
-								{
-									expr = Expression.New(
-										ctor,
-										Expression.MakeUnary(
-											ExpressionType.Convert,
-											getterExpr,
-											colType
-										)
-									);
-								}
-								else
-								{
-									// TODO: should this only happen if the getterExpr is "object"?
-									// what else could it be at this point?
-									expr = Expression.Convert(getterExpr, targetType);
-								}
+								// TODO: should this only happen if the getterExpr is "object"?
+								// what else could it be at this point?
+								expr = Expression.Convert(getterExpr, targetType);
 							}
+							
 						}
 					}
 
@@ -279,9 +291,6 @@ namespace Sylvan.Data
 							var tempVar = Expression.Variable(getterExpr.Type);
 
 							var valueExpr = Convert(colType, tempVar, underlyingType!, cultureInfoExpr);
-
-							// var tempVar = getter();
-							// retur IsNullString(tempVar) ? default(double?) : double.parse(tempVar); 
 
 							expr =
 								Expression.Block(
@@ -335,6 +344,32 @@ namespace Sylvan.Data
 
 				var setExpr = Expression.Call(itemParam, setter, expr);
 				bodyExpressions.Add(setExpr);
+				physicalColumns.Remove(col);
+				properties.Remove(key);
+			}
+
+			foreach (var kvp in properties.ToArray())
+			{
+				var key = kvp.Key;
+				var property = kvp.Value;
+
+				var memberAttribute = property.GetCustomAttribute<DataMemberAttribute>();
+				var columnOrdinal = memberAttribute?.Order;
+				var columnName = memberAttribute?.Name ?? property.Name;
+
+				var col = GetCol(columnOrdinal, columnName);
+				Type colType = col?.DataType ?? typeof(object);
+				if (col == null)
+				{
+					continue;
+				}
+
+				if(col is Schema.Column c && c.IsSeries == true)
+				{
+					var expr = BindSeries(property, c, physicalColumns, state, stateVar, recordParam, itemParam);
+					bodyExpressions.Add(expr);
+					properties.Remove(key);
+				}
 			}
 
 			this.state = state.ToArray();
@@ -347,7 +382,7 @@ namespace Sylvan.Data
 		static Expression BindSeries(
 			PropertyInfo property,
 			Schema.Column column,
-			ReadOnlyCollection<DbColumn> physicalSchema,
+			HashSet<DbColumn> physicalSchema,
 			List<object> state,
 			Expression stateParam,
 			Expression recordParam,
@@ -363,7 +398,11 @@ namespace Sylvan.Data
 			// Can this be done in a more generic way that would support BYO type?
 			//var sct = Type.GetTypeCode(column.SeriesType);
 
-			object seriesAccessor = GetDataSeriesAccessor(column, physicalSchema);
+			object seriesAccessor = GetDataSeriesAccessor(column, physicalSchema, out var bound );
+			foreach (var item in bound)
+			{
+				physicalSchema.Remove(item);
+			}
 			var stateIdx = state.Count;
 			state.Add(seriesAccessor);
 
@@ -574,11 +613,14 @@ namespace Sylvan.Data
 			return null;
 		}
 
-		static object GetDataSeriesAccessor(Schema.Column seriesCol, ReadOnlyCollection<DbColumn> physicalSchema)
+		static object GetDataSeriesAccessor(Schema.Column seriesCol, IEnumerable<DbColumn> physicalSchema, out IEnumerable<DbColumn> boundColumns)
 		{
 			var method = typeof(DataBinder).GetMethod("GetSeriesAccessor", BindingFlags.Static | BindingFlags.NonPublic);
 			method = method.MakeGenericMethod(new Type[] { seriesCol.SeriesType! });
-			return method.Invoke(null, new object[] { seriesCol, physicalSchema });
+			var args = new object?[] { seriesCol, physicalSchema, null };
+			var result = method.Invoke(null, args);
+			boundColumns = (IEnumerable<DbColumn>)args[2]!;
+			return result;
 		}
 
 		void IDataBinder<T>.Bind(IDataRecord record, T item)
@@ -588,6 +630,4 @@ namespace Sylvan.Data
 			recordBinderFunction(record, context, item);
 		}
 	}
-
-	
 }
