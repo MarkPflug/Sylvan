@@ -6,10 +6,10 @@ namespace Sylvan.Data
 	/// Specifies how columns are bound to properties.
 	/// </summary>
 	[Flags]
-	public enum DataBindMode
+	public enum DataBindingMode
 	{
 		/// <summary>
-		/// Requires neither all column nor all properties be bound.
+		/// Allows unbound properties and columns.
 		/// </summary>
 		Neither = 0,
 		/// <summary>

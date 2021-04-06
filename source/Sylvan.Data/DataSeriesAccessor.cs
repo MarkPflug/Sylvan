@@ -129,8 +129,15 @@ namespace Sylvan.Data
 		}
 	}
 
+	/// <summary>
+	/// A column in a <see cref="DataSeriesAccessor{,}"/>.
+	/// </summary>
+	/// <typeparam name="TK">The type of column key.</typeparam>
 	public sealed class DataSeriesColumn<TK>
 	{
+		/// <summary>
+		/// Constructs a new DataSeriesColumn.
+		/// </summary>
 		public DataSeriesColumn(string name, TK key, int ordinal)
 		{
 			this.Name = name;
@@ -138,13 +145,24 @@ namespace Sylvan.Data
 			this.Ordinal = ordinal;
 		}
 
+		/// <summary>
+		/// The physical column name.
+		/// </summary>
 		public string Name { get; }
+
+		/// <summary>
+		/// The key value of the column.
+		/// </summary>
 		public TK Key { get; }
+
+		/// <summary>
+		/// The physical column ordinal.
+		/// </summary>
 		public int Ordinal { get; }
 	}
 
 	/// <summary>
-	/// Reads a series of columns from a DbDataReader as an enumerable.
+	/// Reads a series of columns from a DbDataReader that all have the same type.
 	/// </summary>
 	public sealed class DataSeriesAccessor<TK, TV> where TK : IComparable<TK>
 	{
@@ -154,11 +172,14 @@ namespace Sylvan.Data
 
 		readonly TK[] keys;
 
+		/// <summary>
+		/// Gets an ordered list of the series column keys.
+		/// </summary>
 		public IReadOnlyList<TK> Keys => keys;
 
-		public TK Minimum { get; }
-		public TK Maximum { get; }
-
+		/// <summary>
+		/// Gets the number of columns in the series.
+		/// </summary>
 		public int ColumnCount => keys.Length;
 
 		static IDataAccessor<TV> GetAccessor(Type t)
@@ -190,33 +211,38 @@ namespace Sylvan.Data
 			throw new NotSupportedException();
 		}
 
+		/// <summary>
+		/// Creates a new DataSeriesAccessor.
+		/// </summary>
 		public DataSeriesAccessor(IEnumerable<DataSeriesColumn<TK>> columns)
 		{
 			this.cols = columns.OrderBy(c => c.Key).ToArray();
 			this.keys = cols.Select(c => c.Key).ToArray();
 			this.getter = GetAccessor(typeof(TV));
-
-			this.Minimum = columns.Select(c => c.Key).Min()!;
-			this.Maximum = columns.Select(c => c.Key).Max()!;
 		}
 
-		public IEnumerable<KeyValuePair<TK, TV>> GetSeries(IDataRecord record)
-		{
-			for (int i = 0; i < cols.Length; i++)
-			{
-				var c = cols[i];
-				var o = c.Ordinal;
-				var value = getter.Get(record, o);
-				yield return new KeyValuePair<TK, TV>(c.Key, value);
-			}
-		}
+		//public IEnumerable<KeyValuePair<TK, TV>> GetSeries(IDataRecord record)
+		//{
+		//	for (int i = 0; i < cols.Length; i++)
+		//	{
+		//		var c = cols[i];
+		//		var o = c.Ordinal;
+		//		var value = getter.Get(record, o);
+		//		yield return new KeyValuePair<TK, TV>(c.Key, value);
+		//	}
+		//}
 
-		public IEnumerable<TK> GetKeys()
-		{
-			return this.cols.Select(c => c.Key);
-		}
+		//public IEnumerable<TK> GetKeys()
+		//{
+		//	return this.cols.Select(c => c.Key);
+		//}
 
-		public IEnumerable<TV> GetValues(IDataRecord record)
+		/// <summary>
+		/// Reads the column values from the data record.
+		/// </summary>
+		/// <param name="record">The record to read the values from.</param>
+		/// <returns>The sequence of values ordered by corresponding series column key.</returns>
+		public IEnumerable<TV> ReadValues(IDataRecord record)
 		{
 			for (int i = 0; i < cols.Length; i++)
 			{

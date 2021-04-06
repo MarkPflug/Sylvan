@@ -370,7 +370,7 @@ namespace Sylvan.Data
 				.Build();
 
 			var data = CsvDataReader.Create(new StringReader(dataStr), new CsvDataReaderOptions { Schema = new CsvSchema(schema), BinaryEncoding = BinaryEncoding.Hexadecimal });
-			var binder = DataBinder.Create<Simple>(data, new DataBinderOptions { BindingMode = DataBindMode.Neither });
+			var binder = DataBinder.Create<Simple>(data, new DataBinderOptions { BindingMode = DataBindingMode.Neither });
 			Assert.True(data.Read());
 			var r = binder.GetRecord(data);
 			Assert.Equal(1, r.Id);

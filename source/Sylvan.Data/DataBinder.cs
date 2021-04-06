@@ -49,13 +49,13 @@ namespace Sylvan.Data
 		/// <summary>
 		/// Indicates how the data source will bind to the target type.
 		/// </summary>
-		public DataBindMode BindingMode { get; set; }
+		public DataBindingMode BindingMode { get; set; }
 
 		public DataBinderOptions()
 		{
 			this.Culture = CultureInfo.InvariantCulture;
 			this.ColumnNamer = DataBinder.DefaultNameMapping;
-			this.BindingMode = DataBindMode.Neither;
+			this.BindingMode = DataBindingMode.Neither;
 		}
 	}
 

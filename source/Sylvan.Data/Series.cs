@@ -32,7 +32,7 @@ namespace Sylvan.Data
 			this.keys = seriesData.Keys;
 			var values = new TV[keys.Count];
 			int i = 0;
-			foreach(var value in seriesData.GetValues(data))
+			foreach(var value in seriesData.ReadValues(data))
 			{
 				values[i++] = value;
 			}
