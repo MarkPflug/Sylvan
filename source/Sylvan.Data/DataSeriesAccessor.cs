@@ -14,12 +14,14 @@ namespace Sylvan.Data
 	{
 		internal static IDataAccessor<int> Int32 = new Int32DataAccessor();
 		internal static IDataAccessor<long> Int64 = new Int64DataAccessor();
+		internal static IDataAccessor<float> Float = new FloatDataAccessor();
 		internal static IDataAccessor<double> Double = new DoubleDataAccessor();
 		internal static IDataAccessor<decimal> Decimal = new DecimalDataAccessor();
 		internal static IDataAccessor<string> String = new StringDataAccessor();
 
 		internal static IDataAccessor<int?> NullableInt32 = new NullableInt32DataAccessor();
 		internal static IDataAccessor<long?> NullableInt64 = new NullableInt64DataAccessor();
+		internal static IDataAccessor<float?> NullableFloat = new NullableFloatDataAccessor();
 		internal static IDataAccessor<double?> NullableDouble = new NullableDoubleDataAccessor();
 		internal static IDataAccessor<decimal?> NullableDecimal = new NullableDecimalDataAccessor();
 		internal static IDataAccessor<string?> NullableString = new NullableStringDataAccessor();
@@ -45,6 +47,14 @@ namespace Sylvan.Data
 			public double Get(IDataRecord r, int ordinal)
 			{
 				return r.GetDouble(ordinal);
+			}
+		}
+
+		sealed class FloatDataAccessor : IDataAccessor<float>
+		{
+			public float Get(IDataRecord r, int ordinal)
+			{
+				return r.GetFloat(ordinal);
 			}
 		}
 
@@ -79,6 +89,15 @@ namespace Sylvan.Data
 			{
 				if (r.IsDBNull(ordinal)) return null;
 				return r.GetInt64(ordinal);
+			}
+		}
+
+		sealed class NullableFloatDataAccessor : IDataAccessor<float?>
+		{
+			public float? Get(IDataRecord r, int ordinal)
+			{
+				if (r.IsDBNull(ordinal)) return null;
+				return r.GetFloat(ordinal);
 			}
 		}
 
@@ -133,8 +152,14 @@ namespace Sylvan.Data
 		readonly DataSeriesColumn<TK>[] cols;
 		readonly IDataAccessor<TV> getter;
 
+		readonly TK[] keys;
+
+		public IReadOnlyList<TK> Keys => keys;
+
 		public TK Minimum { get; }
 		public TK Maximum { get; }
+
+		public int ColumnCount => keys.Length;
 
 		static IDataAccessor<TV> GetAccessor(Type t)
 		{
@@ -142,6 +167,8 @@ namespace Sylvan.Data
 				return (IDataAccessor<TV>)DataAccessor.Int32;
 			if (t == typeof(long))
 				return (IDataAccessor<TV>)DataAccessor.Int64;
+			if (t == typeof(float))
+				return (IDataAccessor<TV>)DataAccessor.Float;
 			if (t == typeof(double))
 				return (IDataAccessor<TV>)DataAccessor.Double;
 			if (t == typeof(decimal))
@@ -150,13 +177,15 @@ namespace Sylvan.Data
 				return (IDataAccessor<TV>)DataAccessor.String;
 
 			if (t == typeof(int?))
-				return (IDataAccessor<TV>)DataAccessor.Int32;
+				return (IDataAccessor<TV>)DataAccessor.NullableInt32;
 			if (t == typeof(long?))
-				return (IDataAccessor<TV>)DataAccessor.Int64;
+				return (IDataAccessor<TV>)DataAccessor.NullableInt64;
+			if (t == typeof(float?))
+				return (IDataAccessor<TV>)DataAccessor.NullableFloat;
 			if (t == typeof(double?))
-				return (IDataAccessor<TV>)DataAccessor.Double;
+				return (IDataAccessor<TV>)DataAccessor.NullableDouble;
 			if (t == typeof(decimal?))
-				return (IDataAccessor<TV>)DataAccessor.Decimal;
+				return (IDataAccessor<TV>)DataAccessor.NullableDecimal;
 
 			throw new NotSupportedException();
 		}
@@ -164,11 +193,11 @@ namespace Sylvan.Data
 		public DataSeriesAccessor(IEnumerable<DataSeriesColumn<TK>> columns)
 		{
 			this.cols = columns.OrderBy(c => c.Key).ToArray();
+			this.keys = cols.Select(c => c.Key).ToArray();
 			this.getter = GetAccessor(typeof(TV));
-			
+
 			this.Minimum = columns.Select(c => c.Key).Min()!;
 			this.Maximum = columns.Select(c => c.Key).Max()!;
-
 		}
 
 		public IEnumerable<KeyValuePair<TK, TV>> GetSeries(IDataRecord record)
@@ -181,8 +210,6 @@ namespace Sylvan.Data
 				yield return new KeyValuePair<TK, TV>(c.Key, value);
 			}
 		}
-
-		public int ColumnCount => cols.Length;
 
 		public IEnumerable<TK> GetKeys()
 		{

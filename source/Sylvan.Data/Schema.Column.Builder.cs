@@ -30,7 +30,7 @@ namespace Sylvan.Data
 				public Builder(string name, DbType commonType, bool allowNull = true)
 					: this()
 				{
-					var type = GetDataType(commonType);
+					var type = DataBinder.GetDataType(commonType);
 					this.SetType(type);
 					this.CommonDataType = commonType;
 					this.ColumnName = name;
@@ -42,7 +42,7 @@ namespace Sylvan.Data
 					this.DataType = type;
 					this.DataTypeName = type.Name;
 					this.NumericScale = 0;
-					this.CommonDataType = GetDbType(type);
+					this.CommonDataType = DataBinder.GetDbType(type);
 
 					switch (Type.GetTypeCode(type))
 					{
@@ -346,93 +346,6 @@ namespace Sylvan.Data
 					column = null;
 					return col;
 				}
-
-
-				internal static Type GetDataType(DbType type)
-				{
-					switch (type)
-					{
-						case DbType.Boolean:
-							return typeof(bool);
-						case DbType.Byte: 
-							return typeof(byte);
-						case DbType.Int16: 
-							return typeof(short);
-						case DbType.Int32: 
-							return typeof(int);
-						case DbType.Int64: 
-							return typeof(long);
-						case DbType.Single: 
-							return typeof(float);
-						case DbType.Double: 
-							return typeof(double);
-						case DbType.Decimal:
-						case DbType.VarNumeric:
-						case DbType.Currency:
-							return typeof(decimal);
-						case DbType.String:
-						case DbType.StringFixedLength:
-						case DbType.AnsiString:
-						case DbType.AnsiStringFixedLength:
-							return typeof(string);
-						case DbType.Binary: 
-							return typeof(byte[]);
-						case DbType.Guid: 
-							return typeof(Guid);
-						case DbType.DateTime:
-						case DbType.DateTime2:
-						case DbType.Date: 
-							return typeof(DateTime);
-					}
-					throw new NotSupportedException();
-				}
-
-				internal static DbType? GetDbType(Type? type)
-				{
-					switch (Type.GetTypeCode(type))
-					{
-						case TypeCode.Boolean:
-							return DbType.Boolean;
-						case TypeCode.Byte:
-							return DbType.Byte;
-						case TypeCode.Char:
-							return DbType.StringFixedLength;
-						case TypeCode.Int16:
-						case TypeCode.SByte:
-							return DbType.Int16;
-						case TypeCode.Int32:
-						case TypeCode.UInt16:
-							return DbType.Int32;
-						case TypeCode.Int64:
-						case TypeCode.UInt32:
-							return DbType.Int64;
-						case TypeCode.Single:
-							return DbType.Single;
-						case TypeCode.Double:
-							return DbType.Double;
-						case TypeCode.Decimal:
-							return DbType.Decimal;
-						case TypeCode.String:
-							//more?
-							return DbType.String;
-						case TypeCode.DateTime:
-							//more?
-							return DbType.DateTime;
-					}
-
-					if (type == typeof(byte[]))
-					{
-						return DbType.Binary;
-					}
-
-					if (type == typeof(Guid))
-					{
-						return DbType.Guid;
-					}
-					return null;
-				}
-
-				
 			}
 		}
 	}

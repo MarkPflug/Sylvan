@@ -40,7 +40,9 @@ namespace Sylvan.Data
 				map.Add(type.ToString(), type);
 			}
 			map.Add("bool", DbType.Boolean);
+			map.Add("short", DbType.Int16);
 			map.Add("int", DbType.Int32);
+			map.Add("integer", DbType.Int32);
 			map.Add("long", DbType.Int64);
 			map.Add("float", DbType.Single);
 			return map;
@@ -96,14 +98,14 @@ namespace Sylvan.Data
 					}
 
 					var cb = new Schema.Column.Builder(name, type, allowNull)
-						{
-							BaseColumnName = baseName,
-							ColumnSize = size == -1 ? null : (int?)size,
-							Format = format
-						};
+					{
+						BaseColumnName = baseName,
+						ColumnSize = size == -1 ? null : (int?)size,
+						Format = format
+					};
 
 					// if the column represents a series.
-					if(name.EndsWith(SeriesSymbol))
+					if (name.EndsWith(SeriesSymbol))
 					{
 						cb.IsSeries = true;
 						cb.ColumnName = "";
@@ -112,7 +114,19 @@ namespace Sylvan.Data
 						cb.SeriesName = name.Substring(0, name.Length - 1);
 						if (cb.BaseColumnName != null)
 						{
-							cb.SeriesType = cb.BaseColumnName!.Contains(Schema.DateSeriesMarker) ? typeof(DateTime) : typeof(int);
+							var m = DataBinder.SeriesKeyRegex.Match(cb.BaseColumnName);
+							if (m.Success)
+							{
+								var seriesTypeName = m.Groups[1].Value;
+								if (ColumnTypeMap.Value.TryGetValue(seriesTypeName, out DbType t))
+								{
+									cb.SeriesType = DataBinder.GetDataType(t);
+								}
+								else
+								{
+									throw new ArgumentException();
+								}
+							}
 						}
 					}
 
@@ -219,8 +233,8 @@ namespace Sylvan.Data
 					w.Write(col.Format);
 					w.Write("}");
 				}
-			}			
-		}				
+			}
+		}
 
 		static bool HasLength(DbType type)
 		{

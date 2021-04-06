@@ -1,5 +1,6 @@
 ﻿using Sylvan.Data.Csv;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Data;
 using System.Data.Common;
@@ -28,14 +29,22 @@ namespace Sylvan.Data
 		public int Id { get; private set; }
 		public string Name { get; private set; }
 		//[ColumnSeries("{Integer}")]
-		public Series<int> Values { get; private set; }
+		public Series<int,int> Values { get; private set; }
+	}
+
+	class SeriesStringRecord
+	{
+		public int Id { get; private set; }
+		public string Name { get; private set; }
+		//[ColumnSeries("{Integer}")]
+		public Series<string, int> Values { get; private set; }
 	}
 
 	class SeriesDateRecord
 	{
 		public int Id { get; set; }
 		public string Name { get; set; }
-		public DateSeries<int> Values { get; set; }
+		public Series<DateTime,int> Values { get; set; }
 	}
 
 	enum Severity
@@ -250,6 +259,27 @@ namespace Sylvan.Data
 		}
 
 		[Fact]
+		public void SeriesString()
+		{
+			var schema = Schema.Parse("Id:int,Name,{string}>Values*:int");
+			var cols = schema.GetColumnSchema();
+
+			var csvData = "Id,Name,1,2,3\n1,Test,7,8,9\n2,abc,11,12,13\n";
+			var tr = new StringReader(csvData);
+			var opts = new CsvDataReaderOptions() { Schema = new CsvSchema(cols) };
+			DbDataReader data = CsvDataReader.Create(tr, opts);
+
+			var binder = DataBinder.Create<SeriesStringRecord>(data, schema);
+
+			Assert.True(data.Read());
+			var item = binder.GetRecord(data);
+			Assert.Equal(new[] { 7, 8, 9 }, item.Values.Values);
+			Assert.True(data.Read());
+			item = binder.GetRecord(data);
+			Assert.Equal(new[] { 11, 12, 13 }, item.Values.Values);
+		}
+
+		[Fact]
 		public void SeriesDate()
 		{
 			var schemaSpec = "Id:int,Name,{Date}>Values*:int";
@@ -259,8 +289,8 @@ namespace Sylvan.Data
 			var csvData = "Id,Name,2020-09-19,2020-09-20,2020-09-21,2020-09-22\n1,Test,7,8,9,10\n";
 			var tr = new StringReader(csvData);
 			var opts = new CsvDataReaderOptions() { Schema = new CsvSchema(schema) };
-			DbDataReader data = CsvDataReader.Create(tr, opts);
-			var binder = DataBinder.Create<SeriesDateRecord>(data);
+			var data = CsvDataReader.Create(tr, opts);
+			var binder = DataBinder.Create<SeriesDateRecord>(data, schema);
 
 			while (data.Read())
 			{
@@ -283,7 +313,7 @@ namespace Sylvan.Data
 			var item = binder.GetRecord(data);
 			Assert.Equal(1, item.Id);
 			Assert.Equal("Test", item.Name);
-			Assert.Equal(new[] { 7, 8, 9 }, item.Values.Select(p => p.Value));
+			Assert.Equal(new[] { 7, 8, 9 }, item.Values.Values);
 		}
 
 		sealed class ManualBinder : IDataBinder<SeriesDateRecord>
@@ -307,7 +337,7 @@ namespace Sylvan.Data
 			{
 				item.Id = record.GetInt32(idIdx);
 				item.Name = record.GetString(nameIdx);
-				item.Values = new DateSeries<int>(this.series0.Minimum, this.series0.GetValues(record));
+				item.Values = new Series<DateTime, int>(this.series0, record);
 			}
 		}
 

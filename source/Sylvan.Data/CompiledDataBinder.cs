@@ -66,8 +66,8 @@ namespace Sylvan.Data
 				}
 			}
 
-			logicalSchema
-				.Where(c => !string.IsNullOrEmpty(c.ColumnName));
+			//logicalSchema
+			//	.Where(c => !string.IsNullOrEmpty(c.ColumnName));
 
 			var seriesMap =
 				logicalSchema
@@ -104,7 +104,7 @@ namespace Sylvan.Data
 			var recordParam = Expression.Parameter(drType);
 			var contextParam = Expression.Parameter(typeof(BinderContext));
 			var itemParam = Expression.Parameter(recordType);
-			var localsMap = new Dictionary<Type, ParameterExpression>();
+			//var localsMap = new Dictionary<Type, ParameterExpression>();
 			var locals = new List<ParameterExpression>();
 			var bodyExpressions = new List<Expression>();
 
@@ -393,28 +393,20 @@ namespace Sylvan.Data
 					)
 				);
 
-			Type seriesType =
-				column.SeriesType == typeof(DateTime)
-				? typeof(DateSeries<>)
-				: typeof(Series<>);
+			Type seriesType = property.PropertyType;
 
-			seriesType = seriesType.MakeGenericType(column.DataType!);
+			var seriesCtor = seriesType.GetConstructor(new Type[] { seriesAccType, typeof(IDataRecord) });
 
-			var seriesCtor = seriesType.GetConstructor(new Type[] { column.SeriesType!, typeof(IEnumerable<>).MakeGenericType(column.DataType!) })!;
+			if(seriesCtor == null)
+			{
+				throw new Exception($"Type {seriesType} does not have an appropriate constructor.");
+			}
 
-			// TODO: push this down as a constructor on Series?
 			var ctorExpr =
 				Expression.New(
 					seriesCtor,
-					Expression.Property(
-						accLocal,
-						seriesAccType.GetProperty("Minimum")!
-					),
-					Expression.Call(
-						accLocal,
-						seriesAccType.GetMethod("GetValues")!,
-						recordParam
-					)
+					accLocal,
+					recordParam
 				);
 
 			var setExpr = Expression.Call(itemParam, setter, ctorExpr);
@@ -438,7 +430,8 @@ namespace Sylvan.Data
 
 		enum ConversionType
 		{
-			// conversion is not supported or uses a constu
+			// conversion is not supported
+			// might be handled otherwise by a constructor
 			NotSupported = 0,
 			// no op
 			Identity = 1,
@@ -579,88 +572,14 @@ namespace Sylvan.Data
 			}
 
 			return null;
-			//var dstCtor = dstType.GetConstructor(new Type[] { typeof(string), typeof(IFormatProvider) });
-			//if (dstCtor != null)
-			//{
-			//	return Expression.New(dstCtor, expr, cultureInfoExpr);
-			//}
-			//dstType.GetConstructor(new Type[] { typeof(string) });
-			//if (dstCtor != null)
-			//{
-			//	return Expression.New(dstCtor, expr);
-			//}
 		}
 
 		static object GetDataSeriesAccessor(Schema.Column seriesCol, ReadOnlyCollection<DbColumn> physicalSchema)
 		{
 			var method = typeof(DataBinder).GetMethod("GetSeriesAccessor", BindingFlags.Static | BindingFlags.NonPublic);
-			method = method.MakeGenericMethod(new Type[] { seriesCol.DataType! });
+			method = method.MakeGenericMethod(new Type[] { seriesCol.SeriesType! });
 			return method.Invoke(null, new object[] { seriesCol, physicalSchema });
 		}
-
-		//static object GetDateSeriesAccessor(Schema.Column seriesCol, ReadOnlyCollection<DbColumn> physicalSchema)
-		//{
-		//	var fmt = seriesCol.SeriesHeaderFormat ?? Schema.DateSeriesMarker; //asdf{Date}qwer => ^asdf(.+)qwer$
-
-		//	var accessorType = typeof(DataSeriesAccessor<,>).MakeGenericType(typeof(DateTime), seriesCol.DataType!);
-		//	var cols = new List<DataSeriesColumn<DateTime>>();
-		//	var i = fmt.IndexOf(Schema.DateSeriesMarker, StringComparison.OrdinalIgnoreCase);
-
-		//	var prefix = fmt.Substring(0, i);
-		//	var suffix = fmt.Substring(i + Schema.DateSeriesMarker.Length);
-		//	var pattern = "^" + Regex.Escape(prefix) + "(.+)" + Regex.Escape(suffix) + "$";
-
-		//	var regex = new Regex(pattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-		//	foreach (var col in physicalSchema)
-		//	{
-		//		var name = col.ColumnName;
-		//		var match = regex.Match(name);
-		//		if (match.Success)
-		//		{
-		//			var dateStr = match.Captures[0].Value;
-		//			DateTime d;
-		//			if (DateTime.TryParse(dateStr, out d))
-		//			{
-		//				var ordinal = col.ColumnOrdinal!.Value;
-		//				cols.Add(new DataSeriesColumn<DateTime>(name, d, ordinal));
-		//			}
-		//		}
-		//	}
-
-		//	return Activator.CreateInstance(accessorType, cols)!;
-		//}
-
-		//static object GetIntSeriesAccessor(Schema.Column seriesCol, ReadOnlyCollection<DbColumn> physicalSchema)
-		//{
-		//	var fmt = seriesCol.SeriesHeaderFormat ?? Schema.IntegerSeriesMarker; //col{Integer} => ^col(\d+)$
-
-		//	var accessorType = typeof(DataSeriesAccessor<,>).MakeGenericType(typeof(int), seriesCol.DataType!);
-		//	var cols = new List<DataSeriesColumn<int>>();
-		//	var i = fmt.IndexOf(Schema.IntegerSeriesMarker, StringComparison.OrdinalIgnoreCase);
-
-		//	var prefix = fmt.Substring(0, i);
-		//	var suffix = fmt.Substring(i + Schema.IntegerSeriesMarker.Length);
-		//	var pattern = "^" + Regex.Escape(prefix) + "(\\d+)" + Regex.Escape(suffix) + "$";
-
-		//	var regex = new Regex(pattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-		//	foreach (var col in physicalSchema)
-		//	{
-		//		var name = col.ColumnName;
-		//		var match = regex.Match(name);
-		//		if (match.Success)
-		//		{
-		//			var intStr = match.Captures[0].Value;
-		//			int d;
-		//			if (int.TryParse(intStr, out d))
-		//			{
-		//				var ordinal = col.ColumnOrdinal!.Value;
-		//				cols.Add(new DataSeriesColumn<int>(name, d, ordinal));
-		//			}
-		//		}
-		//	}
-
-		//	return Activator.CreateInstance(accessorType, cols)!;
-		//}
 
 		void IDataBinder<T>.Bind(IDataRecord record, T item)
 		{
@@ -669,4 +588,6 @@ namespace Sylvan.Data
 			recordBinderFunction(record, context, item);
 		}
 	}
+
+	
 }

@@ -96,8 +96,32 @@ namespace Sylvan.Data
 			}
 		}
 
+		internal static readonly Regex SeriesKeyRegex = new Regex(@"\{(.+)\}");
 
-		static readonly Regex SeriesKeyRegex = new Regex(@"\{.+\}");
+		interface IOption<out T>
+		{
+			public bool Success { get; }
+			public T? Value { get; }
+
+		}
+
+		class Option<T> : IOption<T>
+		{
+			public bool b;
+			public T? v;
+
+			public Option(bool b, T? v)
+			{
+				this.b = b;
+				this.v = v;
+			}
+
+			public bool Success => b;
+			public T? Value => v;
+		}
+
+		
+
 		// CALLED VIA REFLECTION DO NOT DELETE
 		static object GetSeriesAccessor<TK>(Schema.Column seriesCol, ReadOnlyCollection<DbColumn> physicalSchema)
 		{
@@ -122,12 +146,32 @@ namespace Sylvan.Data
 			}
 
 			var pattern = "^" + Regex.Escape(prefix) + "(.+)" + Regex.Escape(suffix) + "$";
+			Func<string, IOption<TK>> f;
+			object?[] args = new object[2];
+			if (type == typeof(string))
+			{
+				f = (s) => (IOption<TK>)new Option<string>(true, s);
+			}
+			else
+			{
+				var parseMethod = type.GetMethod("TryParse", BindingFlags.Static | BindingFlags.Public, null, new Type[] { typeof(string), type.MakeByRefType() }, null);
+				
+				f = (s) =>
+				{
+					var parse = parseMethod;
+					args[0] = s;
+					args[1] = null;
+					var success = (bool)parse.Invoke(null, args);
+					if (success)
+					{
+						return new Option<TK>(true, (TK)args[1]!);
+					}
+					return new Option<TK>(false, default);
+				};				
+			}
 
 			var regex = new Regex(pattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-
-			var parseMethod = type.GetMethod("TryParse", BindingFlags.Static | BindingFlags.Public, null, new Type[] { typeof(string), type.MakeByRefType() }, null);
-
-			object?[] args = new object[2];
+			
 			foreach (var col in physicalSchema)
 			{
 				var name = col.ColumnName;
@@ -135,19 +179,100 @@ namespace Sylvan.Data
 				if (match.Success)
 				{
 					var keyStr = match.Captures[0].Value;
-					args[0] = keyStr;
-					args[1] = null;
-					var success = (bool)parseMethod.Invoke(null, args);
-					if (success)
+					var r = f(keyStr);
+					if (r.Success)
 					{
-						var key = (TK)args[1]!;
 						var ordinal = col.ColumnOrdinal!.Value;
-						cols.Add(new DataSeriesColumn<TK>(name, key, ordinal));
+						cols.Add(new DataSeriesColumn<TK>(name, r.Value!, ordinal));
 					}
 				}
 			}
 
 			return Activator.CreateInstance(accessorType, cols)!;
+		}
+
+		internal static Type GetDataType(DbType type)
+		{
+			switch (type)
+			{
+				case DbType.Boolean:
+					return typeof(bool);
+				case DbType.Byte:
+					return typeof(byte);
+				case DbType.Int16:
+					return typeof(short);
+				case DbType.Int32:
+					return typeof(int);
+				case DbType.Int64:
+					return typeof(long);
+				case DbType.Single:
+					return typeof(float);
+				case DbType.Double:
+					return typeof(double);
+				case DbType.Decimal:
+				case DbType.VarNumeric:
+				case DbType.Currency:
+					return typeof(decimal);
+				case DbType.String:
+				case DbType.StringFixedLength:
+				case DbType.AnsiString:
+				case DbType.AnsiStringFixedLength:
+					return typeof(string);
+				case DbType.Binary:
+					return typeof(byte[]);
+				case DbType.Guid:
+					return typeof(Guid);
+				case DbType.DateTime:
+				case DbType.DateTime2:
+				case DbType.Date:
+					return typeof(DateTime);
+			}
+			throw new NotSupportedException();
+		}
+
+		internal static DbType? GetDbType(Type? type)
+		{
+			switch (Type.GetTypeCode(type))
+			{
+				case TypeCode.Boolean:
+					return DbType.Boolean;
+				case TypeCode.Byte:
+					return DbType.Byte;
+				case TypeCode.Char:
+					return DbType.StringFixedLength;
+				case TypeCode.Int16:
+				case TypeCode.SByte:
+					return DbType.Int16;
+				case TypeCode.Int32:
+				case TypeCode.UInt16:
+					return DbType.Int32;
+				case TypeCode.Int64:
+				case TypeCode.UInt32:
+					return DbType.Int64;
+				case TypeCode.Single:
+					return DbType.Single;
+				case TypeCode.Double:
+					return DbType.Double;
+				case TypeCode.Decimal:
+					return DbType.Decimal;
+				case TypeCode.String:
+					//more?
+					return DbType.String;
+				case TypeCode.DateTime:
+					//more?
+					return DbType.DateTime;
+			}
+
+			if (type == typeof(byte[]))
+			{
+				return DbType.Binary;
+			}
+
+			if (type == typeof(Guid))
+			{
+				return DbType.Guid;
+			}
+			return null;
 		}
 	}
 }
