@@ -2,7 +2,6 @@
 
 namespace Sylvan.Data
 {
-
 	public sealed class InvalidEnumValueDataBinderException : FormatException
 	{
 		public string Value { get; }

@@ -27,7 +27,7 @@ namespace Sylvan.Data
 	{
 		public int Id { get; private set; }
 		public string Name { get; private set; }
-		[ColumnSeries("{Integer}")]
+		//[ColumnSeries("{Integer}")]
 		public Series<int> Values { get; private set; }
 	}
 
@@ -255,9 +255,7 @@ namespace Sylvan.Data
 			var schemaSpec = "Id:int,Name,{Date}>Values*:int";
 			var schema = Schema.Parse(schemaSpec);
 			var cols = schema.GetColumnSchema();
-
 			
-
 			var csvData = "Id,Name,2020-09-19,2020-09-20,2020-09-21,2020-09-22\n1,Test,7,8,9,10\n";
 			var tr = new StringReader(csvData);
 			var opts = new CsvDataReaderOptions() { Schema = new CsvSchema(schema) };
@@ -327,6 +325,47 @@ namespace Sylvan.Data
 		static Action<T> BuildBinder<T, TS, TD>(Func<TS> getter, Func<TS, TD> converter, Action<T, TD> setter)
 		{
 			return (T a) => setter(a, converter(getter()));
+		}
+
+		[Fact]
+		public void BindContructorTests()
+		{
+			var dataStr = "Id,Name,Data,Version\n1,a,0x1234,1.2.3.4";
+			var schema = 
+				new Schema.Builder()
+				.Add<int>()
+				.Add<string>()
+				.Add<byte[]>()
+				.Add<string>()
+				.Build();
+
+			var data = CsvDataReader.Create(new StringReader(dataStr), new CsvDataReaderOptions { Schema = new CsvSchema(schema), BinaryEncoding = BinaryEncoding.Hexadecimal });
+			var binder = DataBinder.Create<Simple>(data, new DataBinderOptions { BindingMode = DataBindMode.Neither });
+			Assert.True(data.Read());
+			var r = binder.GetRecord(data);
+			Assert.Equal(1, r.Id);
+			Assert.Equal("a", r.Name);
+			Assert.Equal(2, r.Data.data.Length);
+			Assert.Equal(0x12, r.Data.data[0]);
+			Assert.Equal(0x34, r.Data.data[1]);
+			Assert.Equal(new Version(1, 2, 3, 4), r.Version);
+		}
+	}
+
+	class Simple
+	{
+		public int Id { get; private set; }
+		public string Name { get; private set; }
+		public SomeData Data { get; private set; }
+		public Version Version { get; private set; }
+	}
+
+	class SomeData
+	{
+		public byte[] data;
+		public SomeData(byte[] data)
+		{
+			this.data = data;
 		}
 	}
 }

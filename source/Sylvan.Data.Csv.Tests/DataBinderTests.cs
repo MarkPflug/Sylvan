@@ -12,7 +12,7 @@ namespace Sylvan.Data.Csv
 			public int UID { get; set; }
 			public string Admin2 { get; set; }
 			public string Province_State { get; set; }
-			[ColumnSeries("{Date}")]
+			//[ColumnSeries("{Date}")]
 			public DateSeries<int> Values { get; set; }
 		}
 

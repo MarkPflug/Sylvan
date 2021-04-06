@@ -6,18 +6,18 @@ using System.Globalization;
 
 namespace Sylvan.Data
 {
-	[AttributeUsage(AttributeTargets.Property | AttributeTargets.Field)]
-	public sealed class ColumnSeriesAttribute : Attribute
-	{
-		public string? SeriesPattern { get; }
+	//[AttributeUsage(AttributeTargets.Property | AttributeTargets.Field)]
+	//public sealed class ColumnSeriesAttribute : Attribute
+	//{
+	//	public string? SeriesPattern { get; }
 
-		public ColumnSeriesAttribute() { }
+	//	public ColumnSeriesAttribute() { }
 
-		public ColumnSeriesAttribute(string seriesPattern)
-		{
-			this.SeriesPattern = seriesPattern;
-		}
-	}
+	//	public ColumnSeriesAttribute(string seriesPattern)
+	//	{
+	//		this.SeriesPattern = seriesPattern;
+	//	}
+	//}
 
 	public static class DataBinderExtensions
 	{
@@ -59,13 +59,16 @@ namespace Sylvan.Data
 		// TODO: should this even exist? or should I have a way to auto-map the schema?
 		public Func<string, int, string?>? ColumnNamer { get; set; }
 
-		public DataBindMode BindMode { get; set; }
+		/// <summary>
+		/// Indicates how the data source will bind to the target type.
+		/// </summary>
+		public DataBindMode BindingMode { get; set; }
 
 		public DataBinderOptions()
 		{
 			this.Culture = CultureInfo.InvariantCulture;
 			this.ColumnNamer = DataBinder.DefaultNameMapping;
-			this.BindMode = DataBindMode.Neither;
+			this.BindingMode = DataBindMode.Neither;
 		}
 	}
 
