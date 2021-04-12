@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
@@ -162,9 +163,22 @@ namespace Sylvan.Data
 	}
 
 	/// <summary>
+	/// Allows access to the range and values of keys in a data series.
+	/// </summary>
+	/// <typeparam name="TK"></typeparam>
+	public interface IDataSeriesRange<TK> : IReadOnlyList<TK>
+	{
+		IReadOnlyList<TK> Keys { get; }
+		TK Minimum { get; }
+		TK Maximum { get; }
+	}
+
+	/// <summary>
 	/// Reads a series of columns from a DbDataReader that all have the same type.
 	/// </summary>
-	public sealed class DataSeriesAccessor<TK, TV> where TK : IComparable<TK>
+	public sealed class DataSeriesAccessor<TK, TV> 
+		: IDataSeriesRange<TK>
+		where TK : IComparable<TK>
 	{
 		//readonly bool allowNull;
 		readonly DataSeriesColumn<TK>[] cols;
@@ -177,10 +191,15 @@ namespace Sylvan.Data
 		/// </summary>
 		public IReadOnlyList<TK> Keys => keys;
 
+		public TK Minimum => keys[0];
+		public TK Maximum => keys[keys.Length - 1];
+
 		/// <summary>
-		/// Gets the number of columns in the series.
+		/// Gets the number of elements in the series.
 		/// </summary>
-		public int ColumnCount => keys.Length;
+		public int Count => keys.Length;
+
+		public TK this[int index] => keys[index];
 
 		static IDataAccessor<TV> GetAccessor(Type t)
 		{
@@ -251,6 +270,16 @@ namespace Sylvan.Data
 				var value = getter.Get(record, o);
 				yield return value;
 			}
+		}
+
+		public IEnumerator<TK> GetEnumerator()
+		{
+			return this.Keys.GetEnumerator();
+		}
+
+		IEnumerator IEnumerable.GetEnumerator()
+		{
+			return this.GetEnumerator();
 		}
 	}
 }

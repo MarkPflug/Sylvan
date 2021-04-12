@@ -12,11 +12,22 @@ using System.Runtime.Serialization;
 
 namespace Sylvan.Data
 {
-	sealed class CompiledDataBinder<T> : IDataBinder<T>
+	sealed class CompiledDataBinder<T> 
+		: IDataBinder<T>, IDataSeriesBinder
 	{
+
+		object? IDataSeriesBinder.GetSeriesAccessor(string seriesName)
+		{
+			if(this.seriesAccessors != null && this.seriesAccessors.TryGetValue(seriesName, out object val)) {
+				return val;
+			}
+			return null;
+		}
+
 		readonly Action<IDataRecord, BinderContext, T> recordBinderFunction;
 		readonly object[] state;
 		readonly CultureInfo cultureInfo;
+		Dictionary<string, object>? seriesAccessors;
 
 		//static readonly Type drType = typeof(IDataRecord);
 
@@ -394,7 +405,7 @@ namespace Sylvan.Data
 			this.recordBinderFunction = lf.Compile();
 		}
 
-		static Expression BindSeries(
+		Expression BindSeries(
 			PropertyInfo property,
 			Schema.Column column,
 			HashSet<DbColumn> physicalSchema,
@@ -406,14 +417,12 @@ namespace Sylvan.Data
 		{
 			Debug.Assert(column.IsSeries == true);
 
-			// TODO: potentially use the properties dynamically instead of depending on the type here? 
-			// Not of much value probably.
-
-			// TODO: I don't like that I'm special-casing the Sylvan.Data.Series type here.
-			// Can this be done in a more generic way that would support BYO type?
-			//var sct = Type.GetTypeCode(column.SeriesType);
-
 			object seriesAccessor = GetDataSeriesAccessor(column, physicalSchema, out var bound);
+			var seriesName = column.SeriesName;
+			if (this.seriesAccessors == null)
+				this.seriesAccessors = new Dictionary<string, object>();
+			this.seriesAccessors.Add(seriesName ?? string.Empty, seriesAccessor);
+
 			foreach (var item in bound)
 			{
 				physicalSchema.Remove(item);

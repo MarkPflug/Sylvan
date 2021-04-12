@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.ObjectModel;
 using System.Data;
 using System.Data.Common;
@@ -24,9 +25,42 @@ namespace Sylvan.Data
 			}
 			return t;
 		}
+
+		public static IDataSeriesRange<TK>? GetSeriesRange<TK>(this IDataBinder binder, string seriesName)
+		{
+			if (binder is IDataSeriesBinder b)
+			{
+				var acc = b.GetSeriesAccessor(seriesName);
+				if (acc != null)
+				{
+					return (IDataSeriesRange<TK>)acc;
+				}
+			}
+			return null;
+		}
+
+		//public static IEnumerable? GetSeriesRange(this IDataBinder binder, string seriesName)
+		//{
+		//	seriesName = seriesName ?? "";
+		//	if (binder is IDataSeriesBinder b)
+		//	{
+		//		var acc = b.GetSeriesAccessor(seriesName);
+		//		return (IEnumerable?)acc;
+		//	}
+		//	return null;
+		//}
 	}
 
-	public interface IDataBinder<T>
+	public interface IDataBinder
+	{
+	}
+
+	interface IDataSeriesBinder
+	{
+		object? GetSeriesAccessor(string seriesName);
+	}
+
+	public interface IDataBinder<T> : IDataBinder
 	{
 		void Bind(IDataRecord record, T item);
 	}

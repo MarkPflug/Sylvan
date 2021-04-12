@@ -1,12 +1,10 @@
 ﻿using Sylvan.Data.Csv;
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Data;
 using System.Data.Common;
 using System.IO;
 using System.Linq;
-using System.Runtime.Serialization;
 using Xunit;
 
 namespace Sylvan.Data
@@ -259,6 +257,42 @@ namespace Sylvan.Data
 		}
 
 		[Fact]
+		public void SeriesRangeAccessor()
+		{
+			var schema = Schema.Parse("Id:int,Name,{Integer}>Values*:int");
+			var cols = schema.GetColumnSchema();
+
+			var csvData = "Id,Name,1,2,3\n1,Test,7,8,9\n2,abc,11,12,13\n";
+			var tr = new StringReader(csvData);
+			var opts = new CsvDataReaderOptions() { Schema = new CsvSchema(cols) };
+			DbDataReader data = CsvDataReader.Create(tr, opts);
+
+			var binder = DataBinder.Create<SeriesRecord>(data, schema);
+			var range = binder.GetSeriesRange<int>("Values");
+
+			Assert.Equal(1, range.Minimum);
+			Assert.Equal(3, range.Maximum);
+		}
+
+		[Fact]
+		public void SeriesUnnamedRangeAccessor()
+		{
+			var schema = Schema.Parse("Id:int,Name,{Integer}>*:int");
+			var cols = schema.GetColumnSchema();
+
+			var csvData = "Id,Name,1,2,3\n1,Test,7,8,9\n2,abc,11,12,13\n";
+			var tr = new StringReader(csvData);
+			var opts = new CsvDataReaderOptions() { Schema = new CsvSchema(cols) };
+			DbDataReader data = CsvDataReader.Create(tr, opts);
+
+			var binder = DataBinder.Create<SeriesRecord>(data, schema);
+			var range = binder.GetSeriesRange<int>("");
+
+			Assert.Equal(1, range.Minimum);
+			Assert.Equal(3, range.Maximum);
+		}
+
+		[Fact]
 		public void SeriesString()
 		{
 			var schema = Schema.Parse("Id:int,Name,{string}>Values*:int");
@@ -426,7 +460,7 @@ namespace Sylvan.Data
 				.Build();
 
 			var data = CsvDataReader.Create(new StringReader(dataStr), new CsvDataReaderOptions { Schema = new CsvSchema(schema), BinaryEncoding = BinaryEncoding.Hexadecimal });
-			var binder = DataBinder.Create<Simple>(data, new DataBinderOptions { BindingMode = DataBindingMode.Neither });
+			var binder = DataBinder.Create<Simple>(data, new DataBinderOptions { BindingMode = DataBindingMode.Any});
 			Assert.True(data.Read());
 			var r = binder.GetRecord(data);
 			Assert.Equal(1, r.Id);

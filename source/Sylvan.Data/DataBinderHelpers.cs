@@ -101,7 +101,6 @@ namespace Sylvan.Data
 		{
 			public bool Success { get; }
 			public T? Value { get; }
-
 		}
 
 		class Option<T> : IOption<T>
@@ -119,9 +118,9 @@ namespace Sylvan.Data
 			public T? Value => v;
 		}
 
-		
-
 		// CALLED VIA REFLECTION DO NOT DELETE
+		// identifies all the columns that belong to a series and determines the series key for
+		// each column and produces a concrete DataSeriesAccessor<,> 
 		static object GetSeriesAccessor<TK>(Schema.Column seriesCol, IEnumerable<DbColumn> physicalSchema, out IEnumerable<DbColumn> boundColumns)
 		{
 			var boundCols = new List<DbColumn>();
