@@ -42,20 +42,17 @@ namespace Sylvan.Data
 		//public bool ReaderAllowsDynamicAccess { get; set; }
 		public CultureInfo Culture { get; set; }
 
-#warning how do I name this?
-		// TODO: should this even exist? or should I have a way to auto-map the schema?
-		public Func<string, int, string?>? ColumnNamer { get; set; }
-
 		/// <summary>
 		/// Indicates how the data source will bind to the target type.
+		/// Defaults to <see cref="DataBindingMode.AllProperties"/> which requires that
+		/// the datasource have column that binds to each property, but would allow unbound columns.
 		/// </summary>
 		public DataBindingMode BindingMode { get; set; }
 
 		public DataBinderOptions()
 		{
 			this.Culture = CultureInfo.InvariantCulture;
-			this.ColumnNamer = DataBinder.DefaultNameMapping;
-			this.BindingMode = DataBindingMode.Neither;
+			this.BindingMode = DataBindingMode.AllProperties;
 		}
 	}
 

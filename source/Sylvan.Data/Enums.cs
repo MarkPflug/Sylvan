@@ -9,9 +9,9 @@ namespace Sylvan.Data
 	public enum DataBindingMode
 	{
 		/// <summary>
-		/// Allows unbound properties and columns.
+		/// Allows any combination of unbound properties and columns.
 		/// </summary>
-		Neither = 0,
+		Any = 0,
 		/// <summary>
 		/// Requires all properties be bound to a column.
 		/// </summary>
@@ -23,6 +23,6 @@ namespace Sylvan.Data
 		/// <summary>
 		/// Requires that all columns and all properties be bound.
 		/// </summary>
-		Both = 3,
+		All = 3,
 	}
 }

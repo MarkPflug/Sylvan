@@ -69,9 +69,9 @@ namespace Sylvan.Data
 		{
 			var schema =
 				new Schema.Builder()
-				.Add<int>()
-				.Add<string>()
-				.Add<DateTime?>()
+				.Add<int>("Id")
+				.Add<string>("Name")
+				.Add<DateTime?>("Date")
 				.Build();
 			return schema.GetColumnSchema();
 		}
@@ -296,6 +296,62 @@ namespace Sylvan.Data
 			{
 				var item = binder.GetRecord(data);
 			}
+		}
+
+		class PopulationRecord
+		{
+			public string State { get; set; }
+			public string County { get; set; }
+			public Series<DateTime, int> Values { get; set; }
+		}
+
+		[Fact]
+		public void SimpleSeries()
+		{
+			var schemaSpec = "State,County,{Date}>Values*:int";
+			var schema = Schema.Parse(schemaSpec);
+			var cols = schema.GetColumnSchema();
+
+			var csvData = "State,County,2020-03-01,2020-03-02,2020-03-03,2020-03-04\nOR,Washington,0,0,0,1\nOR,Multnomah,0,1,1,2\nOR,Linn,0,0,0,0\nOR,Deschutes,0,0,0,0";
+			var tr = new StringReader(csvData);
+			var opts = new CsvDataReaderOptions() { Schema = new CsvSchema(schema) };
+			var data = CsvDataReader.Create(tr, opts);
+			var binder = DataBinder.Create<PopulationRecord>(data, schema);
+
+			while (data.Read())
+			{
+				var item = binder.GetRecord(data);
+				Assert.NotNull(item.Values);
+				Assert.Equal(4, item.Values.Keys.Count);
+			}
+		}
+
+		class UnboundPropertyType
+		{
+			public string A { get; set; }
+			public string B { get; set; }
+			public string C { get; set; }
+		}
+
+		[Fact]
+		public void UnboundPropertyFailsDefault()
+		{
+			var csvData = "A,B\n1,2\n3,4";
+			var tr = new StringReader(csvData);
+			var data = CsvDataReader.Create(tr);
+			var ex = Assert.Throws<DataBinderException>(() => DataBinder.Create<UnboundPropertyType>(data));
+			Assert.Contains("C", ex.UnboundProperties);
+		}
+
+		[Fact]
+		public void UnboundColumnFailsConfigured()
+		{
+			var csvData = "A,B,C,D\n1,2\n3,4";
+			var tr = new StringReader(csvData);
+			var data = CsvDataReader.Create(tr);
+			var opts = new DataBinderOptions { BindingMode = DataBindingMode.All };
+			var ex = Assert.Throws<DataBinderException>(() => DataBinder.Create<UnboundPropertyType>(data, opts));
+			Assert.Contains("D", ex.UnboundColumns);
 		}
 
 		[Fact]

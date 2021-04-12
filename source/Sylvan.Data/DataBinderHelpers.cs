@@ -9,7 +9,7 @@ namespace Sylvan.Data
 {
 	partial class DataBinder
 	{
-		internal static string? DefaultNameMapping(string columnName, int ordinal)
+		internal static string? MapName(string columnName, int ordinal)
 		{
 			var name = Regex.Replace(columnName, "[^A-Za-z0-9_]", "");
 			if (name.Length == 0)

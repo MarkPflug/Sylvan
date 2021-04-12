@@ -14,17 +14,17 @@ namespace Sylvan.Data
 {
 	sealed class CompiledDataBinder<T> : IDataBinder<T>
 	{
-		Action<IDataRecord, BinderContext, T> recordBinderFunction;
+		readonly Action<IDataRecord, BinderContext, T> recordBinderFunction;
+		readonly object[] state;
+		readonly CultureInfo cultureInfo;
 
-		object[] state = Array.Empty<object>();
-		CultureInfo cultureInfo;
-
-		static readonly Type drType = typeof(IDataRecord);
+		//static readonly Type drType = typeof(IDataRecord);
 
 		internal CompiledDataBinder(
 			DataBinderOptions opts,
 			ReadOnlyCollection<DbColumn> physicalSchema
-		) : this(opts, physicalSchema, physicalSchema)
+		)
+			: this(opts, physicalSchema, physicalSchema)
 		{
 		}
 
@@ -51,24 +51,21 @@ namespace Sylvan.Data
 
 			this.cultureInfo = opts.Culture ?? CultureInfo.InvariantCulture;
 
-			var colNamer = opts.ColumnNamer;
 
 			var namedCols = physicalColumns.Where(c => !string.IsNullOrEmpty(c.ColumnName)).ToList();
 			var nameMap =
 				namedCols
 				.ToDictionary(p => p.ColumnName, p => p, StringComparer.OrdinalIgnoreCase);
 
-			if (colNamer != null)
+
+			foreach (var col in namedCols)
 			{
-				foreach (var col in namedCols)
+				var ordinal = col.ColumnOrdinal;
+				var name = col.ColumnName;
+				var cleanName = DataBinder.MapName(name, ordinal ?? -1);
+				if (cleanName != null && !nameMap.ContainsKey(cleanName))
 				{
-					var ordinal = col.ColumnOrdinal;
-					var name = col.ColumnName;
-					var cleanName = colNamer(name, ordinal ?? -1); //TODO
-					if (cleanName != null && !nameMap.ContainsKey(cleanName))
-					{
-						nameMap.Add(cleanName, col);
-					}
+					nameMap.Add(cleanName, col);
 				}
 			}
 
@@ -254,7 +251,7 @@ namespace Sylvan.Data
 					}
 					else
 					{
-						expr = Convert(colType, getterExpr, targetType, cultureInfoExpr);
+						expr = Convert(getterExpr, targetType, cultureInfoExpr);
 
 						if (expr == null)
 						{
@@ -276,7 +273,7 @@ namespace Sylvan.Data
 								// what else could it be at this point?
 								expr = Expression.Convert(getterExpr, targetType);
 							}
-							
+
 						}
 					}
 
@@ -290,7 +287,7 @@ namespace Sylvan.Data
 						{
 							var tempVar = Expression.Variable(getterExpr.Type);
 
-							var valueExpr = Convert(colType, tempVar, underlyingType!, cultureInfoExpr);
+							var valueExpr = Convert(tempVar, underlyingType!, cultureInfoExpr);
 
 							expr =
 								Expression.Block(
@@ -364,12 +361,30 @@ namespace Sylvan.Data
 					continue;
 				}
 
-				if(col is Schema.Column c && c.IsSeries == true)
+				if (col is Schema.Column c && c.IsSeries == true)
 				{
 					var expr = BindSeries(property, c, physicalColumns, state, stateVar, recordParam, itemParam);
 					bodyExpressions.Add(expr);
 					properties.Remove(key);
 				}
+			}
+
+			string[]? unboundProperties = null;
+			string[]? unboundColumns = null;
+
+			if (opts.BindingMode.HasFlag(DataBindingMode.AllProperties) && properties.Any())
+			{
+				unboundProperties = properties.Select(p => p.Value.Name).ToArray();
+			}
+
+			if (opts.BindingMode.HasFlag(DataBindingMode.AllColumns) && physicalColumns.Any())
+			{
+				unboundColumns = physicalColumns.Select(p => p.ColumnName).ToArray();
+			}
+
+			if (unboundColumns != null || unboundProperties != null)
+			{
+				throw new DataBinderException(unboundProperties, unboundColumns);
 			}
 
 			this.state = state.ToArray();
@@ -398,7 +413,7 @@ namespace Sylvan.Data
 			// Can this be done in a more generic way that would support BYO type?
 			//var sct = Type.GetTypeCode(column.SeriesType);
 
-			object seriesAccessor = GetDataSeriesAccessor(column, physicalSchema, out var bound );
+			object seriesAccessor = GetDataSeriesAccessor(column, physicalSchema, out var bound);
 			foreach (var item in bound)
 			{
 				physicalSchema.Remove(item);
@@ -412,11 +427,9 @@ namespace Sylvan.Data
 				// TODO:
 				throw new NotSupportedException();
 			}
-			var paramType = setter.GetParameters()[0].ParameterType;
 
 			var seriesAccType = seriesAccessor.GetType();
 			var accLocal = Expression.Variable(seriesAccType);
-
 
 			var stateIdxExpr = Expression.Constant(stateIdx, typeof(int));
 
@@ -436,7 +449,7 @@ namespace Sylvan.Data
 
 			var seriesCtor = seriesType.GetConstructor(new Type[] { seriesAccType, typeof(IDataRecord) });
 
-			if(seriesCtor == null)
+			if (seriesCtor == null)
 			{
 				throw new Exception($"Type {seriesType} does not have an appropriate constructor.");
 			}
@@ -484,7 +497,7 @@ namespace Sylvan.Data
 			Parse = 5,
 		}
 
-		static int[] TypeCodeMap = new int[] {
+		readonly static int[] TypeCodeMap = new int[] {
 			//Empty = 0,
 			-1,
 			//Object = 1,
@@ -525,7 +538,7 @@ namespace Sylvan.Data
 			14,
 		};
 
-		static byte[] Conversion = new byte[16 * 16] {
+		readonly static byte[] Conversion = new byte[16 * 16] {
 			// Boolean, Char, SByte, Byte, Int16, UInt16, Int32, UInt32, Int64, UInt64, Single, Double, Decimal, DateTime, String, Object
 			//Boolean = 3,
 			1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 3, 0,
@@ -569,7 +582,7 @@ namespace Sylvan.Data
 			return (ConversionType)Conversion[srcIdx * 16 + dstIdx];
 		}
 
-		static Expression? Convert(Type colType, Expression expr, Type dstType, Expression cultureInfoExpr)
+		static Expression? Convert(Expression expr, Type dstType, Expression cultureInfoExpr)
 		{
 			var srcType = expr.Type;
 			var srcTypeCode = Type.GetTypeCode(srcType);

@@ -171,7 +171,7 @@ namespace Sylvan.Data
 		readonly IDataAccessor<TV> getter;
 
 		readonly TK[] keys;
-
+		
 		/// <summary>
 		/// Gets an ordered list of the series column keys.
 		/// </summary>
