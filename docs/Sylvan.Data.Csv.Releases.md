@@ -1,4 +1,10 @@
 # Sylvan.Data.Csv Release Notes
+_1.0.1_
+- Adds support for Unquoted style to CsvDataWriter.
+
+_1.0.0_
+- Adds ability to read comments via CommentHandler in CsvDataReader.
+- Writes date values (where time component is at midnight) with `DateFormat` as opposed to `DateTimeFormat`.
 
 _0.10.1_
 - Fix potential issue with reading a comment line where the newline sequence spans a buffer boundary.

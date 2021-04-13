@@ -40,6 +40,7 @@ namespace Sylvan.Data.Csv
 		const int Base64EncSize = 3 * 256;
 
 		readonly TextWriter writer;
+		readonly CsvStyle style;
 		readonly bool writeHeaders;
 		readonly char delimiter;
 		readonly char quote;
@@ -63,6 +64,7 @@ namespace Sylvan.Data.Csv
 		readonly bool fastDouble;
 		readonly bool fastInt;
 		readonly bool fastDate;
+		readonly bool[] needsEscape;
 
 		/// <summary>
 		/// Creates a new CsvDataWriter.
@@ -92,6 +94,7 @@ namespace Sylvan.Data.Csv
 			options = options ?? CsvDataWriterOptions.Default;
 			options.Validate();
 			this.writer = writer ?? throw new ArgumentNullException(nameof(writer));
+			this.style = options.Style;
 			this.trueString = options.TrueString;
 			this.falseString = options.FalseString;
 			this.dateTimeFormat = options.DateTimeFormat;
@@ -105,11 +108,26 @@ namespace Sylvan.Data.Csv
 			this.culture = options.Culture;
 			this.buffer = options.Buffer ?? new char[options.BufferSize];
 			this.pos = 0;
+			
+			// create a lookup of all the characters that need to be escaped.
+			this.needsEscape = new bool[128];
+			Flag(delimiter);
+			Flag(quote);
+			Flag(escape);
+			Flag(comment);
+			Flag('\r');
+			Flag('\n');
 
 			var isInvariantCulture = this.culture == CultureInfo.InvariantCulture;
 			this.fastDouble = isInvariantCulture && delimiter != '.' && quote != '.';
 			this.fastInt = isInvariantCulture && delimiter != '-' && quote != '-';
 			this.fastDate = isInvariantCulture && delimiter == ',' && quote == '\"';
+		}
+
+		void Flag(char c)
+		{
+			// these characters are already validated to be in 0-127
+			needsEscape[c] = true;
 		}
 
 		// this can return either Complete or InsufficientSpace
@@ -135,12 +153,21 @@ namespace Sylvan.Data.Csv
 					break;
 				case TypeCode.String:
 					str = reader.GetString(i);
-					if(i == 0 && str.Length > 0 && str[0] == comment)
+					if (i == 0 && str.Length > 0 && str[0] == comment)
 					{
-						result = WriteQuoted(str);
-					} else {
+						if (style == CsvStyle.Standard)
+						{
+							result = WriteQuoted(str);
+						}
+						else
+						{
+							result = WriteEscapedValue(str);
+						}
+					}
+					else
+					{
 						result = WriteField(str);
-					}					
+					}
 					break;
 				case TypeCode.Byte:
 					intVal = reader.GetByte(i);
@@ -150,7 +177,7 @@ namespace Sylvan.Data.Csv
 					goto intVal;
 				case TypeCode.Int32:
 					intVal = reader.GetInt32(i);
-				intVal:
+					intVal:
 					result = WriteField(intVal);
 					break;
 				case TypeCode.Int64:
@@ -196,7 +223,7 @@ namespace Sylvan.Data.Csv
 								return WriteResult.InsufficientSpace;
 
 							var c = Convert.ToBase64CharArray(dataBuffer, 0, len, this.buffer, pos);
-							
+
 							idx += len;
 							pos += c;
 						}
@@ -224,7 +251,6 @@ namespace Sylvan.Data.Csv
 			for (int i = 0; i < nl.Length; i++)
 				buffer[pos++] = nl[i];
 		}
-			
 
 		static bool IsBase64Symbol(char c)
 		{
@@ -309,12 +335,19 @@ namespace Sylvan.Data.Csv
 
 		WriteResult WriteField(string value)
 		{
-			var r = WriteValueOptimistic(value);
-			if (r == WriteResult.RequiresEscaping)
+			if (style == CsvStyle.Standard)
 			{
-				return WriteQuoted(value);
+				var r = WriteValueOptimistic(value);
+				if (r == WriteResult.RequiresEscaping)
+				{
+					return WriteQuoted(value);
+				}
+				return r;
 			}
-			return r;
+			else
+			{
+				return WriteEscapedValue(value);
+			}
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -328,13 +361,59 @@ namespace Sylvan.Data.Csv
 			for (int i = 0; i < str.Length; i++)
 			{
 				var c = str[i];
-				if (c == delimiter || c == quote || c == '\n' || c == '\r')
+				if (c < needsEscape.Length && !needsEscape[c])
 				{
-					return WriteResult.RequiresEscaping;
+					buffer[pos + i] = c;
 				}
-				buffer[pos + i] = c;
+				else
+				{
+					if (c == delimiter || c == quote || c == '\n' || c == '\r')
+					{
+						return WriteResult.RequiresEscaping;
+					}
+					buffer[pos + i] = c;
+				}
 			}
 			this.pos += str.Length;
+			return WriteResult.Complete;
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		WriteResult WriteEscapedValue(string str)
+		{
+			var buffer = this.buffer;
+			var pos = this.pos;
+			// for simplicity assume every character will need to be escaped
+			if (pos + str.Length * 2 >= buffer.Length)
+				return WriteResult.InsufficientSpace;
+
+			for (int i = 0; i < str.Length; i++)
+			{
+				char c = str[i];
+				if (c < needsEscape.Length && !needsEscape[c])
+				{
+					buffer[pos++] = c;
+				}
+				else
+				{
+					if (c == '\r')
+					{
+						buffer[pos++] = escape;
+						buffer[pos++] = c;
+						if (str[i + 1] == '\n')
+						{
+							buffer[pos++] = '\n';
+							i++;
+						}
+					}
+					else
+					{
+						buffer[pos++] = escape;
+						buffer[pos++] = c;
+					}
+				}
+			}
+			this.pos = pos;
 			return WriteResult.Complete;
 		}
 
@@ -351,15 +430,13 @@ namespace Sylvan.Data.Csv
 			{
 				var c = str[i];
 
-				if (c == delimiter || c == quote || c == '\r' || c == '\n')
+				if (c == quote || c == escape)
 				{
-					if (c == quote || c == escape)
-					{
-						if (p == buffer.Length)
-							return WriteResult.InsufficientSpace;
-						buffer[p++] = escape;
-					}
+					if (p == buffer.Length)
+						return WriteResult.InsufficientSpace;
+					buffer[p++] = escape;
 				}
+
 				if (p == buffer.Length)
 					return WriteResult.InsufficientSpace;
 				buffer[p++] = c;
