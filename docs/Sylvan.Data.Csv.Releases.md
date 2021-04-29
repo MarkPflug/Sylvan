@@ -1,6 +1,7 @@
 # Sylvan.Data.Csv Release Notes
 _1.0.1_
 - Adds support for Unquoted style to CsvDataWriter.
+- Fix for sync IO when performing async read on CsvDataReader.
 
 _1.0.0_
 - Adds ability to read comments via CommentHandler in CsvDataReader.
