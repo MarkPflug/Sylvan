@@ -107,8 +107,6 @@ namespace Sylvan.Data.Csv
 			}
 		}
 
-
-
 		int FillBuffer()
 		{
 			var buffer = this.buffer;
@@ -123,15 +121,14 @@ namespace Sylvan.Data.Csv
 			recordStart = 0;
 
 			var count = buffer.Length - bufferEnd;
-			var c = reader.ReadBlock(buffer, bufferEnd, count);
+			var c = reader.Read(buffer, bufferEnd, count);
 			bufferEnd += c;
-			if (c < count)
+			if (c == 0)
 			{
 				atEndOfText = true;
 			}
 			return c;
 		}
-
 
 		/// <inheritdoc/>
 		public override bool Read()

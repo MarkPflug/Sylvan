@@ -170,7 +170,7 @@ namespace Sylvan.Data.Csv
 				}
 				
 				// we were unable to read an entire record out of the buffer synchronously
-				if (recordStart == 0)
+				if (recordStart == 0 && atEndOfText)
 				{
 					// if we consumed the entire buffer reading this record, then this is an exceptional situation
 					// we expect a record to be able to fit entirely within the buffer.
@@ -198,9 +198,9 @@ namespace Sylvan.Data.Csv
 			recordStart = 0;
 
 			var count = buffer.Length - bufferEnd;
-			var c = await reader.ReadBlockAsync(buffer, bufferEnd, count).ConfigureAwait(false);
+			var c = await reader.ReadAsync(buffer, bufferEnd, count).ConfigureAwait(false);
 			bufferEnd += c;
-			if (c < count)
+			if (c == 0)
 			{
 				atEndOfText = true;
 			}

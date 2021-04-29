@@ -7,6 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="..\Sylvan.Data.Tests\TestData.cs" Link="TestData.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="5.0.0" />
     <PackageReference Include="System.Buffers" Version="4.4.0" />
     <PackageReference Include="System.Data.SqlClient" Version="4.8.1" />
@@ -15,7 +19,6 @@
     <ProjectReference Include="..\Sylvan.Common\Sylvan.Common.csproj" />
     <ProjectReference Include="..\Sylvan.Data\Sylvan.Data.csproj" />
     <ProjectReference Include="..\Sylvan.Data.Csv\Sylvan.Data.Csv.csproj" />
-    <ProjectReference Include="..\Sylvan.Data.Tests\Sylvan.Data.Tests.csproj" />
   </ItemGroup>
 
   <ItemGroup>
