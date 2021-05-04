@@ -8,6 +8,11 @@ namespace Sylvan.Data.Csv
 	/// </summary>
 	public sealed class CsvDataWriterOptions
 	{
+		internal CsvDataWriterOptions Clone()
+		{
+			return (CsvDataWriterOptions)MemberwiseClone();
+		}
+
 		internal static CsvDataWriterOptions Default = new CsvDataWriterOptions();
 
 		const char DefaultDelimiter = ',';
@@ -22,6 +27,7 @@ namespace Sylvan.Data.Csv
 		/// </summary>
 		public CsvDataWriterOptions()
 		{
+			this.Style = CsvStyle.Standard;
 			this.Delimiter = DefaultDelimiter;
 			this.Quote = DefaultQuote;
 			this.Escape = DefaultEscape;
@@ -60,6 +66,11 @@ namespace Sylvan.Data.Csv
 		/// The format string used when writing DateTime values that have to time component. The default is \"yyyy'-'MM'-'dd\".
 		/// </summary>
 		public string? DateFormat { get; set; }
+
+		/// <summary>
+		/// The style of the CSV file to be written, defaults to <see cref="CsvStyle.Standard"/>.
+		/// </summary>
+		public CsvStyle Style { get; set; }
 
 		/// <summary>
 		/// The delimiter to use between fields. The default is ','.
@@ -114,7 +125,8 @@ namespace Sylvan.Data.Csv
 				(Buffer != null && Buffer.Length < MinBufferSize) ||
 				Delimiter >= 128 ||
 				Quote >= 128 ||
-				Escape >= 128;
+				Escape >= 128 ||
+				Comment >= 128;
 			if (invalid)
 				throw new CsvConfigurationException();
 		}

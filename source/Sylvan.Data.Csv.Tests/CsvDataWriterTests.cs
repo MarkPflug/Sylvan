@@ -87,7 +87,31 @@ namespace Sylvan.Data.Csv
 			Assert.Equal("Name,Date\nDate1,2021-02-06T00:00:00\nDate2,2021-02-07T00:00:00\n", csv);
 		}
 
-		
+		[Fact]
+		public void UnquotedStyle()
+		{
+			var opts = new CsvDataWriterOptions { Style = CsvStyle.Unquoted, Escape = '\\', NewLine = "\n" };
+			var sw = new StringWriter();
+			var w = CsvDataWriter.Create(sw, opts);
+
+			var data = new[]
+				{
+					new
+					{
+						Name = "Value with comma, and \r\n newline.",
+						Value = 12,
+					},
+					new
+					{
+						Name = "#Comment",
+						Value = 16,
+					},
+				};
+
+			w.Write(data.AsDataReader());
+			var str = sw.ToString();
+			Assert.Equal("Name,Value\nValue with comma\\, and \\\r\n newline.,12\n\\#Comment,16\n", str);
+		}		
 
 		[Fact]
 		public void WriteQuote()
