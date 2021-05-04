@@ -22,6 +22,8 @@ Sylvan CSV is also one of the only CSV parsers I'm aware of that supports `async
 
 `Install-Package Sylvan.Data.Csv`
 
+[Release Notes](Sylvan.Data.Csv.Releases.md)
+
 #### CSV Reader Example
 
 ```C#
