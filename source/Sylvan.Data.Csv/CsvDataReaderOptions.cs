@@ -96,22 +96,6 @@ namespace Sylvan.Data.Csv
 	}
 
 	/// <summary>
-	/// The CSV quoting and escaping styles.
-	/// </summary>
-	public enum CsvStyle
-	{
-		/// <summary>
-		/// Parses using the standard RFC4180 mode.
-		/// </summary>
-		Standard = 1,
-
-		/// <summary>
-		/// Interprets fields as if they are implicitly quoted. Delimiters and new lines within fields are preceeded by an escape character.
-		/// </summary>
-		Unquoted = 2,
-	}
-
-	/// <summary>
 	/// Options for configuring a CsvDataReader.
 	/// </summary>
 	public sealed class CsvDataReaderOptions

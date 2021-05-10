@@ -955,7 +955,7 @@ namespace Sylvan.Data.Csv
 			var options =
 				new CsvDataReaderOptions
 				{
-					CsvStyle = CsvStyle.Unquoted,
+					CsvStyle = CsvStyle.Escaped,
 					Escape = '\\'
 				};
 

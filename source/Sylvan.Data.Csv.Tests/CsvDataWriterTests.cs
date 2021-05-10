@@ -90,7 +90,7 @@ namespace Sylvan.Data.Csv
 		[Fact]
 		public void UnquotedStyle()
 		{
-			var opts = new CsvDataWriterOptions { Style = CsvStyle.Unquoted, Escape = '\\', NewLine = "\n" };
+			var opts = new CsvDataWriterOptions { Style = CsvStyle.Escaped, Escape = '\\', NewLine = "\n" };
 			var sw = new StringWriter();
 			var w = CsvDataWriter.Create(sw, opts);
 

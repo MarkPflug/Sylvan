@@ -1,4 +1,10 @@
 # Sylvan.Data.Csv Release Notes
+
+_1.0.2_
+- Fix CsvDataWriter.WriteAsync to consume the data reader asynchronously with `ReadAsync` instead of `Read`, 
+which caused failures when used in ASP.NET Core where synchronous IO is disallowed by default.
+- Seal CsvDataWriter class.
+
 _1.0.1_
 - Adds support for Unquoted style to CsvDataWriter.
 - Fix for sync IO when performing async read on CsvDataReader.

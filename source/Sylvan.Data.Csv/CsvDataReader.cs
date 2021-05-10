@@ -254,7 +254,7 @@ namespace Sylvan.Data.Csv
 			bool complete = false;
 			char minSafe = this.minSafe;
 
-			if (style == CsvStyle.Unquoted)
+			if (style == CsvStyle.Escaped)
 			{
 				// consume quoted field.
 				while (idx < bufferEnd)
@@ -406,7 +406,7 @@ namespace Sylvan.Data.Csv
 
 				ref var fi = ref fieldInfos[fieldIdx];
 
-				if (style == CsvStyle.Unquoted)
+				if (style == CsvStyle.Escaped)
 				{
 					fi.quoteState =
 						escapeCount == 0

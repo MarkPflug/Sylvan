@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Data.Common;
-using System.IO;
-using System.Threading.Tasks;
 
 namespace Sylvan.Data.Csv
 {
@@ -12,7 +10,7 @@ namespace Sylvan.Data.Csv
 		/// </summary>
 		/// <param name="reader">The DbDataReader to be written.</param>
 		/// <returns>A task representing the asynchronous write operation.</returns>
-		public virtual long Write(DbDataReader reader)
+		public long Write(DbDataReader reader)
 		{
 			var c = reader.FieldCount;
 			var fieldTypes = new FieldInfo[c];
