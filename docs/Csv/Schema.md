@@ -128,9 +128,9 @@ MappedName is the name that the header will be mapped to, this is also optional,
 
 Type is the data type of the column. This can be any of the primitive types in the DbType enum, or "int", "long", or "float".
 
-Size specifies the maximum length of data that is variable length: strings and booleans. This is optional, and only useful to define in very narrow scenarios like when a physical database table will be constructed from the provided schema.
+Size specifies the maximum length of data that is variable length: strings and binary. This is optional, and only useful to define in very narrow scenarios like when a physical database table will be constructed from the provided schema.
 
-"?" optionally indicates that the column is nullable.
+"?" indicates that the column is nullable.
 
 {Format} This specifies the data format, which currently only applies to columns of type `DateTime`, `Boolean`, or `Binary`.
 
@@ -140,12 +140,10 @@ The default behavior of GetBoolean is to use Boolean.TryParse which allows only 
 However, it is also common for CSV to represent boolean values as "Y"/"N" or "T"/"F". These scenarios can be handled by the format string.
 
 The format string for boolean allows one or two specifiers separated by a vertical bar: "
-(TrueSpec)?(|FalseSpec)?". If only the TrueSpec is provided that value will represent true and any other value as false. Likewise if only the FalseSpec is provided, ie "|Nope", then the string "Nope" will be interpreted as false, and all other strings as true.
+(TrueSpec)?(|FalseSpec)?". If only the TrueSpec is provided that value will represent true and any other value as false. Likewise if only the FalseSpec is provided, e.g. "|Nope", then the string "Nope" will be interpreted as false, and all other strings as true.
 
 ### DateTime
-The default behavior of GetDateTime is to use DateTime.TryParse to convert the CSV data string. However, it is not unusual for CSV data to contain compact data representations like `yyyyMMdd` which GetDateTime does not handle by default.
-
-
+The default behavior of GetDateTime is to use DateTime.TryParse to convert the CSV data string using the provided culture, which defaults to `Invariant`. However, it is not unusual for CSV data to contain compact data representations like `yyyyMMdd` which GetDateTime does not handle by default. CsvDataReaderOptions allows specifying a `DateFormat`, which can provide a format that will be used for all column. This can be overridden on a per-column basis by providing a `Format` in the schema spec, e.g. "CreateDate:DateTime{yyyyMMdd}".
 
 ### Binary
-The default behavior of `GetBytes` is to interpret the field text as base64 encoded binary data. This behavior can be overridden by specifying "hex" as the format. This is most easily done by specifying the option on the `CsvDataReaderOptions.BinaryEncoding` property, but can be overridden on a per-column basis by specifying the "hex" format string.
+The default behavior of `GetBytes` is to interpret the field text as base64 encoded binary data. This behavior can be overridden by specifying "hex" as the format. This is most easily done by specifying the option on the `CsvDataReaderOptions.BinaryEncoding` property, but can be overridden on a per-column basis by specifying the "hex" format string, e.g. `"UserId:int,UserProfileImage:binary{hex}"`.

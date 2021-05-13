@@ -1212,5 +1212,16 @@ namespace Sylvan.Data.Csv
 			Assert.Equal(3, csv.FieldCount);
 			Assert.False(csv.Read());
 		}
+
+		[Fact]
+		public void InvalidHexTest()
+		{
+			var opts = new CsvDataReaderOptions { BinaryEncoding = BinaryEncoding.Hexadecimal, HasHeaders = false };
+			var reader = CsvDataReader.Create(new StringReader("1,0102zz"), opts);
+			reader.Read();
+			Assert.Equal(1, reader.GetInt32(0));
+			var buffer = new byte[16];
+			Assert.Throws<FormatException>(() => reader.GetBytes(1, 0, buffer, 0, buffer.Length));
+		}
 	}
 }

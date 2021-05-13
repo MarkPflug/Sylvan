@@ -746,8 +746,6 @@ namespace Sylvan.Data.Csv
 
 			var c = Math.Min(outLen - dataOffset, length);
 
-			const int Invalid = 255;
-
 			var bo = o;
 			for (int i = 0; i < c; i++)
 			{
@@ -765,6 +763,8 @@ namespace Sylvan.Data.Csv
 			return c;
 		}
 
+		const byte Invalid = 255;
+
 		static readonly byte[] HexMap = new byte[]
 			{
 				255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
@@ -777,9 +777,9 @@ namespace Sylvan.Data.Csv
 				255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
 			};
 
-		static int HexValue(char c)
+		static byte HexValue(char c)
 		{
-			if (c > 128) return -1;
+			if (c > 128) return Invalid;
 			return HexMap[c];
 		}
 
