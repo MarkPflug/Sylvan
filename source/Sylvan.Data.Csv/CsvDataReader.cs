@@ -244,16 +244,15 @@ namespace Sylvan.Data.Csv
 		{
 			char c;
 			var idx = this.idx;
+			var buffer = this.buffer;
+
 			// this will remain -1 if it is unquoted. 
 			// Otherwise we use it to determine if the quotes were "clean".
 			var closeQuoteIdx = -1;
 			int escapeCount = 0;
 			int fieldEnd = 0;
-			var buffer = this.buffer;
 			bool last = false;
 			bool complete = false;
-			char minSafe = this.minSafe;
-
 			if (style == CsvStyle.Escaped)
 			{
 				// consume quoted field.
