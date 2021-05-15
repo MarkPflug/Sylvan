@@ -244,17 +244,16 @@ namespace Sylvan.Data.Csv
 		{
 			char c;
 			var idx = this.idx;
+			var buffer = this.buffer;
+
 			// this will remain -1 if it is unquoted. 
 			// Otherwise we use it to determine if the quotes were "clean".
 			var closeQuoteIdx = -1;
 			int escapeCount = 0;
 			int fieldEnd = 0;
-			var buffer = this.buffer;
 			bool last = false;
 			bool complete = false;
-			char minSafe = this.minSafe;
-
-			if (style == CsvStyle.Unquoted)
+			if (style == CsvStyle.Escaped)
 			{
 				// consume quoted field.
 				while (idx < bufferEnd)
@@ -406,7 +405,7 @@ namespace Sylvan.Data.Csv
 
 				ref var fi = ref fieldInfos[fieldIdx];
 
-				if (style == CsvStyle.Unquoted)
+				if (style == CsvStyle.Escaped)
 				{
 					fi.quoteState =
 						escapeCount == 0
@@ -746,8 +745,6 @@ namespace Sylvan.Data.Csv
 
 			var c = Math.Min(outLen - dataOffset, length);
 
-			const int Invalid = 255;
-
 			var bo = o;
 			for (int i = 0; i < c; i++)
 			{
@@ -765,6 +762,8 @@ namespace Sylvan.Data.Csv
 			return c;
 		}
 
+		const byte Invalid = 255;
+
 		static readonly byte[] HexMap = new byte[]
 			{
 				255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
@@ -777,9 +776,9 @@ namespace Sylvan.Data.Csv
 				255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
 			};
 
-		static int HexValue(char c)
+		static byte HexValue(char c)
 		{
-			if (c > 128) return -1;
+			if (c > 128) return Invalid;
 			return HexMap[c];
 		}
 

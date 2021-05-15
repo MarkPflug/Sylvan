@@ -10,7 +10,7 @@ namespace Sylvan.Data.Csv
 	/// <summary>
 	/// Writes data from a DbDataReader as delimited values to a TextWriter.
 	/// </summary>
-	public partial class CsvDataWriter
+	public sealed partial class CsvDataWriter
 		: IDisposable
 #if NETSTANDARD2_1
 		, IAsyncDisposable
