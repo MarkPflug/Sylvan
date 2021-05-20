@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data.Common;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Xml;
 using Xunit;
 
@@ -180,5 +181,72 @@ namespace Sylvan.Data.Csv
 			Assert.Equal("Name,Value\n\"#1\",#2\n", str);
 		}
 
+
+		[Fact]
+		public void BufferSpanBugDateTime()
+		{
+			var date = new DateTime(2000, 1, 1);
+			BufferSpanBug(i => date.AddDays(i), dr => dr.GetDateTime(1));
+		}
+
+		[Fact]
+		public void BufferSpanBugInt32()
+		{
+			BufferSpanBug(i => i + 1000, dr => dr.GetInt32(1));
+		}
+
+		[Fact]
+		public void BufferSpanBugInt64()
+		{
+			BufferSpanBug(i => i + 1000L, dr => dr.GetInt64(1));
+		}
+
+		[Fact]
+		public void BufferSpanBugFloat()
+		{
+			BufferSpanBug(i => (float) Math.PI * i, dr => dr.GetFloat(1));
+		}
+
+		[Fact]
+		public void BufferSpanBugDouble()
+		{
+			BufferSpanBug(i => Math.PI * i, dr => dr.GetDouble(1));
+		}
+
+		[Fact]
+		public void BufferSpanBugGuid()
+		{
+			BufferSpanBug(i => Guid.NewGuid(), dr => dr.GetGuid(1));
+		}
+
+		void BufferSpanBug<T>(Func<int, T> allocator, Func<DbDataReader,T> selector)
+		{
+			// There was a bug where values that spanned buffers wouldn't be written at all
+			const int RecordCount = 10000;
+			var sw = new StringWriter();
+			var csv = CsvDataWriter.Create(sw, TestOptions);
+			
+			var data = 
+				Enumerable
+				.Range(0, RecordCount)
+				.Select(i => new { Id = i, Value = allocator(i) })
+				.ToArray();
+
+			csv.Write(data.AsDataReader());
+			var str = sw.ToString();
+			var reader = new StringReader(str);
+			var csvReader = CsvDataReader.Create(reader);
+
+			int c = 0;
+			while (csvReader.Read())
+			{
+				var i = csvReader.GetInt32(0);
+				Assert.Equal(c, i);
+				var d = selector(csvReader);
+				Assert.Equal(data[i].Value, d);
+				c++;
+			}
+			Assert.Equal(RecordCount, c);
+		}
 	}
 }

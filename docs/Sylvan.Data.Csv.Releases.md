@@ -1,5 +1,8 @@
 # Sylvan.Data.Csv Release Notes
 
+_1.0.3_
+- Fix CsvDataWriter not writing certain types when writing the value would span a buffer.
+
 _1.0.2_
 - Fix CsvDataWriter.WriteAsync to consume the data reader asynchronously with `ReadAsync` instead of `Read`, 
 which caused failures when used in ASP.NET Core where synchronous IO is disallowed by default.
