@@ -276,23 +276,8 @@ namespace Sylvan.Data.Csv
 		public async Task TestBig()
 		{
 			var tr = TestData.GetTextReader();
-			string str = null;
-
 			var csv = await CsvDataReader.CreateAsync(tr);
-			while (await csv.ReadAsync())
-			{
-				var s = csv.GetString(0);
-				var v = csv.GetInt32(0);
-				var n = csv.GetString(10);
-
-				for (int i = 0; i < csv.FieldCount; i++)
-				{
-					str = csv.GetString(i);
-				}
-				var v1 = csv.GetInt32(20);
-			}
-			// there was previously a bug, where the last value was read as "103\n".
-			Assert.Equal("103", str);
+			await csv.ProcessAsync();
 		}
 
 		[Fact]

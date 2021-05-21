@@ -182,19 +182,19 @@ namespace Sylvan.Data.Csv
 					break;
 				case TypeCode.Int64:
 					var longVal = reader.GetInt64(i);
-					WriteField(longVal);
+					result = WriteField(longVal);
 					break;
 				case TypeCode.DateTime:
 					var dateVal = reader.GetDateTime(i);
-					WriteField(dateVal);
+					result = WriteField(dateVal);
 					break;
 				case TypeCode.Single:
 					var floatVal = reader.GetFloat(i);
-					WriteField(floatVal);
+					result = WriteField(floatVal);
 					break;
 				case TypeCode.Double:
 					var doubleVal = reader.GetDouble(i);
-					WriteField(doubleVal);
+					result = WriteField(doubleVal);
 					break;
 				case TypeCode.Empty:
 				case TypeCode.DBNull:

@@ -39,18 +39,5 @@ namespace Sylvan.Data.Csv
 			Assert.Equal("Col*", schema[2].ColumnName);
 			Assert.Equal(typeof(double), schema[2].DataType);
 		}
-
-		[Fact]
-		public void DateSeriesTest()
-		{
-			var data = TestData.GetTextReader();
-			var csv = CsvDataReader.Create(data);
-			var a = new SchemaAnalyzer();
-			var result = a.Analyze(csv);
-
-			var schema = result.GetSchema().GetColumnSchema();
-			var col = schema[11];
-			Assert.NotNull(col);
-		}
 	}
 }
