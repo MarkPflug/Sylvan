@@ -1,11 +1,12 @@
 ﻿using Sylvan.Data.Csv;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.Common;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace Sylvan.Data
 {
@@ -18,48 +19,19 @@ namespace Sylvan.Data
 		public double[] DataSet { get; set; }
 	}
 
-	public class Monster
+	public class ShippingRecord
 	{
-		public string Name { get; set; }
-		public int Health { get; set; }
-		public int Armor { get; set; }
-		public int Strength { get; set; }
-		public int Agility { get; set; }
-		public int Intellect { get; set; }
-	}
-
-	public class CovidRecord
-	{
-		public int UID { get; set; }
-		public string iso2 { get; set; }
-		public string iso3 { get; set; }
-		public int? code3 { get; set; }
-		public float? FIPS { get; set; }
-		public string Admin2 { get; set; }
-		public string Province_State { get; set; }
-		public string Country_Region { get; set; }
-		public float? Lat { get; set; }
-		public float? Long_ { get; set; }
-		public string Combined_Key { get; set; }
+		public Guid RecordUID { get; set; }
+		public string ProductName { get; set; }
+		public int Quantity { get; set; }
+		public DateTime ShipDate { get; set; }
+		public double ShippedWeight { get; set; }
+		public bool DeliveryConfirmed { get; set; }
 	}
 
 	public class TestData
 	{
-		const string DataSetUrl = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/f7c2384622806d5297d16c314a7bc0b9cde24937/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_US.csv";
-		const string DataFileName = "Data.csv";
-
-		const string DataSetSchema = @"UID:int,
-iso2,
-iso3,
-code3:int?,
-FIPS:float?,
-Admin2,
-Province_State,
-Country_Region,
-Lat:float?,
-Long_:float?,
-Combined_Key,
-{Date}>Values*:int";
+		const string DataSetSchema = @"RecordUID:Guid,ProductName,Quantity:int,ShipDate:DateTime,ShippedWeight:double,DeliveryConfirmed:bool";
 
 		static ICsvSchemaProvider Schema;
 		static CsvDataReaderOptions Options;
@@ -67,15 +39,48 @@ Combined_Key,
 		static string CachedData;
 		static byte[] CachedUtfData;
 
+		static string Alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz ,;\"\'";
+
+		static string GetRandomName(Random rand)
+		{
+			var len = rand.Next(8, 20);
+			char[] buffer = new char[len];
+			for(int i = 0; i < len; i++)
+			{
+				buffer[i] = Alphabet[rand.Next(0, Alphabet.Length)];
+			}
+			return new string(buffer);
+			
+		}
+
+		static ShippingRecord CreateShippingRecord(Random rand)
+		{
+			var quantity = rand.Next(1, 12);
+			return new ShippingRecord
+			{
+				RecordUID = Guid.NewGuid(),
+				Quantity = quantity,
+				DeliveryConfirmed = rand.Next(1, 5) % 4 < 2,
+				ProductName = GetRandomName(rand),
+				ShipDate = new DateTime(2015, 1, 1).AddDays(rand.NextDouble() * 365d * 7d),
+				ShippedWeight = quantity * (rand.NextDouble() + 1d) * 4,
+			};
+		}
+
 		static void CacheData()
 		{
-			if (!File.Exists(DataFileName))
-			{
-				using var oStream = File.OpenWrite(DataFileName);
-				using var iStream = new HttpClient().GetStreamAsync(DataSetUrl).Result;
-				iStream.CopyTo(oStream);
-			}
-			CachedData = File.ReadAllText(DataFileName);
+			var rand = new Random(1);
+
+			var data =
+				Enumerable.Range(0, 10000)
+				.Select(i => CreateShippingRecord(rand))
+				.ToArray();
+
+			var reader = data.AsDataReader();
+			var csvTW = new StringWriter();
+			var csvWriter = CsvDataWriter.Create(csvTW);
+			csvWriter.Write(reader);
+			CachedData = csvTW.ToString();
 			CachedUtfData = Encoding.UTF8.GetBytes(CachedData);
 		}
 
@@ -87,15 +92,7 @@ Combined_Key,
 			Schema = new CsvSchema(Data.Schema.Parse(DataSetSchema).GetColumnSchema());
 			Options = new CsvDataReaderOptions { Schema = Schema };
 		}
-
-		public static string DataFile
-		{
-			get
-			{
-				return DataFileName;
-			}
-		}
-
+				
 		public static TextReader GetTextReader()
 		{
 			return new StringReader(CachedData);
@@ -118,7 +115,7 @@ Combined_Key,
 		}
 
 		public static DbDataReader GetTypedData()
-		{ 
+		{
 			var reader = File.OpenText("Data/Schema.csv");
 			return CsvDataReader.Create(reader, new CsvDataReaderOptions() { Schema = DataSchema.Instance });
 		}
@@ -263,6 +260,58 @@ Combined_Key,
 			}
 
 			return item;
+		}
+	}
+
+	public static class DataReaderProcessor
+	{
+		public static void Process(this IDataReader reader)
+		{
+			while (reader.Read())
+			{
+				reader.ProcessRecord();
+			}
+		}
+
+		public static async Task ProcessAsync(this DbDataReader reader)
+		{
+			while (await reader.ReadAsync())
+			{
+				reader.ProcessRecord();
+			}
+		}
+
+		public static void ProcessRecord(this IDataRecord record)
+		{
+			for (int i = 0; i < record.FieldCount; i++)
+			{
+				if (record.IsDBNull(i))
+					continue;
+
+				switch (Type.GetTypeCode(record.GetFieldType(i)))
+				{
+					case TypeCode.Boolean:
+						record.GetBoolean(i);
+						break;
+					case TypeCode.Int32:
+						record.GetInt32(i);
+						break;
+					case TypeCode.DateTime:
+						record.GetDateTime(i);
+						break;
+					case TypeCode.Double:
+						record.GetDouble(i);
+						break;
+					case TypeCode.Decimal:
+						record.GetDecimal(i);
+						break;
+					case TypeCode.String:
+						record.GetString(i);
+						break;
+					default:
+						continue;
+				}
+			}
 		}
 	}
 }

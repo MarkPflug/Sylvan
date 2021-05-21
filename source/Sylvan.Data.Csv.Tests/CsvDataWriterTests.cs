@@ -4,7 +4,6 @@ using System.Data.Common;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Xml;
 using Xunit;
 
 namespace Sylvan.Data.Csv
@@ -210,7 +209,7 @@ namespace Sylvan.Data.Csv
 		[Fact]
 		public void BufferSpanBugDouble()
 		{
-			BufferSpanBug(i => Math.PI * i, dr => dr.GetDouble(1));
+			BufferSpanBug(i => 1.125 * i, dr => dr.GetDouble(1));
 		}
 
 		[Fact]

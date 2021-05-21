@@ -8,12 +8,10 @@ namespace Sylvan.Benchmarks
 	[MemoryDiagnoser]
 	public class CsvDataBinderBenchmarks
 	{
-
 		const int BufferSize = 0x4000;
 		readonly StringFactory pool;
 		char[] buffer = new char[BufferSize];
 		readonly StringPool sp;
-
 
 		public CsvDataBinderBenchmarks()
 		{
@@ -27,11 +25,11 @@ namespace Sylvan.Benchmarks
 
 			var dr = (CsvDataReader)TestData.GetDataWithSchema(o => { o.StringFactory = pool; });
 
-			var binder = DataBinder.Create<CovidRecord>(dr);
+			var binder = DataBinder.Create<ShippingRecord>(dr);
 
 			while (dr.Read())
 			{
-				CovidRecord cr = new CovidRecord();
+				ShippingRecord cr = new ShippingRecord();
 				binder.Bind(dr, cr);
 			}
 		}
