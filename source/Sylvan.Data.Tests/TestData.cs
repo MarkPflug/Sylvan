@@ -21,7 +21,7 @@ namespace Sylvan.Data
 
 	public class ShippingRecord
 	{
-		public Guid RecordUID { get; set; }
+		public Guid RecordId { get; set; }
 		public string ProductName { get; set; }
 		public int Quantity { get; set; }
 		public DateTime ShipDate { get; set; }
@@ -31,7 +31,7 @@ namespace Sylvan.Data
 
 	public class TestData
 	{
-		const string DataSetSchema = @"RecordUID:Guid,ProductName,Quantity:int,ShipDate:DateTime,ShippedWeight:double,DeliveryConfirmed:bool";
+		const string DataSetSchema = @"RecordId:Guid,ProductName,Quantity:int,ShipDate:DateTime,ShippedWeight:double,DeliveryConfirmed:bool";
 
 		static ICsvSchemaProvider Schema;
 		static CsvDataReaderOptions Options;
@@ -49,16 +49,15 @@ namespace Sylvan.Data
 			{
 				buffer[i] = Alphabet[rand.Next(0, Alphabet.Length)];
 			}
-			return new string(buffer);
-			
+			return new string(buffer);			
 		}
 
-		static ShippingRecord CreateShippingRecord(Random rand)
+		static ShippingRecord CreateShippingRecord(Random rand, int i)
 		{
 			var quantity = rand.Next(1, 12);
 			return new ShippingRecord
 			{
-				RecordUID = Guid.NewGuid(),
+				RecordId = Guid.NewGuid(),
 				Quantity = quantity,
 				DeliveryConfirmed = rand.Next(1, 5) % 4 < 2,
 				ProductName = GetRandomName(rand),
@@ -72,8 +71,8 @@ namespace Sylvan.Data
 			var rand = new Random(1);
 
 			var data =
-				Enumerable.Range(0, 10000)
-				.Select(i => CreateShippingRecord(rand))
+				Enumerable.Range(0, 250000)
+				.Select(i => CreateShippingRecord(rand, i))
 				.ToArray();
 
 			var reader = data.AsDataReader();
@@ -89,7 +88,8 @@ namespace Sylvan.Data
 			// is it a bad idea to do this in a static constructor?
 			// probably, but this is only used in test/benchmarks.
 			CacheData();
-			Schema = new CsvSchema(Data.Schema.Parse(DataSetSchema).GetColumnSchema());
+			var schema = Data.Schema.Parse(DataSetSchema);
+			Schema = new CsvSchema(schema.GetColumnSchema());
 			Options = new CsvDataReaderOptions { Schema = Schema };
 		}
 				
@@ -117,38 +117,10 @@ namespace Sylvan.Data
 		public static DbDataReader GetTypedData()
 		{
 			var reader = File.OpenText("Data/Schema.csv");
-			return CsvDataReader.Create(reader, new CsvDataReaderOptions() { Schema = DataSchema.Instance });
+			return CsvDataReader.Create(reader, new CsvDataReaderOptions() { Schema = Schema });
 		}
 
-		public static ICsvSchemaProvider TestDataSchema => DataSchema.Instance;
-
-
-		class DataSchema : ICsvSchemaProvider
-		{
-			public static DataSchema Instance = new DataSchema();
-			Type[] types;
-			bool[] nullable;
-
-			private DataSchema()
-			{
-				Type i = typeof(int), s = typeof(string), f = typeof(float);
-				types = new Type[] { i, s, s, i, f, s, s, s, f, f, s };
-				nullable = new bool[] { false, false, false, false, true };
-			}
-
-			public DbColumn GetColumn(string name, int ordinal)
-			{
-				Type type =
-					ordinal < types.Length
-					? types[ordinal]
-					: typeof(int);
-				bool allowNull =
-					ordinal < nullable.Length
-					? nullable[ordinal]
-					: false;
-				return new TypedCsvColumn(type, allowNull);
-			}
-		}
+		public static ICsvSchemaProvider TestDataSchema => Schema;
 
 		class TypedCsvColumn : DbColumn
 		{
@@ -159,20 +131,19 @@ namespace Sylvan.Data
 			}
 		}
 
-		static ObjectDataReader.Factory<TestRecord> Factory =
+		static ObjectDataReader.Builder<TestRecord> Builder =
 			ObjectDataReader
-				.BuildFactory<TestRecord>()
+				.Build<TestRecord>()
 				.AddColumn("Id", i => i.Id)
 				.AddColumn("Name", i => i.Name)
 				.AddColumn("Date", i => i.Date)
 				.AddColumn("IsActive", i => i.IsActive)
-				.Repeat((b, i) => b.AddColumn("Data" + i, r => r.DataSet[i]), 10)
-				.Build();
+				.Repeat((b, i) => b.AddColumn("Data" + i, r => r.DataSet[i]), 10);
 
 
 		public static DbDataReader GetTestData(int count = 10)
 		{
-			return Factory.Create(GetTestObjects(count, 10));
+			return Builder.Build(GetTestObjects(count, 10));
 		}
 
 		public const int DefaultRecordCount = 100000;
@@ -207,16 +178,15 @@ namespace Sylvan.Data
 				);
 		}
 
-		static ObjectDataReader.Factory<BinaryData> BinaryFactory =
+		static ObjectDataReader.Builder<BinaryData> BinaryBuilder =
 			ObjectDataReader
-				.BuildFactory<BinaryData>()
+				.Build<BinaryData>()
 				.AddColumn("Id", d => d.Id)
-				.AddColumn("Data", d => d.Data)
-				.Build();
+				.AddColumn("Data", d => d.Data);
 
 		public static DbDataReader GetBinaryData()
 		{
-			return BinaryFactory.Create(GetTestBinary());
+			return BinaryBuilder.Build(GetTestBinary());
 		}
 
 		public class BinaryData
@@ -237,14 +207,13 @@ namespace Sylvan.Data
 			var items = GetTestObjects(recordCount, valueCount);
 			return
 				ObjectDataReader
-				.BuildFactory<TestRecord>()
+				.Build<TestRecord>()
 				.AddColumn("Id", i => i.Id)
 				.AddColumn("Name", i => i.Name)
 				.AddColumn("Date", i => i.Date)
 				.AddColumn("IsActive", i => i.IsActive)
 				.Repeat((b, i) => b.AddColumn("Data" + i, r => r.DataSet[i]), valueCount)
-				.Build()
-				.Create(items);
+				.Build(items);
 		}
 	}
 

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 namespace Sylvan.Benchmarks
 {
 	[MemoryDiagnoser]
+	[SimpleJob(1, 4, 8, 1)]
 	public class CsvReaderBenchmarks
 	{
 		const int BufferSize = 0x4000;
@@ -34,7 +35,21 @@ namespace Sylvan.Benchmarks
 		}
 
 		[Benchmark]
-		public async Task Sylvan()
+		public void SylvanSync()
+		{
+			using var tr = TestData.GetTextReader();
+			using var dr = CsvDataReader.Create(tr, new CsvDataReaderOptions() { Buffer = buffer });
+			while (dr.Read())
+			{
+				for (int i = 0; i < dr.FieldCount; i++)
+				{
+					var s = dr.GetString(i);
+				}
+			}
+		}
+
+		[Benchmark]
+		public async Task SylvanAsync()
 		{
 			using var tr = TestData.GetTextReader();
 			using var dr = await CsvDataReader.CreateAsync(tr, new CsvDataReaderOptions() { Buffer = buffer });
@@ -48,7 +63,7 @@ namespace Sylvan.Benchmarks
 		}
 
 		[Benchmark]
-		public async Task SylvanShare()
+		public async Task SylvanHashSetDeDupe()
 		{
 			using var tr = TestData.GetTextReader();
 			using var dr = await CsvDataReader.CreateAsync(tr);
@@ -59,7 +74,6 @@ namespace Sylvan.Benchmarks
 				{
 					var s = dr.GetString(i);
 					hs.Add(s);
-
 				}
 			}
 		}
@@ -117,13 +131,15 @@ namespace Sylvan.Benchmarks
 		{
 			using var tr = TestData.GetTextReader();
 			using var dr = CsvDataReader.Create(tr);
+			var quantityIdx = dr.GetOrdinal("Quantity");
+			var nameIdx = dr.GetOrdinal("ProductName");
+			var dateIdx = dr.GetOrdinal("ShipDate");
 			while (dr.Read())
 			{
-				var id = dr.GetInt32(0);
-				var name = dr.GetString(10);
-				var val = dr.GetInt32(20);
+				var quantity = dr.GetString(quantityIdx);
+				var name = dr.GetString(nameIdx);
+				var date = dr.GetString(dateIdx);
 			}
 		}
 	}
-
 }

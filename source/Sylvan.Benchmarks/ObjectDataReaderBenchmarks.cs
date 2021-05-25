@@ -7,15 +7,14 @@ namespace Sylvan.Benchmarks
 	[MemoryDiagnoser]
 	public class ObjectDataReaderBenchmarks
 	{
-		ObjectDataReader.Factory<TestRecord> Factory;
+		ObjectDataReader.Builder<TestRecord> Builder;
 
 		public ObjectDataReaderBenchmarks()
 		{
-			Factory =
+			Builder =
 				ObjectDataReader
-				.BuildFactory<TestRecord>()
-				.AddAllProperties()
-				.Build();
+				.Build<TestRecord>()
+				.AddAllProperties();
 		}
 
 		const int Count = 1000000;
@@ -28,7 +27,7 @@ namespace Sylvan.Benchmarks
 		[Benchmark(Baseline = true)]
 		public void ObjectDataReaderFactory()
 		{
-			var dr = Factory.Create(GetData());
+			var dr = Builder.Build(GetData());
 			dr.Process();
 		}
 
@@ -44,13 +43,12 @@ namespace Sylvan.Benchmarks
 		{
 			var fac =
 				ObjectDataReader
-				.BuildFactory<TestRecord>()
+				.Build<TestRecord>()
 				.AddColumn("Id", r => r.Id)
 				.AddColumn("Date", r => r.Date)
 				.AddColumn("IsActive", r => r.IsActive)
-				.AddColumn("Name", r => r.Name)
-				.Build();
-			var dr = fac.Create(GetData());
+				.AddColumn("Name", r => r.Name);
+			var dr = fac.Build(GetData());
 			dr.Process();
 		}
 
@@ -59,10 +57,9 @@ namespace Sylvan.Benchmarks
 		{
 			var fac =
 				ObjectDataReader
-				.BuildFactory<TestRecord>()
-				.AddAllProperties()
-				.Build();
-			var dr = fac.Create(GetData());
+				.Build<TestRecord>()
+				.AddAllProperties();
+			var dr = fac.Build(GetData());
 			dr.Process();
 		}
 	}
