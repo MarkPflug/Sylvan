@@ -12,13 +12,14 @@ using System.Runtime.Serialization;
 
 namespace Sylvan.Data
 {
-	sealed class CompiledDataBinder<T> 
+	sealed class CompiledDataBinder<T>
 		: IDataBinder<T>, IDataSeriesBinder
 	{
 
 		object? IDataSeriesBinder.GetSeriesAccessor(string seriesName)
 		{
-			if(this.seriesAccessors != null && this.seriesAccessors.TryGetValue(seriesName, out object val)) {
+			if (this.seriesAccessors != null && this.seriesAccessors.TryGetValue(seriesName, out object val))
+			{
 				return val;
 			}
 			return null;
@@ -27,6 +28,8 @@ namespace Sylvan.Data
 		readonly Action<IDataRecord, BinderContext, T> recordBinderFunction;
 		readonly object[] state;
 		readonly CultureInfo cultureInfo;
+		readonly BinderContext context;
+
 		Dictionary<string, object>? seriesAccessors;
 
 		//static readonly Type drType = typeof(IDataRecord);
@@ -118,12 +121,16 @@ namespace Sylvan.Data
 			var recordParam = Expression.Parameter(drType);
 			var contextParam = Expression.Parameter(typeof(BinderContext));
 			var itemParam = Expression.Parameter(recordType);
+			var debugParam = Expression.Parameter(typeof(string));
 			//var localsMap = new Dictionary<Type, ParameterExpression>();
 			var locals = new List<ParameterExpression>();
 			var bodyExpressions = new List<Expression>();
 
 			var cultureInfoExpr = Expression.Variable(typeof(CultureInfo));
 			locals.Add(cultureInfoExpr);
+			var idxExpr = Expression.Variable(typeof(int));
+			locals.Add(idxExpr);
+			locals.Add(debugParam);
 
 			// To provide special handling empty string as a null for a nullable primtivite type
 			// we want to construct the following:
@@ -161,6 +168,7 @@ namespace Sylvan.Data
 			var properties =
 				recordType
 				.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
+				.Where(p => p.GetSetMethod() != null)
 				.ToDictionary(p => p.Name, p => p, StringComparer.OrdinalIgnoreCase);
 
 			foreach (var kvp in properties.ToArray())
@@ -180,6 +188,8 @@ namespace Sylvan.Data
 					continue;
 				}
 
+				bool canBeNull = col.AllowDBNull != false;
+
 				if (col is Schema.Column c && c.IsSeries == true)
 				{
 					// series get handled below after all normal properties are bound
@@ -194,6 +204,9 @@ namespace Sylvan.Data
 					continue;
 				}
 
+				//bodyExpressions.Add(Expression.Assign(idxExpr, Expression.Constant(ordinal)));
+				//bodyExpressions.Add(Expression.Assign(debugParam, Expression.Call(recordParam, drType.GetMethod("GetString"), Expression.Constant(ordinal))));
+
 				var setter = property.GetSetMethod(true);
 				if (setter == null)
 				{
@@ -203,7 +216,14 @@ namespace Sylvan.Data
 
 				var targetType = setter.GetParameters()[0].ParameterType!;
 
-				var accessorMethod = DataBinder.GetAccessorMethod(colType);
+				Type accessorType = colType;
+				if (opts.InferColumnTypeFromProperty)
+				{
+					accessorType = GetInferredAccessorType(targetType);
+					canBeNull = Nullable.GetUnderlyingType(targetType) != null;
+				}
+
+				var accessorMethod = DataBinder.GetAccessorMethod(accessorType);
 
 				var ordinalExpr = Expression.Constant(ordinal, typeof(int));
 
@@ -284,7 +304,6 @@ namespace Sylvan.Data
 								// what else could it be at this point?
 								expr = Expression.Convert(getterExpr, targetType);
 							}
-
 						}
 					}
 
@@ -294,11 +313,11 @@ namespace Sylvan.Data
 					{
 						var nullableCtor = nullableType!.GetConstructor(new Type[] { underlyingType! })!;
 
-						if (getterExpr.Type == typeof(string))
+						if (expr!.Type == typeof(string))
 						{
 							var tempVar = Expression.Variable(getterExpr.Type);
 
-							var valueExpr = Convert(tempVar, underlyingType!, cultureInfoExpr);
+							//var valueExpr = Convert(tempVar, underlyingType!, cultureInfoExpr);
 
 							expr =
 								Expression.Block(
@@ -316,7 +335,7 @@ namespace Sylvan.Data
 											Expression.Default(nullableType),
 											Expression.New(
 												nullableCtor,
-												valueExpr
+												expr
 											)
 										)
 									}
@@ -327,7 +346,7 @@ namespace Sylvan.Data
 							expr =
 								Expression.New(
 									nullableCtor,
-									getterExpr
+									expr
 								);
 						}
 					}
@@ -338,7 +357,7 @@ namespace Sylvan.Data
 					}
 				}
 
-				if (col.AllowDBNull != false)
+				if (canBeNull)
 				{
 					// roughly:
 					// item.Property = record.IsDBNull(idx) ? default : Coerce(record.Get[Type](idx));
@@ -399,10 +418,69 @@ namespace Sylvan.Data
 			}
 
 			this.state = state.ToArray();
-			var body = Expression.Block(locals, bodyExpressions);
 
-			var lf = Expression.Lambda<Action<IDataRecord, BinderContext, T>>(body, recordParam, contextParam, itemParam);
+			var body = Expression.Block(bodyExpressions);
+
+			var exParam = Expression.Parameter(typeof(Exception));
+
+			var tryBlock =
+				Expression
+				.TryCatch(
+					body,
+					Expression.Catch(
+						exParam,
+						Expression.Throw(
+							Expression.New(
+								typeof(BindFailureException).GetConstructors()[0],
+								idxExpr,
+								debugParam,
+								exParam
+							)
+						)
+
+					)
+				);
+
+			var lambdaBody = Expression.Block(locals, tryBlock);
+
+			var lf = Expression.Lambda<Action<IDataRecord, BinderContext, T>>(lambdaBody, recordParam, contextParam, itemParam);
 			this.recordBinderFunction = lf.Compile();
+			this.context = new BinderContext(this.cultureInfo, this.state);
+		}
+
+		public class BindFailureException : Exception
+		{
+			public int Ordinal { get; }
+			public string? Value { get; }
+
+			public BindFailureException(int ordinal, string? str, Exception inner) : base(null, inner)
+			{
+				this.Ordinal = ordinal;
+				this.Value = str;
+			}
+
+		}
+
+		static Type GetInferredAccessorType(Type propertyType)
+		{
+			var ut = Nullable.GetUnderlyingType(propertyType);
+			propertyType = ut ?? propertyType;
+
+			var code = Type.GetTypeCode(propertyType);
+			if (propertyType.IsEnum)
+				return typeof(string);
+			if (propertyType == typeof(DateTimeOffset))
+				return typeof(string);
+
+			if (Type.GetTypeCode(propertyType) == TypeCode.Object)
+			{
+				if (propertyType == typeof(Guid))
+					return propertyType;
+
+				return typeof(string);
+			}
+
+			return propertyType;
 		}
 
 		Expression BindSeries(
@@ -504,6 +582,7 @@ namespace Sylvan.Data
 			UnsafeCast = 4,
 			// convert via Parse operation
 			Parse = 5,
+			Custom = 6,
 		}
 
 		readonly static int[] TypeCodeMap = new int[] {
@@ -578,7 +657,7 @@ namespace Sylvan.Data
 			//DateTime = 16
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 3, 0,
 			//String = 18
-			5, 0, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 1, 5,
+			5, 6, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 1, 5,
 			//Object = 1
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0,
 		};
@@ -596,6 +675,9 @@ namespace Sylvan.Data
 			var srcType = expr.Type;
 			var srcTypeCode = Type.GetTypeCode(srcType);
 			var dstTypeCode = Type.GetTypeCode(dstType);
+
+			if (srcType == dstType)
+				return expr;
 
 			var conversionType = GetConversionType(srcTypeCode, dstTypeCode);
 
@@ -630,6 +712,18 @@ namespace Sylvan.Data
 						return Expression.Call(parseMethod, new[] { expr });
 					}
 					return null;
+				case ConversionType.Custom:
+					if (expr.Type == typeof(string) && dstType == typeof(char))
+					{
+						return
+							Expression.Call(
+								expr,
+								typeof(string).GetProperty("Chars").GetGetMethod(),
+								Expression.Constant(0)
+							);
+
+					}
+					throw new NotSupportedException();
 			}
 
 			return null;
@@ -647,9 +741,7 @@ namespace Sylvan.Data
 
 		void IDataBinder<T>.Bind(IDataRecord record, T item)
 		{
-			var context = new BinderContext(this.cultureInfo, this.state);
-
-			recordBinderFunction(record, context, item);
+			recordBinderFunction(record, this.context, item);
 		}
 	}
 }

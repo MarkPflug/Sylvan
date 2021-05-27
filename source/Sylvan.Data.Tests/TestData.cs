@@ -71,7 +71,7 @@ namespace Sylvan.Data
 			var rand = new Random(1);
 
 			var data =
-				Enumerable.Range(0, 250000)
+				Enumerable.Range(0, 500000)
 				.Select(i => CreateShippingRecord(rand, i))
 				.ToArray();
 

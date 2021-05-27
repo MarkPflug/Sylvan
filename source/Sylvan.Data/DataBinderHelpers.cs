@@ -37,16 +37,20 @@ namespace Sylvan.Data
 				case TypeCode.Byte:
 					return drType.GetMethod("GetByte")!;
 				case TypeCode.Int16:
+				case TypeCode.SByte:
 					return drType.GetMethod("GetInt16")!;
 				case TypeCode.Int32:
+				case TypeCode.UInt16:
 					return drType.GetMethod("GetInt32")!;
 				case TypeCode.Int64:
+				case TypeCode.UInt32:
 					return drType.GetMethod("GetInt64")!;
 				case TypeCode.DateTime:
 					return drType.GetMethod("GetDateTime")!;
 				case TypeCode.Char:
 					return drType.GetMethod("GetChar")!;
 				case TypeCode.String:
+				case TypeCode.UInt64:
 					return drType.GetMethod("GetString")!;
 				case TypeCode.Single:
 					return drType.GetMethod("GetFloat")!;

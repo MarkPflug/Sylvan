@@ -83,6 +83,8 @@ namespace Sylvan.Data
 		/// </summary>
 		public DataBindingMode BindingMode { get; set; }
 
+		public bool InferColumnTypeFromProperty { get; set; }
+
 		public DataBinderOptions()
 		{
 			this.Culture = CultureInfo.InvariantCulture;
