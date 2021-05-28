@@ -128,7 +128,7 @@ namespace Sylvan.Data
 		{
 			var tr = new StringReader("Name,Value\nA,12.3\nB,\n");
 			var dr = CsvDataReader.Create(tr);
-			var binder = new CompiledDataBinder<NumericNullRecord>(DataBinderOptions.Default, dr.GetColumnSchema());
+			var binder = DataBinder.Create<NumericNullRecord>(dr);
 
 			while (dr.Read())
 			{
