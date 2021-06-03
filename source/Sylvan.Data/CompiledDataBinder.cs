@@ -121,16 +121,12 @@ namespace Sylvan.Data
 			var recordParam = Expression.Parameter(drType);
 			var contextParam = Expression.Parameter(typeof(BinderContext));
 			var itemParam = Expression.Parameter(recordType);
-			var debugParam = Expression.Parameter(typeof(string));
 			//var localsMap = new Dictionary<Type, ParameterExpression>();
 			var locals = new List<ParameterExpression>();
 			var bodyExpressions = new List<Expression>();
 
 			var cultureInfoExpr = Expression.Variable(typeof(CultureInfo));
 			locals.Add(cultureInfoExpr);
-			var idxExpr = Expression.Variable(typeof(int));
-			locals.Add(idxExpr);
-			locals.Add(debugParam);
 
 			// To provide special handling empty string as a null for a nullable primtivite type
 			// we want to construct the following:
@@ -168,7 +164,7 @@ namespace Sylvan.Data
 			var properties =
 				recordType
 				.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
-				.Where(p => p.GetSetMethod() != null)
+				//.Where(p => p.GetSetMethod() != null)
 				.ToDictionary(p => p.Name, p => p, StringComparer.OrdinalIgnoreCase);
 
 			foreach (var kvp in properties.ToArray())
@@ -203,9 +199,6 @@ namespace Sylvan.Data
 					// this means the column didn't know it's own ordinal, and neither did the property.
 					continue;
 				}
-
-				//bodyExpressions.Add(Expression.Assign(idxExpr, Expression.Constant(ordinal)));
-				//bodyExpressions.Add(Expression.Assign(debugParam, Expression.Call(recordParam, drType.GetMethod("GetString"), Expression.Constant(ordinal))));
 
 				var setter = property.GetSetMethod(true);
 				if (setter == null)
@@ -304,6 +297,7 @@ namespace Sylvan.Data
 								// what else could it be at this point?
 								expr = Expression.Convert(getterExpr, targetType);
 							}
+
 						}
 					}
 
@@ -313,11 +307,11 @@ namespace Sylvan.Data
 					{
 						var nullableCtor = nullableType!.GetConstructor(new Type[] { underlyingType! })!;
 
-						if (expr!.Type == typeof(string))
+						if (getterExpr.Type == typeof(string))
 						{
 							var tempVar = Expression.Variable(getterExpr.Type);
 
-							//var valueExpr = Convert(tempVar, underlyingType!, cultureInfoExpr);
+							var valueExpr = Convert(tempVar, underlyingType!, cultureInfoExpr);
 
 							expr =
 								Expression.Block(
@@ -335,7 +329,7 @@ namespace Sylvan.Data
 											Expression.Default(nullableType),
 											Expression.New(
 												nullableCtor,
-												expr
+												valueExpr
 											)
 										)
 									}
@@ -346,7 +340,7 @@ namespace Sylvan.Data
 							expr =
 								Expression.New(
 									nullableCtor,
-									expr
+									getterExpr
 								);
 						}
 					}
@@ -418,47 +412,11 @@ namespace Sylvan.Data
 			}
 
 			this.state = state.ToArray();
+			var body = Expression.Block(locals, bodyExpressions);
 
-			var body = Expression.Block(bodyExpressions);
-
-			var exParam = Expression.Parameter(typeof(Exception));
-
-			var tryBlock =
-				Expression
-				.TryCatch(
-					body,
-					Expression.Catch(
-						exParam,
-						Expression.Throw(
-							Expression.New(
-								typeof(BindFailureException).GetConstructors()[0],
-								idxExpr,
-								debugParam,
-								exParam
-							)
-						)
-
-					)
-				);
-
-			var lambdaBody = Expression.Block(locals, tryBlock);
-
-			var lf = Expression.Lambda<Action<IDataRecord, BinderContext, T>>(lambdaBody, recordParam, contextParam, itemParam);
+			var lf = Expression.Lambda<Action<IDataRecord, BinderContext, T>>(body, recordParam, contextParam, itemParam);
 			this.recordBinderFunction = lf.Compile();
 			this.context = new BinderContext(this.cultureInfo, this.state);
-		}
-
-		public class BindFailureException : Exception
-		{
-			public int Ordinal { get; }
-			public string? Value { get; }
-
-			public BindFailureException(int ordinal, string? str, Exception inner) : base(null, inner)
-			{
-				this.Ordinal = ordinal;
-				this.Value = str;
-			}
-
 		}
 
 		static Type GetInferredAccessorType(Type propertyType)
