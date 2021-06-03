@@ -4,60 +4,12 @@ using System.Collections.ObjectModel;
 using System.Data;
 using System.Data.Common;
 using System.Globalization;
+using System.Reflection;
 
 namespace Sylvan.Data
 {
-	public static class DataBinderExtensions
-	{
-		public static T GetRecord<T>(this IDataBinder<T> binder, IDataRecord record, Func<IDataRecord, Exception, bool>? errorHandler = null) where T : new()
-		{
-			var t = new T();
-			try
-			{
-				binder.Bind(record, t);
-			}
-			catch (Exception e) when (errorHandler != null)
-			{
-				if (!errorHandler(record, e))
-				{
-					throw;
-				}
-			}
-			return t;
-		}
-
-		public static IDataSeriesRange<TK>? GetSeriesRange<TK>(this IDataBinder binder, string seriesName)
-		{
-			if (binder is IDataSeriesBinder b)
-			{
-				var acc = b.GetSeriesAccessor(seriesName);
-				if (acc != null)
-				{
-					return (IDataSeriesRange<TK>)acc;
-				}
-			}
-			return null;
-		}
-
-		//public static IEnumerable? GetSeriesRange(this IDataBinder binder, string seriesName)
-		//{
-		//	seriesName = seriesName ?? "";
-		//	if (binder is IDataSeriesBinder b)
-		//	{
-		//		var acc = b.GetSeriesAccessor(seriesName);
-		//		return (IEnumerable?)acc;
-		//	}
-		//	return null;
-		//}
-	}
-
 	public interface IDataBinder
 	{
-	}
-
-	interface IDataSeriesBinder
-	{
-		object? GetSeriesAccessor(string seriesName);
 	}
 
 	public interface IDataBinder<T> : IDataBinder
@@ -65,10 +17,15 @@ namespace Sylvan.Data
 		void Bind(IDataRecord record, T item);
 	}
 
-	public abstract class BinderFactory<T>
+	interface IDataSeriesBinder
 	{
-		public abstract IDataBinder<T> CreateBinder(ReadOnlyCollection<DbColumn> schema);
+		object? GetSeriesAccessor(string seriesName);
 	}
+
+	//public abstract class BinderFactory<T>
+	//{
+	//	public abstract IDataBinder<T> CreateBinder(ReadOnlyCollection<DbColumn> schema);
+	//}
 
 	public sealed class DataBinderOptions
 	{
@@ -117,6 +74,12 @@ namespace Sylvan.Data
 				}
 			}
 			return Schema.GetWeakSchema(dr).GetColumnSchema();
+		}
+
+		public static IDataBinder<T> Create<T>(ReadOnlyCollection<DbColumn> schema, DataBinderOptions? opts = null)
+		{
+			opts = opts ?? new DataBinderOptions();
+			return new CompiledDataBinder<T>(opts, schema);
 		}
 
 		public static IDataBinder<T> Create<T>(IDataReader dr, DataBinderOptions? opts = null)

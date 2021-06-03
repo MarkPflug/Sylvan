@@ -26,47 +26,82 @@ namespace Sylvan.Data
 			return name;
 		}
 
-		static readonly Type drType = typeof(IDataRecord);
+		internal static readonly Type IDataRecordType = typeof(IDataRecord);
+
+		internal static readonly MethodInfo IsDbNullMethod;
+		internal static readonly MethodInfo GetBooleanMethod;
+		internal static readonly MethodInfo GetCharMethod;
+		internal static readonly MethodInfo GetByteMethod;
+		internal static readonly MethodInfo GetInt16Method;
+		internal static readonly MethodInfo GetInt32Method;
+		internal static readonly MethodInfo GetInt64Method;
+		internal static readonly MethodInfo GetFloatMethod;
+		internal static readonly MethodInfo GetDoubleMethod;
+		internal static readonly MethodInfo GetDecimalMethod;
+		internal static readonly MethodInfo GetGuidMethod;
+		internal static readonly MethodInfo GetStringMethod;
+		internal static readonly MethodInfo GetDateTimeMethod;
+		internal static readonly MethodInfo GetValueMethod;
+
+		static DataBinder()
+		{
+			IDataRecordType = typeof(IDataRecord);
+			IsDbNullMethod = IDataRecordType.GetMethod("IsDBNull")!;
+			GetBooleanMethod = IDataRecordType.GetMethod("GetBoolean");
+			GetCharMethod = IDataRecordType.GetMethod("GetChar");
+			GetByteMethod = IDataRecordType.GetMethod("GetByte");
+			GetInt16Method = IDataRecordType.GetMethod("GetInt16");
+			GetInt32Method = IDataRecordType.GetMethod("GetInt32");
+			GetInt64Method = IDataRecordType.GetMethod("GetInt64");
+			GetFloatMethod = IDataRecordType.GetMethod("GetFloat");
+			GetDoubleMethod = IDataRecordType.GetMethod("GetDouble");
+			GetDecimalMethod = IDataRecordType.GetMethod("GetDecimal");
+			GetStringMethod = IDataRecordType.GetMethod("GetString");
+			GetGuidMethod = IDataRecordType.GetMethod("GetGuid");
+			GetDateTimeMethod = IDataRecordType.GetMethod("GetDateTime");
+
+			GetValueMethod = IDataRecordType.GetMethod("GetValue");
+		}
 
 		internal static MethodInfo? GetAccessorMethod(Type type)
 		{
 			switch (Type.GetTypeCode(type))
 			{
 				case TypeCode.Boolean:
-					return drType.GetMethod("GetBoolean")!;
+					return GetBooleanMethod;
 				case TypeCode.Byte:
-					return drType.GetMethod("GetByte")!;
+					return GetByteMethod;
 				case TypeCode.Int16:
 				case TypeCode.SByte:
-					return drType.GetMethod("GetInt16")!;
+					return GetInt16Method;
 				case TypeCode.Int32:
 				case TypeCode.UInt16:
-					return drType.GetMethod("GetInt32")!;
+					return GetInt32Method;
 				case TypeCode.Int64:
 				case TypeCode.UInt32:
-					return drType.GetMethod("GetInt64")!;
+					return GetInt64Method;
 				case TypeCode.DateTime:
-					return drType.GetMethod("GetDateTime")!;
+					return GetDateTimeMethod;
 				case TypeCode.Char:
-					return drType.GetMethod("GetChar")!;
+					return GetCharMethod;
 				case TypeCode.String:
 				case TypeCode.UInt64:
-					return drType.GetMethod("GetString")!;
+					return GetStringMethod;
 				case TypeCode.Single:
-					return drType.GetMethod("GetFloat")!;
+					return GetFloatMethod;
 				case TypeCode.Double:
-					return drType.GetMethod("GetDouble")!;
+					return GetDoubleMethod;
 				case TypeCode.Decimal:
-					return drType.GetMethod("GetDecimal")!;
+					return GetDecimalMethod;
 				default:
 					if (type == typeof(Guid))
 					{
-						return drType.GetMethod("GetGuid")!;
+						return GetGuidMethod;
 					}
 
 					if (type == typeof(byte[]) || type == typeof(char[]))
 					{
-						return drType.GetMethod("GetValue");
+						return GetValueMethod;
 					}
 					break;
 			}
@@ -280,5 +315,46 @@ namespace Sylvan.Data
 			}
 			return null;
 		}
+
+		public static T GetRecord<T>(this IDataBinder<T> binder, IDataRecord record, Func<IDataRecord, Exception, bool>? errorHandler = null) where T : new()
+		{
+			var t = new T();
+			try
+			{
+				binder.Bind(record, t);
+			}
+			catch (Exception e) when (errorHandler != null)
+			{
+				if (!errorHandler(record, e))
+				{
+					throw;
+				}
+			}
+			return t;
+		}
+
+		public static IDataSeriesRange<TK>? GetSeriesRange<TK>(this IDataBinder binder, string seriesName)
+		{
+			if (binder is IDataSeriesBinder b)
+			{
+				var acc = b.GetSeriesAccessor(seriesName);
+				if (acc != null)
+				{
+					return (IDataSeriesRange<TK>)acc;
+				}
+			}
+			return null;
+		}
+
+		//public static IEnumerable? GetSeriesRange(this IDataBinder binder, string seriesName)
+		//{
+		//	seriesName = seriesName ?? "";
+		//	if (binder is IDataSeriesBinder b)
+		//	{
+		//		var acc = b.GetSeriesAccessor(seriesName);
+		//		return (IEnumerable?)acc;
+		//	}
+		//	return null;
+		//}
 	}
 }
