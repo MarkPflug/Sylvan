@@ -305,13 +305,27 @@ namespace Sylvan.Data
 
 					if (isNullable)
 					{
-						var nullableCtor = nullableType!.GetConstructor(new Type[] { underlyingType! })!;
+						if (nullableType == null || underlyingType == null)
+							throw new InvalidOperationException();
+
+						var nullableCtor = nullableType.GetConstructor(new Type[] { underlyingType })!;
 
 						if (getterExpr.Type == typeof(string))
 						{
 							var tempVar = Expression.Variable(getterExpr.Type);
 
-							var valueExpr = Convert(tempVar, underlyingType!, cultureInfoExpr);
+							if (underlyingType.IsEnum)
+							{
+								expr =
+									Expression.Call(
+										DataBinder.EnumParseMethod.MakeGenericMethod(targetType),
+										tempVar
+									);
+							}
+							else
+							{
+								expr = Convert(tempVar, underlyingType, cultureInfoExpr);
+							}
 
 							expr =
 								Expression.Block(
@@ -329,7 +343,7 @@ namespace Sylvan.Data
 											Expression.Default(nullableType),
 											Expression.New(
 												nullableCtor,
-												valueExpr
+												expr
 											)
 										)
 									}
@@ -340,7 +354,7 @@ namespace Sylvan.Data
 							expr =
 								Expression.New(
 									nullableCtor,
-									getterExpr
+									expr
 								);
 						}
 					}
