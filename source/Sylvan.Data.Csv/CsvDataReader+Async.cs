@@ -65,7 +65,6 @@ namespace Sylvan.Data.Csv
 
 		async Task<bool> InitializeAsync()
 		{
-			result++;
 			state = State.Initializing;
 			await FillBufferAsync().ConfigureAwait(false);
 

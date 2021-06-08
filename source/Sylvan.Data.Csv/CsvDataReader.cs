@@ -85,7 +85,7 @@ namespace Sylvan.Data.Csv
 		readonly TextReader reader;
 		bool hasRows;
 		readonly char[] buffer;
-		int result;
+		
 		int idx;
 		int bufferEnd;
 		int recordStart;
@@ -97,9 +97,10 @@ namespace Sylvan.Data.Csv
 		byte[]? scratch;
 		FieldInfo[] fieldInfos;
 		CsvColumn[] columns;
-		bool autoDetectDelimiter;
 
 		readonly Dictionary<string, int> headerMap;
+
+		readonly bool autoDetectDelimiter;
 		// options:
 		char delimiter;
 		readonly CsvStyle style;
@@ -155,7 +156,7 @@ namespace Sylvan.Data.Csv
 			this.dateFormat = options.DateFormat;
 			this.trueString = options.TrueString;
 			this.falseString = options.FalseString;
-			this.result = -1;
+			
 			this.recordStart = 0;
 			this.bufferEnd = 0;
 			this.idx = 0;
@@ -559,8 +560,8 @@ namespace Sylvan.Data.Csv
 			// four cases:
 			// true and false both not null. Any other value raises error.
 			// true not null, false null. True string true, anything else false.
-			// false not null, false null. True string true, anything else false.
-			// both null. 
+			// false not null, true null. False string false, anything else true.
+			// both null: attempt to parse a bool then attempt to parse as int
 			var col = this.columns[ordinal];
 			var trueString = col.TrueString ?? this.trueString;
 			var falseString = col.FalseString ?? this.falseString;
@@ -736,8 +737,7 @@ namespace Sylvan.Data.Csv
 			var b = cs.buffer;
 			var o = cs.offset;
 
-			bool hasPrefix;
-			var outLen = GetHexLength(cs, out hasPrefix);
+			var outLen = GetHexLength(cs, out bool hasPrefix);
 			if (hasPrefix)
 			{
 				o += 2;
@@ -1001,6 +1001,11 @@ namespace Sylvan.Data.Csv
 
 #if NETSTANDARD2_1
 
+		/// <summary>
+		/// Gets a span containing the characters of a field.
+		/// </summary>
+		/// <param name="ordinal">The field ordinal.</param>
+		/// <returns>A span containing the characters of the field.</returns>
 		ReadOnlySpan<char> GetFieldSpan(int ordinal)
 		{
 			var s = GetField(ordinal);
@@ -1235,7 +1240,7 @@ namespace Sylvan.Data.Csv
 		{
 			hasPrefix = false;
 			var l = span.length;
-			// must be divisible by 1
+			// must be divisible by 2
 			if (l % 2 != 0) throw new FormatException();
 			if (l >= 2 && char.ToLowerInvariant(span[1]) == 'x' && span[0] == '0')
 			{
