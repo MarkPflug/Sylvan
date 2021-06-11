@@ -15,6 +15,7 @@ using System.Threading.Tasks;
 
 namespace Sylvan.Data.Csv
 {
+
 	/// <summary>
 	/// A data reader for delimited text data.
 	/// </summary>
@@ -565,7 +566,7 @@ namespace Sylvan.Data.Csv
 			var col = this.columns[ordinal];
 			var trueString = col.TrueString ?? this.trueString;
 			var falseString = col.FalseString ?? this.falseString;
-#if NETSTANDARD2_1
+#if SPAN
 			var span = this.GetFieldSpan(ordinal);
 			if (trueString != null && span.Equals(trueString.AsSpan(), StringComparison.OrdinalIgnoreCase))
 			{
@@ -618,7 +619,7 @@ namespace Sylvan.Data.Csv
 		/// <inheritdoc/>
 		public override byte GetByte(int ordinal)
 		{
-#if NETSTANDARD2_1
+#if SPAN
 			return byte.Parse(this.GetFieldSpan(ordinal), provider: culture);
 #else
 			return byte.Parse(this.GetString(ordinal), culture);
@@ -784,7 +785,7 @@ namespace Sylvan.Data.Csv
 
 		void FromBase64Chars(char[] chars, int charsOffset, int charsLen, byte[] bytes, int bytesOffset, out int bytesWritten)
 		{
-#if NETSTANDARD2_1
+#if SPAN
 			if (!Convert.TryFromBase64Chars(chars.AsSpan().Slice(charsOffset, charsLen), bytes.AsSpan().Slice(bytesOffset), out bytesWritten))
 			{
 				throw new FormatException();
@@ -824,12 +825,40 @@ namespace Sylvan.Data.Csv
 			return len;
 		}
 
+		/// <summary>
+		/// Gets the value of the field as a <see cref="TimeSpan"/>.
+		/// </summary>
+		public TimeSpan GetTimeSpan(int ordinal)
+		{
+#if SPAN
+			var f = this.GetField(ordinal);
+			return TimeSpan.TryParse(f.ToSpan(), out var value) ? value : throw new FormatException();
+#else
+			var str = this.GetString(ordinal);
+			return TimeSpan.Parse(str);
+#endif
+		}
+
+		/// <summary>
+		/// Gets the value of the field as a <see cref="DateTimeOffset"/>.
+		/// </summary>
+		public DateTimeOffset GetDateTimeOffset(int ordinal)
+		{
+#if SPAN
+			var f = this.GetField(ordinal);
+			return DateTimeOffset.TryParse(f.ToSpan(), out var value) ? value : throw new FormatException();
+#else
+			var str = this.GetString(ordinal);
+			return DateTimeOffset.Parse(str);
+#endif
+		}
+
 		/// <inheritdoc/>
 		public override DateTime GetDateTime(int ordinal)
 		{
 			var format = columns[ordinal].Format ?? this.dateFormat;
 			var style = DateTimeStyles.AdjustToUniversal;
-#if NETSTANDARD2_1
+#if SPAN
 			if (format != null && DateTime.TryParseExact(this.GetFieldSpan(ordinal), format.AsSpan(), culture, style, out var dt))
 			{
 				return dt;
@@ -848,7 +877,7 @@ namespace Sylvan.Data.Csv
 		/// <inheritdoc/>
 		public override decimal GetDecimal(int ordinal)
 		{
-#if NETSTANDARD2_1
+#if SPAN
 			var field = this.GetField(ordinal);
 			return
 				field.TryParseSingleCharInt()
@@ -861,7 +890,7 @@ namespace Sylvan.Data.Csv
 		/// <inheritdoc/>
 		public override double GetDouble(int ordinal)
 		{
-#if NETSTANDARD2_1
+#if SPAN
 			var field = this.GetField(ordinal);
 			return
 				field.TryParseSingleCharInt()
@@ -893,7 +922,7 @@ namespace Sylvan.Data.Csv
 		/// <inheritdoc/>
 		public override float GetFloat(int ordinal)
 		{
-#if NETSTANDARD2_1
+#if SPAN
 			var field = this.GetField(ordinal);
 			return
 				field.TryParseSingleCharInt()
@@ -906,7 +935,7 @@ namespace Sylvan.Data.Csv
 		/// <inheritdoc/>
 		public override Guid GetGuid(int ordinal)
 		{
-#if NETSTANDARD2_1
+#if SPAN
 			return Guid.Parse(this.GetFieldSpan(ordinal));
 #else
 			return Guid.Parse(this.GetString(ordinal));
@@ -916,7 +945,7 @@ namespace Sylvan.Data.Csv
 		/// <inheritdoc/>
 		public override short GetInt16(int ordinal)
 		{
-#if NETSTANDARD2_1
+#if SPAN
 			var field = this.GetField(ordinal);
 			return
 				field.TryParseSingleCharInt()
@@ -929,10 +958,10 @@ namespace Sylvan.Data.Csv
 		/// <inheritdoc/>
 		public override int GetInt32(int ordinal)
 		{
-#if NETSTANDARD2_1
+#if SPAN
 
 			var field = this.GetField(ordinal);
-
+			var str = field.ToString();
 			return
 				field.TryParseSingleCharInt()
 				?? int.Parse(field.ToSpan(), provider: culture);
@@ -944,7 +973,7 @@ namespace Sylvan.Data.Csv
 		/// <inheritdoc/>
 		public override long GetInt64(int ordinal)
 		{
-#if NETSTANDARD2_1
+#if SPAN
 			var field = this.GetField(ordinal);
 			return
 				field.TryParseSingleCharInt()
@@ -999,7 +1028,7 @@ namespace Sylvan.Data.Csv
 			return string.Empty;
 		}
 
-#if NETSTANDARD2_1
+#if SPAN
 
 		/// <summary>
 		/// Gets a span containing the characters of a field.
@@ -1047,7 +1076,7 @@ namespace Sylvan.Data.Csv
 				return null;
 			}
 
-#if NETSTANDARD2_1
+#if SPAN
 
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
 			internal Span<char> ToSpan()
@@ -1061,6 +1090,13 @@ namespace Sylvan.Data.Csv
 			public readonly char[] buffer;
 			public readonly int offset;
 			public readonly int length;
+
+#if DEBUG
+			public override string ToString()
+			{
+				return new string(buffer, offset, length);
+			}
+#endif
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1437,7 +1473,7 @@ namespace Sylvan.Data.Csv
 			}
 		}
 
-#if NETSTANDARD2_1
+#if SPAN
 
 		/// <summary>
 		/// Gets a span containing the current record data, including the line ending.
@@ -1470,6 +1506,23 @@ namespace Sylvan.Data.Csv
 				Array.Copy(this.buffer, this.recordStart, buffer, offset, len);
 			}
 			return len;
+		}
+
+		IFieldAccessor<T> GetAccessor<T>(int ordinal)
+		{
+			var acc = CsvDataAccessor.Instance as IFieldAccessor<T>;
+			if (acc == null)
+			{
+				throw new NotSupportedException(); // TODO: exception type?
+			}
+			return acc;
+		}
+
+		/// <inheritdoc/>
+		public override T GetFieldValue<T>(int ordinal)
+		{
+			var acc = this.GetAccessor<T>(ordinal);
+			return acc.GetValue(this, ordinal);
 		}
 	}
 }

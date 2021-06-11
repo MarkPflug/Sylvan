@@ -116,7 +116,7 @@ namespace Sylvan.Data.Csv
 			pos = 0;
 		}
 
-#if NETSTANDARD2_1
+#if SPAN
 		ValueTask IAsyncDisposable.DisposeAsync()
 		{
 			GC.SuppressFinalize(this);

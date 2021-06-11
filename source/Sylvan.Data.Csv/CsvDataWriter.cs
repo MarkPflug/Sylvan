@@ -12,7 +12,7 @@ namespace Sylvan.Data.Csv
 	/// </summary>
 	public sealed partial class CsvDataWriter
 		: IDisposable
-#if NETSTANDARD2_1
+#if SPAN
 		, IAsyncDisposable
 #endif
 	{
@@ -108,7 +108,7 @@ namespace Sylvan.Data.Csv
 			this.culture = options.Culture;
 			this.buffer = options.Buffer ?? new char[options.BufferSize];
 			this.pos = 0;
-			
+
 			// create a lookup of all the characters that need to be escaped.
 			this.needsEscape = new bool[128];
 			Flag(delimiter);
@@ -237,6 +237,28 @@ namespace Sylvan.Data.Csv
 						result = WriteField(guid);
 						break;
 					}
+
+					if (type == typeof(TimeSpan))
+					{
+						var ts = reader.GetFieldValue<TimeSpan>(i);
+						result = WriteField(ts);
+						break;
+					}
+#if NET6_0_OR_GREATER
+					if (type == typeof(DateOnly))
+					{
+						var d = reader.GetFieldValue<DateOnly>(i);
+						result = WriteField(d);
+						break;
+					}
+
+					if (type == typeof(TimeOnly))
+					{
+						var t = reader.GetFieldValue<TimeOnly>(i);
+						result = WriteField(t);
+						break;
+					}
+#endif
 					str = reader.GetValue(i)?.ToString() ?? string.Empty;
 					result = WriteField(str);
 					break;
@@ -270,10 +292,10 @@ namespace Sylvan.Data.Csv
 
 		WriteResult WriteField(double value)
 		{
-#if NETSTANDARD2_1
-			if(fastDouble)
+#if SPAN
+			if (fastDouble)
 			{
-				if(value.TryFormat(buffer.AsSpan()[pos..], out int len, default, culture))
+				if (value.TryFormat(buffer.AsSpan()[pos..], out int len, default, culture))
 				{
 					pos += len;
 					return WriteResult.Complete;
@@ -286,10 +308,10 @@ namespace Sylvan.Data.Csv
 
 		WriteResult WriteField(long value)
 		{
-#if NETSTANDARD2_1
-			if(fastInt)
+#if SPAN
+			if (fastInt)
 			{
-				if(value.TryFormat(buffer.AsSpan()[pos..], out int len, default, culture))
+				if (value.TryFormat(buffer.AsSpan()[pos..], out int len, default, culture))
 				{
 					pos += len;
 					return WriteResult.Complete;
@@ -302,10 +324,10 @@ namespace Sylvan.Data.Csv
 
 		WriteResult WriteField(int value)
 		{
-#if NETSTANDARD2_1
-			if(fastInt)
+#if SPAN
+			if (fastInt)
 			{
-				if(value.TryFormat(buffer.AsSpan()[pos..], out int len, default, culture))
+				if (value.TryFormat(buffer.AsSpan()[pos..], out int len, default, culture))
 				{
 					pos += len;
 					return WriteResult.Complete;
@@ -319,7 +341,7 @@ namespace Sylvan.Data.Csv
 		WriteResult WriteField(DateTime value)
 		{
 			var format = value.TimeOfDay == TimeSpan.Zero ? dateFormat : dateTimeFormat;
-#if NETSTANDARD2_1
+#if SPAN
 			if (fastDate)
 			{
 				if (value.TryFormat(buffer.AsSpan()[pos..], out int len, format, culture))
@@ -332,6 +354,54 @@ namespace Sylvan.Data.Csv
 #endif
 			return WriteField(value.ToString(format, culture));
 		}
+
+		WriteResult WriteField(TimeSpan value)
+		{
+#if SPAN
+			if (fastDate)
+			{
+				if (value.TryFormat(buffer.AsSpan()[pos..], out int len, default, culture))
+				{
+					pos += len;
+					return WriteResult.Complete;
+				}
+				return WriteResult.InsufficientSpace;
+			}
+#endif
+			return WriteField(value.ToString(null, culture));
+		}
+
+#if NET6_0_OR_GREATER
+		WriteResult WriteField(DateOnly value)
+		{
+			var format = dateFormat;
+
+			if (fastDate)
+			{
+				if (value.TryFormat(buffer.AsSpan()[pos..], out int len, format, culture))
+				{
+					pos += len;
+					return WriteResult.Complete;
+				}
+				return WriteResult.InsufficientSpace;
+			}
+			return WriteField(value.ToString(format, culture));
+		}
+
+		WriteResult WriteField(TimeOnly value)
+		{
+			if (fastDate)
+			{
+				if (value.TryFormat(buffer.AsSpan()[pos..], out int len, default, culture))
+				{
+					pos += len;
+					return WriteResult.Complete;
+				}
+				return WriteResult.InsufficientSpace;
+			}
+			return WriteField(value.ToString(null, culture));
+		}
+#endif
 
 		WriteResult WriteField(string value)
 		{
