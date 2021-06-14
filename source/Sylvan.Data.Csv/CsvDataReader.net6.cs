@@ -1,13 +1,12 @@
-﻿using System;
+﻿#if NET6_0_OR_GREATER
+
+using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Sylvan.Data.Csv
 {
-
-#if NET6_0_OR_GREATER
-
 	partial class CsvDataAccessor :		
 		IFieldAccessor<DateOnly>,
 		IFieldAccessor<TimeOnly>
@@ -50,6 +49,6 @@ namespace Sylvan.Data.Csv
 			return Task.FromResult(GetFieldValue<T>(ordinal));
 		}
 	}
+}
 
 #endif
-}

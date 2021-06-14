@@ -13,7 +13,7 @@ namespace Sylvan.Data.Csv
 		public long Write(DbDataReader reader)
 		{
 			var c = reader.FieldCount;
-			var fieldTypes = new FieldInfo[c];
+			var fieldInfos = new FieldInfo[c];
 
 			var schema = (reader as IDbColumnSchemaGenerator)?.GetColumnSchema();
 
@@ -26,7 +26,7 @@ namespace Sylvan.Data.Csv
 			{
 				var type = reader.GetFieldType(i);
 				var allowNull = schema?[i].AllowDBNull ?? true;
-				fieldTypes[i] = new FieldInfo(allowNull, type);
+				fieldInfos[i] = new FieldInfo(allowNull, type);
 			}
 
 			if (writeHeaders)
@@ -60,6 +60,7 @@ namespace Sylvan.Data.Csv
 				EndRecord();
 			}
 
+			var wc = new WriterContext(this, reader);
 			int row = 0;
 			while (reader.Read())
 			{
@@ -76,13 +77,22 @@ namespace Sylvan.Data.Csv
 						}
 						buffer[pos++] = delimiter;
 					}
+					var field = fieldInfos[i];
+					if (field.allowNull && reader.IsDBNull(i))
+					{
+						continue;
+					}
+
 					for (int retry = 0; retry < 2; retry++)
 					{
-						var r = WriteField(reader, fieldTypes, i);
+						var r = field.writer.Write(wc, i, buffer, pos);
 
-						if (r == WriteResult.Complete)
+						if (r >= 0)
+						{
+							pos += r;
 							goto success;
-						if (r == WriteResult.InsufficientSpace)
+						}
+						else
 						{
 							FlushBuffer();
 							continue;
@@ -91,7 +101,7 @@ namespace Sylvan.Data.Csv
 					// we arrive here only when there isn't enough room in the buffer
 					// to hold the field.				
 					throw new CsvRecordTooLargeException(row, i);
-				success:;
+					success:;
 				}
 
 				if (pos + 2 >= bufferSize)

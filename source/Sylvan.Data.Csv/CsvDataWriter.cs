@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data.Common;
 using System.Globalization;
 using System.IO;
@@ -12,10 +13,161 @@ namespace Sylvan.Data.Csv
 	/// </summary>
 	public sealed partial class CsvDataWriter
 		: IDisposable
-#if SPAN
+#if ASYNC_DISPOSE
 		, IAsyncDisposable
 #endif
 	{
+
+		interface IFieldWriter
+		{
+			int Write(WriterContext context, int ordinal, char[] buffer, int offset);
+		}
+
+
+		class WriterContext
+		{
+			internal CsvDataWriter writer;
+			internal DbDataReader reader;
+
+			public WriterContext(CsvDataWriter writer, DbDataReader reader)
+			{
+				this.writer = writer;
+				this.reader = reader;
+			}
+		}
+
+		sealed class DateTimeFastFieldWriter : IFieldWriter
+		{
+			public static IFieldWriter Instance = new DateTimeFastFieldWriter();
+
+			public int Write(WriterContext context, int ordinal, char[] buffer, int offset)
+			{
+#if SPAN
+				var reader = context.reader;
+				var w = context.writer;
+				var culture = w.culture;
+
+				var value = reader.GetDateTime(ordinal);
+				var format = value.TimeOfDay == TimeSpan.Zero ? w.dateFormat : w.dateTimeFormat;
+
+				if (value.TryFormat(buffer.AsSpan().Slice(offset), out int len, format, culture))
+				{
+					return len;
+				}
+				return -1;
+#else
+				return ObjectFieldWriter.Instance.Write(context, ordinal, buffer, offset);
+#endif
+			}
+		}
+
+		sealed class BooleanFieldWriter : IFieldWriter
+		{
+			public static IFieldWriter Instance = new BooleanFieldWriter();
+
+			public int Write(WriterContext context, int ordinal, char[] buffer, int offset)
+			{
+#if SPAN
+				var reader = context.reader;
+				var w = context.writer;
+				var culture = w.culture;
+
+				var value = reader.GetBoolean(ordinal);
+				var str = value ? w.trueString : w.falseString;
+				var span = str.AsSpan();
+				return CsvDataWriter.Write(context, span, buffer.AsSpan().Slice(offset));
+#else
+				return ObjectFieldWriter.Instance.Write(context, ordinal, buffer, offset);
+#endif
+			}
+		}
+
+		sealed class Int32FastFieldWriter : IFieldWriter
+		{
+			public static IFieldWriter Instance = new Int32FastFieldWriter();
+
+			public int Write(WriterContext context, int ordinal, char[] buffer, int offset)
+			{
+#if SPAN
+				var reader = context.reader;
+				var culture = context.writer.culture;
+
+				var value = reader.GetInt32(ordinal);
+				if (value.TryFormat(buffer.AsSpan().Slice(offset), out int len, default, culture))
+				{
+					return len;
+				}
+				return -1;
+#else
+				return ObjectFieldWriter.Instance.Write(context, ordinal, buffer, offset);
+#endif
+			}
+		}
+
+		sealed class Int32FieldWriter : IFieldWriter
+		{
+			public static IFieldWriter Instance = new Int32FastFieldWriter();
+
+			public int Write(WriterContext context, int ordinal, char[] buffer, int offset)
+			{
+#if SPAN
+				var reader = context.reader;
+				var culture = context.writer.culture;
+
+				Span<char> span = stackalloc char[16];
+
+				var value = reader.GetInt32(ordinal);
+				if (!value.TryFormat(span, out int len, default, culture))
+				{
+					throw new FormatException(); // this shouldn't happen
+				}
+
+				var src = span.Slice(0, len);
+				var dst = buffer.AsSpan().Slice(offset);
+				return CsvDataWriter.Write(context, src, dst);
+#else
+				return ObjectFieldWriter.Instance.Write(context, ordinal, buffer, offset);
+#endif
+			}
+		}
+
+		sealed class DoubleFastFieldWriter : IFieldWriter
+		{
+			public static IFieldWriter Instance = new DoubleFastFieldWriter();
+
+			public int Write(WriterContext context, int ordinal, char[] buffer, int offset)
+			{
+#if SPAN
+				var reader = context.reader;
+				var culture = context.writer.culture;
+
+				var value = reader.GetDouble(ordinal);
+				if (value.TryFormat(buffer.AsSpan().Slice(offset), out int len, default, culture))
+				{
+					return len;
+				}
+				return -1;
+#else
+				return ObjectFieldWriter.Instance.Write(context, ordinal, buffer, offset);
+#endif
+			}
+		}
+
+		sealed class ObjectFieldWriter : IFieldWriter
+		{
+			public static IFieldWriter Instance = new ObjectFieldWriter();
+
+			public int Write(WriterContext context, int ordinal, char[] buffer, int offset)
+			{
+				var reader = context.reader;
+				var value = reader.GetValue(ordinal).ToString() ?? "";
+				if (ordinal == 0 && value.Length > 0 && value[0] == context.writer.comment)
+					return WriteQuoted(context, value, buffer, offset);
+
+				return CsvDataWriter.Write(context, value, buffer, offset);
+			}
+		}
+
 		class FieldInfo
 		{
 			public FieldInfo(bool allowNull, Type type)
@@ -23,10 +175,35 @@ namespace Sylvan.Data.Csv
 				this.allowNull = allowNull;
 				this.type = type;
 				this.typeCode = Type.GetTypeCode(type);
+				this.writer = GetFieldWriter(type);
 			}
+
 			public bool allowNull;
 			public Type type;
 			public TypeCode typeCode;
+			public IFieldWriter writer;
+
+			static IFieldWriter GetFieldWriter(Type t)
+			{
+				if (t == typeof(int))
+					return Int32FastFieldWriter.Instance;
+				if (t == typeof(double))
+					return DoubleFastFieldWriter.Instance;
+				if(t == typeof(DateTime))
+					return DateTimeFastFieldWriter.Instance;
+				if(t == typeof(bool))
+					return BooleanFieldWriter.Instance;
+				return ObjectFieldWriter.Instance;
+			}
+
+			//static readonly Dictionary<Type, IFieldWriter> FieldWriters;
+
+			//static FieldInfo()
+			//{
+			//	FieldWriters = new Dictionary<Type, IFieldWriter>();
+			//	FieldWriters.Add(typeof(int), int32)
+
+			//}
 		}
 
 		enum WriteResult
@@ -114,7 +291,7 @@ namespace Sylvan.Data.Csv
 			Flag(delimiter);
 			Flag(quote);
 			Flag(escape);
-			Flag(comment);
+			//Flag(comment);
 			Flag('\r');
 			Flag('\n');
 
@@ -131,140 +308,140 @@ namespace Sylvan.Data.Csv
 		}
 
 		// this can return either Complete or InsufficientSpace
-		WriteResult WriteField(DbDataReader reader, FieldInfo[] fieldTypes, int i)
-		{
-			var allowNull = fieldTypes[i].allowNull;
+		//		WriteResult WriteField(DbDataReader reader, FieldInfo[] fieldTypes, int i)
+		//		{
+		//			var allowNull = fieldTypes[i].allowNull;
 
-			if (allowNull && reader.IsDBNull(i))
-			{
-				return WriteResult.Complete;
-			}
+		//			if (allowNull && reader.IsDBNull(i))
+		//			{
+		//				return WriteResult.Complete;
+		//			}
 
-			int intVal;
-			string? str;
-			WriteResult result = WriteResult.Complete;
+		//			int intVal;
+		//			string? str;
+		//			WriteResult result = WriteResult.Complete;
 
-			var typeCode = fieldTypes[i].typeCode;
-			switch (typeCode)
-			{
-				case TypeCode.Boolean:
-					var boolVal = reader.GetBoolean(i);
-					result = WriteField(boolVal);
-					break;
-				case TypeCode.String:
-					str = reader.GetString(i);
-					if (i == 0 && str.Length > 0 && str[0] == comment)
-					{
-						if (style == CsvStyle.Standard)
-						{
-							result = WriteQuoted(str);
-						}
-						else
-						{
-							result = WriteEscapedValue(str);
-						}
-					}
-					else
-					{
-						result = WriteField(str);
-					}
-					break;
-				case TypeCode.Byte:
-					intVal = reader.GetByte(i);
-					goto intVal;
-				case TypeCode.Int16:
-					intVal = reader.GetInt16(i);
-					goto intVal;
-				case TypeCode.Int32:
-					intVal = reader.GetInt32(i);
-					intVal:
-					result = WriteField(intVal);
-					break;
-				case TypeCode.Int64:
-					var longVal = reader.GetInt64(i);
-					result = WriteField(longVal);
-					break;
-				case TypeCode.DateTime:
-					var dateVal = reader.GetDateTime(i);
-					result = WriteField(dateVal);
-					break;
-				case TypeCode.Single:
-					var floatVal = reader.GetFloat(i);
-					result = WriteField(floatVal);
-					break;
-				case TypeCode.Double:
-					var doubleVal = reader.GetDouble(i);
-					result = WriteField(doubleVal);
-					break;
-				case TypeCode.Empty:
-				case TypeCode.DBNull:
-					// nothing to do.
-					result = WriteResult.Complete;
-					break;
-				default:
-					var type = fieldTypes[i].type;
-					if (type == typeof(byte[]))
-					{
-						if (dataBuffer.Length == 0)
-						{
-							dataBuffer = new byte[Base64EncSize];
-						}
-						var idx = 0;
-						if (IsBase64Symbol(delimiter) || IsBase64Symbol(quote))
-						{
-							throw new InvalidOperationException();
-						}
-						int len;
-						var pos = this.pos;
-						while ((len = (int)reader.GetBytes(i, idx, dataBuffer, 0, Base64EncSize)) != 0)
-						{
-							var req = (len + 2) / 3 * 4;
-							if (pos + req >= buffer.Length)
-								return WriteResult.InsufficientSpace;
+		//			var typeCode = fieldTypes[i].typeCode;
+		//			switch (typeCode)
+		//			{
+		//				case TypeCode.Boolean:
+		//					var boolVal = reader.GetBoolean(i);
+		//					result = WriteField(boolVal);
+		//					break;
+		//				case TypeCode.String:
+		//					str = reader.GetString(i);
+		//					if (i == 0 && str.Length > 0 && str[0] == comment)
+		//					{
+		//						if (style == CsvStyle.Standard)
+		//						{
+		//							result = WriteQuoted(str);
+		//						}
+		//						else
+		//						{
+		//							result = WriteEscapedValue(str);
+		//						}
+		//					}
+		//					else
+		//					{
+		//						result = WriteField(str);
+		//					}
+		//					break;
+		//				case TypeCode.Byte:
+		//					intVal = reader.GetByte(i);
+		//					goto intVal;
+		//				case TypeCode.Int16:
+		//					intVal = reader.GetInt16(i);
+		//					goto intVal;
+		//				case TypeCode.Int32:
+		//					intVal = reader.GetInt32(i);
+		//					intVal:
+		//					result = WriteField(intVal);
+		//					break;
+		//				case TypeCode.Int64:
+		//					var longVal = reader.GetInt64(i);
+		//					result = WriteField(longVal);
+		//					break;
+		//				case TypeCode.DateTime:
+		//					var dateVal = reader.GetDateTime(i);
+		//					result = WriteField(dateVal);
+		//					break;
+		//				case TypeCode.Single:
+		//					var floatVal = reader.GetFloat(i);
+		//					result = WriteField(floatVal);
+		//					break;
+		//				case TypeCode.Double:
+		//					var doubleVal = reader.GetDouble(i);
+		//					result = WriteField(doubleVal);
+		//					break;
+		//				case TypeCode.Empty:
+		//				case TypeCode.DBNull:
+		//					// nothing to do.
+		//					result = WriteResult.Complete;
+		//					break;
+		//				default:
+		//					var type = fieldTypes[i].type;
+		//					if (type == typeof(byte[]))
+		//					{
+		//						if (dataBuffer.Length == 0)
+		//						{
+		//							dataBuffer = new byte[Base64EncSize];
+		//						}
+		//						var idx = 0;
+		//						if (IsBase64Symbol(delimiter) || IsBase64Symbol(quote))
+		//						{
+		//							throw new InvalidOperationException();
+		//						}
+		//						int len;
+		//						var pos = this.pos;
+		//						while ((len = (int)reader.GetBytes(i, idx, dataBuffer, 0, Base64EncSize)) != 0)
+		//						{
+		//							var req = (len + 2) / 3 * 4;
+		//							if (pos + req >= buffer.Length)
+		//								return WriteResult.InsufficientSpace;
 
-							var c = Convert.ToBase64CharArray(dataBuffer, 0, len, this.buffer, pos);
+		//							var c = Convert.ToBase64CharArray(dataBuffer, 0, len, this.buffer, pos);
 
-							idx += len;
-							pos += c;
-						}
-						this.pos = pos;
-						result = WriteResult.Complete;
-						break;
-					}
-					if (type == typeof(Guid))
-					{
-						var guid = reader.GetGuid(i);
-						result = WriteField(guid);
-						break;
-					}
+		//							idx += len;
+		//							pos += c;
+		//						}
+		//						this.pos = pos;
+		//						result = WriteResult.Complete;
+		//						break;
+		//					}
+		//					if (type == typeof(Guid))
+		//					{
+		//						var guid = reader.GetGuid(i);
+		//						result = WriteField(guid);
+		//						break;
+		//					}
 
-					if (type == typeof(TimeSpan))
-					{
-						var ts = reader.GetFieldValue<TimeSpan>(i);
-						result = WriteField(ts);
-						break;
-					}
-#if NET6_0_OR_GREATER
-					if (type == typeof(DateOnly))
-					{
-						var d = reader.GetFieldValue<DateOnly>(i);
-						result = WriteField(d);
-						break;
-					}
+		//					if (type == typeof(TimeSpan))
+		//					{
+		//						var ts = reader.GetFieldValue<TimeSpan>(i);
+		//						result = WriteField(ts);
+		//						break;
+		//					}
+		//#if NET6_0_OR_GREATER
+		//					if (type == typeof(DateOnly))
+		//					{
+		//						var d = reader.GetFieldValue<DateOnly>(i);
+		//						result = WriteField(d);
+		//						break;
+		//					}
 
-					if (type == typeof(TimeOnly))
-					{
-						var t = reader.GetFieldValue<TimeOnly>(i);
-						result = WriteField(t);
-						break;
-					}
-#endif
-					str = reader.GetValue(i)?.ToString() ?? string.Empty;
-					result = WriteField(str);
-					break;
-			}
-			return result;
-		}
+		//					if (type == typeof(TimeOnly))
+		//					{
+		//						var t = reader.GetFieldValue<TimeOnly>(i);
+		//						result = WriteField(t);
+		//						break;
+		//					}
+		//#endif
+		//					str = reader.GetValue(i)?.ToString() ?? string.Empty;
+		//					result = WriteField(str);
+		//					break;
+		//			}
+		//			return result;
+		//		}
 
 		// this should only be called in scenarios where we know there is enough room.
 		void EndRecord()
@@ -516,6 +693,143 @@ namespace Sylvan.Data.Csv
 			buffer[p++] = quote;
 			this.pos = p;
 			return WriteResult.Complete;
+		}
+
+
+		const int InsufficientSpace = -1;
+		const int NeedsQuoting = -2;
+
+#if SPAN
+
+		static int Write(WriterContext context, ReadOnlySpan<char> src, Span<char> dst)
+		{
+			var r = WriteOptimistic(context, src, dst);
+			return
+				r == NeedsQuoting
+				? WriteQuoted(context, src, dst)
+				: r;
+		}
+
+		static int WriteOptimistic(WriterContext context, ReadOnlySpan<char> src, Span<char> dst)
+		{
+			var ns = context.writer.needsEscape;
+			var delimiter = context.writer.delimiter;
+			var quote = context.writer.quote;
+
+			if (src.Length > dst.Length)
+				return InsufficientSpace;
+
+			for (int i = 0; i < src.Length; i++)
+			{
+				var c = src[i];
+				if (c >= ns.Length || !ns[c])
+				{
+					dst[i] = c;
+				}
+				else
+				{
+					return NeedsQuoting;
+				}
+			}
+			return src.Length;
+		}
+
+		static int WriteQuoted(WriterContext context, ReadOnlySpan<char> src, Span<char> dst)
+		{
+			var quote = context.writer.quote;
+			var escape = context.writer.escape;
+			int p = 0;
+			// require at least room for the 2 quotes and 1 escape.
+			if (src.Length + 3 > dst.Length)
+				return -1;
+
+			dst[p++] = quote; // range guarded by previous if
+			for (int i = 0; i < src.Length; i++)
+			{
+				var c = src[i];
+
+				if (c == quote || c == escape)
+				{
+					if (p == dst.Length)
+						return -1;
+					dst[p++] = escape;
+				}
+
+				if (p == dst.Length)
+					return -1;
+				dst[p++] = c;
+			}
+			if (p == dst.Length)
+				return -1;
+			dst[p++] = quote;
+			return p;
+		}
+
+#endif
+
+		static int Write(WriterContext context, string value, char[] buffer, int offset)
+		{
+			var r = WriteOptimistic(context, value, buffer, offset);
+			return r == -2
+				? WriteQuoted(context, value, buffer, offset)
+				: r;
+		}
+
+		static int WriteOptimistic(WriterContext context, string value, char[] buffer, int offset)
+		{
+			var pos = offset;
+			var ns = context.writer.needsEscape;
+			var delimiter = context.writer.delimiter;
+			var quote = context.writer.quote;
+
+			if (pos + value.Length >= buffer.Length)
+				return -1;
+
+			for (int i = 0; i < value.Length; i++)
+			{
+				var c = value[i];
+				if (c >= ns.Length || !ns[c])
+				{
+					buffer[pos + i] = c;
+				}
+				else
+				{
+					return -2;
+				}
+			}
+			return value.Length;
+		}
+
+		static int WriteQuoted(WriterContext context, string value, char[] buffer, int offset)
+		{
+			var p = offset;
+			var quote = context.writer.quote;
+			var escape = context.writer.escape;
+
+			// require at least room for the 2 quotes and 1 escape.
+			if (p + value.Length + 3 >= buffer.Length)
+				return -1;
+
+			buffer[p++] = quote; // range guarded by previous if
+			for (int i = 0; i < value.Length; i++)
+			{
+				var c = value[i];
+
+				if (c == quote || c == escape)
+				{
+					if (p == buffer.Length)
+						return -1;
+					buffer[p++] = escape;
+				}
+
+				if (p == buffer.Length)
+					return -1;
+				buffer[p++] = c;
+			}
+			if (p == buffer.Length)
+				return -1;
+			buffer[p++] = quote;
+			return p - offset;
 		}
 	}
 }
