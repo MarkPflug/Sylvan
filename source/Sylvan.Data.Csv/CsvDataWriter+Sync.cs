@@ -20,14 +20,17 @@ namespace Sylvan.Data.Csv
 			char[] buffer = this.buffer;
 			int bufferSize = this.buffer.Length;
 
-			WriteResult result;
+			int result;
 
 			for (int i = 0; i < c; i++)
 			{
 				var type = reader.GetFieldType(i);
 				var allowNull = schema?[i].AllowDBNull ?? true;
-				fieldInfos[i] = new FieldInfo(allowNull, type);
+				var writer = GetWriter(type);
+				fieldInfos[i] = new FieldInfo(allowNull, writer);
 			}
+
+			var wc = new WriterContext(this, reader);
 
 			if (writeHeaders)
 			{
@@ -42,14 +45,24 @@ namespace Sylvan.Data.Csv
 						buffer[pos++] = delimiter;
 					}
 
-					var header = reader.GetName(i);
-					result = WriteField(header);
-					if (result == WriteResult.InsufficientSpace)
+					var header = reader.GetName(i) ?? "";
+					result = csvWriter.Write(wc, header, buffer, pos);
+					if (result < 0)
 					{
 						FlushBuffer();
-						result = WriteField(header);
-						if (result == WriteResult.InsufficientSpace)
+						result = csvWriter.Write(wc, header, buffer, pos);
+						if (result < 0)
+						{
 							throw new CsvRecordTooLargeException(0, i);
+						}
+						else
+						{
+							pos += result;
+						}
+					}
+					else
+					{
+						pos += result;
 					}
 				}
 
@@ -60,7 +73,6 @@ namespace Sylvan.Data.Csv
 				EndRecord();
 			}
 
-			var wc = new WriterContext(this, reader);
 			int row = 0;
 			while (reader.Read())
 			{
