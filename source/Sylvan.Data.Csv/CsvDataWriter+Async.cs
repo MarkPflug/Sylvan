@@ -7,8 +7,6 @@ namespace Sylvan.Data.Csv
 {
 	partial class CsvDataWriter
 	{
-		
-
 		/// <summary>
 		/// Asynchronously writes delimited data.
 		/// </summary>

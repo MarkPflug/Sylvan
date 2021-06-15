@@ -15,7 +15,6 @@ using System.Threading.Tasks;
 
 namespace Sylvan.Data.Csv
 {
-
 	/// <summary>
 	/// A data reader for delimited text data.
 	/// </summary>
@@ -1207,62 +1206,6 @@ namespace Sylvan.Data.Csv
 			}
 
 			return acc.GetValueAsObject(this, ordinal);
-
-//			var type = this.GetFieldType(ordinal);
-
-//			switch (Type.GetTypeCode(type))
-//			{
-//				case TypeCode.Boolean:
-//					return this.GetBoolean(ordinal);
-//				case TypeCode.Char:
-//					return this.GetChar(ordinal);
-//				case TypeCode.Byte:
-//					return this.GetByte(ordinal);
-//				case TypeCode.Int16:
-//					return this.GetInt16(ordinal);
-//				case TypeCode.Int32:
-//					return this.GetInt32(ordinal);
-//				case TypeCode.Int64:
-//					return this.GetInt64(ordinal);
-//				case TypeCode.Single:
-//					return this.GetFloat(ordinal);
-//				case TypeCode.Double:
-//					return this.GetDouble(ordinal);
-//				case TypeCode.Decimal:
-//					return this.GetDecimal(ordinal);
-//				case TypeCode.DateTime:
-//					return this.GetDateTime(ordinal);
-//				case TypeCode.String:
-//					return this.GetString(ordinal);
-//				default:
-//					if (type == typeof(byte[]))
-//					{
-//						var length = this.GetBinaryLength(ordinal);
-//						var buffer = new byte[length];
-//						var len = GetBytes(ordinal, 0, buffer, 0, length);
-//						Debug.Assert(len == length);
-//						return buffer;
-//					}
-//					if (type == typeof(Guid))
-//					{
-//						return this.GetGuid(ordinal);
-//					}
-//					if (type == typeof(TimeSpan))
-//					{
-//						return this.GetTimeSpan(ordinal);
-//					}
-//#if NET6_0_OR_GREATER
-//					if (type == typeof(DateOnly))
-//					{
-//						return this.GetDate(ordinal);
-//					}
-//					if (type == typeof(TimeOnly))
-//					{
-//						return this.GetTime(ordinal);
-//					}
-//#endif
-//					return this.GetString(ordinal);
-//			}
 		}
 
 		int GetBinaryLength(int ordinal)
