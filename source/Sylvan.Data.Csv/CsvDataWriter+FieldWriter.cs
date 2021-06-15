@@ -47,7 +47,39 @@ namespace Sylvan.Data.Csv
 			}
 		}
 
-		
+		sealed class BinaryFieldWriter : FieldWriter
+		{
+			public static BinaryFieldWriter Instance = new BinaryFieldWriter();
+
+			public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
+			{
+				var reader = context.reader;
+				var writer = context.writer;
+
+				if (writer.dataBuffer.Length == 0)
+				{
+					writer.dataBuffer = new byte[Base64EncSize];
+				}
+				var dataBuffer = writer.dataBuffer;
+				var idx = 0;
+
+				int len;
+				var pos = offset;
+				while ((len = (int)reader.GetBytes(ordinal, idx, dataBuffer, 0, Base64EncSize)) != 0)
+				{
+					var req = (len + 2) / 3 * 4;
+					if (pos + req >= buffer.Length)
+						return InsufficientSpace;
+
+					var c = Convert.ToBase64CharArray(dataBuffer, 0, len, buffer, pos);
+
+					idx += len;
+					pos += c;
+				}
+				return pos - offset;
+			}
+		}
+
 		sealed class BooleanFieldWriter : FieldWriter
 		{
 			public static IFieldWriter Instance = new BooleanFieldWriter();
@@ -91,6 +123,60 @@ namespace Sylvan.Data.Csv
 			}
 		}
 
+		sealed class Int64FieldWriter : FieldWriter
+		{
+			public static Int64FieldWriter Instance = new Int64FieldWriter();
+
+			public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
+			{
+				var reader = context.reader;
+				var writer = context.writer;
+				var culture = writer.culture;
+				var value = reader.GetInt64(ordinal);
+#if SPAN
+
+				Span<char> str = stackalloc char[20];
+				if (!value.TryFormat(str, out int len, default, culture))
+				{
+					throw new FormatException(); // this shouldn't happen
+				}
+
+				str = str.Slice(0, len);
+
+#else
+				var str = value.ToString(culture);
+#endif
+				return writer.csvWriter.Write(context, str, buffer, offset);
+			}
+		}
+
+		sealed class SingleFieldWriter : FieldWriter
+		{
+			public static SingleFieldWriter Instance = new SingleFieldWriter();
+
+			public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
+			{
+				var reader = context.reader;
+				var writer = context.writer;
+				var culture = writer.culture;
+				var value = reader.GetFloat(ordinal);
+#if SPAN
+
+				Span<char> str = stackalloc char[14];
+				if (!value.TryFormat(str, out int len, default, culture))
+				{
+					throw new FormatException(); // this shouldn't happen
+				}
+
+				str = str.Slice(0, len);
+
+#else
+				var str = value.ToString(culture);
+#endif
+				return writer.csvWriter.Write(context, str, buffer, offset);
+			}
+		}
+
 		sealed class DoubleFieldWriter : FieldWriter
 		{
 			public static DoubleFieldWriter Instance = new DoubleFieldWriter();
@@ -113,6 +199,60 @@ namespace Sylvan.Data.Csv
 
 #else
 				var str = value.ToString(culture);
+#endif
+				return writer.csvWriter.Write(context, str, buffer, offset);
+			}
+		}
+
+		sealed class DecimalFieldWriter : FieldWriter
+		{
+			public static DecimalFieldWriter Instance = new DecimalFieldWriter();
+
+			public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
+			{
+				var reader = context.reader;
+				var writer = context.writer;
+				var culture = writer.culture;
+				var value = reader.GetDecimal(ordinal);
+#if SPAN
+
+				Span<char> str = stackalloc char[32];
+				if (!value.TryFormat(str, out int len, default, culture))
+				{
+					throw new FormatException(); // this shouldn't happen
+				}
+
+				str = str.Slice(0, len);
+
+#else
+				var str = value.ToString(culture);
+#endif
+				return writer.csvWriter.Write(context, str, buffer, offset);
+			}
+		}
+
+		sealed class GuidFieldWriter : FieldWriter
+		{
+			public static GuidFieldWriter Instance = new GuidFieldWriter();
+
+			public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
+			{
+				var reader = context.reader;
+				var writer = context.writer;
+				var culture = writer.culture;
+				var value = reader.GetGuid(ordinal);
+#if SPAN
+
+				Span<char> str = stackalloc char[36];
+				if (!value.TryFormat(str, out int len, default))
+				{
+					throw new FormatException(); // this shouldn't happen
+				}
+
+				str = str.Slice(0, len);
+
+#else
+				var str = value.ToString();
 #endif
 				return writer.csvWriter.Write(context, str, buffer, offset);
 			}
@@ -168,6 +308,25 @@ namespace Sylvan.Data.Csv
 			}
 		}
 
+		sealed class Int64FastFieldWriter : FieldWriter
+		{
+			public static Int64FastFieldWriter Instance = new Int64FastFieldWriter();
+
+			public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
+			{
+				var reader = context.reader;
+				var writer = context.writer;
+				var culture = writer.culture;
+				var value = reader.GetInt64(ordinal);
+				var span = buffer.AsSpan().Slice(offset);
+				if (!value.TryFormat(span, out int len, default, culture))
+				{
+					return InsufficientSpace;
+				}
+				return len;
+			}
+		}
+
 		sealed class DateTimeFastFieldWriter : FieldWriter
 		{
 			public static DateTimeFastFieldWriter Instance = new DateTimeFastFieldWriter();
@@ -178,6 +337,26 @@ namespace Sylvan.Data.Csv
 				var writer = context.writer;
 				var culture = writer.culture;
 				var value = reader.GetDateTime(ordinal);
+				var fmt = value.TimeOfDay == TimeSpan.Zero ? writer.dateFormat : writer.dateTimeFormat;
+				var span = buffer.AsSpan().Slice(offset);
+				if (!value.TryFormat(span, out int len, fmt, culture))
+				{
+					return InsufficientSpace;
+				}
+				return len;
+			}
+		}
+
+		sealed class SingleFastFieldWriter : FieldWriter
+		{
+			public static SingleFastFieldWriter Instance = new SingleFastFieldWriter();
+
+			public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
+			{
+				var reader = context.reader;
+				var writer = context.writer;
+				var culture = writer.culture;
+				var value = reader.GetFloat(ordinal);
 				var span = buffer.AsSpan().Slice(offset);
 				if (!value.TryFormat(span, out int len, default, culture))
 				{
@@ -186,7 +365,6 @@ namespace Sylvan.Data.Csv
 				return len;
 			}
 		}
-
 
 		sealed class DoubleFastFieldWriter : FieldWriter
 		{
@@ -200,6 +378,44 @@ namespace Sylvan.Data.Csv
 				var value = reader.GetDouble(ordinal);
 				var span = buffer.AsSpan().Slice(offset);
 				if (!value.TryFormat(span, out int len, default, culture))
+				{
+					return InsufficientSpace;
+				}
+				return len;
+			}
+		}
+
+		sealed class DecimalFastFieldWriter : FieldWriter
+		{
+			public static DecimalFastFieldWriter Instance = new DecimalFastFieldWriter();
+
+			public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
+			{
+				var reader = context.reader;
+				var writer = context.writer;
+				var culture = writer.culture;
+				var value = reader.GetDecimal(ordinal);
+				var span = buffer.AsSpan().Slice(offset);
+				if (!value.TryFormat(span, out int len, default, culture))
+				{
+					return InsufficientSpace;
+				}
+				return len;
+			}
+		}
+
+		sealed class GuidFastFieldWriter : FieldWriter
+		{
+			public static GuidFastFieldWriter Instance = new GuidFastFieldWriter();
+
+			public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
+			{
+				var reader = context.reader;
+				var writer = context.writer;
+				var culture = writer.culture;
+				var value = reader.GetGuid(ordinal);
+				var span = buffer.AsSpan().Slice(offset);
+				if (!value.TryFormat(span, out int len, default))
 				{
 					return InsufficientSpace;
 				}
