@@ -117,10 +117,10 @@ namespace Sylvan.Data
 		public static DbDataReader GetTypedData()
 		{
 			var reader = File.OpenText("Data/Schema.csv");
-			return CsvDataReader.Create(reader, new CsvDataReaderOptions() { Schema = Schema });
+			return CsvDataReader.Create(reader, new CsvDataReaderOptions() { Schema = TestDataSchema });
 		}
 
-		public static ICsvSchemaProvider TestDataSchema => Schema;
+		public static ICsvSchemaProvider TestDataSchema => new CsvSchema(Sylvan.Data.Schema.Parse(DataSetSchema));
 
 		class TypedCsvColumn : DbColumn
 		{

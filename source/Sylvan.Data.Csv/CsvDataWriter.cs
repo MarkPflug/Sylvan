@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Data.Common;
 using System.Globalization;
 using System.IO;
-using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace Sylvan.Data.Csv
@@ -12,35 +10,191 @@ namespace Sylvan.Data.Csv
 	/// </summary>
 	public sealed partial class CsvDataWriter
 		: IDisposable
-#if NETSTANDARD2_1
+#if ASYNC_DISPOSE
 		, IAsyncDisposable
 #endif
 	{
+		const int InsufficientSpace = -1;
+		const int NeedsQuoting = -2;
+
 		class FieldInfo
 		{
-			public FieldInfo(bool allowNull, Type type)
+			public FieldInfo(bool allowNull, IFieldWriter writer)
 			{
 				this.allowNull = allowNull;
-				this.type = type;
-				this.typeCode = Type.GetTypeCode(type);
+				this.writer = writer;
 			}
+
 			public bool allowNull;
-			public Type type;
-			public TypeCode typeCode;
+			public IFieldWriter writer;
 		}
 
-		enum WriteResult
+		IFieldWriter GetWriter(Type type)
 		{
-			InsufficientSpace = 1,
-			RequiresEscaping,
-			Complete,
+			if (type == typeof(string))
+			{
+				return StringFieldWriter.Instance;
+			}
+			if (type == typeof(int))
+			{
+#if SPAN
+				return IsFastInt
+					? Int32FastFieldWriter.Instance
+					: Int32FieldWriter.Instance;
+#else
+				return Int32FieldWriter.Instance;
+#endif
+			}
+
+			if (type == typeof(long))
+			{
+#if SPAN
+				return IsFastInt
+					? Int64FastFieldWriter.Instance
+					: Int64FieldWriter.Instance;
+#else
+				return Int64FieldWriter.Instance;
+#endif
+			}
+			if (type == typeof(float))
+			{
+#if SPAN
+				return IsFastDouble
+					? SingleFastFieldWriter.Instance
+					: SingleFieldWriter.Instance;
+#else
+				return SingleFieldWriter.Instance;
+#endif
+			}
+
+			if (type == typeof(double))
+			{
+#if SPAN
+				return IsFastDouble
+					? DoubleFastFieldWriter.Instance
+					: DoubleFieldWriter.Instance;
+#else
+				return DoubleFieldWriter.Instance;
+#endif
+			}
+			if (type == typeof(decimal))
+			{
+#if SPAN
+				return IsFastDecimal
+					? DecimalFastFieldWriter.Instance
+					: DecimalFieldWriter.Instance;
+#else
+				return DecimalFieldWriter.Instance;
+#endif
+			}
+			if (type == typeof(bool))
+			{
+				return BooleanFieldWriter.Instance;
+			}
+			if (type == typeof(DateTime))
+			{
+#if SPAN
+				return IsFastDateTime
+					? DateTimeFastFieldWriter.Instance
+					: DateTimeFieldWriter.Instance;
+#else
+				return DateTimeFieldWriter.Instance;
+#endif
+			}
+
+			if (type == typeof(Guid))
+			{
+#if SPAN
+				return IsFastNumeric
+					? GuidFastFieldWriter.Instance
+					: GuidFieldWriter.Instance;
+#else
+				return GuidFieldWriter.Instance;
+#endif
+			}
+
+			if (type == typeof(byte[]))
+			{
+				if (IsBase64Symbol(quote) || IsBase64Symbol(delimiter) || IsBase64Symbol(escape))
+				{
+					// if the csv writer is configured to use a symbol that collides with the
+					// base64 alphabet, we throw early to avoid creating a potentially ambiguous file.
+					// this doesn't happen with default configuration.
+					throw new CsvConfigurationException();
+				}
+				return BinaryFieldWriter.Instance;
+			}
+
+			// for everything else fallback to GetValue/ToString
+			return ObjectFieldWriter.Instance;
 		}
+
+#if SPAN
+
+		bool IsInvariantCulture
+		{
+			get
+			{
+				return this.culture == CultureInfo.InvariantCulture;
+			}
+		}
+
+		// indicates if the writer is configured such that
+		// most primitive data types can be written without escaping.
+		bool IsFastConfig
+		{
+			get
+			{
+				return
+					(
+					this.delimiter == ',' ||
+					this.delimiter == '\t' ||
+					this.delimiter == '|' ||
+					this.delimiter == ';' ||
+					this.delimiter < ' '
+					)
+					&&
+					(
+					this.quote == '\"' ||
+					this.quote == '\'' ||
+					this.quote < ' '
+					)
+					&&
+					(
+					this.escape == '\\' ||
+					this.escape == '\"' ||
+					this.escape == '\'' ||
+					this.escape < ' '
+					);
+			}
+		}
+
+		bool IsFastNumeric => IsInvariantCulture && IsFastConfig;
+
+		bool IsFastDecimal => IsFastNumeric;
+
+		bool IsFastDouble => IsFastNumeric;
+
+		bool IsFastInt => IsFastNumeric;
+
+		bool IsFastDateTime
+		{
+			get
+			{
+				return IsInvariantCulture && IsFastConfig
+					&& this.dateFormat == CsvDataWriterOptions.Default.DateFormat
+					&& this.dateTimeFormat == CsvDataWriterOptions.Default.DateTimeFormat;
+			}
+		}
+
+#endif
 
 		// Size of the buffer used for base64 encoding, must be a multiple of 3.
 		const int Base64EncSize = 3 * 256;
 
 		readonly TextWriter writer;
-		readonly CsvStyle style;
+		readonly CsvWriter csvWriter;
+
 		readonly bool writeHeaders;
 		readonly char delimiter;
 		readonly char quote;
@@ -61,9 +215,6 @@ namespace Sylvan.Data.Csv
 
 		bool disposedValue;
 
-		readonly bool fastDouble;
-		readonly bool fastInt;
-		readonly bool fastDate;
 		readonly bool[] needsEscape;
 
 		/// <summary>
@@ -94,7 +245,7 @@ namespace Sylvan.Data.Csv
 			options = options ?? CsvDataWriterOptions.Default;
 			options.Validate();
 			this.writer = writer ?? throw new ArgumentNullException(nameof(writer));
-			this.style = options.Style;
+			this.csvWriter = options.Style == CsvStyle.Standard ? CsvWriter.Quoted : CsvWriter.Escaped;
 			this.trueString = options.TrueString;
 			this.falseString = options.FalseString;
 			this.dateTimeFormat = options.DateTimeFormat;
@@ -108,140 +259,24 @@ namespace Sylvan.Data.Csv
 			this.culture = options.Culture;
 			this.buffer = options.Buffer ?? new char[options.BufferSize];
 			this.pos = 0;
-			
+
 			// create a lookup of all the characters that need to be escaped.
 			this.needsEscape = new bool[128];
 			Flag(delimiter);
 			Flag(quote);
 			Flag(escape);
-			Flag(comment);
+			if (options.Style == CsvStyle.Escaped)
+			{
+				Flag(comment);
+			}
 			Flag('\r');
 			Flag('\n');
-
-			var isInvariantCulture = this.culture == CultureInfo.InvariantCulture;
-			this.fastDouble = isInvariantCulture && delimiter != '.' && quote != '.';
-			this.fastInt = isInvariantCulture && delimiter != '-' && quote != '-';
-			this.fastDate = isInvariantCulture && delimiter == ',' && quote == '\"';
 		}
 
 		void Flag(char c)
 		{
 			// these characters are already validated to be in 0-127
 			needsEscape[c] = true;
-		}
-
-		// this can return either Complete or InsufficientSpace
-		WriteResult WriteField(DbDataReader reader, FieldInfo[] fieldTypes, int i)
-		{
-			var allowNull = fieldTypes[i].allowNull;
-
-			if (allowNull && reader.IsDBNull(i))
-			{
-				return WriteResult.Complete;
-			}
-
-			int intVal;
-			string? str;
-			WriteResult result = WriteResult.Complete;
-
-			var typeCode = fieldTypes[i].typeCode;
-			switch (typeCode)
-			{
-				case TypeCode.Boolean:
-					var boolVal = reader.GetBoolean(i);
-					result = WriteField(boolVal);
-					break;
-				case TypeCode.String:
-					str = reader.GetString(i);
-					if (i == 0 && str.Length > 0 && str[0] == comment)
-					{
-						if (style == CsvStyle.Standard)
-						{
-							result = WriteQuoted(str);
-						}
-						else
-						{
-							result = WriteEscapedValue(str);
-						}
-					}
-					else
-					{
-						result = WriteField(str);
-					}
-					break;
-				case TypeCode.Byte:
-					intVal = reader.GetByte(i);
-					goto intVal;
-				case TypeCode.Int16:
-					intVal = reader.GetInt16(i);
-					goto intVal;
-				case TypeCode.Int32:
-					intVal = reader.GetInt32(i);
-					intVal:
-					result = WriteField(intVal);
-					break;
-				case TypeCode.Int64:
-					var longVal = reader.GetInt64(i);
-					result = WriteField(longVal);
-					break;
-				case TypeCode.DateTime:
-					var dateVal = reader.GetDateTime(i);
-					result = WriteField(dateVal);
-					break;
-				case TypeCode.Single:
-					var floatVal = reader.GetFloat(i);
-					result = WriteField(floatVal);
-					break;
-				case TypeCode.Double:
-					var doubleVal = reader.GetDouble(i);
-					result = WriteField(doubleVal);
-					break;
-				case TypeCode.Empty:
-				case TypeCode.DBNull:
-					// nothing to do.
-					result = WriteResult.Complete;
-					break;
-				default:
-					var type = fieldTypes[i].type;
-					if (type == typeof(byte[]))
-					{
-						if (dataBuffer.Length == 0)
-						{
-							dataBuffer = new byte[Base64EncSize];
-						}
-						var idx = 0;
-						if (IsBase64Symbol(delimiter) || IsBase64Symbol(quote))
-						{
-							throw new InvalidOperationException();
-						}
-						int len;
-						var pos = this.pos;
-						while ((len = (int)reader.GetBytes(i, idx, dataBuffer, 0, Base64EncSize)) != 0)
-						{
-							var req = (len + 2) / 3 * 4;
-							if (pos + req >= buffer.Length)
-								return WriteResult.InsufficientSpace;
-
-							var c = Convert.ToBase64CharArray(dataBuffer, 0, len, this.buffer, pos);
-
-							idx += len;
-							pos += c;
-						}
-						this.pos = pos;
-						result = WriteResult.Complete;
-						break;
-					}
-					if (type == typeof(Guid))
-					{
-						var guid = reader.GetGuid(i);
-						result = WriteField(guid);
-						break;
-					}
-					str = reader.GetValue(i)?.ToString() ?? string.Empty;
-					result = WriteField(str);
-					break;
-			}
-			return result;
 		}
 
 		// this should only be called in scenarios where we know there is enough room.
@@ -255,197 +290,6 @@ namespace Sylvan.Data.Csv
 		static bool IsBase64Symbol(char c)
 		{
 			return c == '+' || c == '/' || c == '=';
-		}
-
-		WriteResult WriteField(Guid value)
-		{
-			return WriteField(value.ToString());
-		}
-
-		WriteResult WriteField(bool value)
-		{
-			var str = value ? trueString : falseString;
-			return WriteField(str);
-		}
-
-		WriteResult WriteField(double value)
-		{
-#if NETSTANDARD2_1
-			if(fastDouble)
-			{
-				if(value.TryFormat(buffer.AsSpan()[pos..], out int len, default, culture))
-				{
-					pos += len;
-					return WriteResult.Complete;
-				}
-				return WriteResult.InsufficientSpace;
-			}
-#endif
-			return WriteField(value.ToString(culture));
-		}
-
-		WriteResult WriteField(long value)
-		{
-#if NETSTANDARD2_1
-			if(fastInt)
-			{
-				if(value.TryFormat(buffer.AsSpan()[pos..], out int len, default, culture))
-				{
-					pos += len;
-					return WriteResult.Complete;
-				}
-				return WriteResult.InsufficientSpace;
-			}
-#endif
-			return WriteField(value.ToString(culture));
-		}
-
-		WriteResult WriteField(int value)
-		{
-#if NETSTANDARD2_1
-			if(fastInt)
-			{
-				if(value.TryFormat(buffer.AsSpan()[pos..], out int len, default, culture))
-				{
-					pos += len;
-					return WriteResult.Complete;
-				}
-				return WriteResult.InsufficientSpace;
-			}
-#endif
-			return WriteField(value.ToString(culture));
-		}
-
-		WriteResult WriteField(DateTime value)
-		{
-			var format = value.TimeOfDay == TimeSpan.Zero ? dateFormat : dateTimeFormat;
-#if NETSTANDARD2_1
-			if (fastDate)
-			{
-				if (value.TryFormat(buffer.AsSpan()[pos..], out int len, format, culture))
-				{
-					pos += len;
-					return WriteResult.Complete;
-				}
-				return WriteResult.InsufficientSpace;
-			}
-#endif
-			return WriteField(value.ToString(format, culture));
-		}
-
-		WriteResult WriteField(string value)
-		{
-			if (style == CsvStyle.Standard)
-			{
-				var r = WriteValueOptimistic(value);
-				if (r == WriteResult.RequiresEscaping)
-				{
-					return WriteQuoted(value);
-				}
-				return r;
-			}
-			else
-			{
-				return WriteEscapedValue(value);
-			}
-		}
-
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		WriteResult WriteValueOptimistic(string str)
-		{
-			var buffer = this.buffer;
-			var pos = this.pos;
-			if (pos + str.Length >= buffer.Length)
-				return WriteResult.InsufficientSpace;
-
-			for (int i = 0; i < str.Length; i++)
-			{
-				var c = str[i];
-				if (c < needsEscape.Length && !needsEscape[c])
-				{
-					buffer[pos + i] = c;
-				}
-				else
-				{
-					if (c == delimiter || c == quote || c == '\n' || c == '\r')
-					{
-						return WriteResult.RequiresEscaping;
-					}
-					buffer[pos + i] = c;
-				}
-			}
-			this.pos += str.Length;
-			return WriteResult.Complete;
-		}
-
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		WriteResult WriteEscapedValue(string str)
-		{
-			var buffer = this.buffer;
-			var pos = this.pos;
-			// for simplicity assume every character will need to be escaped
-			if (pos + str.Length * 2 >= buffer.Length)
-				return WriteResult.InsufficientSpace;
-
-			for (int i = 0; i < str.Length; i++)
-			{
-				char c = str[i];
-				if (c < needsEscape.Length && !needsEscape[c])
-				{
-					buffer[pos++] = c;
-				}
-				else
-				{
-					if (c == '\r')
-					{
-						buffer[pos++] = escape;
-						buffer[pos++] = c;
-						if (str[i + 1] == '\n')
-						{
-							buffer[pos++] = '\n';
-							i++;
-						}
-					}
-					else
-					{
-						buffer[pos++] = escape;
-						buffer[pos++] = c;
-					}
-				}
-			}
-			this.pos = pos;
-			return WriteResult.Complete;
-		}
-
-		WriteResult WriteQuoted(string str)
-		{
-			var buffer = this.buffer;
-			var p = this.pos;
-			// require at least room for the 2 quotes and 1 escape.
-			if (p + str.Length + 3 >= buffer.Length)
-				return WriteResult.InsufficientSpace;
-
-			buffer[p++] = quote; // range guarded by previous if
-			for (int i = 0; i < str.Length; i++)
-			{
-				var c = str[i];
-
-				if (c == quote || c == escape)
-				{
-					if (p == buffer.Length)
-						return WriteResult.InsufficientSpace;
-					buffer[p++] = escape;
-				}
-
-				if (p == buffer.Length)
-					return WriteResult.InsufficientSpace;
-				buffer[p++] = c;
-			}
-			if (p == buffer.Length)
-				return WriteResult.InsufficientSpace;
-			buffer[p++] = quote;
-			this.pos = p;
-			return WriteResult.Complete;
 		}
 	}
 }

@@ -16,21 +16,24 @@ namespace Sylvan.Data.Csv
 		public async Task<long> WriteAsync(DbDataReader reader, CancellationToken cancel = default)
 		{
 			var c = reader.FieldCount;
-			var fieldTypes = new FieldInfo[c];
+			var fieldInfos = new FieldInfo[c];
 
 			var schema = (reader as IDbColumnSchemaGenerator)?.GetColumnSchema();
 
 			char[] buffer = this.buffer;
 			int bufferSize = this.buffer.Length;
 
-			WriteResult result;
+			int result;
 
 			for (int i = 0; i < c; i++)
 			{
 				var type = reader.GetFieldType(i);
 				var allowNull = schema?[i].AllowDBNull ?? true;
-				fieldTypes[i] = new FieldInfo(allowNull, type);
+				var writer = GetWriter(type);
+				fieldInfos[i] = new FieldInfo(allowNull, writer);
 			}
+
+			var wc = new WriterContext(this, reader);
 
 			if (writeHeaders)
 			{
@@ -40,31 +43,41 @@ namespace Sylvan.Data.Csv
 					{
 						if (pos + 1 >= bufferSize)
 						{
-							await FlushBufferAsync().ConfigureAwait(false);
+							await FlushBufferAsync(cancel).ConfigureAwait(false);
 						}
 						buffer[pos++] = delimiter;
 					}
 
-					var header = reader.GetName(i);
-					result = WriteField(header);
-					if (result == WriteResult.InsufficientSpace)
+					var header = reader.GetName(i) ?? "";
+					result = csvWriter.Write(wc, header, buffer, pos);
+					if (result < 0)
 					{
-						await FlushBufferAsync().ConfigureAwait(false);
-						result = WriteField(header);
-						if (result == WriteResult.InsufficientSpace)
+						await FlushBufferAsync(cancel).ConfigureAwait(false);
+						result = csvWriter.Write(wc, header, buffer, pos);
+						if (result < 0)
+						{
 							throw new CsvRecordTooLargeException(0, i);
+						}
+						else
+						{
+							pos += result;
+						}
+					}
+					else
+					{
+						pos += result;
 					}
 				}
 
 				if (pos + 2 >= bufferSize)
 				{
-					await FlushBufferAsync().ConfigureAwait(false);
+					await FlushBufferAsync(cancel).ConfigureAwait(false);
 				}
 				EndRecord();
 			}
 
 			int row = 0;
-			while (await reader.ReadAsync())
+			while (await reader.ReadAsync(cancel))
 			{
 				cancel.ThrowIfCancellationRequested();
 				row++;
@@ -76,47 +89,61 @@ namespace Sylvan.Data.Csv
 					{
 						if (pos + 1 >= bufferSize)
 						{
-							await FlushBufferAsync().ConfigureAwait(false);
+							await FlushBufferAsync(cancel).ConfigureAwait(false);
 						}
 						buffer[pos++] = delimiter;
 					}
+					var field = fieldInfos[i];
+					if (field.allowNull && reader.IsDBNull(i))
+					{
+						continue;
+					}
+
 					for (int retry = 0; retry < 2; retry++)
 					{
-						var r = WriteField(reader, fieldTypes, i);
+						var r = field.writer.Write(wc, i, buffer, pos);
 
-						if (r == WriteResult.Complete)
-							goto success;
-						if (r == WriteResult.InsufficientSpace)
+						if (r >= 0)
 						{
-							await FlushBufferAsync().ConfigureAwait(false);
+							pos += r;
+							goto success;
+						}
+						else
+						{
+							await FlushBufferAsync(cancel).ConfigureAwait(false);
 							continue;
 						}
 					}
 					// we arrive here only when there isn't enough room in the buffer
 					// to hold the field.				
 					throw new CsvRecordTooLargeException(row, i);
-				success:;
+					success:;
 				}
 
 				if (pos + 2 >= bufferSize)
 				{
-					await FlushBufferAsync().ConfigureAwait(false);
+					await FlushBufferAsync(cancel).ConfigureAwait(false);
 				}
 				EndRecord();
 			}
 			// flush any pending data on the way out.
-			await FlushBufferAsync().ConfigureAwait(false);
+			await FlushBufferAsync(cancel).ConfigureAwait(false);
 			return row;
 		}
 
-		async Task FlushBufferAsync()
+		async Task FlushBufferAsync(CancellationToken cancel)
 		{
 			if (this.pos == 0) return;
+#if NETSTANDARD2_1_OR_GREATER || NET6_0_OR_GREATER
+			var m = buffer.AsMemory().Slice(0, pos);
+			await writer.WriteAsync(m, cancel).ConfigureAwait(false);
+#else
 			await writer.WriteAsync(buffer, 0, pos).ConfigureAwait(false);
+#endif
 			pos = 0;
 		}
 
-#if NETSTANDARD2_1
+#if ASYNC_DISPOSE
 		ValueTask IAsyncDisposable.DisposeAsync()
 		{
 			GC.SuppressFinalize(this);

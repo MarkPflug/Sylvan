@@ -35,11 +35,11 @@ namespace Sylvan.Benchmarks
 		}
 
 		[Benchmark]
-		public void SylvanSync()
+		public async Task SylvanAsync()
 		{
 			using var tr = TestData.GetTextReader();
-			using var dr = CsvDataReader.Create(tr, new CsvDataReaderOptions() { Buffer = buffer });
-			while (dr.Read())
+			using var dr = await CsvDataReader.CreateAsync(tr, new CsvDataReaderOptions() { Buffer = buffer });
+			while (await dr.ReadAsync())
 			{
 				for (int i = 0; i < dr.FieldCount; i++)
 				{
@@ -49,11 +49,25 @@ namespace Sylvan.Benchmarks
 		}
 
 		[Benchmark]
-		public async Task SylvanAsync()
+		public async Task SylvanGenericAsync()
 		{
 			using var tr = TestData.GetTextReader();
 			using var dr = await CsvDataReader.CreateAsync(tr, new CsvDataReaderOptions() { Buffer = buffer });
 			while (await dr.ReadAsync())
+			{
+				for (int i = 0; i < dr.FieldCount; i++)
+				{
+					var s = dr.GetFieldValue<string>(i);
+				}
+			}
+		}
+
+		[Benchmark]
+		public void SylvanSync()
+		{
+			using var tr = TestData.GetTextReader();
+			using var dr = CsvDataReader.Create(tr, new CsvDataReaderOptions() { Buffer = buffer });
+			while (dr.Read())
 			{
 				for (int i = 0; i < dr.FieldCount; i++)
 				{

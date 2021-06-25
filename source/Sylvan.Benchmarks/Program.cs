@@ -1,4 +1,5 @@
 ﻿using BenchmarkDotNet.Running;
+using System.Threading.Tasks;
 
 namespace Sylvan.Benchmarks
 {

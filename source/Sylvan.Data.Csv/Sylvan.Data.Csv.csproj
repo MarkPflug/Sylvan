@@ -1,12 +1,17 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netstandard2.0;netstandard2.1</TargetFrameworks>
-    <VersionPrefix>1.0.3</VersionPrefix>
+    <!--
+    <TargetFramework>net6.0</TargetFramework>
+    -->
+    <TargetFrameworks>netstandard2.0;netstandard2.1;net6.0</TargetFrameworks>
+    <VersionPrefix>1.1.0</VersionPrefix>
+    <VersionSuffix>b0001</VersionSuffix>
     <Description>A .NET library for reading and writing delimited CSV data.</Description>
     <PackageTags>csv;delimited;datareader</PackageTags>
     <Nullable>enable</Nullable>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <DefineConstants Condition="$(TargetFramework) == 'netstandard2.1' Or $(TargetFramework) == 'net6.0'">SPAN;ASYNC_DISPOSE;$(DefineConstants)</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
