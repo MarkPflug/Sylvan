@@ -52,9 +52,13 @@ await csvWriter.WriteAsync(dr);
 
 ```
 
-## Options
+## [Usage Examples](Csv/Examples.md)
 
-The default behavior should be sufficient for many cases, and there are a number of [options](csv/Options.md) for configuring the behavior of the CSV data reader and writer.
+A few examples of common use cases are [documented here](Csv/Examples.md).
+
+## [Options](Csv/Options.md)
+
+The default behavior should be sufficient for many cases, and there are a number of [options](Csv/Options.md) for configuring the behavior of the CSV data reader and writer.
 
 ## Null/Empty field handling
 
