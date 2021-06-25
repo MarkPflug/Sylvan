@@ -7,8 +7,9 @@ namespace Sylvan.Benchmarks
 	{
 		public static void Main(string[] args)
 		{
-			var summary = BenchmarkSwitcher
-				.FromAssembly(typeof(Program).Assembly).Run(args);
+			BenchmarkSwitcher
+				.FromAssembly(typeof(Program).Assembly)
+				.Run(args);
 		}
 	}
 }

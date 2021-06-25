@@ -1,53 +1,31 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.ObjectModel;
 using System.Data;
 using System.Data.Common;
 using System.Globalization;
+using System.Reflection;
 
 namespace Sylvan.Data
 {
-	[AttributeUsage(AttributeTargets.Property | AttributeTargets.Field)]
-	public sealed class ColumnSeriesAttribute : Attribute
+	public interface IDataBinder
 	{
-		public string? SeriesPattern { get; }
-
-		public ColumnSeriesAttribute() { }
-
-		public ColumnSeriesAttribute(string seriesPattern)
-		{
-			this.SeriesPattern = seriesPattern;
-		}
 	}
 
-	public static class DataBinderExtensions
-	{
-		public static T GetRecord<T>(this IDataBinder<T> binder, IDataRecord record, Func<IDataRecord, Exception, bool>? errorHandler = null) where T : new()
-		{
-			var t = new T();
-			try
-			{
-				binder.Bind(record, t);
-			}
-			catch (Exception e) when (errorHandler != null)
-			{
-				if (!errorHandler(record, e))
-				{
-					throw;
-				}
-			}
-			return t;
-		}
-	}
-
-	public interface IDataBinder<T>
+	public interface IDataBinder<T> : IDataBinder
 	{
 		void Bind(IDataRecord record, T item);
 	}
 
-	public abstract class BinderFactory<T>
+	interface IDataSeriesBinder
 	{
-		public abstract IDataBinder<T> CreateBinder(ReadOnlyCollection<DbColumn> schema);
+		object? GetSeriesAccessor(string seriesName);
 	}
+
+	//public abstract class BinderFactory<T>
+	//{
+	//	public abstract IDataBinder<T> CreateBinder(ReadOnlyCollection<DbColumn> schema);
+	//}
 
 	public sealed class DataBinderOptions
 	{
@@ -55,17 +33,19 @@ namespace Sylvan.Data
 		//public bool ReaderAllowsDynamicAccess { get; set; }
 		public CultureInfo Culture { get; set; }
 
-#warning how do I name this?
-		// TODO: should this even exist? or should I have a way to auto-map the schema?
-		public Func<string, int, string?>? ColumnNamer { get; set; }
+		/// <summary>
+		/// Indicates how the data source will bind to the target type.
+		/// Defaults to <see cref="DataBindingMode.AllProperties"/> which requires that
+		/// the datasource have column that binds to each property, but would allow unbound columns.
+		/// </summary>
+		public DataBindingMode BindingMode { get; set; }
 
-		public DataBindMode BindMode { get; set; }
+		public bool InferColumnTypeFromProperty { get; set; }
 
 		public DataBinderOptions()
 		{
 			this.Culture = CultureInfo.InvariantCulture;
-			this.ColumnNamer = DataBinder.DefaultNameMapping;
-			this.BindMode = DataBindMode.Neither;
+			this.BindingMode = DataBindingMode.AllProperties;
 		}
 	}
 
@@ -94,6 +74,12 @@ namespace Sylvan.Data
 				}
 			}
 			return Schema.GetWeakSchema(dr).GetColumnSchema();
+		}
+
+		public static IDataBinder<T> Create<T>(ReadOnlyCollection<DbColumn> schema, DataBinderOptions? opts = null)
+		{
+			opts = opts ?? new DataBinderOptions();
+			return new CompiledDataBinder<T>(opts, schema);
 		}
 
 		public static IDataBinder<T> Create<T>(IDataReader dr, DataBinderOptions? opts = null)

@@ -65,9 +65,6 @@ namespace Sylvan.Data
 			return builder.Build();
 		}
 
-		internal const string DateSeriesMarker = "{Date}";
-		internal const string IntegerSeriesMarker = "{Integer}";
-
 		// types: byte,int16,int32,int64,float,double,decimal,string,binary,date,datetime,
 		// Id:int;
 		// FirstName:string[32]?;

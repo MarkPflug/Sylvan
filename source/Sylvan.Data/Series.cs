@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
+using System.Data;
 
 namespace Sylvan.Data
 {
@@ -11,94 +11,39 @@ namespace Sylvan.Data
 		TK Minimum { get; }
 		TK Maximum { get; }
 
-		TV this[TK key] { get; }
+		IReadOnlyList<TK> Keys { get; }
+		IReadOnlyList<TV> Values { get; }
 	}
 
-	public sealed class Series<T> : ISeries<int, T>
+	public sealed class Series<TK, TV> : ISeries<TK,TV>
+		where TK : IComparable<TK>
 	{
-		public int Minimum { get; }
-		public int Step { get; }
-		public int Maximum { get; }
+		readonly IReadOnlyList<TK> keys;
+		readonly IReadOnlyList<TV> values;
 
-		readonly T[] values;
+		public TK Minimum => keys[0];
+		public TK Maximum => keys[keys.Count - 1];
 
-		public Series(int start, IEnumerable<T> values) : this(start, 1, values)
+		public IReadOnlyList<TK> Keys => keys;
+		public IReadOnlyList<TV> Values => values;
+
+		public Series(DataSeriesAccessor<TK,TV> seriesData, IDataRecord data)
 		{
-
-		}
-
-		public Series(int start, int step, IEnumerable<T> values)
-		{
-			this.Minimum = start;
-			this.Step = step;
-			this.values = values.ToArray();
-			this.Maximum = Minimum + this.values.Length * Step;
-		}
-
-		public T this[int key]
-		{
-			get
+			this.keys = seriesData.Keys;
+			var values = new TV[keys.Count];
+			int i = 0;
+			foreach(var value in seriesData.ReadValues(data))
 			{
-				if (key < Minimum || key > Maximum) throw new IndexOutOfRangeException();
-				var idx = (key - Minimum) / Step;
-
-				return values[idx];
+				values[i++] = value;
 			}
+			this.values = values;
 		}
 
-		public IEnumerator<KeyValuePair<int, T>> GetEnumerator()
+		public IEnumerator<KeyValuePair<TK, TV>> GetEnumerator()
 		{
-			int key = Minimum;
-			for (int i = 0; i < values.Length; i++, key += Step)
+			for(int i = 0; i < keys.Count; i++)
 			{
-				yield return new KeyValuePair<int, T>(key, values[i]);
-			}
-		}
-
-		IEnumerator IEnumerable.GetEnumerator()
-		{
-			return this.GetEnumerator();
-		}
-	}
-
-	public sealed class DateSeries<T> : ISeries<DateTime, T>
-	{
-		public DateTime Minimum { get; }
-		public TimeSpan Step { get; }
-		public DateTime Maximum { get; }
-
-		readonly T[] values;
-
-		public DateSeries(DateTime startDate, IEnumerable<T> values)
-			: this(startDate, TimeSpan.FromDays(1), values)
-		{
-		}
-
-		public DateSeries(DateTime startDate, TimeSpan step, IEnumerable<T> values)
-		{
-			this.Minimum = startDate.Date;
-			this.Step = step;
-			this.values = values.ToArray();
-			this.Maximum = Minimum.AddDays(this.values.Length);
-		}
-
-		public T this[DateTime key]
-		{
-			get
-			{
-				if (key < Minimum || key > Maximum) throw new IndexOutOfRangeException();
-				var idx = (key.Ticks - Minimum.Ticks) / Step.Ticks;
-				return values[idx];
-			}
-		}
-
-		public IEnumerator<KeyValuePair<DateTime, T>> GetEnumerator()
-		{
-			DateTime key = Minimum;
-			for (int i = 0; i < this.values.Length; i++)
-			{
-				yield return new KeyValuePair<DateTime, T>(key, values[i]);
-				key = key.Add(Step);
+				yield return new KeyValuePair<TK, TV>(keys[i], values[i]);
 			}
 		}
 

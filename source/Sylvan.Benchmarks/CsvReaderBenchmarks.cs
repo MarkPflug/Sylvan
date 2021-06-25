@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace Sylvan.Benchmarks
 {
 	[MemoryDiagnoser]
-	[SimpleJob(1, 4, 10, 2)]
+	[SimpleJob(1, 4, 8, 1)]
 	public class CsvReaderBenchmarks
 	{
 		const int BufferSize = 0x4000;
@@ -77,7 +77,7 @@ namespace Sylvan.Benchmarks
 		}
 
 		[Benchmark]
-		public async Task SylvanShare()
+		public async Task SylvanHashSetDeDupe()
 		{
 			using var tr = TestData.GetTextReader();
 			using var dr = await CsvDataReader.CreateAsync(tr);
@@ -88,7 +88,6 @@ namespace Sylvan.Benchmarks
 				{
 					var s = dr.GetString(i);
 					hs.Add(s);
-
 				}
 			}
 		}
@@ -146,12 +145,15 @@ namespace Sylvan.Benchmarks
 		{
 			using var tr = TestData.GetTextReader();
 			using var dr = CsvDataReader.Create(tr);
+			var quantityIdx = dr.GetOrdinal("Quantity");
+			var nameIdx = dr.GetOrdinal("ProductName");
+			var dateIdx = dr.GetOrdinal("ShipDate");
 			while (dr.Read())
 			{
-				var name = dr.GetString(1);
-				var quantity = dr.GetInt32(2);
+				var quantity = dr.GetString(quantityIdx);
+				var name = dr.GetString(nameIdx);
+				var date = dr.GetString(dateIdx);
 			}
 		}
 	}
-
 }

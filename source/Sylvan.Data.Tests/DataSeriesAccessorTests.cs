@@ -27,7 +27,7 @@ namespace Sylvan.Data
 			var acc = new DataSeriesAccessor<DateTime, int>(cols);
 			while (csv.Read())
 			{
-				var result = acc.GetSeries(csv).ToArray();
+				var result = acc.ReadValues(csv).ToArray();
 			}
 		}
 	}

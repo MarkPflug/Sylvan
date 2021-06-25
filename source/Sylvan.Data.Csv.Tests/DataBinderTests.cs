@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Data.Common;
 using System.IO;
 using Xunit;
 
@@ -12,8 +11,8 @@ namespace Sylvan.Data.Csv
 			public int UID { get; set; }
 			public string Admin2 { get; set; }
 			public string Province_State { get; set; }
-			[ColumnSeries("{Date}")]
-			public DateSeries<int> Values { get; set; }
+			//[ColumnSeries("{Date}")]
+			public Series<DateTime, int> Values { get; set; }
 		}
 
 		const string SchemaSpec = "UID:int,Admin2,Province_State,{Date}>Values*:int";
