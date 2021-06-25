@@ -85,7 +85,7 @@ namespace Sylvan.Data.Csv
 		readonly TextReader reader;
 		bool hasRows;
 		readonly char[] buffer;
-		int result;
+
 		int idx;
 		int bufferEnd;
 		int recordStart;
@@ -97,9 +97,10 @@ namespace Sylvan.Data.Csv
 		byte[]? scratch;
 		FieldInfo[] fieldInfos;
 		CsvColumn[] columns;
-		bool autoDetectDelimiter;
 
 		readonly Dictionary<string, int> headerMap;
+
+		readonly bool autoDetectDelimiter;
 		// options:
 		char delimiter;
 		readonly CsvStyle style;
@@ -155,7 +156,7 @@ namespace Sylvan.Data.Csv
 			this.dateFormat = options.DateFormat;
 			this.trueString = options.TrueString;
 			this.falseString = options.FalseString;
-			this.result = -1;
+
 			this.recordStart = 0;
 			this.bufferEnd = 0;
 			this.idx = 0;
@@ -465,7 +466,7 @@ namespace Sylvan.Data.Csv
 						{
 							return r;
 						}
-						if(this.commentHandler != null)
+						if (this.commentHandler != null)
 						{
 							var s = idx + 1;
 							var str = new string(buffer, s, e - s);
@@ -559,12 +560,12 @@ namespace Sylvan.Data.Csv
 			// four cases:
 			// true and false both not null. Any other value raises error.
 			// true not null, false null. True string true, anything else false.
-			// false not null, false null. True string true, anything else false.
-			// both null. 
+			// false not null, true null. False string false, anything else true.
+			// both null: attempt to parse a bool then attempt to parse as int
 			var col = this.columns[ordinal];
 			var trueString = col.TrueString ?? this.trueString;
 			var falseString = col.FalseString ?? this.falseString;
-#if NETSTANDARD2_1
+#if SPAN
 			var span = this.GetFieldSpan(ordinal);
 			if (trueString != null && span.Equals(trueString.AsSpan(), StringComparison.OrdinalIgnoreCase))
 			{
@@ -617,7 +618,7 @@ namespace Sylvan.Data.Csv
 		/// <inheritdoc/>
 		public override byte GetByte(int ordinal)
 		{
-#if NETSTANDARD2_1
+#if SPAN
 			return byte.Parse(this.GetFieldSpan(ordinal), provider: culture);
 #else
 			return byte.Parse(this.GetString(ordinal), culture);
@@ -736,8 +737,7 @@ namespace Sylvan.Data.Csv
 			var b = cs.buffer;
 			var o = cs.offset;
 
-			bool hasPrefix;
-			var outLen = GetHexLength(cs, out hasPrefix);
+			var outLen = GetHexLength(cs, out bool hasPrefix);
 			if (hasPrefix)
 			{
 				o += 2;
@@ -784,7 +784,7 @@ namespace Sylvan.Data.Csv
 
 		void FromBase64Chars(char[] chars, int charsOffset, int charsLen, byte[] bytes, int bytesOffset, out int bytesWritten)
 		{
-#if NETSTANDARD2_1
+#if SPAN
 			if (!Convert.TryFromBase64Chars(chars.AsSpan().Slice(charsOffset, charsLen), bytes.AsSpan().Slice(bytesOffset), out bytesWritten))
 			{
 				throw new FormatException();
@@ -824,12 +824,40 @@ namespace Sylvan.Data.Csv
 			return len;
 		}
 
+		/// <summary>
+		/// Gets the value of the field as a <see cref="TimeSpan"/>.
+		/// </summary>
+		public TimeSpan GetTimeSpan(int ordinal)
+		{
+#if SPAN
+			var f = this.GetField(ordinal);
+			return TimeSpan.TryParse(f.ToSpan(), out var value) ? value : throw new FormatException();
+#else
+			var str = this.GetString(ordinal);
+			return TimeSpan.Parse(str);
+#endif
+		}
+
+		/// <summary>
+		/// Gets the value of the field as a <see cref="DateTimeOffset"/>.
+		/// </summary>
+		public DateTimeOffset GetDateTimeOffset(int ordinal)
+		{
+#if SPAN
+			var f = this.GetField(ordinal);
+			return DateTimeOffset.TryParse(f.ToSpan(), out var value) ? value : throw new FormatException();
+#else
+			var str = this.GetString(ordinal);
+			return DateTimeOffset.Parse(str);
+#endif
+		}
+
 		/// <inheritdoc/>
 		public override DateTime GetDateTime(int ordinal)
 		{
 			var format = columns[ordinal].Format ?? this.dateFormat;
 			var style = DateTimeStyles.AdjustToUniversal;
-#if NETSTANDARD2_1
+#if SPAN
 			if (format != null && DateTime.TryParseExact(this.GetFieldSpan(ordinal), format.AsSpan(), culture, style, out var dt))
 			{
 				return dt;
@@ -848,7 +876,7 @@ namespace Sylvan.Data.Csv
 		/// <inheritdoc/>
 		public override decimal GetDecimal(int ordinal)
 		{
-#if NETSTANDARD2_1
+#if SPAN
 			var field = this.GetField(ordinal);
 			return
 				field.TryParseSingleCharInt()
@@ -861,7 +889,7 @@ namespace Sylvan.Data.Csv
 		/// <inheritdoc/>
 		public override double GetDouble(int ordinal)
 		{
-#if NETSTANDARD2_1
+#if SPAN
 			var field = this.GetField(ordinal);
 			return
 				field.TryParseSingleCharInt()
@@ -893,7 +921,7 @@ namespace Sylvan.Data.Csv
 		/// <inheritdoc/>
 		public override float GetFloat(int ordinal)
 		{
-#if NETSTANDARD2_1
+#if SPAN
 			var field = this.GetField(ordinal);
 			return
 				field.TryParseSingleCharInt()
@@ -906,7 +934,7 @@ namespace Sylvan.Data.Csv
 		/// <inheritdoc/>
 		public override Guid GetGuid(int ordinal)
 		{
-#if NETSTANDARD2_1
+#if SPAN
 			return Guid.Parse(this.GetFieldSpan(ordinal));
 #else
 			return Guid.Parse(this.GetString(ordinal));
@@ -916,7 +944,7 @@ namespace Sylvan.Data.Csv
 		/// <inheritdoc/>
 		public override short GetInt16(int ordinal)
 		{
-#if NETSTANDARD2_1
+#if SPAN
 			var field = this.GetField(ordinal);
 			return
 				field.TryParseSingleCharInt()
@@ -929,10 +957,9 @@ namespace Sylvan.Data.Csv
 		/// <inheritdoc/>
 		public override int GetInt32(int ordinal)
 		{
-#if NETSTANDARD2_1
-
+#if SPAN
 			var field = this.GetField(ordinal);
-
+			var str = field.ToString();
 			return
 				field.TryParseSingleCharInt()
 				?? int.Parse(field.ToSpan(), provider: culture);
@@ -944,7 +971,7 @@ namespace Sylvan.Data.Csv
 		/// <inheritdoc/>
 		public override long GetInt64(int ordinal)
 		{
-#if NETSTANDARD2_1
+#if SPAN
 			var field = this.GetField(ordinal);
 			return
 				field.TryParseSingleCharInt()
@@ -999,8 +1026,13 @@ namespace Sylvan.Data.Csv
 			return string.Empty;
 		}
 
-#if NETSTANDARD2_1
+#if SPAN
 
+		/// <summary>
+		/// Gets a span containing the characters of a field.
+		/// </summary>
+		/// <param name="ordinal">The field ordinal.</param>
+		/// <returns>A span containing the characters of the field.</returns>
 		ReadOnlySpan<char> GetFieldSpan(int ordinal)
 		{
 			var s = GetField(ordinal);
@@ -1042,7 +1074,7 @@ namespace Sylvan.Data.Csv
 				return null;
 			}
 
-#if NETSTANDARD2_1
+#if SPAN
 
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
 			internal Span<char> ToSpan()
@@ -1056,6 +1088,13 @@ namespace Sylvan.Data.Csv
 			public readonly char[] buffer;
 			public readonly int offset;
 			public readonly int length;
+
+#if DEBUG
+			public override string ToString()
+			{
+				return new string(buffer, offset, length);
+			}
+#endif
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1159,47 +1198,14 @@ namespace Sylvan.Data.Csv
 			{
 				return DBNull.Value;
 			}
-			var type = this.GetFieldType(ordinal);
 
-			switch (Type.GetTypeCode(type))
-			{
-				case TypeCode.Boolean:
-					return this.GetBoolean(ordinal);
-				case TypeCode.Char:
-					return this.GetChar(ordinal);
-				case TypeCode.Byte:
-					return this.GetByte(ordinal);
-				case TypeCode.Int16:
-					return this.GetInt16(ordinal);
-				case TypeCode.Int32:
-					return this.GetInt32(ordinal);
-				case TypeCode.Int64:
-					return this.GetInt64(ordinal);
-				case TypeCode.Single:
-					return this.GetFloat(ordinal);
-				case TypeCode.Double:
-					return this.GetDouble(ordinal);
-				case TypeCode.Decimal:
-					return this.GetDecimal(ordinal);
-				case TypeCode.DateTime:
-					return this.GetDateTime(ordinal);
-				case TypeCode.String:
-					return this.GetString(ordinal);
-				default:
-					if (type == typeof(byte[]))
-					{
-						var length = this.GetBinaryLength(ordinal);
-						var buffer = new byte[length];
-						var len = GetBytes(ordinal, 0, buffer, 0, length);
-						Debug.Assert(len == length);
-						return buffer;
-					}
-					if (type == typeof(Guid))
-					{
-						return this.GetGuid(ordinal);
-					}
-					return this.GetString(ordinal);
+			IFieldAccessor acc = StringAccessor.Instance;
+
+			if (ordinal < this.columns.Length) {
+				acc = this.columns[ordinal].Accessor;
 			}
+
+			return acc.GetValueAsObject(this, ordinal);
 		}
 
 		int GetBinaryLength(int ordinal)
@@ -1235,7 +1241,7 @@ namespace Sylvan.Data.Csv
 		{
 			hasPrefix = false;
 			var l = span.length;
-			// must be divisible by 1
+			// must be divisible by 2
 			if (l % 2 != 0) throw new FormatException();
 			if (l >= 2 && char.ToLowerInvariant(span[1]) == 'x' && span[0] == '0')
 			{
@@ -1346,6 +1352,8 @@ namespace Sylvan.Data.Csv
 
 			public string? FalseString { get; }
 
+			public IFieldAccessor Accessor { get; }
+
 			public CsvColumn(string? name, int ordinal, DbColumn? schema = null)
 			{
 				// non-overridable
@@ -1357,6 +1365,8 @@ namespace Sylvan.Data.Csv
 				this.ColumnName = string.IsNullOrEmpty(colName) ? name ?? "" : colName;
 				this.DataType = schema?.DataType ?? typeof(string);
 				this.DataTypeName = schema?.DataTypeName ?? this.DataType.Name;
+
+				this.Accessor = CsvDataAccessor.GetAccessor(this.DataType) ?? StringAccessor.Instance;
 
 				// by default, we don't consider string types to be nullable,
 				// an empty field for a string means "", not null.
@@ -1432,7 +1442,7 @@ namespace Sylvan.Data.Csv
 			}
 		}
 
-#if NETSTANDARD2_1
+#if SPAN
 
 		/// <summary>
 		/// Gets a span containing the current record data, including the line ending.
@@ -1465,6 +1475,23 @@ namespace Sylvan.Data.Csv
 				Array.Copy(this.buffer, this.recordStart, buffer, offset, len);
 			}
 			return len;
+		}
+
+		IFieldAccessor<T> GetAccessor<T>(int ordinal)
+		{
+			var acc = CsvDataAccessor.Instance as IFieldAccessor<T>;
+			if (acc == null)
+			{
+				throw new NotSupportedException(); // TODO: exception type?
+			}
+			return acc;
+		}
+
+		/// <inheritdoc/>
+		public override T GetFieldValue<T>(int ordinal)
+		{
+			var acc = this.GetAccessor<T>(ordinal);
+			return acc.GetValue(this, ordinal);
 		}
 	}
 }

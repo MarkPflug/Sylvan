@@ -13,21 +13,24 @@ namespace Sylvan.Data.Csv
 		public long Write(DbDataReader reader)
 		{
 			var c = reader.FieldCount;
-			var fieldTypes = new FieldInfo[c];
+			var fieldInfos = new FieldInfo[c];
 
 			var schema = (reader as IDbColumnSchemaGenerator)?.GetColumnSchema();
 
 			char[] buffer = this.buffer;
 			int bufferSize = this.buffer.Length;
 
-			WriteResult result;
+			int result;
 
 			for (int i = 0; i < c; i++)
 			{
 				var type = reader.GetFieldType(i);
 				var allowNull = schema?[i].AllowDBNull ?? true;
-				fieldTypes[i] = new FieldInfo(allowNull, type);
+				var writer = GetWriter(type);
+				fieldInfos[i] = new FieldInfo(allowNull, writer);
 			}
+
+			var wc = new WriterContext(this, reader);
 
 			if (writeHeaders)
 			{
@@ -42,14 +45,24 @@ namespace Sylvan.Data.Csv
 						buffer[pos++] = delimiter;
 					}
 
-					var header = reader.GetName(i);
-					result = WriteField(header);
-					if (result == WriteResult.InsufficientSpace)
+					var header = reader.GetName(i) ?? "";
+					result = csvWriter.Write(wc, header, buffer, pos);
+					if (result < 0)
 					{
 						FlushBuffer();
-						result = WriteField(header);
-						if (result == WriteResult.InsufficientSpace)
+						result = csvWriter.Write(wc, header, buffer, pos);
+						if (result < 0)
+						{
 							throw new CsvRecordTooLargeException(0, i);
+						}
+						else
+						{
+							pos += result;
+						}
+					}
+					else
+					{
+						pos += result;
 					}
 				}
 
@@ -76,13 +89,22 @@ namespace Sylvan.Data.Csv
 						}
 						buffer[pos++] = delimiter;
 					}
+					var field = fieldInfos[i];
+					if (field.allowNull && reader.IsDBNull(i))
+					{
+						continue;
+					}
+
 					for (int retry = 0; retry < 2; retry++)
 					{
-						var r = WriteField(reader, fieldTypes, i);
+						var r = field.writer.Write(wc, i, buffer, pos);
 
-						if (r == WriteResult.Complete)
+						if (r >= 0)
+						{
+							pos += r;
 							goto success;
-						if (r == WriteResult.InsufficientSpace)
+						}
+						else
 						{
 							FlushBuffer();
 							continue;
@@ -91,7 +113,7 @@ namespace Sylvan.Data.Csv
 					// we arrive here only when there isn't enough room in the buffer
 					// to hold the field.				
 					throw new CsvRecordTooLargeException(row, i);
-				success:;
+					success:;
 				}
 
 				if (pos + 2 >= bufferSize)

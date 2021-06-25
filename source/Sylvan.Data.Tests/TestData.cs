@@ -72,7 +72,7 @@ namespace Sylvan.Data
 			var rand = new Random(1);
 
 			var data =
-				Enumerable.Range(0, 10000)
+				Enumerable.Range(0, 100000)
 				.Select(i => CreateShippingRecord(rand))
 				.ToArray();
 
@@ -117,38 +117,10 @@ namespace Sylvan.Data
 		public static DbDataReader GetTypedData()
 		{
 			var reader = File.OpenText("Data/Schema.csv");
-			return CsvDataReader.Create(reader, new CsvDataReaderOptions() { Schema = DataSchema.Instance });
+			return CsvDataReader.Create(reader, new CsvDataReaderOptions() { Schema = TestDataSchema });
 		}
 
-		public static ICsvSchemaProvider TestDataSchema => DataSchema.Instance;
-
-
-		class DataSchema : ICsvSchemaProvider
-		{
-			public static DataSchema Instance = new DataSchema();
-			Type[] types;
-			bool[] nullable;
-
-			private DataSchema()
-			{
-				Type i = typeof(int), s = typeof(string), f = typeof(float);
-				types = new Type[] { i, s, s, i, f, s, s, s, f, f, s };
-				nullable = new bool[] { false, false, false, false, true };
-			}
-
-			public DbColumn GetColumn(string name, int ordinal)
-			{
-				Type type =
-					ordinal < types.Length
-					? types[ordinal]
-					: typeof(int);
-				bool allowNull =
-					ordinal < nullable.Length
-					? nullable[ordinal]
-					: false;
-				return new TypedCsvColumn(type, allowNull);
-			}
-		}
+		public static ICsvSchemaProvider TestDataSchema => new CsvSchema(Sylvan.Data.Schema.Parse(DataSetSchema));
 
 		class TypedCsvColumn : DbColumn
 		{

@@ -1,4 +1,10 @@
 # Sylvan.Data.Csv Release Notes
+_1.1.0_
+- CsvDataReader now provides a proper implementation overriding `DbDataReader.GetFieldValue<T>`.
+- Adds a `net6.0` target framework.
+	- Adds CsvDataReader support for reading GetDate and GetTime for `net6.0`.
+- Adds CsvDataReader support for reading `DateTimeOffset` and `TimeSpan` to all supported frameworks.
+- Adds support for async cancellation.
 
 _1.0.3_
 - Fix CsvDataWriter not writing certain types when writing the value would span a buffer.

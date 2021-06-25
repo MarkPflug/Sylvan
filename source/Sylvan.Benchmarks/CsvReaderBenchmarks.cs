@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 namespace Sylvan.Benchmarks
 {
 	[MemoryDiagnoser]
+	[SimpleJob(1, 4, 10, 2)]
 	public class CsvReaderBenchmarks
 	{
 		const int BufferSize = 0x4000;
@@ -34,11 +35,39 @@ namespace Sylvan.Benchmarks
 		}
 
 		[Benchmark]
-		public async Task Sylvan()
+		public async Task SylvanAsync()
 		{
 			using var tr = TestData.GetTextReader();
 			using var dr = await CsvDataReader.CreateAsync(tr, new CsvDataReaderOptions() { Buffer = buffer });
 			while (await dr.ReadAsync())
+			{
+				for (int i = 0; i < dr.FieldCount; i++)
+				{
+					var s = dr.GetString(i);
+				}
+			}
+		}
+
+		[Benchmark]
+		public async Task SylvanGenericAsync()
+		{
+			using var tr = TestData.GetTextReader();
+			using var dr = await CsvDataReader.CreateAsync(tr, new CsvDataReaderOptions() { Buffer = buffer });
+			while (await dr.ReadAsync())
+			{
+				for (int i = 0; i < dr.FieldCount; i++)
+				{
+					var s = dr.GetFieldValue<string>(i);
+				}
+			}
+		}
+
+		[Benchmark]
+		public void SylvanSync()
+		{
+			using var tr = TestData.GetTextReader();
+			using var dr = CsvDataReader.Create(tr, new CsvDataReaderOptions() { Buffer = buffer });
+			while (dr.Read())
 			{
 				for (int i = 0; i < dr.FieldCount; i++)
 				{
@@ -119,9 +148,8 @@ namespace Sylvan.Benchmarks
 			using var dr = CsvDataReader.Create(tr);
 			while (dr.Read())
 			{
-				var id = dr.GetInt32(0);
-				var name = dr.GetString(10);
-				var val = dr.GetInt32(20);
+				var name = dr.GetString(1);
+				var quantity = dr.GetInt32(2);
 			}
 		}
 	}

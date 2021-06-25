@@ -50,7 +50,6 @@ namespace Sylvan.Data.Csv
 			Assert.Equal(expected, csv);
 		}
 
-
 		[Fact]
 		public void Binary()
 		{
@@ -203,7 +202,7 @@ namespace Sylvan.Data.Csv
 		[Fact]
 		public void BufferSpanBugFloat()
 		{
-			BufferSpanBug(i => (float) Math.PI * i, dr => dr.GetFloat(1));
+			BufferSpanBug(i => 1.5f * i, dr => dr.GetFloat(1));
 		}
 
 		[Fact]

@@ -63,11 +63,10 @@ namespace Sylvan.Data.Csv
 			return false;
 		}
 
-		async Task<bool> InitializeAsync()
+		async Task<bool> InitializeAsync(CancellationToken cancel = default)
 		{
-			result++;
 			state = State.Initializing;
-			await FillBufferAsync().ConfigureAwait(false);
+			await FillBufferAsync(cancel).ConfigureAwait(false);
 
 			bool skip = true;
 			while (skip)
@@ -101,7 +100,7 @@ namespace Sylvan.Data.Csv
 			// read them, and use them to determine fieldCount.
 			if (hasHeaders)
 			{
-				if (await NextRecordAsync().ConfigureAwait(false))
+				if (await NextRecordAsync(cancel).ConfigureAwait(false))
 				{
 					this.fieldCount = this.curFieldCount;
 					InitializeSchema();
@@ -114,7 +113,7 @@ namespace Sylvan.Data.Csv
 
 			// read the first row of data to determine fieldCount (if there were no headers)
 			// and support calling HasRows before Read is first called.
-			this.hasRows = await NextRecordAsync().ConfigureAwait(false);
+			this.hasRows = await NextRecordAsync(cancel).ConfigureAwait(false);
 			if (hasHeaders == false)
 			{
 				this.fieldCount = this.curFieldCount;
@@ -124,14 +123,14 @@ namespace Sylvan.Data.Csv
 			return true;
 		}
 
-		async Task<bool> NextRecordAsync()
+		async Task<bool> NextRecordAsync(CancellationToken cancel = default)
 		{
 			this.curFieldCount = 0;
 			this.recordStart = this.idx;
 			start:
 			if (this.idx >= bufferEnd)
 			{
-				await FillBufferAsync().ConfigureAwait(false);
+				await FillBufferAsync(cancel).ConfigureAwait(false);
 				if (idx == bufferEnd)
 				{
 					return false;
@@ -149,7 +148,7 @@ namespace Sylvan.Data.Csv
 					}
 					else
 					{
-						await FillBufferAsync().ConfigureAwait(false);
+						await FillBufferAsync(cancel).ConfigureAwait(false);
 					}
 				}
 				goto start;
@@ -179,13 +178,13 @@ namespace Sylvan.Data.Csv
 				}
 				else
 				{
-					await FillBufferAsync().ConfigureAwait(false);
+					await FillBufferAsync(cancel).ConfigureAwait(false);
 					// after filling the buffer, we will resume reading fields from where we left off.
 				}
 			}
 		}
 
-		async Task<int> FillBufferAsync()
+		async Task<int> FillBufferAsync(CancellationToken cancel = default)
 		{
 			var buffer = this.buffer;
 			if (recordStart != 0)
@@ -199,7 +198,12 @@ namespace Sylvan.Data.Csv
 			recordStart = 0;
 
 			var count = buffer.Length - bufferEnd;
+#if SPAN
+			var memory = new Memory<char>(buffer, bufferEnd, count);
+			var c = await reader.ReadAsync(memory, cancel).ConfigureAwait(false);
+#else
 			var c = await reader.ReadAsync(buffer, bufferEnd, count).ConfigureAwait(false);
+#endif
 			bufferEnd += c;
 			if (c == 0)
 			{
@@ -215,7 +219,7 @@ namespace Sylvan.Data.Csv
 			this.rowNumber++;
 			if (this.state == State.Open)
 			{
-				var success = await this.NextRecordAsync();
+				var success = await this.NextRecordAsync(cancellationToken);
 				if (this.resultSetMode == ResultSetMode.MultiResult && this.curFieldCount != this.fieldCount)
 				{
 					this.curFieldCount = 0;
