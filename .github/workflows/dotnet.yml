@@ -14,7 +14,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Setup .NET
-      uses: actions/setup-dotnet@v1
+      uses: actions/setup-dotnet@v1.7.2
       with:
         dotnet-version: 6.0.100-preview.5.21302.13
     - name: Restore dependencies
@@ -22,4 +22,4 @@ jobs:
     - name: Build
       run: dotnet build source --no-restore
     - name: Test
-      run: dotnet test source -f net6.0 --no-build --verbosity normal
+      run: dotnet test source -f net5.0 --no-build --verbosity normal
