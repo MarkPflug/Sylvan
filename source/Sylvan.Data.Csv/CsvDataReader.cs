@@ -13,6 +13,12 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
+#if INTRINSICS
+using System.Numerics;
+using System.Runtime.Intrinsics;
+using System.Runtime.Intrinsics.X86;
+#endif
+
 namespace Sylvan.Data.Csv
 {
 	/// <summary>
@@ -237,6 +243,128 @@ namespace Sylvan.Data.Csv
 			this.state = State.Initialized;
 		}
 
+#if INTRINSICS
+
+		Vector128<byte> delimiterVec;
+		Vector128<byte> lineFeedVec;
+		Vector128<byte> quoteVec;
+		Vector128<byte> charMask;
+
+		[Conditional("INTRINSICS")]
+		void InitIntrinsics()
+		{
+			delimiterVec = Vector128.Create((byte)this.delimiter);
+			lineFeedVec = Vector128.Create((byte)'\n');
+			quoteVec = Vector128.Create((byte)this.quote);
+			charMask = Vector128.Create(
+				0xff, 0x00, 0xff, 0x00,
+				0xff, 0x00, 0xff, 0x00,
+				0xff, 0x00, 0xff, 0x00,
+				0xff, 0x00, 0xff, 0x00
+				);
+		}
+
+		unsafe bool ReadRecordFast()
+		{
+			if (!Bmi1.IsSupported || !Sse2.IsSupported)
+			{
+				return false;
+			}
+
+			// there is probably a more elegant way to do this
+			// but as a first attempt with SIMD, it works, and is
+			// actually faster than the single-data path.
+
+			var len = this.bufferEnd - idx;
+			int fieldIdx = 0;
+			var pos = 0;
+			fixed (char* p = &buffer[idx])
+			{
+				byte* ip = (byte*)p;
+				while (len > Vector128<byte>.Count)
+				{
+					if (fieldIdx + 8 >= this.fieldInfos.Length)
+					{
+						Array.Resize(ref this.fieldInfos, this.fieldInfos.Length + 8);
+					}
+
+					var v = Sse2.LoadVector128(ip + pos * 2);
+
+					var dv = Sse2.CompareEqual(v, delimiterVec);
+					var lv = Sse2.CompareEqual(v, lineFeedVec);
+					var qv = Sse2.CompareEqual(v, quoteVec);
+
+					var delimPos = (uint)Sse2.MoveMask(dv);
+
+					var fast = Sse2.Or(lv, qv);
+					if (Sse2.MoveMask(fast) != 0)
+					{
+						var lm = (uint)Sse2.MoveMask(lv);
+						var qm = (uint)Sse2.MoveMask(qv);
+
+						var endIdx = Bmi1.TrailingZeroCount(lm);
+						var quoteIdx = Bmi1.TrailingZeroCount(qm);
+
+						// encountered a quote in the record, abort fast parse
+						if (quoteIdx < endIdx)
+							return false;
+
+						if (endIdx < 32) //found the end of the record.
+						{
+							var end = pos + (int)endIdx / 2;
+
+							while (delimPos != 0)
+							{
+								var idx = (int)Bmi1.TrailingZeroCount(delimPos);
+								if (idx >= endIdx)
+								{
+									// I think this branch can be avoided
+									// use the lowest lv bit to mask only the delimiters lesser
+									// than the record end
+									break;
+								}
+								ref var fi = ref this.fieldInfos[fieldIdx++];
+								fi.endIdx = pos + (idx / 2);
+								fi.escapeCount = 0;
+								fi.quoteState = QuoteState.Unquoted;
+								delimPos = Bmi1.ResetLowestSetBit(delimPos);
+							}
+
+							{
+								ref var fi = ref this.fieldInfos[fieldIdx++];
+								var idx = (int)Bmi1.TrailingZeroCount(delimPos);
+
+								fi.endIdx = end;
+								if (end > 0 && p[end - 1] == '\r')
+								{
+									fi.endIdx--;
+								}
+
+								fi.escapeCount = 0;
+								fi.quoteState = QuoteState.Unquoted;
+							}
+							this.curFieldCount = fieldIdx;
+							this.idx += end + 1;
+							return true;
+						}
+					}
+					while (delimPos != 0)
+					{
+						ref var fi = ref this.fieldInfos[fieldIdx++];
+						var idx = (int)Bmi1.TrailingZeroCount(delimPos);
+						fi.endIdx = pos + (idx / 2);
+						fi.escapeCount = 0;
+						fi.quoteState = QuoteState.Unquoted;
+						delimPos = Bmi1.ResetLowestSetBit(delimPos);
+					}
+
+					pos += Vector128<ushort>.Count;
+					len -= Vector128<byte>.Count;
+				}
+				return false;
+			}
+		}
+#endif
 		// attempt to read a field. 
 		// returns True if there are more in record (hit delimiter), 
 		// False if last in record (hit eol/eof), 
@@ -300,67 +428,75 @@ namespace Sylvan.Data.Csv
 			{
 				if (idx < bufferEnd)
 				{
-					c = buffer[idx];
-					if (c == quote)
-					{
-						idx++;
-						closeQuoteIdx = idx;
+					c = buffer[idx++];
 
-						// consume quoted field.
-						while (idx < bufferEnd)
+					if (c <= minSafe)
+					{
+						if (c == quote)
 						{
-							c = buffer[idx++];
-							if (c == escape)
+							closeQuoteIdx = idx;
+
+							// consume quoted field.
+							while (idx < bufferEnd)
 							{
-								if (idx < bufferEnd)
+								c = buffer[idx++];
+								if (c == escape)
 								{
-									c = buffer[idx++]; // the escaped char
-									if (c == escape || c == quote)
+									if (idx < bufferEnd)
 									{
-										escapeCount++;
-										continue;
+										c = buffer[idx++]; // the escaped char
+										if (c == escape || c == quote)
+										{
+											escapeCount++;
+											continue;
+										}
+										else
+										if (escape == quote)
+										{
+											idx--;
+											closeQuoteIdx = idx;
+											// the quote (escape) we just saw was a the closing quote
+											break;
+										}
 									}
 									else
-									if (escape == quote)
 									{
-										idx--;
-										closeQuoteIdx = idx;
-										// the quote (escape) we just saw was a the closing quote
-										break;
+										if (atEndOfText)
+										{
+											break;
+										}
+										return ReadResult.Incomplete;
 									}
 								}
-								else
-								{
-									if (atEndOfText)
-									{
-										break;
-									}
-									return ReadResult.Incomplete;
-								}
-							}
 
-							if (c == quote)
-							{
-								// immediately after the quote should be a delimiter, eol, or eof, but...
-								// we can simply treat the remainder of the record like a normal unquoted field
-								// we are currently positioned on the quote, the next while loop will consume it
-								closeQuoteIdx = idx;
-								break;
-							}
-							if (IsEndOfLine(c))
-							{
-								idx--;
-								var r = ConsumeLineEnd(buffer, ref idx);
-								if (r == ReadResult.Incomplete)
+								if (c == quote)
 								{
-									return ReadResult.Incomplete;
+									// immediately after the quote should be a delimiter, eol, or eof, but...
+									// we can simply treat the remainder of the record like a normal unquoted field
+									// we are currently positioned on the quote, the next while loop will consume it
+									closeQuoteIdx = idx;
+									break;
 								}
-								else
+								if (IsEndOfLine(c))
 								{
-									// continue on. We are inside a quoted string, so the newline is part of the value.
+									idx--;
+									var r = ConsumeLineEnd(buffer, ref idx);
+									if (r == ReadResult.Incomplete)
+									{
+										return ReadResult.Incomplete;
+									}
+									else
+									{
+										// continue on. We are inside a quoted string, so the newline is part of the value.
+									}
 								}
-							}
-						} // we exit this loop when we reach the closing quote.
+							} // we exit this loop when we reach the closing quote.
+						}
+						else
+						{
+							// "unread" the last character and let the next loop handle it.
+							idx--;
+						}
 					}
 				}
 			}
@@ -1201,7 +1337,8 @@ namespace Sylvan.Data.Csv
 
 			IFieldAccessor acc = StringAccessor.Instance;
 
-			if (ordinal < this.columns.Length) {
+			if (ordinal < this.columns.Length)
+			{
 				acc = this.columns[ordinal].Accessor;
 			}
 

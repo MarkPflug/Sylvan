@@ -14,6 +14,13 @@ namespace Sylvan.Data.Csv
 	public class CsvDataReaderTests
 	{
 		[Fact]
+		public void Simple1()
+		{
+			var csv = CsvDataReader.Create(new StringReader("ABC,DEF\n1,2\n3,4\n5,6\n5,6\n5,6\n5,6\n5,6\n5,6\n5,6\n5,6\n"));
+			while (csv.Read()) ;
+		}
+
+		[Fact]
 		public void FinalCRTest()
 		{
 			var b = CsvDataReader.Create(new StringReader(@"A,B\r\n1,2\r\n1,\r"));
