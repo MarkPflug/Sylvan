@@ -12,6 +12,8 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Linq.Expressions;
+using System.Reflection;
 
 #if INTRINSICS
 using System.Numerics;
@@ -1610,10 +1612,81 @@ namespace Sylvan.Data.Csv
 			var acc = CsvDataAccessor.Instance as IFieldAccessor<T>;
 			if (acc == null)
 			{
+#if ENUM_SPAN_PARSE
+				if (typeof(T).IsEnum)
+				{
+					return EnumAccessor<T>.Instance;
+				}
+				
+#endif
+
 				throw new NotSupportedException(); // TODO: exception type?
 			}
 			return acc;
 		}
+
+#if ENUM_SPAN_PARSE
+
+		delegate bool TryParse<T>(ReadOnlySpan<char> str, bool ignoreCase, out T value);
+
+		static class EnumParse
+		{
+			internal static MethodInfo? GenericSpanParseMethod;
+
+			static MethodInfo? GetGenericMethod()
+			{
+				return
+					typeof(Enum)
+					.GetMethods()
+					.Where(m => {
+						if (m.Name != "TryParse")
+							return false;
+						var p = m.GetParameters();
+						return p.Count() == 3 && p[0].ParameterType == typeof(ReadOnlySpan<char>);
+					}
+					)
+					.SingleOrDefault();
+			}
+
+			static EnumParse()
+			{
+				GenericSpanParseMethod = GetGenericMethod();
+			}
+		}
+
+		sealed class EnumAccessor<T> : IFieldAccessor<T>
+		{
+			internal static EnumAccessor<T> Instance = new EnumAccessor<T>();
+
+			internal static TryParse<T>? Parser;
+
+			static EnumAccessor()
+			{
+				Parser = null;
+				var method = EnumParse.GenericSpanParseMethod;
+				if (method != null)
+				{
+					var gm = method.MakeGenericMethod(new[] { typeof(T) });
+					Parser = (TryParse<T>)gm.CreateDelegate(typeof(TryParse<T>));
+				}
+			}
+
+			public T GetValue(CsvDataReader reader, int ordinal)
+			{
+				var span = reader.GetFieldSpan(ordinal);
+				var parser = Parser;
+				if (parser == null)
+				{
+					throw new NotSupportedException();
+				}
+				return
+					parser(reader.GetFieldSpan(ordinal), true, out T value)
+					? value
+					: throw new FormatException();
+			}
+		}
+#endif
+
 
 		/// <inheritdoc/>
 		public override T GetFieldValue<T>(int ordinal)
