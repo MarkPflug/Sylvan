@@ -248,20 +248,12 @@ namespace Sylvan.Data.Csv
 		Vector128<byte> delimiterVec;
 		Vector128<byte> lineFeedVec;
 		Vector128<byte> quoteVec;
-		Vector128<byte> charMask;
 
-		[Conditional("INTRINSICS")]
 		void InitIntrinsics()
 		{
 			delimiterVec = Vector128.Create((byte)this.delimiter);
 			lineFeedVec = Vector128.Create((byte)'\n');
 			quoteVec = Vector128.Create((byte)this.quote);
-			charMask = Vector128.Create(
-				0xff, 0x00, 0xff, 0x00,
-				0xff, 0x00, 0xff, 0x00,
-				0xff, 0x00, 0xff, 0x00,
-				0xff, 0x00, 0xff, 0x00
-				);
 		}
 
 		unsafe bool ReadRecordFast()
@@ -271,21 +263,24 @@ namespace Sylvan.Data.Csv
 				return false;
 			}
 
+			if (this.style != CsvStyle.Standard) return false;
+
 			// there is probably a more elegant way to do this
-			// but as a first attempt with SIMD, it works, and is
+			// but as a first attempt at SIMD, it works, and is
 			// actually faster than the single-data path.
 
 			var len = this.bufferEnd - idx;
 			int fieldIdx = 0;
 			var pos = 0;
+
 			fixed (char* p = &buffer[idx])
 			{
 				byte* ip = (byte*)p;
 				while (len > Vector128<byte>.Count)
 				{
-					if (fieldIdx + 8 >= this.fieldInfos.Length)
+					if (fieldIdx + 8 >= fieldInfos.Length)
 					{
-						Array.Resize(ref this.fieldInfos, this.fieldInfos.Length + 8);
+						Array.Resize(ref fieldInfos, fieldInfos.Length + 8);
 					}
 
 					var v = Sse2.LoadVector128(ip + pos * 2);
@@ -309,7 +304,7 @@ namespace Sylvan.Data.Csv
 						if (quoteIdx < endIdx)
 							return false;
 
-						if (endIdx < 32) //found the end of the record.
+						if (endIdx < 0x20) // found the end of the record.
 						{
 							var end = pos + (int)endIdx / 2;
 
@@ -323,38 +318,34 @@ namespace Sylvan.Data.Csv
 									// than the record end
 									break;
 								}
-								ref var fi = ref this.fieldInfos[fieldIdx++];
+								ref var fi = ref fieldInfos[fieldIdx++];
+								fi = default;
 								fi.endIdx = pos + (idx / 2);
-								fi.escapeCount = 0;
-								fi.quoteState = QuoteState.Unquoted;
 								delimPos = Bmi1.ResetLowestSetBit(delimPos);
 							}
 
 							{
-								ref var fi = ref this.fieldInfos[fieldIdx++];
+								ref var fi = ref fieldInfos[fieldIdx++];
 								var idx = (int)Bmi1.TrailingZeroCount(delimPos);
-
+								fi = default;
 								fi.endIdx = end;
 								if (end > 0 && p[end - 1] == '\r')
 								{
 									fi.endIdx--;
 								}
-
-								fi.escapeCount = 0;
-								fi.quoteState = QuoteState.Unquoted;
 							}
 							this.curFieldCount = fieldIdx;
 							this.idx += end + 1;
 							return true;
 						}
 					}
+
 					while (delimPos != 0)
 					{
-						ref var fi = ref this.fieldInfos[fieldIdx++];
+						ref var fi = ref fieldInfos[fieldIdx++];
 						var idx = (int)Bmi1.TrailingZeroCount(delimPos);
+						fi = default;
 						fi.endIdx = pos + (idx / 2);
-						fi.escapeCount = 0;
-						fi.quoteState = QuoteState.Unquoted;
 						delimPos = Bmi1.ResetLowestSetBit(delimPos);
 					}
 
