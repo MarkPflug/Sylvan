@@ -1,8 +1,12 @@
 # Sylvan.Data.Csv Release Notes
+
+_1.1.1
+- Fixes some capabilities exposed in netcoreapp3.0.
+
 _1.1.0_
 - CsvDataReader now provides a proper implementation overriding `DbDataReader.GetFieldValue<T>`.
 - Adds a `net6.0` target framework.
-	- Adds CsvDataReader support for reading GetDate and GetTime for `net6.0`.
+- Adds CsvDataReader support for reading GetDate and GetTime for `net6.0`.
 - Adds CsvDataReader support for reading `DateTimeOffset` and `TimeSpan` to all supported frameworks.
 - Adds support for async cancellation.
 - Improve CsvDataReader performance in some scenarios.
