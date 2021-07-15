@@ -1226,7 +1226,7 @@ namespace Sylvan.Data.Csv
 			Assert.Equal(FileAccess.Write, csv.GetFieldValue<FileAccess>(1));
 			Assert.True(csv.Read());
 			Assert.Equal(FileAccess.ReadWrite, csv.GetFieldValue<FileAccess>(0));
-			Assert.False(csv.GetFieldValue<FileAccess?>(1).HasValue);
+			Assert.Equal((FileAccess)0, csv.GetFieldValue<FileAccess>(1));
 		}
 	}
 }
