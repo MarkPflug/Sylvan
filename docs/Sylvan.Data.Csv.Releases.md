@@ -1,4 +1,8 @@
 # Sylvan.Data.Csv Release Notes
+
+_1.1.2_
+- Add CsvDataReader support for accessing enum values via `GetFieldValue<T>`.
+
 _1.1.0_
 - CsvDataReader now provides a proper implementation overriding `DbDataReader.GetFieldValue<T>`.
 - Adds a `net6.0` target framework.
