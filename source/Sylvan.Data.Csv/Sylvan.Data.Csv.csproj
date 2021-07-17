@@ -1,17 +1,17 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <!--
-    <TargetFramework>net6.0</TargetFramework>
-    -->
-    <TargetFrameworks>netstandard2.0;netstandard2.1;net6.0</TargetFrameworks>
+    <TargetFrameworks>netstandard2.0;netstandard2.1;netcoreapp3.0;net6.0</TargetFrameworks>
     <VersionPrefix>1.1.0</VersionPrefix>
-    <VersionSuffix>b0001</VersionSuffix>
+    <VersionSuffix>b0002</VersionSuffix>
     <Description>A .NET library for reading and writing delimited CSV data.</Description>
     <PackageTags>csv;delimited;datareader</PackageTags>
     <Nullable>enable</Nullable>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <DefineConstants Condition="$(TargetFramework) == 'netstandard2.1' Or $(TargetFramework) == 'net6.0'">SPAN;ASYNC_DISPOSE;$(DefineConstants)</DefineConstants>
+    <DefineConstants Condition="$(TargetFramework) == 'netcoreapp3.0' Or $(TargetFramework) == 'net6.0'">INTRINSICS;$(DefineConstants)</DefineConstants>
+    <!-- Enable unsafe blocks for use with simd -->
+    <AllowUnsafeBlocks Condition="$(TargetFramework) == 'netcoreapp3.0' Or $(TargetFramework) == 'net6.0'">true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>

@@ -95,6 +95,11 @@ namespace Sylvan.Data.Csv
 			}
 
 			this.minSafe = delimiter < '\r' ? '\r' : delimiter;
+			this.minSafe = minSafe > quote ? minSafe : quote;
+
+#if INTRINSICS
+			InitIntrinsics();
+#endif
 
 			// if the user specified that there are headers
 			// read them, and use them to determine fieldCount.
@@ -153,6 +158,13 @@ namespace Sylvan.Data.Csv
 				}
 				goto start;
 			}
+
+#if INTRINSICS
+
+			if (ReadRecordFast())
+				return true;
+
+#endif
 
 			int fieldIdx = 0;
 			while (true)
