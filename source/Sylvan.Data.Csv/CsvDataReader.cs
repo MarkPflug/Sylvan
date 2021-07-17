@@ -12,6 +12,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Reflection;
 
 #if INTRINSICS
 using System.Numerics;
@@ -1160,7 +1161,7 @@ namespace Sylvan.Data.Csv
 		/// </summary>
 		/// <param name="ordinal">The field ordinal.</param>
 		/// <returns>A span containing the characters of the field.</returns>
-		ReadOnlySpan<char> GetFieldSpan(int ordinal)
+		internal ReadOnlySpan<char> GetFieldSpan(int ordinal)
 		{
 			var s = GetField(ordinal);
 			return s.ToSpan();
@@ -1168,7 +1169,7 @@ namespace Sylvan.Data.Csv
 
 #endif
 
-		readonly struct CharSpan
+		internal readonly struct CharSpan
 		{
 			public CharSpan(char[] buffer, int offset, int length)
 			{
@@ -1225,7 +1226,7 @@ namespace Sylvan.Data.Csv
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		CharSpan GetField(int ordinal)
+		internal CharSpan GetField(int ordinal)
 		{
 			if ((uint)ordinal < (uint)this.curFieldCount)
 			{
@@ -1610,6 +1611,10 @@ namespace Sylvan.Data.Csv
 			var acc = CsvDataAccessor.Instance as IFieldAccessor<T>;
 			if (acc == null)
 			{
+				if (typeof(T).IsEnum)
+				{
+					return EnumAccessor<T>.Instance;
+				}				
 				throw new NotSupportedException(); // TODO: exception type?
 			}
 			return acc;

@@ -1,5 +1,9 @@
 # Sylvan.Data.Csv Release Notes
 
+_1.1.2_
+- Add CsvDataReader support for accessing enum values via `GetFieldValue<T>`.
+
+
 _1.1.1
 - Fixes some capabilities exposed in netcoreapp3.0.
 

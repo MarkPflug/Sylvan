@@ -1215,5 +1215,18 @@ namespace Sylvan.Data.Csv
 			var buffer = new byte[16];
 			Assert.Throws<FormatException>(() => reader.GetBytes(1, 0, buffer, 0, buffer.Length));
 		}
+
+		[Fact]
+		public void Enum()
+		{
+			var text = new StringReader("a,b\nRead,write\nReadWrite,");
+			var csv = CsvDataReader.Create(text);
+			Assert.True(csv.Read());
+			Assert.Equal(FileAccess.Read, csv.GetFieldValue<FileAccess>(0));
+			Assert.Equal(FileAccess.Write, csv.GetFieldValue<FileAccess>(1));
+			Assert.True(csv.Read());
+			Assert.Equal(FileAccess.ReadWrite, csv.GetFieldValue<FileAccess>(0));
+			Assert.Equal((FileAccess)0, csv.GetFieldValue<FileAccess>(1));
+		}
 	}
 }
