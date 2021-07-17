@@ -2,14 +2,14 @@
 
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0;netstandard2.1;netcoreapp3.0;net6.0</TargetFrameworks>
-    <VersionPrefix>1.1.0</VersionPrefix>
-    <VersionSuffix>b0002</VersionSuffix>
+    <VersionPrefix>1.1.1</VersionPrefix>
     <Description>A .NET library for reading and writing delimited CSV data.</Description>
     <PackageTags>csv;delimited;datareader</PackageTags>
     <Nullable>enable</Nullable>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <DefineConstants Condition="$(TargetFramework) == 'netstandard2.1' Or $(TargetFramework) == 'net6.0'">SPAN;ASYNC_DISPOSE;$(DefineConstants)</DefineConstants>
-    <DefineConstants Condition="$(TargetFramework) == 'netcoreapp3.0' Or $(TargetFramework) == 'net6.0'">INTRINSICS;$(DefineConstants)</DefineConstants>
+    <DefineConstants Condition="$(TargetFramework) == 'netstandard2.1'">SPAN;ASYNC_DISPOSE;$(DefineConstants)</DefineConstants>
+    <DefineConstants Condition="$(TargetFramework) == 'netcoreapp3.0'">SPAN;ASYNC_DISPOSE;INTRINSICS;$(DefineConstants)</DefineConstants>
+    <DefineConstants Condition="$(TargetFramework) == 'net6.0'">SPAN;ASYNC_DISPOSE;INTRINSICS;$(DefineConstants)</DefineConstants>
     <!-- Enable unsafe blocks for use with simd -->
     <AllowUnsafeBlocks Condition="$(TargetFramework) == 'netcoreapp3.0' Or $(TargetFramework) == 'net6.0'">true</AllowUnsafeBlocks>
   </PropertyGroup>
