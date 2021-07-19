@@ -246,15 +246,24 @@ namespace Sylvan.Data.Csv
 
 #if INTRINSICS
 
-		Vector128<byte> delimiterVec;
-		Vector128<byte> lineFeedVec;
-		Vector128<byte> quoteVec;
+		Vector128<ushort> delimiterVec;
+		Vector128<ushort> lineFeedVec;
+		Vector128<ushort> quoteVec;
 
 		void InitIntrinsics()
 		{
-			delimiterVec = Vector128.Create((byte)this.delimiter);
-			lineFeedVec = Vector128.Create((byte)'\n');
-			quoteVec = Vector128.Create((byte)this.quote);
+			delimiterVec = ForChar(this.delimiter);
+			lineFeedVec = ForChar('\n');
+			quoteVec = ForChar(this.quote);
+		}
+
+		static Vector128<ushort> ForChar(char c)
+		{
+			ushort b = (ushort)c;
+			return Vector128.Create(
+				b, b, b, b,
+				b, b, b, b
+			);
 		}
 
 		unsafe bool ReadRecordFast()
@@ -276,27 +285,30 @@ namespace Sylvan.Data.Csv
 
 			fixed (char* p = &buffer[idx])
 			{
-				byte* ip = (byte*)p;
-				while (len > Vector128<byte>.Count)
+				ushort* ip = (ushort*)p;
+				while (len > 8)
 				{
 					if (fieldIdx + 8 >= fieldInfos.Length)
 					{
 						Array.Resize(ref fieldInfos, fieldInfos.Length + 8);
 					}
 
-					var v = Sse2.LoadVector128(ip + pos * 2);
+					var v = Sse2.LoadVector128(ip + pos);
 
 					var dv = Sse2.CompareEqual(v, delimiterVec);
 					var lv = Sse2.CompareEqual(v, lineFeedVec);
 					var qv = Sse2.CompareEqual(v, quoteVec);
 
-					var delimPos = (uint)Sse2.MoveMask(dv);
+					var delimPos = (uint)Sse2.MoveMask(dv.AsByte());
+					delimPos = Bmi2.ParallelBitExtract(delimPos, 0b10101010101010101010101010101010);
 
 					var fast = Sse2.Or(lv, qv);
-					if (Sse2.MoveMask(fast) != 0)
+					if (Sse2.MoveMask(fast.AsByte()) != 0)
 					{
-						var lm = (uint)Sse2.MoveMask(lv);
-						var qm = (uint)Sse2.MoveMask(qv);
+						var lm = (uint)Sse2.MoveMask(lv.AsByte());
+						var qm = (uint)Sse2.MoveMask(qv.AsByte());
+						lm = Bmi2.ParallelBitExtract(lm, 0b10101010101010101010101010101010);
+						qm = Bmi2.ParallelBitExtract(qm, 0b10101010101010101010101010101010);
 
 						var endIdx = Bmi1.TrailingZeroCount(lm);
 						var quoteIdx = Bmi1.TrailingZeroCount(qm);
@@ -307,7 +319,7 @@ namespace Sylvan.Data.Csv
 
 						if (endIdx < 0x20) // found the end of the record.
 						{
-							var end = pos + (int)endIdx / 2;
+							var end = pos + (int)endIdx;
 
 							while (delimPos != 0)
 							{
@@ -321,7 +333,7 @@ namespace Sylvan.Data.Csv
 								}
 								ref var fi = ref fieldInfos[fieldIdx++];
 								fi = default;
-								fi.endIdx = pos + (idx / 2);
+								fi.endIdx = pos + idx;
 								delimPos = Bmi1.ResetLowestSetBit(delimPos);
 							}
 
@@ -346,12 +358,12 @@ namespace Sylvan.Data.Csv
 						ref var fi = ref fieldInfos[fieldIdx++];
 						var idx = (int)Bmi1.TrailingZeroCount(delimPos);
 						fi = default;
-						fi.endIdx = pos + (idx / 2);
+						fi.endIdx = pos + idx;
 						delimPos = Bmi1.ResetLowestSetBit(delimPos);
 					}
 
-					pos += Vector128<ushort>.Count;
-					len -= Vector128<byte>.Count;
+					pos += 8;
+					len -= 8;
 				}
 				return false;
 			}
@@ -514,6 +526,10 @@ namespace Sylvan.Data.Csv
 						{
 							return ReadResult.Incomplete;
 						}
+						if (r == ReadResult.False)
+						{
+							continue;
+						}
 						fieldEnd = temp - recordStart;
 						complete = true;
 						last = true;
@@ -594,6 +610,10 @@ namespace Sylvan.Data.Csv
 						{
 							return r;
 						}
+						if (r == ReadResult.False)
+						{
+							continue;
+						}
 						if (this.commentHandler != null)
 						{
 							var s = idx + 1;
@@ -631,8 +651,8 @@ namespace Sylvan.Data.Csv
 					c = buffer[idx++];
 					if (c != '\n')
 					{
-						// weird, but we'll allow a lone \r
 						idx--;
+						return ReadResult.False;
 					}
 					return ReadResult.True;
 				}
@@ -648,7 +668,8 @@ namespace Sylvan.Data.Csv
 			{
 				return ReadResult.True;
 			}
-			// this can never be reached.
+			// this can never be reached, as this is only called
+			// in a context where c is '\r' or '\n'
 			return ReadResult.False;
 		}
 
@@ -1614,7 +1635,7 @@ namespace Sylvan.Data.Csv
 				if (typeof(T).IsEnum)
 				{
 					return EnumAccessor<T>.Instance;
-				}				
+				}
 				throw new NotSupportedException(); // TODO: exception type?
 			}
 			return acc;

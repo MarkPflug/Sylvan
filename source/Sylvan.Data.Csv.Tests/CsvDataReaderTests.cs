@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
@@ -568,7 +568,7 @@ namespace Sylvan.Data.Csv
 		[Fact]
 		public void LineEndings()
 		{
-			using var tr = new StringReader("Id\r1\r\n2\n3\n\r");
+			using var tr = new StringReader("Id\n1\r\n2\n3\r\n");
 			var csv = CsvDataReader.Create(tr);
 			Assert.Equal("Id", csv.GetName(0));
 			Assert.True(csv.Read());
@@ -577,8 +577,6 @@ namespace Sylvan.Data.Csv
 			Assert.Equal("2", csv.GetString(0));
 			Assert.True(csv.Read());
 			Assert.Equal("3", csv.GetString(0));
-			Assert.True(csv.Read());
-			Assert.Equal("", csv.GetString(0));
 			Assert.False(csv.Read());
 		}
 
@@ -1227,6 +1225,41 @@ namespace Sylvan.Data.Csv
 			Assert.True(csv.Read());
 			Assert.Equal(FileAccess.ReadWrite, csv.GetFieldValue<FileAccess>(0));
 			Assert.Equal((FileAccess)0, csv.GetFieldValue<FileAccess>(1));
+		}
+
+		[Fact]
+		public void Issue67()
+		{
+			var text = new StreamReader("Data/67.csv");
+			var csv = CsvDataReader.Create(text);
+			Assert.True(csv.Read());
+			Assert.Equal(6, csv.RowFieldCount);
+			Assert.Equal("567774", csv.GetString(0));
+			Assert.Equal("11014", csv.GetString(1));
+			Assert.Equal("(주)다올소프트", csv.GetString(2));
+			Assert.Equal("기타녹음", csv.GetString(3));
+			Assert.Equal("NULL", csv.GetString(4));
+			Assert.Equal("1", csv.GetString(5));
+
+			Assert.True(csv.Read());
+			Assert.Equal(6, csv.RowFieldCount);
+			Assert.Equal("394394", csv.GetString(0));
+			Assert.Equal("11014", csv.GetString(1));
+			Assert.Equal("(주)달콤소프트", csv.GetString(2));
+			Assert.Equal("유선전송", csv.GetString(3));
+			Assert.Equal("NULL", csv.GetString(4));
+			Assert.Equal("1", csv.GetString(5));
+
+			Assert.True(csv.Read());
+			Assert.Equal(6, csv.RowFieldCount);
+			Assert.Equal("601057", csv.GetString(0));
+			Assert.Equal("11014", csv.GetString(1));
+			Assert.Equal("(주)대교", csv.GetString(2));
+			Assert.Equal("기타녹음", csv.GetString(3));
+			Assert.Equal("NULL", csv.GetString(4));
+			Assert.Equal("1", csv.GetString(5));
+
+			Assert.False(csv.Read());
 		}
 	}
 }
