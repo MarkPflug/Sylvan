@@ -2,7 +2,7 @@
 
 _1.1.2_
 - Add CsvDataReader support for accessing enum values via `GetFieldValue<T>`.
-
+- Fix for issue #67, which was caused by some incorrect simd logic.
 
 _1.1.1
 - Fixes some capabilities exposed in netcoreapp3.0.
