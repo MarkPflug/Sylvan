@@ -27,6 +27,7 @@ namespace Sylvan.Data
 		}
 
 		internal static readonly Type IDataRecordType = typeof(IDataRecord);
+		internal static readonly Type DbDataRecordType = typeof(DbDataRecord);
 
 		internal static readonly MethodInfo IsDbNullMethod;
 		internal static readonly MethodInfo GetBooleanMethod;
@@ -46,6 +47,7 @@ namespace Sylvan.Data
 		static DataBinder()
 		{
 			IDataRecordType = typeof(IDataRecord);
+			DbDataRecordType = typeof(DbDataRecord);
 			IsDbNullMethod = IDataRecordType.GetMethod("IsDBNull")!;
 			GetBooleanMethod = IDataRecordType.GetMethod("GetBoolean");
 			GetCharMethod = IDataRecordType.GetMethod("GetChar");
@@ -333,7 +335,7 @@ namespace Sylvan.Data
 			return t;
 		}
 
-		public static IDataSeriesRange<TK>? GetSeriesRange<TK>(this IDataBinder binder, string seriesName)
+		public static IDataSeriesRange<TK>? GetSeriesRange<TK>(this object binder, string seriesName)
 		{
 			if (binder is IDataSeriesBinder b)
 			{

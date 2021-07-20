@@ -1,18 +1,26 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Data;
 using System.Data.Common;
-using System.Globalization;
-using System.Reflection;
 
 namespace Sylvan.Data
 {
-	public interface IDataBinder
+
+	public static class DataBinderFactory
 	{
+		public static IDataBinder<T> Create<T>(this IDataBinderFactory<T> factory, DbDataReader reader)
+		{
+			var schema = reader.GetColumnSchema();
+			return factory.Create(schema);
+		}
 	}
 
-	public interface IDataBinder<T> : IDataBinder
+	public interface IDataBinderFactory<T>
+	{
+		IDataBinder<T> Create(IReadOnlyList<DbColumn> schema);
+	}
+
+	public interface IDataBinder<T>
 	{
 		void Bind(IDataRecord record, T item);
 	}
@@ -22,35 +30,15 @@ namespace Sylvan.Data
 		object? GetSeriesAccessor(string seriesName);
 	}
 
-	//public abstract class BinderFactory<T>
-	//{
-	//	public abstract IDataBinder<T> CreateBinder(ReadOnlyCollection<DbColumn> schema);
-	//}
-
-	public sealed class DataBinderOptions
-	{
-		internal static readonly DataBinderOptions Default = new DataBinderOptions();
-		//public bool ReaderAllowsDynamicAccess { get; set; }
-		public CultureInfo Culture { get; set; }
-
-		/// <summary>
-		/// Indicates how the data source will bind to the target type.
-		/// Defaults to <see cref="DataBindingMode.AllProperties"/> which requires that
-		/// the datasource have column that binds to each property, but would allow unbound columns.
-		/// </summary>
-		public DataBindingMode BindingMode { get; set; }
-
-		public bool InferColumnTypeFromProperty { get; set; }
-
-		public DataBinderOptions()
-		{
-			this.Culture = CultureInfo.InvariantCulture;
-			this.BindingMode = DataBindingMode.AllProperties;
-		}
-	}
-
 	public static partial class DataBinder
 	{
+
+		public static IDataBinderFactory<T> CreateFactory<T>()
+		{
+			return new DynamicDataBinderFactory<T>();
+		}
+
+
 		// make every effort to construct a schema.
 		static ReadOnlyCollection<DbColumn> GetSchema(IDataReader dr)
 		{
