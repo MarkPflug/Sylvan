@@ -159,12 +159,12 @@ namespace Sylvan.Data.Csv
 				goto start;
 			}
 
-#if INTRINSICS
+//#if INTRINSICS
 
-			if (ReadRecordFast())
-				return true;
+//			if (ReadRecordFast())
+//				return true;
 
-#endif
+//#endif
 
 			int fieldIdx = 0;
 			while (true)

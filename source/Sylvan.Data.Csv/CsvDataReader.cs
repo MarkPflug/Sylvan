@@ -266,22 +266,29 @@ namespace Sylvan.Data.Csv
 			);
 		}
 
-		unsafe bool ReadRecordFast()
+		unsafe int ReadRecordFast(int startFieldIdx)
 		{
 			if (!Bmi1.IsSupported || !Sse2.IsSupported)
 			{
-				return false;
+				return startFieldIdx;
 			}
 
-			if (this.style != CsvStyle.Standard) return false;
+			if (this.style != CsvStyle.Standard)
+			{
+				return startFieldIdx;
+			}
 
 			// there is probably a more elegant way to do this
 			// but as a first attempt at SIMD, it works, and is
 			// actually faster than the single-data path.
 
 			var len = this.bufferEnd - idx;
-			int fieldIdx = 0;
+			int fieldIdx = startFieldIdx;
 			var pos = 0;
+			if(len <= 0)
+			{
+				return startFieldIdx;
+			}
 
 			fixed (char* p = &buffer[idx])
 			{
@@ -315,7 +322,9 @@ namespace Sylvan.Data.Csv
 
 						// encountered a quote in the record, abort fast parse
 						if (quoteIdx < endIdx)
-							return false;
+						{
+							return fieldIdx;
+						}
 
 						if (endIdx < 0x20) // found the end of the record.
 						{
@@ -333,15 +342,14 @@ namespace Sylvan.Data.Csv
 								}
 								ref var fi = ref fieldInfos[fieldIdx++];
 								fi = default;
-								fi.endIdx = pos + idx;
+								fi.endIdx = (this.idx + pos + idx) - recordStart;
 								delimPos = Bmi1.ResetLowestSetBit(delimPos);
 							}
 
 							{
 								ref var fi = ref fieldInfos[fieldIdx++];
-								var idx = (int)Bmi1.TrailingZeroCount(delimPos);
 								fi = default;
-								fi.endIdx = end;
+								fi.endIdx = (this.idx + end) - recordStart;
 								if (end > 0 && p[end - 1] == '\r')
 								{
 									fi.endIdx--;
@@ -349,7 +357,7 @@ namespace Sylvan.Data.Csv
 							}
 							this.curFieldCount = fieldIdx;
 							this.idx += end + 1;
-							return true;
+							return -fieldIdx;
 						}
 					}
 
@@ -358,14 +366,15 @@ namespace Sylvan.Data.Csv
 						ref var fi = ref fieldInfos[fieldIdx++];
 						var idx = (int)Bmi1.TrailingZeroCount(delimPos);
 						fi = default;
-						fi.endIdx = pos + idx;
+						fi.endIdx = (this.idx + pos + idx) - recordStart;
 						delimPos = Bmi1.ResetLowestSetBit(delimPos);
 					}
 
 					pos += 8;
 					len -= 8;
 				}
-				return false;
+				
+				return startFieldIdx;
 			}
 		}
 #endif
@@ -1194,6 +1203,8 @@ namespace Sylvan.Data.Csv
 		{
 			public CharSpan(char[] buffer, int offset, int length)
 			{
+				Debug.Assert(offset >= 0);
+				Debug.Assert(length >= 0);
 				this.buffer = buffer;
 				this.offset = offset;
 				this.length = length;

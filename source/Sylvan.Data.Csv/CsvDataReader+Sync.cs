@@ -61,7 +61,7 @@ namespace Sylvan.Data.Csv
 			}
 
 			var result = ReadComment(buffer, ref this.idx);
-			if(result != ReadResult.False)
+			if (result != ReadResult.False)
 			{
 				if (result == ReadResult.Incomplete)
 				{
@@ -77,16 +77,28 @@ namespace Sylvan.Data.Csv
 				goto start;
 			}
 
-#if INTRINSICS
-			
-			if (ReadRecordFast())
-				return true;
 
-#endif
 
 			int fieldIdx = 0;
 			while (true)
 			{
+
+
+#if INTRINSICS
+
+				var idx = ReadRecordFast(fieldIdx);
+				if (idx < 0)
+				{
+					fieldIdx = -idx;
+					return true;
+				}
+				else
+				{
+					fieldIdx = idx;
+				}
+
+#endif
+
 				result = ReadField(fieldIdx);
 
 				if (result == ReadResult.True)
@@ -98,7 +110,7 @@ namespace Sylvan.Data.Csv
 				{
 					return true;
 				}
-				
+
 				// we were unable to read an entire record out of the buffer synchronously
 				if (recordStart == 0)
 				{
