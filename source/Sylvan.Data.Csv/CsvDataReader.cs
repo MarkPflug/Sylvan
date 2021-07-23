@@ -286,6 +286,9 @@ namespace Sylvan.Data.Csv
 			var pos = idx;			
 			var end = this.bufferEnd - 8;
 
+			var recordStart = this.recordStart;
+			var fieldInfos = this.fieldInfos;
+
 			fixed (char* p = buffer)
 			{
 				ushort* ip = (ushort*)p;
@@ -294,6 +297,7 @@ namespace Sylvan.Data.Csv
 					if (fieldIdx + 8 >= fieldInfos.Length)
 					{
 						Array.Resize(ref fieldInfos, fieldInfos.Length + 8);
+						this.fieldInfos = fieldInfos;
 					}
 
 					var v = Sse2.LoadVector128(ip + pos);
