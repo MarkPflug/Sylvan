@@ -266,34 +266,30 @@ namespace Sylvan.Data.Csv
 			);
 		}
 
-		unsafe int ReadRecordFast(int startFieldIdx)
+		// this method uses SIMD instructions in order to optimistically read records
+		// as fast as possible. To keep things simple, this method stops processing
+		// when quotes are detected and falls back to the slower, more robust single-data
+		// path. Returns true when the end-of-record newline is found, and false when
+		// the record might contain more fields.
+		unsafe bool ReadRecordFast(ref int fieldIdx)
 		{
 			if (!Bmi1.IsSupported || !Sse2.IsSupported)
 			{
-				return startFieldIdx;
+				return false;
 			}
 
 			if (this.style != CsvStyle.Standard)
 			{
-				return startFieldIdx;
+				return false;
 			}
 
-			// there is probably a more elegant way to do this
-			// but as a first attempt at SIMD, it works, and is
-			// actually faster than the single-data path.
+			var pos = idx;			
+			var end = this.bufferEnd - 8;
 
-			var len = this.bufferEnd - idx;
-			int fieldIdx = startFieldIdx;
-			var pos = 0;
-			if(len <= 0)
-			{
-				return startFieldIdx;
-			}
-
-			fixed (char* p = &buffer[idx])
+			fixed (char* p = buffer)
 			{
 				ushort* ip = (ushort*)p;
-				while (len > 8)
+				while (pos < end)
 				{
 					if (fieldIdx + 8 >= fieldInfos.Length)
 					{
@@ -317,64 +313,64 @@ namespace Sylvan.Data.Csv
 						lm = Bmi2.ParallelBitExtract(lm, 0b10101010101010101010101010101010);
 						qm = Bmi2.ParallelBitExtract(qm, 0b10101010101010101010101010101010);
 
-						var endIdx = Bmi1.TrailingZeroCount(lm);
-						var quoteIdx = Bmi1.TrailingZeroCount(qm);
+						var endIdx = (int)Bmi1.TrailingZeroCount(lm);
+						var quoteIdx = (int)Bmi1.TrailingZeroCount(qm);
 
-						// encountered a quote in the record, abort fast parse
+						// encountered a quote in the field, abort fast parse
 						if (quoteIdx < endIdx)
 						{
-							return fieldIdx;
+							return false;
 						}
 
 						if (endIdx < 0x20) // found the end of the record.
 						{
-							var end = pos + (int)endIdx;
-
 							while (delimPos != 0)
 							{
-								var idx = (int)Bmi1.TrailingZeroCount(delimPos);
-								if (idx >= endIdx)
+								var delIdx = (int)Bmi1.TrailingZeroCount(delimPos);
+								if (delIdx >= endIdx)
 								{
 									// I think this branch can be avoided
 									// use the lowest lv bit to mask only the delimiters lesser
 									// than the record end
 									break;
 								}
+								this.idx = pos + delIdx + 1;
 								ref var fi = ref fieldInfos[fieldIdx++];
 								fi = default;
-								fi.endIdx = (this.idx + pos + idx) - recordStart;
+								fi.endIdx = pos + delIdx - recordStart;
 								delimPos = Bmi1.ResetLowestSetBit(delimPos);
 							}
 
 							{
 								ref var fi = ref fieldInfos[fieldIdx++];
+								var eIdx = pos + endIdx;
+								this.idx = eIdx + 1;
 								fi = default;
-								fi.endIdx = (this.idx + end) - recordStart;
-								if (end > 0 && p[end - 1] == '\r')
+								fi.endIdx = eIdx - recordStart;
+								if (p[eIdx - 1] == '\r')
 								{
 									fi.endIdx--;
 								}
 							}
 							this.curFieldCount = fieldIdx;
-							this.idx += end + 1;
-							return -fieldIdx;
+							return true;
 						}
 					}
 
 					while (delimPos != 0)
 					{
+						var delIdx = (int)Bmi1.TrailingZeroCount(delimPos);
 						ref var fi = ref fieldInfos[fieldIdx++];
-						var idx = (int)Bmi1.TrailingZeroCount(delimPos);
+						this.idx = pos + delIdx + 1;
 						fi = default;
-						fi.endIdx = (this.idx + pos + idx) - recordStart;
+						fi.endIdx = pos + delIdx - recordStart;
 						delimPos = Bmi1.ResetLowestSetBit(delimPos);
 					}
 
 					pos += 8;
-					len -= 8;
 				}
-				
-				return startFieldIdx;
+				this.curFieldCount = fieldIdx;
+				return false;
 			}
 		}
 #endif
@@ -1116,8 +1112,7 @@ namespace Sylvan.Data.Csv
 		public override int GetInt32(int ordinal)
 		{
 #if SPAN
-			var field = this.GetField(ordinal);
-			var str = field.ToString();
+			var field = this.GetField(ordinal);			
 			return
 				field.TryParseSingleCharInt()
 				?? int.Parse(field.ToSpan(), provider: culture);

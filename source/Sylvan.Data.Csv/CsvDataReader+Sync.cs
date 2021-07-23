@@ -86,15 +86,9 @@ namespace Sylvan.Data.Csv
 
 #if INTRINSICS
 
-				var idx = ReadRecordFast(fieldIdx);
-				if (idx < 0)
+				if(ReadRecordFast(ref fieldIdx))
 				{
-					fieldIdx = -idx;
 					return true;
-				}
-				else
-				{
-					fieldIdx = idx;
 				}
 
 #endif
