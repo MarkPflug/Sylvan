@@ -159,16 +159,17 @@ namespace Sylvan.Data.Csv
 				goto start;
 			}
 
-#if INTRINSICS
-
-			if (ReadRecordFast())
-				return true;
-
-#endif
-
 			int fieldIdx = 0;
 			while (true)
 			{
+#if INTRINSICS
+
+				if (ReadRecordFast(ref fieldIdx))
+				{
+					return true;
+				}
+
+#endif
 				result = ReadField(fieldIdx);
 
 				if (result == ReadResult.True)
@@ -180,7 +181,7 @@ namespace Sylvan.Data.Csv
 				{
 					return true;
 				}
-				
+
 				// we were unable to read an entire record out of the buffer synchronously
 				if (recordStart == 0 && atEndOfText)
 				{
