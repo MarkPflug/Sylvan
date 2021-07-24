@@ -86,7 +86,7 @@ namespace Sylvan.Data.Csv
 
 #if INTRINSICS
 
-				if(ReadRecordFast(ref fieldIdx))
+				if (ReadRecordFast(ref fieldIdx))
 				{
 					return true;
 				}

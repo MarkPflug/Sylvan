@@ -181,7 +181,7 @@ namespace Sylvan.Data.Csv
 				{
 					return true;
 				}
-				
+
 				// we were unable to read an entire record out of the buffer synchronously
 				if (recordStart == 0 && atEndOfText)
 				{

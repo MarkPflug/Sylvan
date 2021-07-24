@@ -283,7 +283,7 @@ namespace Sylvan.Data.Csv
 				return false;
 			}
 
-			var pos = idx;			
+			var pos = idx;
 			var end = this.bufferEnd - 8;
 
 			var recordStart = this.recordStart;
@@ -431,7 +431,7 @@ namespace Sylvan.Data.Csv
 					}
 					if (c == delimiter || IsEndOfLine(c))
 					{
-						// HACK: "unread" the delimiter/eol, and let the normal code path handle it
+						// "unread" the delimiter/eol, and let the normal code path handle it
 						idx--;
 						break;
 					}
@@ -1116,7 +1116,7 @@ namespace Sylvan.Data.Csv
 		public override int GetInt32(int ordinal)
 		{
 #if SPAN
-			var field = this.GetField(ordinal);			
+			var field = this.GetField(ordinal);
 			return
 				field.TryParseSingleCharInt()
 				?? int.Parse(field.ToSpan(), provider: culture);
