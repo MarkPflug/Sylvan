@@ -13,11 +13,18 @@ namespace Sylvan.Data.Csv
 {
 	public class CsvDataReaderTests
 	{
-		[Fact]
-		public void Simple1()
+		[Theory]
+		[InlineData("ABC,DEF\n1,2\n3,4\n5,6\n7,8\n9,10\n11,12\n13,14\n15,16\n17,18\n19,20\n")]
+		[InlineData("ABC,DEF\n\"1\",2\n3,4\n5,6\n7,8\n9,\"10\"\n11,12\n13,14\n15,16\n17,\"18\"\n19,20\n")]
+		public void Simple1(string data)
 		{
-			var csv = CsvDataReader.Create(new StringReader("ABC,DEF\n1,2\n3,4\n5,6\n5,6\n5,6\n5,6\n5,6\n5,6\n5,6\n5,6\n"));
-			while (csv.Read()) ;
+			var csv = CsvDataReader.Create(new StringReader(data));
+			int i = 1;
+			while (csv.Read())
+			{
+				Assert.Equal(i++, csv.GetInt32(0));
+				Assert.Equal(i++, csv.GetInt32(1));
+			}
 		}
 
 		[Fact]

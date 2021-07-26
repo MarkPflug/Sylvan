@@ -1,5 +1,8 @@
 # Sylvan.Data.Csv Release Notes
 
+_1.1.3_
+- Improve CsvDataReader performance for some files that contain a lot of quoted fields.
+
 _1.1.2_
 - Add CsvDataReader support for accessing enum values via `GetFieldValue<T>`.
 - Fix for issue #67, which was caused by some incorrect simd logic.
