@@ -2,23 +2,57 @@
 
 namespace Sylvan.Benchmarks
 {
+	[SimpleJob(1, 2, 4, 1)]
+	[MemoryDiagnoser]
 	public class NumberBenchmarks
 	{
-		[Benchmark(Baseline = true)]
+
+		const int Count = 100000;
+
+		[Benchmark]
 		public void IntToString()
 		{
-			for (int i = 0; i < 100; i++)
+			for (int i = 0; i < Count; i++)
 			{
 				var s = i.ToString();
 			}
 		}
 
 		[Benchmark]
-		public void IntToStringCommon()
+		public double IntToDoubleCast()
 		{
-			for (int i = 0; i < 100; i++)
+			double d = 0d;
+			for (int i = 0; i < Count; i++)
 			{
-				var s = i.ToStringCommon();
+				d += (double)i;
+			}
+			return d;
+		}
+
+		[Benchmark]
+		public void DoubleToString()
+		{
+			for (int i = 0; i < Count; i++)
+			{
+				var s = ((double)i).ToString();
+			}
+		}
+
+		[Benchmark]
+		public void IntParse()
+		{
+			for (int i = 0; i < Count; i++)
+			{
+				var x = int.Parse("123456");
+			}
+		}
+
+		[Benchmark]
+		public void DoubleParse()
+		{
+			for (int i = 0; i < Count; i++)
+			{
+				var x = double.Parse("123.45");
 			}
 		}
 	}
