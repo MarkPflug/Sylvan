@@ -2,14 +2,239 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Reflection.Emit;
 using System.Runtime.Serialization;
 
 namespace Sylvan.Data
 {
+
+	public static class DynamicBinder
+	{
+		public static IDataBinderFactory<T> Get<T>()
+		{
+			return BinderCache<T>.Instance;
+		}
+	}
+
+	static class NullAccessor<TP>
+	{
+		public static Func<IDataRecord, int, TP> Instance;
+
+		static NullAccessor()
+		{
+			Instance = (dr, i) => default!;
+		}
+	}
+
+	static class BinderAccessor
+	{
+		internal static Func<IDataRecord, int, T> GetAccessor<T>()
+		{
+			return (r, i) => ((DbDataReader)r).GetFieldValue<T>(i);
+
+		}
+	}
+
+
+	static class BinderCache<T>
+	{
+		internal static IDataBinderFactory<T> Instance;
+
+		static BinderCache()
+		{
+			Instance = BuildFactory();
+		}
+
+
+		static readonly Type SchemaType = typeof(IReadOnlyList<DbColumn>);
+
+
+
+		static IDataBinderFactory<T> BuildFactory()
+		{
+			var type = typeof(T);
+			var accType = typeof(Func<,,>);
+
+			var binderType = typeof(IDataBinder<>).MakeGenericType(new Type[] { type });
+			var binderFactoryType = typeof(IDataBinderFactory<>).MakeGenericType(new Type[] { type });
+
+			var attrs = TypeAttributes.Class | TypeAttributes.Sealed;
+			var mb = BinderBuilder.mb;
+
+			var builder = mb.DefineType("Sylvan.Data.Generated.Binder_" + type.Name, attrs, typeof(object), new Type[] { binderType });
+
+			var ctor = builder.DefineConstructor(MethodAttributes.Public, CallingConventions.HasThis, new Type[] { SchemaType });
+			var ctorIL = ctor.GetILGenerator();
+			var iVar = ctorIL.DeclareLocal(typeof(int));
+			var enuVar = ctorIL.DeclareLocal(typeof(IEnumerator<DbColumn>));
+			var colVar = ctorIL.DeclareLocal(typeof(DbColumn));
+			var ordinalVar = ctorIL.DeclareLocal(typeof(int));
+
+
+			var mapType = typeof(Dictionary<string, int>);
+			var mapField = builder.DefineField("Map", mapType, FieldAttributes.Private | FieldAttributes.Static);
+
+			Debug.Assert(iVar.LocalIndex == 0);
+			ctorIL.Emit(OpCodes.Ldc_I4_0);
+			ctorIL.Emit(OpCodes.Stloc_0);
+
+			Dictionary<string, int> map = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+			var props = GetBindableProperties(type).ToArray();
+			Label loopLabel = ctorIL.DefineLabel();
+			Label startLabel = ctorIL.DefineLabel();
+			Label[] propLabels = new Label[props.Length];
+			for(int i = 0; i < propLabels.Length; i++)
+			{
+				propLabels[i] = ctorIL.DefineLabel();
+			}
+			Label defaultLabel = ctorIL.DefineLabel();
+			int idx = 0;
+
+			var idxFields = new FieldInfo[props.Length];
+			var accFields = new FieldInfo[props.Length];
+
+			ctorIL.Emit(OpCodes.Ldarg_0);
+			ctorIL.Emit(OpCodes.Call, typeof(object).GetConstructors()[0]);
+
+			// initialize fields with default values.
+			foreach (var prop in props)
+			{
+				map.Add(prop.Name, idx);
+
+				var idxField = builder.DefineField("idx" + idx, typeof(int), FieldAttributes.Private);
+				var accessorType = accType.MakeGenericType(typeof(IDataRecord), typeof(int), prop.PropertyType);
+				var accField = builder.DefineField("accessor" + idx, accessorType, FieldAttributes.Private);
+				idxFields[idx] = idxField;
+				accFields[idx] = accField;
+
+				// set idxField to -1
+				ctorIL.Emit(OpCodes.Ldarg_0);
+				ctorIL.Emit(OpCodes.Ldc_I4_M1);
+				ctorIL.Emit(OpCodes.Stfld, idxField);
+
+				ctorIL.Emit(OpCodes.Ldarg_0);
+				ctorIL.Emit(OpCodes.Ldfld, typeof(NullAccessor<>).MakeGenericType(prop.PropertyType).GetField("Instance", BindingFlags.Public | BindingFlags.Static));
+				ctorIL.Emit(OpCodes.Stfld, accField);
+
+				idx++;
+			}
+			//i = 0;
+			ctorIL.Emit(OpCodes.Ldc_I4_0);
+			ctorIL.Emit(OpCodes.Stloc_0);
+
+			ctorIL.Emit(OpCodes.Ldarg_1); // load schema
+
+			ctorIL.Emit(OpCodes.Callvirt, typeof(IEnumerable<DbColumn>).GetMethod("GetEnumerator"));
+			ctorIL.Emit(OpCodes.Stloc_1);
+
+			ctorIL.Emit(OpCodes.Br, loopLabel);
+
+			ctorIL.MarkLabel(startLabel);
+			ctorIL.Emit(OpCodes.Ldloc_1);
+			ctorIL.Emit(OpCodes.Callvirt, typeof(IEnumerator<DbColumn>).GetProperty("Current").GetGetMethod());
+			ctorIL.Emit(OpCodes.Stloc_2);
+
+			ctorIL.Emit(OpCodes.Ldfld, mapField); // static
+			ctorIL.Emit(OpCodes.Ldloc_2);
+			ctorIL.Emit(OpCodes.Callvirt, typeof(DbColumn).GetProperty("ColumnName").GetGetMethod());
+			ctorIL.Emit(OpCodes.Ldloca_S, ordinalVar.LocalIndex);
+			ctorIL.Emit(OpCodes.Callvirt, mapType.GetMethod("TryGetValue"));
+			ctorIL.Emit(OpCodes.Brfalse, loopLabel);
+
+			ctorIL.Emit(OpCodes.Ldloc_3);
+			ctorIL.Emit(OpCodes.Switch, propLabels);
+			ctorIL.Emit(OpCodes.Br, defaultLabel);
+
+			for(int i = 0; i < props.Length; i++)
+			{
+				var prop = props[i];
+				ctorIL.MarkLabel(propLabels[i]);
+				// this.idx{i} = i;
+				ctorIL.Emit(OpCodes.Ldarg_0);
+				ctorIL.Emit(OpCodes.Ldloc_0);
+				ctorIL.Emit(OpCodes.Stfld, idxFields[i]);
+
+				// this.acc{i} = 
+				ctorIL.Emit(OpCodes.Ldarg_0);
+				//ctorIL.Emit(OpCodes.Ldloc_2);
+				var accMethod = typeof(BinderAccessor).GetMethod("GetAccessor", BindingFlags.NonPublic | BindingFlags.Static);
+				accMethod = accMethod.MakeGenericMethod(prop.PropertyType);
+				ctorIL.Emit(OpCodes.Call, accMethod);
+
+				ctorIL.Emit(OpCodes.Stfld, accFields[i]);
+				ctorIL.Emit(OpCodes.Br, defaultLabel);
+			}
+
+			ctorIL.MarkLabel(defaultLabel);
+			ctorIL.Emit(OpCodes.Ldloc_0);
+			ctorIL.Emit(OpCodes.Ldc_I4_1);
+			ctorIL.Emit(OpCodes.Add);
+			ctorIL.Emit(OpCodes.Stloc_0);
+
+			ctorIL.MarkLabel(loopLabel);
+			ctorIL.Emit(OpCodes.Ldloc_1);
+			ctorIL.Emit(OpCodes.Callvirt, typeof(System.Collections.IEnumerator).GetMethod("MoveNext"));
+			ctorIL.Emit(OpCodes.Brtrue, startLabel);
+			ctorIL.Emit(OpCodes.Ret);
+
+
+			var methodAttrs = MethodAttributes.Public | MethodAttributes.Virtual | MethodAttributes.HideBySig;
+			var method = builder.DefineMethod("Bind", methodAttrs, typeof(void), new Type[] { typeof(IDataRecord), type });
+			var mIL = method.GetILGenerator();
+			mIL.Emit(OpCodes.Newobj, typeof(NotImplementedException));
+			mIL.Emit(OpCodes.Throw);
+
+			var bindMethod = binderType.GetMethod("Bind");
+			builder.DefineMethodOverride(method, bindMethod);
+
+
+			var bT = builder.CreateType();
+
+			var facBuilder = mb.DefineType("Sylvan.Data.Generated.BinderFactory_" + type.Name, attrs, typeof(object), new Type[] { binderFactoryType });
+			var createMethod = facBuilder.DefineMethod("Create", methodAttrs, binderType, new Type[] { SchemaType });
+
+			mIL = createMethod.GetILGenerator();
+			mIL.Emit(OpCodes.Ldarg_1);
+			mIL.Emit(OpCodes.Newobj, bT.GetConstructor(new Type[] { SchemaType }));
+			mIL.Emit(OpCodes.Ret);
+
+			var facType = facBuilder.CreateType();
+
+			return (IDataBinderFactory<T>)Activator.CreateInstance(facType);
+
+		}
+
+		static IEnumerable<PropertyInfo> GetBindableProperties(Type type)
+		{
+			var props = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
+			foreach(var prop in props)
+			{
+				if (prop.GetSetMethod() == null) continue;
+				yield return prop;
+			}
+		}
+	}
+
+	static class BinderBuilder
+	{
+		const string Name = "SylvanDataBinder";
+
+		internal static AssemblyBuilder ab;
+		internal static ModuleBuilder mb;
+
+		static BinderBuilder()
+		{
+			ab = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName(Name), AssemblyBuilderAccess.Run);
+			mb = ab.DefineDynamicModule(Name);
+		}
+
+	}
 
 	sealed class DynamicDataBinderFactory<T> : IDataBinderFactory<T>
 	{
@@ -45,10 +270,15 @@ namespace Sylvan.Data
 		static FieldInfo accessorsField = typeof(DynamicDataBinder).GetField("accessors");
 
 
+
+
+
 		internal DynamicDataBinderFactory()
 		{
-			var recordType = typeof(T);
 
+
+
+			var recordType = typeof(T);
 
 			var binderParam = Expression.Parameter(typeof(DynamicDataBinder));
 			var recordParam = Expression.Parameter(DataBinder.DbDataRecordType);

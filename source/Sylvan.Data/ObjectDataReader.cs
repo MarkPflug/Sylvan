@@ -12,7 +12,7 @@ namespace Sylvan.Data
 	public static class ObjectDataReader
 	{
 		/// <summary>
-		/// Allows constructing ObjectDataReaders for anonymous types.
+		/// Creates a DbDataReader over a sequence of objects.
 		/// </summary>
 		public static DbDataReader Create<T>(IEnumerable<T> data)
 		{

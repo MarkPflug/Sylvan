@@ -70,14 +70,14 @@ namespace Sylvan.Data.Csv
 		{
 			var data = new[]
 				{
-					new 
+					new
 					{
-						Name = "Date1", 
+						Name = "Date1",
 						Date = new DateTime(2021, 2, 6),
 					},
-					new 
+					new
 					{
-						Name = "Date2", 
+						Name = "Date2",
 						Date = new DateTime(2021, 2, 7),
 					},
 				};
@@ -110,7 +110,7 @@ namespace Sylvan.Data.Csv
 			w.Write(data.AsDataReader());
 			var str = sw.ToString();
 			Assert.Equal("Name,Value\nValue with comma\\, and \\\r\n newline.,12\n\\#Comment,16\n", str);
-		}		
+		}
 
 		[Fact]
 		public void WriteQuote()
@@ -217,14 +217,14 @@ namespace Sylvan.Data.Csv
 			BufferSpanBug(i => Guid.NewGuid(), dr => dr.GetGuid(1));
 		}
 
-		void BufferSpanBug<T>(Func<int, T> allocator, Func<DbDataReader,T> selector)
+		void BufferSpanBug<T>(Func<int, T> allocator, Func<DbDataReader, T> selector)
 		{
 			// There was a bug where values that spanned buffers wouldn't be written at all
 			const int RecordCount = 10000;
 			var sw = new StringWriter();
 			var csv = CsvDataWriter.Create(sw, TestOptions);
-			
-			var data = 
+
+			var data =
 				Enumerable
 				.Range(0, RecordCount)
 				.Select(i => new { Id = i, Value = allocator(i) })
@@ -245,6 +245,27 @@ namespace Sylvan.Data.Csv
 				c++;
 			}
 			Assert.Equal(RecordCount, c);
+		}
+
+
+		[Fact]
+		public void CsvWriteBatches()
+		{
+			File.Open("output.csv", FileMode.Append, FileAccess.ReadWrite, FileShare.Read);
+			using var tw = File.CreateText("output.csv");
+			var data = "A,B,C\n1,2,3\n4,5,6\n";
+
+			{
+				var r = CsvDataReader.Create(new StringReader(data));
+				var csvWriter = CsvDataWriter.Create(tw);
+				csvWriter.Write(r);
+			}
+
+			{
+				var r = CsvDataReader.Create(new StringReader(data));
+				var csvWriter = CsvDataWriter.Create(tw, new CsvDataWriterOptions { WriteHeaders = false, o });
+				csvWriter.Write(r);
+			}
 		}
 	}
 }

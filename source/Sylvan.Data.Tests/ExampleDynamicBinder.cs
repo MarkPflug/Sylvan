@@ -14,7 +14,8 @@ namespace Sylvan.Data
 
 	public static class Ext
 	{
-		public static IEnumerable<ExampleClass> Bind(this IDataReader reader) {
+		public static IEnumerable<ExampleClass> Bind(this IDataReader reader)
+		{
 			var r = (DbDataReader)reader;
 			var binder = new ExampleDynamicBinder(r.GetColumnSchema());
 			while (reader.Read())
@@ -23,6 +24,14 @@ namespace Sylvan.Data
 				binder.Bind(reader, item);
 				yield return item;
 			}
+		}
+	}
+
+	sealed class ExampleDynamicBinderFactory : IDataBinderFactory<ExampleClass>
+	{
+		public IDataBinder<ExampleClass> Create(IReadOnlyList<DbColumn> schema)
+		{
+			return new ExampleDynamicBinder(schema);
 		}
 	}
 
@@ -39,13 +48,22 @@ namespace Sylvan.Data
 			}
 		}
 
-		// these should be inlined.
+		static Dictionary<string, int> Map = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+		{
+			{"Name", 0 },
+			{"Count", 1 },
+			{"Value", 2 },
+		};
+
 		int idx0, idx1, idx2;
-		object accessor0, accessor1, accessor2;
+		Func<IDataRecord, int, string> accessor0;
+		Func<IDataRecord, int, int> accessor1;
+		Func<IDataRecord, int, double> accessor2;
 
 		public ExampleDynamicBinder(IReadOnlyList<DbColumn> schema)
 		{
-			// generated
+			// this method body will be generated with ILEmit
+			// it is called one time to constuct a binder from DbDataReader to T.
 			idx0 = -1;
 			idx1 = -1;
 			idx2 = -1;
@@ -53,27 +71,29 @@ namespace Sylvan.Data
 			accessor0 = NullAccessor<string>.Instance;
 			accessor1 = NullAccessor<int>.Instance;
 			accessor2 = NullAccessor<double>.Instance;
-
 			int i = 0;
-
 			foreach (var col in schema)
 			{
-				switch (col.ColumnName)
+				if (Map.TryGetValue(col.ColumnName, out int ord))
 				{
-					case "Name":
-						idx0 = col.ColumnOrdinal ?? i;
-						accessor0 = GetAccessor<string>(col);
-						break;
-					case "Count":
-						idx1 = col.ColumnOrdinal ?? i;
-						accessor1 = GetAccessor<int>(col);
-						break;
-					case "Value":
-						idx2 = col.ColumnOrdinal ?? i;
-						accessor2 = GetAccessor<double>(col);
-						break;
+
+					switch (ord)
+					{
+						case 0:
+							idx0 = i;
+							accessor0 = GetAccessor<string>(col);
+							break;
+						case 1:
+							idx1 = i;
+							accessor1 = GetAccessor<int>(col);
+							break;
+						case 2:
+							idx2 = i;
+							accessor2 = GetAccessor<double>(col);
+							break;
+					}
+					i++;
 				}
-				i++;
 			}
 		}
 
@@ -101,9 +121,16 @@ namespace Sylvan.Data
 
 		public void Bind(IDataRecord record, ExampleClass item)
 		{
-			item.Name = ((Func<IDataRecord, int, string>)accessor0)(record, idx0);
-			item.Count = ((Func<IDataRecord, int, int>)accessor1)(record, idx1);
-			item.Value = ((Func<IDataRecord, int, double>)accessor2)(record, idx2);
+			// this method body will be generated with ILEmit
+			// called once per row in a DbDataReader.
+			item.Name = accessor0(record, idx0);
+			item.Count = accessor1(record, idx1);
+			item.Value = accessor2(record, idx2);
+		}
+
+		public void Bind(IDataRecord record, object item)
+		{
+			Bind(record, (ExampleClass)item);
 		}
 	}
 }

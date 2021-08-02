@@ -20,7 +20,6 @@ namespace Sylvan.Data
 				binder.Bind(csv, item);
 				result.Add(item);
 			}
-
 		}
 
 		[Fact]
