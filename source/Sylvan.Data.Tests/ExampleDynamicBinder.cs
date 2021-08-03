@@ -60,6 +60,11 @@ namespace Sylvan.Data
 		Func<IDataRecord, int, int> accessor1;
 		Func<IDataRecord, int, double> accessor2;
 
+		public static void F()
+		{
+			throw new NotImplementedException();
+		}
+
 		public ExampleDynamicBinder(IReadOnlyList<DbColumn> schema)
 		{
 			// this method body will be generated with ILEmit

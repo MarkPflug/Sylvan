@@ -13,6 +13,18 @@ using System.Runtime.Serialization;
 namespace Sylvan.Data
 {
 
+	static class ILEmitExtensions
+	{
+		static ConstructorInfo NieCtor = typeof(NotImplementedException).GetConstructor(Array.Empty<Type>());
+
+		public static ILGenerator ThrowNotImplemented(this ILGenerator gen)
+		{
+			gen.Emit(OpCodes.Newobj, NieCtor);
+			gen.Emit(OpCodes.Throw);
+			return gen;
+		}
+	}
+
 	public static class DynamicBinder
 	{
 		public static IDataBinderFactory<T> Get<T>()
@@ -21,7 +33,7 @@ namespace Sylvan.Data
 		}
 	}
 
-	static class NullAccessor<TP>
+	public static class NullAccessor<TP>
 	{
 		public static Func<IDataRecord, int, TP> Instance;
 
@@ -86,21 +98,22 @@ namespace Sylvan.Data
 			Dictionary<string, int> map = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
 			var props = GetBindableProperties(type).ToArray();
-			Label loopLabel = ctorIL.DefineLabel();
-			Label startLabel = ctorIL.DefineLabel();
-			Label[] propLabels = new Label[props.Length];
-			for(int i = 0; i < propLabels.Length; i++)
-			{
-				propLabels[i] = ctorIL.DefineLabel();
-			}
-			Label defaultLabel = ctorIL.DefineLabel();
+			//Label loopLabel = ctorIL.DefineLabel();
+			//Label startLabel = ctorIL.DefineLabel();
+			//Label[] propLabels = new Label[props.Length];
+			//for(int i = 0; i < propLabels.Length; i++)
+			//{
+			//	propLabels[i] = ctorIL.DefineLabel();
+			//}
+			//Label defaultLabel = ctorIL.DefineLabel();
 			int idx = 0;
 
 			var idxFields = new FieldInfo[props.Length];
 			var accFields = new FieldInfo[props.Length];
 
-			ctorIL.Emit(OpCodes.Ldarg_0);
-			ctorIL.Emit(OpCodes.Call, typeof(object).GetConstructors()[0]);
+			//ctorIL.Emit(OpCodes.Ldarg_0);
+			//ctorIL.Emit(OpCodes.Call, typeof(object).GetConstructors()[0]);
+			//ctorIL.Emit(OpCodes.Ret);
 
 			// initialize fields with default values.
 			foreach (var prop in props)
@@ -119,76 +132,97 @@ namespace Sylvan.Data
 				ctorIL.Emit(OpCodes.Stfld, idxField);
 
 				ctorIL.Emit(OpCodes.Ldarg_0);
-				ctorIL.Emit(OpCodes.Ldfld, typeof(NullAccessor<>).MakeGenericType(prop.PropertyType).GetField("Instance", BindingFlags.Public | BindingFlags.Static));
+				var nullAccType = typeof(NullAccessor<>).MakeGenericType(prop.PropertyType);
+				var accInstField = nullAccType.GetField("Instance", BindingFlags.Public | BindingFlags.Static);
+				ctorIL.Emit(OpCodes.Ldsfld, accInstField);
 				ctorIL.Emit(OpCodes.Stfld, accField);
 
 				idx++;
 			}
 			//i = 0;
-			ctorIL.Emit(OpCodes.Ldc_I4_0);
-			ctorIL.Emit(OpCodes.Stloc_0);
+			//ctorIL.Emit(OpCodes.Ldc_I4_0);
+			//ctorIL.Emit(OpCodes.Stloc_0);
 
-			ctorIL.Emit(OpCodes.Ldarg_1); // load schema
+			//ctorIL.Emit(OpCodes.Ldarg_1); // load schema
 
-			ctorIL.Emit(OpCodes.Callvirt, typeof(IEnumerable<DbColumn>).GetMethod("GetEnumerator"));
-			ctorIL.Emit(OpCodes.Stloc_1);
+			//ctorIL.Emit(OpCodes.Callvirt, typeof(IEnumerable<DbColumn>).GetMethod("GetEnumerator"));
+			//ctorIL.Emit(OpCodes.Stloc_1);
 
-			ctorIL.Emit(OpCodes.Br, loopLabel);
+			//ctorIL.Emit(OpCodes.Br, loopLabel);
 
-			ctorIL.MarkLabel(startLabel);
-			ctorIL.Emit(OpCodes.Ldloc_1);
-			ctorIL.Emit(OpCodes.Callvirt, typeof(IEnumerator<DbColumn>).GetProperty("Current").GetGetMethod());
-			ctorIL.Emit(OpCodes.Stloc_2);
+			//ctorIL.MarkLabel(startLabel);
+			//ctorIL.Emit(OpCodes.Ldloc_1);
+			//ctorIL.Emit(OpCodes.Callvirt, typeof(IEnumerator<DbColumn>).GetProperty("Current").GetGetMethod());
+			//ctorIL.Emit(OpCodes.Stloc_2);
 
-			ctorIL.Emit(OpCodes.Ldfld, mapField); // static
-			ctorIL.Emit(OpCodes.Ldloc_2);
-			ctorIL.Emit(OpCodes.Callvirt, typeof(DbColumn).GetProperty("ColumnName").GetGetMethod());
-			ctorIL.Emit(OpCodes.Ldloca_S, ordinalVar.LocalIndex);
-			ctorIL.Emit(OpCodes.Callvirt, mapType.GetMethod("TryGetValue"));
-			ctorIL.Emit(OpCodes.Brfalse, loopLabel);
+			//ctorIL.Emit(OpCodes.Ldfld, mapField); // static
+			//ctorIL.Emit(OpCodes.Ldloc_2);
+			//ctorIL.Emit(OpCodes.Callvirt, typeof(DbColumn).GetProperty("ColumnName").GetGetMethod());
+			//ctorIL.Emit(OpCodes.Ldloca_S, ordinalVar.LocalIndex);
+			//ctorIL.Emit(OpCodes.Callvirt, mapType.GetMethod("TryGetValue"));
+			//ctorIL.Emit(OpCodes.Brfalse, loopLabel);
 
-			ctorIL.Emit(OpCodes.Ldloc_3);
-			ctorIL.Emit(OpCodes.Switch, propLabels);
-			ctorIL.Emit(OpCodes.Br, defaultLabel);
+			//ctorIL.Emit(OpCodes.Ldloc_3);
+			//ctorIL.Emit(OpCodes.Switch, propLabels);
+			//ctorIL.Emit(OpCodes.Br, defaultLabel);
 
-			for(int i = 0; i < props.Length; i++)
-			{
-				var prop = props[i];
-				ctorIL.MarkLabel(propLabels[i]);
-				// this.idx{i} = i;
-				ctorIL.Emit(OpCodes.Ldarg_0);
-				ctorIL.Emit(OpCodes.Ldloc_0);
-				ctorIL.Emit(OpCodes.Stfld, idxFields[i]);
+			//for (int i = 0; i < props.Length; i++)
+			//{
+			//	var prop = props[i];
+			//	ctorIL.MarkLabel(propLabels[i]);
+			//	// this.idx{i} = i;
+			//	ctorIL.Emit(OpCodes.Ldarg_0);
+			//	ctorIL.Emit(OpCodes.Ldloc_0);
+			//	ctorIL.Emit(OpCodes.Stfld, idxFields[i]);
 
-				// this.acc{i} = 
-				ctorIL.Emit(OpCodes.Ldarg_0);
-				//ctorIL.Emit(OpCodes.Ldloc_2);
-				var accMethod = typeof(BinderAccessor).GetMethod("GetAccessor", BindingFlags.NonPublic | BindingFlags.Static);
-				accMethod = accMethod.MakeGenericMethod(prop.PropertyType);
-				ctorIL.Emit(OpCodes.Call, accMethod);
+			//	// this.acc{i} = 
+			//	ctorIL.Emit(OpCodes.Ldarg_0);
+			//	//ctorIL.Emit(OpCodes.Ldloc_2);
+			//	var accMethod = typeof(BinderAccessor).GetMethod("GetAccessor", BindingFlags.NonPublic | BindingFlags.Static);
+			//	accMethod = accMethod.MakeGenericMethod(prop.PropertyType);
+			//	ctorIL.Emit(OpCodes.Call, accMethod);
 
-				ctorIL.Emit(OpCodes.Stfld, accFields[i]);
-				ctorIL.Emit(OpCodes.Br, defaultLabel);
-			}
+			//	ctorIL.Emit(OpCodes.Stfld, accFields[i]);
+			//	ctorIL.Emit(OpCodes.Br, defaultLabel);
+			//}
 
-			ctorIL.MarkLabel(defaultLabel);
-			ctorIL.Emit(OpCodes.Ldloc_0);
-			ctorIL.Emit(OpCodes.Ldc_I4_1);
-			ctorIL.Emit(OpCodes.Add);
-			ctorIL.Emit(OpCodes.Stloc_0);
+			//ctorIL.MarkLabel(defaultLabel);
+			//ctorIL.Emit(OpCodes.Ldloc_0);
+			//ctorIL.Emit(OpCodes.Ldc_I4_1);
+			//ctorIL.Emit(OpCodes.Add);
+			//ctorIL.Emit(OpCodes.Stloc_0);
 
-			ctorIL.MarkLabel(loopLabel);
-			ctorIL.Emit(OpCodes.Ldloc_1);
-			ctorIL.Emit(OpCodes.Callvirt, typeof(System.Collections.IEnumerator).GetMethod("MoveNext"));
-			ctorIL.Emit(OpCodes.Brtrue, startLabel);
+			//ctorIL.MarkLabel(loopLabel);
+			//ctorIL.Emit(OpCodes.Ldloc_1);
+			//ctorIL.Emit(OpCodes.Callvirt, typeof(System.Collections.IEnumerator).GetMethod("MoveNext"));
+			//ctorIL.Emit(OpCodes.Brtrue, startLabel);
+
+
 			ctorIL.Emit(OpCodes.Ret);
 
 
 			var methodAttrs = MethodAttributes.Public | MethodAttributes.Virtual | MethodAttributes.HideBySig;
 			var method = builder.DefineMethod("Bind", methodAttrs, typeof(void), new Type[] { typeof(IDataRecord), type });
 			var mIL = method.GetILGenerator();
-			mIL.Emit(OpCodes.Newobj, typeof(NotImplementedException));
-			mIL.Emit(OpCodes.Throw);
+			//mIL.ThrowNotImplemented();
+			idx = 0;
+			foreach(var prop in props)
+			{
+				mIL.Emit(OpCodes.Ldarg_2);
+				mIL.Emit(OpCodes.Ldarg_0);
+				var accField = accFields[idx];
+				mIL.Emit(OpCodes.Ldfld, accField);
+
+				mIL.Emit(OpCodes.Ldarg_1);
+				mIL.Emit(OpCodes.Ldarg_0);
+				
+				mIL.Emit(OpCodes.Ldfld, idxFields[idx]);
+				var accMethod = accField.FieldType.GetMethod("Invoke", new Type[] { typeof(IDataRecord), typeof(int) });
+				mIL.Emit(OpCodes.Callvirt, accMethod);
+				mIL.Emit(OpCodes.Callvirt, prop.GetSetMethod());
+				idx++;
+			}
+			mIL.Emit(OpCodes.Ret);
 
 			var bindMethod = binderType.GetMethod("Bind");
 			builder.DefineMethodOverride(method, bindMethod);
@@ -201,14 +235,16 @@ namespace Sylvan.Data
 
 			mIL = createMethod.GetILGenerator();
 			mIL.Emit(OpCodes.Ldarg_1);
-			mIL.Emit(OpCodes.Newobj, bT.GetConstructor(new Type[] { SchemaType }));
+			var binderCtor = bT.GetConstructor(new Type[] { SchemaType });
+			mIL.Emit(OpCodes.Newobj, binderCtor);
 			mIL.Emit(OpCodes.Ret);
 
 			var facType = facBuilder.CreateType();
 
 			return (IDataBinderFactory<T>)Activator.CreateInstance(facType);
-
 		}
+
+
 
 		static IEnumerable<PropertyInfo> GetBindableProperties(Type type)
 		{

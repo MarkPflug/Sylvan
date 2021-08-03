@@ -29,10 +29,11 @@ namespace Sylvan.Data
 			while (csv.Read())
 			{
 				var p = new Person();
+				p.FirstName = "asdf";
+				p.LastName = "qwer";
+				p.BirthDate = DateTime.Now;
 				binder.Bind(csv, p);
 			}
-			
-
 		}
 	}
 }

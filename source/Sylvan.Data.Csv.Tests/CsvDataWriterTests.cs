@@ -263,7 +263,7 @@ namespace Sylvan.Data.Csv
 
 			{
 				var r = CsvDataReader.Create(new StringReader(data));
-				var csvWriter = CsvDataWriter.Create(tw, new CsvDataWriterOptions { WriteHeaders = false, o });
+				var csvWriter = CsvDataWriter.Create(tw, new CsvDataWriterOptions { WriteHeaders = false });
 				csvWriter.Write(r);
 			}
 		}
