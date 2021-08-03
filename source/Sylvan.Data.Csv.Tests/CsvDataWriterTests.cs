@@ -251,7 +251,6 @@ namespace Sylvan.Data.Csv
 		[Fact]
 		public void CsvWriteBatches()
 		{
-			File.Open("output.csv", FileMode.Append, FileAccess.ReadWrite, FileShare.Read);
 			using var tw = File.CreateText("output.csv");
 			var data = "A,B,C\n1,2,3\n4,5,6\n";
 
