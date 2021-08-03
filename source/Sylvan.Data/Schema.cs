@@ -31,8 +31,10 @@ namespace Sylvan.Data
 			var builder = 
 				new Builder();
 
-			foreach(DataRow row in dt.Rows)
+			foreach(DataRow? row in dt.Rows)
 			{
+				if (row == null) continue;
+
 				var cb = new Column.Builder();
 				cb.AllowDBNull = GetValue<bool?>(row, SchemaTableColumn.AllowDBNull);
 				cb.ColumnName = GetValue<string>(row, SchemaTableColumn.ColumnName) ?? string.Empty;

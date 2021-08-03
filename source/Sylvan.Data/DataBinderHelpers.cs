@@ -49,20 +49,19 @@ namespace Sylvan.Data
 			IDataRecordType = typeof(IDataRecord);
 			DbDataRecordType = typeof(DbDataRecord);
 			IsDbNullMethod = IDataRecordType.GetMethod("IsDBNull")!;
-			GetBooleanMethod = IDataRecordType.GetMethod("GetBoolean");
-			GetCharMethod = IDataRecordType.GetMethod("GetChar");
-			GetByteMethod = IDataRecordType.GetMethod("GetByte");
-			GetInt16Method = IDataRecordType.GetMethod("GetInt16");
-			GetInt32Method = IDataRecordType.GetMethod("GetInt32");
-			GetInt64Method = IDataRecordType.GetMethod("GetInt64");
-			GetFloatMethod = IDataRecordType.GetMethod("GetFloat");
-			GetDoubleMethod = IDataRecordType.GetMethod("GetDouble");
-			GetDecimalMethod = IDataRecordType.GetMethod("GetDecimal");
-			GetStringMethod = IDataRecordType.GetMethod("GetString");
-			GetGuidMethod = IDataRecordType.GetMethod("GetGuid");
-			GetDateTimeMethod = IDataRecordType.GetMethod("GetDateTime");
-
-			GetValueMethod = IDataRecordType.GetMethod("GetValue");
+			GetBooleanMethod = IDataRecordType.GetMethod("GetBoolean")!;
+			GetCharMethod = IDataRecordType.GetMethod("GetChar")!;
+			GetByteMethod = IDataRecordType.GetMethod("GetByte")!;
+			GetInt16Method = IDataRecordType.GetMethod("GetInt16")!;
+			GetInt32Method = IDataRecordType.GetMethod("GetInt32")!;
+			GetInt64Method = IDataRecordType.GetMethod("GetInt64")!;
+			GetFloatMethod = IDataRecordType.GetMethod("GetFloat")!;
+			GetDoubleMethod = IDataRecordType.GetMethod("GetDouble")!;
+			GetDecimalMethod = IDataRecordType.GetMethod("GetDecimal")!;
+			GetStringMethod = IDataRecordType.GetMethod("GetString")!;
+			GetGuidMethod = IDataRecordType.GetMethod("GetGuid")!;
+			GetDateTimeMethod = IDataRecordType.GetMethod("GetDateTime")!;
+			GetValueMethod = IDataRecordType.GetMethod("GetValue")!;
 		}
 
 		internal static MethodInfo? GetAccessorMethod(Type type)
@@ -203,7 +202,7 @@ namespace Sylvan.Data
 					var parse = parseMethod;
 					args[0] = s;
 					args[1] = null;
-					var success = (bool)parse.Invoke(null, args);
+					var success = (bool)parse!.Invoke(null, args)!;
 					if (success)
 					{
 						return new Option<TK>(true, (TK)args[1]!);

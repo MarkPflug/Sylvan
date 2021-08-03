@@ -18,7 +18,7 @@ namespace Sylvan.Data
 
 		object? IDataSeriesBinder.GetSeriesAccessor(string seriesName)
 		{
-			if (this.seriesAccessors != null && this.seriesAccessors.TryGetValue(seriesName, out object val))
+			if (this.seriesAccessors != null && this.seriesAccessors.TryGetValue(seriesName, out object? val))
 			{
 				return val;
 			}
@@ -690,7 +690,7 @@ namespace Sylvan.Data
 						return
 							Expression.Call(
 								expr,
-								typeof(string).GetProperty("Chars").GetGetMethod(),
+								typeof(string).GetProperty("Chars")!.GetGetMethod()!,
 								Expression.Constant(0)
 							);
 
@@ -703,10 +703,10 @@ namespace Sylvan.Data
 
 		static object GetDataSeriesAccessor(Schema.Column seriesCol, IEnumerable<DbColumn> physicalSchema, out IEnumerable<DbColumn> boundColumns)
 		{
-			var method = typeof(DataBinder).GetMethod("GetSeriesAccessor", BindingFlags.Static | BindingFlags.NonPublic);
+			var method = typeof(DataBinder).GetMethod("GetSeriesAccessor", BindingFlags.Static | BindingFlags.NonPublic)!;
 			method = method.MakeGenericMethod(new Type[] { seriesCol.SeriesType! });
 			var args = new object?[] { seriesCol, physicalSchema, null };
-			var result = method.Invoke(null, args);
+			var result = method.Invoke(null, args)!;
 			boundColumns = (IEnumerable<DbColumn>)args[2]!;
 			return result;
 		}
@@ -714,6 +714,11 @@ namespace Sylvan.Data
 		void IDataBinder<T>.Bind(IDataRecord record, T item)
 		{
 			recordBinderFunction(record, this.context, item);
+		}
+
+		public void Bind(IDataRecord record, object item)
+		{
+			throw new NotImplementedException();
 		}
 	}
 }

@@ -29,7 +29,7 @@ namespace Sylvan.Data
 
 	sealed class ExampleDynamicBinderFactory : IDataBinderFactory<ExampleClass>
 	{
-		public IDataBinder<ExampleClass> Create(IReadOnlyList<DbColumn> schema)
+		public IDataBinder<ExampleClass> Create(IReadOnlyList<DbColumn> schema, DataBinderOptions options)
 		{
 			return new ExampleDynamicBinder(schema);
 		}

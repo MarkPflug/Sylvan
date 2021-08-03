@@ -5,22 +5,35 @@ using System.Data.Common;
 
 namespace Sylvan.Data
 {
-
 	public static class DataBinderFactory
 	{
-		public static IDataBinder<T> Create<T>(this IDataBinderFactory<T> factory, DbDataReader reader)
+		public static IDataBinder<T> Create<T>(this IDataBinderFactory<T> factory, DbDataReader reader, DataBinderOptions? options = null)
 		{
 			var schema = reader.GetColumnSchema();
-			return factory.Create(schema);
+			return factory.Create(schema, options);
+		}
+
+		public static IDataBinder<T> Create<T>(this IDataBinderFactory<T> factory, IReadOnlyList<DbColumn> schema)
+		{
+			return factory.Create(schema, null);
 		}
 	}
 
+	/// <summary>
+	/// A factory for creating a data binder for a given schema.
+	/// </summary>
+	/// <typeparam name="T"></typeparam>
 	public interface IDataBinderFactory<T>
 	{
-		IDataBinder<T> Create(IReadOnlyList<DbColumn> schema);
+		IDataBinder<T> Create(IReadOnlyList<DbColumn> schema, DataBinderOptions? options);
 	}
 
-	public interface IDataBinder<T>
+	public interface IDataBinder
+	{
+		void Bind(IDataRecord record, object item);
+	}
+
+	public interface IDataBinder<T> : IDataBinder
 	{
 		void Bind(IDataRecord record, T item);
 	}
@@ -32,13 +45,6 @@ namespace Sylvan.Data
 
 	public static partial class DataBinder
 	{
-
-		public static IDataBinderFactory<T> CreateFactory<T>()
-		{
-			return new DynamicDataBinderFactory<T>();
-		}
-
-
 		// make every effort to construct a schema.
 		static ReadOnlyCollection<DbColumn> GetSchema(IDataReader dr)
 		{
@@ -62,6 +68,13 @@ namespace Sylvan.Data
 				}
 			}
 			return Schema.GetWeakSchema(dr).GetColumnSchema();
+		}
+
+		public static IDataBinder<T> CreateDynamic<T>(ReadOnlyCollection<DbColumn> schema, DataBinderOptions? opts = null)
+		{
+			var bf = ObjectBinder.Get<T>();
+			var b = bf.Create(schema, opts);
+			return b;
 		}
 
 		public static IDataBinder<T> Create<T>(ReadOnlyCollection<DbColumn> schema, DataBinderOptions? opts = null)

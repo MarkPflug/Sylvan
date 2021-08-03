@@ -219,6 +219,11 @@ namespace Sylvan.Benchmarks
 				item.I = record.GetInt32(4);
 				item.S = record.GetString(5);
 			}
+
+			public void Bind(IDataRecord record, object item)
+			{
+				Bind(record, (Record)item);
+			}
 		}
 
 		Record item;

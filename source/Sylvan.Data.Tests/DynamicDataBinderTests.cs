@@ -22,7 +22,7 @@ namespace Sylvan.Data
 		[Fact]
 		public void Test1()
 		{
-			var b = DynamicBinder.Get<Person>();
+			var b = ObjectBinder.Get<Person>();
 
 			var csv = CsvDataReader.Create(new StringReader("FirstName,LastName\nTest,User"));
 			var binder = b.Create(csv);
