@@ -48,16 +48,6 @@ namespace Sylvan.Data
 		}
 	}
 
-	public abstract class BinderBase<T> : IDataBinder<T>
-	{
-		public abstract void Bind(IDataRecord record, T item);
-
-		public void Bind(IDataRecord record, object item)
-		{
-			Bind(record, (T)item);
-		}
-	}
-
 	static class BinderCache<T>
 	{
 		internal static IDataBinderFactory<T> Instance;
@@ -80,7 +70,7 @@ namespace Sylvan.Data
 			var attrs = TypeAttributes.Class | TypeAttributes.Sealed;
 			var mb = BinderBuilder.mb;
 
-			var builder = mb.DefineType("Sylvan.Data.Generated.Binder_" + type.Name, attrs, typeof(BinderBase<>).MakeGenericType(type));
+			var builder = mb.DefineType("Sylvan.Data.Generated.Binder_" + type.Name, attrs, typeof(object), new Type[] { typeof(IDataBinder), binderType });
 
 			var ctor = builder.DefineConstructor(MethodAttributes.Public, CallingConventions.HasThis, new Type[] { SchemaType });
 			var ctorIL = ctor.GetILGenerator();
@@ -223,8 +213,17 @@ namespace Sylvan.Data
 			mIL.Emit(OpCodes.Ret);
 
 			var bindMethod = binderType.GetMethod("Bind");
-			//builder.DefineMethodOverride(method, bindMethod);
+			builder.DefineMethodOverride(method, bindMethod);
 
+			method = builder.DefineMethod("Bind", methodAttrs, typeof(void), new Type[] { typeof(IDataRecord), typeof(object) });
+			mIL = method.GetILGenerator();
+			mIL.Emit(OpCodes.Ldarg_0);
+			mIL.Emit(OpCodes.Ldarg_1);
+			mIL.Emit(OpCodes.Castclass, type);
+			mIL.Emit(OpCodes.Callvirt, bindMethod);
+			mIL.Emit(OpCodes.Ret);
+			bindMethod = typeof(IDataBinder).GetMethod("Bind");
+			builder.DefineMethodOverride(method, bindMethod);
 
 			var bT = builder.CreateTypeInfo()!;
 
@@ -244,8 +243,6 @@ namespace Sylvan.Data
 
 			return (IDataBinderFactory<T>)Activator.CreateInstance(facType)!;
 		}
-
-
 
 		static IEnumerable<PropertyInfo> GetBindableProperties(Type type)
 		{
@@ -270,6 +267,5 @@ namespace Sylvan.Data
 			ab = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName(Name), AssemblyBuilderAccess.Run);
 			mb = ab.DefineDynamicModule(Name);
 		}
-
 	}
 }
