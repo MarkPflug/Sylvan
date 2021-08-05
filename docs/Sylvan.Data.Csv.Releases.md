@@ -1,5 +1,8 @@
 # Sylvan.Data.Csv Release Notes
 
+_1.1.4_
+- Fix for issue with detecting overlarge records when reading asynchronously, or creating a new reader.
+
 _1.1.3_
 - Improve CsvDataReader performance for some files that contain a lot of quoted fields.
 
