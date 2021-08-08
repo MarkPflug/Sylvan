@@ -1290,5 +1290,27 @@ namespace Sylvan.Data.Csv
 			var data = sw.ToString();
 			Assert.Throws<CsvRecordTooLargeException>(() => CsvDataReader.Create(new StringReader(data), new CsvDataReaderOptions { BufferSize = 0x1000 }));
 		}
+
+
+		[Fact]
+		public void TooLongRecordThrows()
+		{
+			var sw = new StringWriter();
+			sw.WriteLine("a,b,c,d,e,f,g,h");
+			sw.WriteLine("1,2,3,4,5,6,7,8");
+
+			for (int i = 0; i < 8; i++)
+			{
+				var c = (char)('a' + i);
+				if (i > 0)
+					sw.Write(",");
+				sw.Write(new string(c, 1000));
+			}
+			sw.WriteLine();
+			var data = sw.ToString();
+			var csv = CsvDataReader.Create(new StringReader(data), new CsvDataReaderOptions { BufferSize = 0x1000 });
+			csv.Read();
+			Assert.Throws<CsvRecordTooLargeException>(() => csv.Read());
+		}
 	}
 }

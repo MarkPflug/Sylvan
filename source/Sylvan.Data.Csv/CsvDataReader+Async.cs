@@ -183,7 +183,7 @@ namespace Sylvan.Data.Csv
 				}
 
 				// we were unable to read an entire record out of the buffer
-				if (recordStart == 0)
+				if (recordStart == 0 && (atEndOfText || bufferEnd == buffer.Length))
 				{
 					// if we consumed the entire buffer reading this record, then this is an exceptional situation
 					// we expect a record to be able to fit entirely within the buffer.
