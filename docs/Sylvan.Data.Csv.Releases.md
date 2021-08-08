@@ -1,5 +1,8 @@
 # Sylvan.Data.Csv Release Notes
 
+_1.1.5_
+- Fix regression introduced in 1.1.4.
+
 _1.1.4_
 - Fix for issue with detecting overlarge records when reading asynchronously, or creating a new reader.
 
