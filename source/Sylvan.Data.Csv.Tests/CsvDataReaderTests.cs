@@ -1268,5 +1268,49 @@ namespace Sylvan.Data.Csv
 
 			Assert.False(csv.Read());
 		}
+
+		[Fact]
+		public void TooLongHeaderThrows()
+		{
+			var sw = new StringWriter();
+			var date = new DateTime(2020, 1, 1);
+			for (int i = 0; i < 1000; i++)
+			{
+				if (i != 0)
+					sw.Write(",");
+				sw.Write(date.ToString("yyyy-MM-dd"));
+			}
+			sw.WriteLine();
+			for (int i = 0; i < 1000; i++)
+			{
+				if (i != 0)
+					sw.Write(",");
+				sw.Write(i);
+			}
+			var data = sw.ToString();
+			Assert.Throws<CsvRecordTooLargeException>(() => CsvDataReader.Create(new StringReader(data), new CsvDataReaderOptions { BufferSize = 0x1000 }));
+		}
+
+
+		[Fact]
+		public void TooLongRecordThrows()
+		{
+			var sw = new StringWriter();
+			sw.WriteLine("a,b,c,d,e,f,g,h");
+			sw.WriteLine("1,2,3,4,5,6,7,8");
+
+			for (int i = 0; i < 8; i++)
+			{
+				var c = (char)('a' + i);
+				if (i > 0)
+					sw.Write(",");
+				sw.Write(new string(c, 1000));
+			}
+			sw.WriteLine();
+			var data = sw.ToString();
+			var csv = CsvDataReader.Create(new StringReader(data), new CsvDataReaderOptions { BufferSize = 0x1000 });
+			csv.Read();
+			Assert.Throws<CsvRecordTooLargeException>(() => csv.Read());
+		}
 	}
 }
