@@ -266,7 +266,7 @@ namespace Sylvan.Data.Csv
 			);
 		}
 
-		// this method uses SIMD instructions in order to optimistically read records
+		// this method uses SIMD instructions to optimistically read records
 		// as fast as possible. To keep things simple, this method stops processing
 		// when quotes are detected and falls back to the slower, more robust single-data
 		// path. Returns true when the end-of-record newline is found, and false when
@@ -307,15 +307,12 @@ namespace Sylvan.Data.Csv
 					var qv = Sse2.CompareEqual(v, quoteVec);
 
 					var delimPos = (uint)Sse2.MoveMask(dv.AsByte());
-					delimPos = Bmi2.ParallelBitExtract(delimPos, 0b10101010101010101010101010101010);
 
 					var fast = Sse2.Or(lv, qv);
 					if (Sse2.MoveMask(fast.AsByte()) != 0)
 					{
 						var lm = (uint)Sse2.MoveMask(lv.AsByte());
 						var qm = (uint)Sse2.MoveMask(qv.AsByte());
-						lm = Bmi2.ParallelBitExtract(lm, 0b10101010101010101010101010101010);
-						qm = Bmi2.ParallelBitExtract(qm, 0b10101010101010101010101010101010);
 
 						var endIdx = (int)Bmi1.TrailingZeroCount(lm);
 						var quoteIdx = (int)Bmi1.TrailingZeroCount(qm);
@@ -326,28 +323,28 @@ namespace Sylvan.Data.Csv
 							return false;
 						}
 
-						if (endIdx < 0x20) // found the end of the record.
+						if (endIdx < 0x10) // found the end of the record.
 						{
 							while (delimPos != 0)
 							{
 								var delIdx = (int)Bmi1.TrailingZeroCount(delimPos);
 								if (delIdx >= endIdx)
 								{
-									// I think this branch can be avoided
-									// use the lowest lv bit to mask only the delimiters lesser
-									// than the record end
 									break;
 								}
-								this.idx = pos + delIdx + 1;
+								var eIdx = pos + (delIdx >> 1);
+								this.idx = eIdx + 1;
 								ref var fi = ref fieldInfos[fieldIdx++];
 								fi = default;
-								fi.endIdx = pos + delIdx - recordStart;
-								delimPos = Bmi1.ResetLowestSetBit(delimPos);
+								fi.endIdx = eIdx - recordStart;
+
+								var cm = (uint)~((1 << (delIdx + 2)) - 1);
+								delimPos &= cm;
 							}
 
 							{
 								ref var fi = ref fieldInfos[fieldIdx++];
-								var eIdx = pos + endIdx;
+								var eIdx = pos + (endIdx >> 1);
 								this.idx = eIdx + 1;
 								fi = default;
 								fi.endIdx = eIdx - recordStart;
@@ -365,14 +362,17 @@ namespace Sylvan.Data.Csv
 					{
 						var delIdx = (int)Bmi1.TrailingZeroCount(delimPos);
 						ref var fi = ref fieldInfos[fieldIdx++];
-						this.idx = pos + delIdx + 1;
+						int eIdx = pos + (delIdx >> 1);
+						this.idx = eIdx + 1;
 						fi = default;
-						fi.endIdx = pos + delIdx - recordStart;
-						delimPos = Bmi1.ResetLowestSetBit(delimPos);
+						fi.endIdx = eIdx - recordStart;
+						var cm = (uint)~((1 << (delIdx + 2)) - 1);
+						delimPos &= cm;
 					}
 
 					pos += 8;
 				}
+
 				this.curFieldCount = fieldIdx;
 				return false;
 			}

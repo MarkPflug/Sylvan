@@ -1270,6 +1270,24 @@ namespace Sylvan.Data.Csv
 		}
 
 		[Fact]
+		public void Issue67_2()
+		{
+			var text = new StreamReader("Data/67.2.csv");
+			var csv = CsvDataReader.Create(text);
+
+			Assert.True(csv.Read());
+			Assert.Equal(6, csv.RowFieldCount);
+			Assert.Equal("601057", csv.GetString(0));
+			Assert.Equal("11014", csv.GetString(1));
+			Assert.Equal("(주)대교", csv.GetString(2));
+			Assert.Equal("기타녹음", csv.GetString(3));
+			Assert.Equal("NULL", csv.GetString(4));
+			Assert.Equal("1", csv.GetString(5));
+
+			Assert.False(csv.Read());
+		}
+
+		[Fact]
 		public void TooLongHeaderThrows()
 		{
 			var sw = new StringWriter();

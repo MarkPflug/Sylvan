@@ -1,5 +1,8 @@
 # Sylvan.Data.Csv Release Notes
 
+_1.1.6_
+- Improve performance of SIMD logic on AMD Zen2 architecture.
+
 _1.1.5_
 - Fix regression introduced in 1.1.4.
 
