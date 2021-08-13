@@ -4,6 +4,7 @@
     <TargetFrameworks>net6.0;net461</TargetFrameworks>
     <IsPackable>false</IsPackable>
     <RootNamespace>Sylvan.Data.Csv</RootNamespace>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>

@@ -11,7 +11,8 @@
     <LangVersion>9.0</LangVersion>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <WarningsNotAsErrors>CS1030;CA1835;$(WarningsNotAsErrors)</WarningsNotAsErrors>
-    
+
+    <DisableImplicitNamespaceImports>true</DisableImplicitNamespaceImports>
     <PackageProjectUrl>https://github.com/MarkPflug/Sylvan</PackageProjectUrl>
 
     <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
