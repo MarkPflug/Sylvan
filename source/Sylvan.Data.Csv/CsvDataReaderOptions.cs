@@ -105,7 +105,7 @@ namespace Sylvan.Data.Csv
 		const char DefaultQuote = '"';
 		const char DefaultEscape = '"';
 		const char DefaultComment = '#';
-		const int DefaultBufferSize = 0x1000;
+		const int DefaultBufferSize = 0x4000;
 		const int MinBufferSize = 0x80;
 
 		char? delimiter;
