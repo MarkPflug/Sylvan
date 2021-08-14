@@ -1,5 +1,9 @@
 # Sylvan.Data.Csv Release Notes
 
+_1.1.7_
+- Fix for SIMD logic when encountering a quote that would cause incorrect number of records to be identified.
+- Fix issue with final character in file being a quote.
+
 _1.1.6_
 - Improve performance of CsvDataReader SIMD logic on AMD Zen2 architecture.
 
