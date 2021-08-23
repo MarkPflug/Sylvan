@@ -37,8 +37,13 @@ namespace Sylvan.Data.Csv
 			this.Culture = CultureInfo.InvariantCulture;
 			this.TrueString = bool.TrueString;
 			this.FalseString = bool.FalseString;
+			//this.DateTimeFormat = "O";
 			this.DateTimeFormat = "yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'FFFFFFFK";
 			this.DateFormat = this.DateTimeFormat;
+			this.TimeSpanFormat = "c";
+#if NET6_0_OR_GREATER
+			this.TimeFormat = "O";
+#endif
 			this.WriteHeaders = true;
 		}
 
@@ -58,14 +63,26 @@ namespace Sylvan.Data.Csv
 		public string FalseString { get; set; }
 
 		/// <summary>
-		/// The format string used when writing DateTime values. The default is \"yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'FFFFFFF\".
+		/// The format string used when writing DateTime values. The default is \"O\".
 		/// </summary>
 		public string? DateTimeFormat { get; set; }
 
 		/// <summary>
-		/// The format string used when writing DateTime values that have to time component. The default is \"yyyy'-'MM'-'dd\".
+		/// The format string used when writing DateTime values, or DateOnly values on supported frameworks, that have to time component. The default is \"O\".
 		/// </summary>
 		public string? DateFormat { get; set; }
+
+		/// <summary>
+		/// The format string used when writing TimeSpan values that have to time component. The default is \"c\".
+		/// </summary>
+		public string? TimeSpanFormat { get; set; }
+
+#if NET6_0_OR_GREATER
+		/// <summary>
+		/// The format string used when writing TimeSpan values that have to time component. The default is \"O\".
+		/// </summary>
+		public string? TimeFormat { get; set; }
+#endif
 
 		/// <summary>
 		/// The style of the CSV file to be written, defaults to <see cref="CsvStyle.Standard"/>.
