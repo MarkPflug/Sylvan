@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 
@@ -42,12 +43,13 @@ namespace Sylvan.Data
 		internal static readonly MethodInfo GetGuidMethod;
 		internal static readonly MethodInfo GetStringMethod;
 		internal static readonly MethodInfo GetDateTimeMethod;
+		internal static readonly MethodInfo GetDateTimeOffsetMethod;
 		internal static readonly MethodInfo GetValueMethod;
 
 		static DataBinder()
 		{
 			IDataRecordType = typeof(IDataRecord);
-			DbDataRecordType = typeof(DbDataRecord);
+			DbDataRecordType = typeof(DbDataReader);
 			IsDbNullMethod = IDataRecordType.GetMethod("IsDBNull")!;
 			GetBooleanMethod = IDataRecordType.GetMethod("GetBoolean")!;
 			GetCharMethod = IDataRecordType.GetMethod("GetChar")!;
@@ -62,6 +64,7 @@ namespace Sylvan.Data
 			GetGuidMethod = IDataRecordType.GetMethod("GetGuid")!;
 			GetDateTimeMethod = IDataRecordType.GetMethod("GetDateTime")!;
 			GetValueMethod = IDataRecordType.GetMethod("GetValue")!;
+			GetDateTimeOffsetMethod = DbDataRecordType.GetMethods().Single(m => m.Name =="GetFieldValue").MakeGenericMethod(typeof(DateTimeOffset));
 		}
 
 		internal static MethodInfo? GetAccessorMethod(Type type)
@@ -104,6 +107,12 @@ namespace Sylvan.Data
 					{
 						return GetValueMethod;
 					}
+
+					if(type == typeof(DateTimeOffset))
+					{
+						return GetDateTimeOffsetMethod;
+					}
+
 					break;
 			}
 
@@ -268,6 +277,8 @@ namespace Sylvan.Data
 				case DbType.DateTime2:
 				case DbType.Date:
 					return typeof(DateTime);
+				case DbType.DateTimeOffset:
+					return typeof(DateTimeOffset);
 			}
 			throw new NotSupportedException();
 		}
@@ -317,7 +328,7 @@ namespace Sylvan.Data
 			return null;
 		}
 
-		public static T GetRecord<T>(this IDataBinder<T> binder, IDataRecord record, Func<IDataRecord, Exception, bool>? errorHandler = null) where T : new()
+		public static T GetRecord<T>(this IDataBinder<T> binder, DbDataReader record, Func<IDataRecord, Exception, bool>? errorHandler = null) where T : new()
 		{
 			var t = new T();
 			try

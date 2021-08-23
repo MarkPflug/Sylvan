@@ -32,7 +32,7 @@ namespace Sylvan.Data
 
 	public static class NullAccessor<TP>
 	{
-		public static Func<IDataRecord, int, TP> Instance;
+		public static Func<DbDataReader, int, TP> Instance;
 
 		static NullAccessor()
 		{
@@ -42,7 +42,7 @@ namespace Sylvan.Data
 
 	public static class BinderAccessor
 	{
-		public static Func<IDataRecord, int, T> GetAccessor<T>()
+		public static Func<DbDataReader, int, T> GetAccessor<T>()
 		{
 			return (r, i) => ((DbDataReader)r).GetFieldValue<T>(i);
 		}
@@ -109,7 +109,7 @@ namespace Sylvan.Data
 				map.Add(prop.Name, idx);
 
 				var idxField = builder.DefineField("idx" + idx, typeof(int), FieldAttributes.Private);
-				var accessorType = accType.MakeGenericType(typeof(IDataRecord), typeof(int), prop.PropertyType);
+				var accessorType = accType.MakeGenericType(typeof(DbDataReader), typeof(int), prop.PropertyType);
 				var accField = builder.DefineField("accessor" + idx, accessorType, FieldAttributes.Private);
 				idxFields[idx] = idxField;
 				accFields[idx] = accField;
@@ -190,7 +190,7 @@ namespace Sylvan.Data
 
 
 			var methodAttrs = MethodAttributes.Public | MethodAttributes.Virtual | MethodAttributes.HideBySig;
-			var method = builder.DefineMethod("Bind", methodAttrs, typeof(void), new Type[] { typeof(IDataRecord), type });
+			var method = builder.DefineMethod("Bind", methodAttrs, typeof(void), new Type[] { typeof(DbDataReader), type });
 			var mIL = method.GetILGenerator();
 
 			idx = 0;
@@ -205,7 +205,7 @@ namespace Sylvan.Data
 				mIL.Emit(OpCodes.Ldarg_0);
 				
 				mIL.Emit(OpCodes.Ldfld, idxFields[idx]);
-				var accMethod = accField.FieldType.GetMethod("Invoke", new Type[] { typeof(IDataRecord), typeof(int) })!;
+				var accMethod = accField.FieldType.GetMethod("Invoke", new Type[] { typeof(DbDataReader), typeof(int) })!;
 				mIL.Emit(OpCodes.Callvirt, accMethod);
 				mIL.Emit(OpCodes.Callvirt, prop.GetSetMethod()!);
 				idx++;
@@ -213,17 +213,17 @@ namespace Sylvan.Data
 			mIL.Emit(OpCodes.Ret);
 
 			var bindMethod = binderType.GetMethod("Bind");
-			builder.DefineMethodOverride(method, bindMethod);
+			builder.DefineMethodOverride(method, bindMethod!);
 
-			method = builder.DefineMethod("Bind", methodAttrs, typeof(void), new Type[] { typeof(IDataRecord), typeof(object) });
+			method = builder.DefineMethod("Bind", methodAttrs, typeof(void), new Type[] { typeof(DbDataReader), typeof(object) });
 			mIL = method.GetILGenerator();
 			mIL.Emit(OpCodes.Ldarg_0);
 			mIL.Emit(OpCodes.Ldarg_1);
 			mIL.Emit(OpCodes.Castclass, type);
-			mIL.Emit(OpCodes.Callvirt, bindMethod);
+			mIL.Emit(OpCodes.Callvirt, bindMethod!);
 			mIL.Emit(OpCodes.Ret);
 			bindMethod = typeof(IDataBinder).GetMethod("Bind");
-			builder.DefineMethodOverride(method, bindMethod);
+			builder.DefineMethodOverride(method, bindMethod!);
 
 			var bT = builder.CreateTypeInfo()!;
 

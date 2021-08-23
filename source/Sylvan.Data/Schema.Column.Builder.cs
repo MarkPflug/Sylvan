@@ -99,6 +99,10 @@ namespace Sylvan.Data
 								this.ColumnSize = 16;
 								break;
 							}
+							if(type == typeof(DateTimeOffset))
+							{
+								break;
+							}
 							goto default;
 						default:
 							throw new NotSupportedException();

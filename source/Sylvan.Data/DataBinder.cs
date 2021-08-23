@@ -30,12 +30,12 @@ namespace Sylvan.Data
 
 	public interface IDataBinder
 	{
-		void Bind(IDataRecord record, object item);
+		void Bind(DbDataReader record, object item);
 	}
 
 	public interface IDataBinder<T> : IDataBinder
 	{
-		void Bind(IDataRecord record, T item);
+		void Bind(DbDataReader record, T item);
 	}
 
 	interface IDataSeriesBinder

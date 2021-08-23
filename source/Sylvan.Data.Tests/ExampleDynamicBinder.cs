@@ -14,7 +14,7 @@ namespace Sylvan.Data
 
 	public static class Ext
 	{
-		public static IEnumerable<ExampleClass> Bind(this IDataReader reader)
+		public static IEnumerable<ExampleClass> Bind(this DbDataReader reader)
 		{
 			var r = (DbDataReader)reader;
 			var binder = new ExampleDynamicBinder(r.GetColumnSchema());
@@ -124,7 +124,7 @@ namespace Sylvan.Data
 			}
 		}
 
-		public void Bind(IDataRecord record, ExampleClass item)
+		public void Bind(DbDataReader record, ExampleClass item)
 		{
 			// this method body will be generated with ILEmit
 			// called once per row in a DbDataReader.
@@ -133,7 +133,7 @@ namespace Sylvan.Data
 			item.Value = accessor2(record, idx2);
 		}
 
-		public void Bind(IDataRecord record, object item)
+		public void Bind(DbDataReader record, object item)
 		{
 			Bind(record, (ExampleClass)item);
 		}

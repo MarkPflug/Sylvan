@@ -21,6 +21,12 @@ namespace Sylvan.Data
 			return new ObjectDataReader<T>(seq);
 		}
 
+		public static DbDataReader Select(this DbDataReader reader, Func<DbDataReader, int[]> ordinals)
+		{
+			var o = ordinals(reader);
+			return new TransformDataReader(reader, o);
+		}
+
 		public static DbDataReader Select(this DbDataReader reader, params int[] ordinals)
 		{
 			return new TransformDataReader(reader, ordinals);

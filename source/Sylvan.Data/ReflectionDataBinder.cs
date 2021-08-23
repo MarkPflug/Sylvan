@@ -134,12 +134,12 @@ namespace Sylvan.Data
 			this.propBinders = propBinderList.ToArray();
 		}
 
-		public void Bind(IDataRecord record, object item)
+		public void Bind(DbDataReader record, object item)
 		{
 			throw new NotImplementedException();
 		}
 
-		void IDataBinder<T>.Bind(IDataRecord record, T item)
+		void IDataBinder<T>.Bind(DbDataReader record, T item)
 		{
 			foreach (var pb in propBinders)
 			{

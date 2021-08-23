@@ -423,14 +423,14 @@ namespace Sylvan.Data
 				this.series0 = new DataSeriesAccessor<DateTime, int>(seriesCols);
 			}
 
-			public void Bind(IDataRecord record, SeriesDateRecord item)
+			public void Bind(DbDataReader record, SeriesDateRecord item)
 			{
 				item.Id = record.GetInt32(idIdx);
 				item.Name = record.GetString(nameIdx);
 				item.Values = new Series<DateTime, int>(this.series0, record);
 			}
 
-			public void Bind(IDataRecord record, object item)
+			public void Bind(DbDataReader record, object item)
 			{
 				Bind(record, (SeriesDateRecord)item);
 			}

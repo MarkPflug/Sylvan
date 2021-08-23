@@ -1,8 +1,10 @@
 ﻿using BenchmarkDotNet.Attributes;
 using Sylvan.Data;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.Common;
 using System.Linq;
 
 namespace Sylvan.Benchmarks
@@ -10,7 +12,7 @@ namespace Sylvan.Benchmarks
 	[MemoryDiagnoser]
 	public class DataBinderBenchmarks
 	{
-		class TestRecord : IDataReader
+		class TestRecord : DbDataReader
 		{
 			string[] columns;
 			Type[] types;
@@ -24,122 +26,119 @@ namespace Sylvan.Benchmarks
 
 			}
 
-			public object this[int i] => GetValue(i);
+			public override object this[int i] => GetValue(i);
 
-			public object this[string name] => ordinals[name];
+			public override object this[string name] => ordinals[name];
 
-			public int FieldCount => columns.Length;
+			public override int FieldCount => columns.Length;
 
-			public int Depth => 1;
+			public override int Depth => 1;
 
-			public bool IsClosed => false;
+			public override bool IsClosed => false;
 
-			public int RecordsAffected => throw new NotImplementedException();
+			public override int RecordsAffected => throw new NotImplementedException();
 
-			public bool GetBoolean(int i)
+			public override bool HasRows => true;
+
+			public override bool GetBoolean(int i)
 			{
 				if (i == 0) return true;
 				throw new NotImplementedException();
 			}
 
-			public byte GetByte(int i)
+			public override byte GetByte(int i)
 			{
 				throw new NotImplementedException();
 			}
 
-			public long GetBytes(int i, long fieldOffset, byte[] buffer, int bufferoffset, int length)
+			public override long GetBytes(int i, long fieldOffset, byte[] buffer, int bufferoffset, int length)
 			{
 				throw new NotImplementedException();
 			}
 
-			public char GetChar(int i)
+			public override char GetChar(int i)
 			{
 				throw new NotImplementedException();
 			}
 
-			public long GetChars(int i, long fieldoffset, char[] buffer, int bufferoffset, int length)
+			public override long GetChars(int i, long fieldoffset, char[] buffer, int bufferoffset, int length)
 			{
 				throw new NotImplementedException();
 			}
 
-			public IDataReader GetData(int i)
-			{
-				throw new NotImplementedException();
-			}
-
-			public string GetDataTypeName(int i)
+			public override string GetDataTypeName(int i)
 			{
 				return types[i].Name;
 			}
 
 			DateTime date = DateTime.UtcNow;
-			public DateTime GetDateTime(int i)
+			public override DateTime GetDateTime(int i)
 			{
 				if (i == 1) return date;
 				throw new NotSupportedException();
 			}
 
-			public decimal GetDecimal(int i)
+			public override decimal GetDecimal(int i)
 			{
 				throw new NotSupportedException();
 			}
 
-			public double GetDouble(int i)
+			public override double GetDouble(int i)
 			{
 				if (i == 2) return 12345.5;
 				throw new NotSupportedException();
 			}
 
-			public Type GetFieldType(int i)
+			public override Type GetFieldType(int i)
 			{
 				return types[i];
 			}
 
-			public float GetFloat(int i)
+			public override float GetFloat(int i)
 			{
 				throw new NotImplementedException();
 			}
 
 			Guid g = Guid.NewGuid();
-			public Guid GetGuid(int i)
+			public override Guid GetGuid(int i)
 			{
 				if (i == 3) return g;
 				throw new NotSupportedException();
 			}
 
-			public short GetInt16(int i)
+			public override short GetInt16(int i)
 			{
 				throw new NotImplementedException();
 			}
 
-			public int GetInt32(int i)
+			public override int GetInt32(int i)
 			{
 				if (i == 4) return 64532;
 				throw new NotSupportedException();
 			}
 
-			public long GetInt64(int i)
+			public override long GetInt64(int i)
 			{
 				throw new NotImplementedException();
 			}
 
-			public string GetName(int i)
+			public override string GetName(int i)
 			{
 				return columns[i];
 			}
 
-			public int GetOrdinal(string name)
+			public override int GetOrdinal(string name)
 			{
 				return ordinals[name];
 			}
 
-			public string GetString(int i)
+			public override string GetString(int i)
 			{
 				if (i == 5) return "This is a test string";
 				throw new NotSupportedException();
 			}
 
-			public object GetValue(int i)
+			public override object GetValue(int i)
 			{
 				switch (i)
 				{
@@ -153,37 +152,38 @@ namespace Sylvan.Benchmarks
 				throw new NotSupportedException();
 			}
 
-			public int GetValues(object[] values)
+			public override int GetValues(object[] values)
 			{
 				throw new NotImplementedException();
 			}
 
-			public bool IsDBNull(int i)
+			public override bool IsDBNull(int i)
 			{
 				return false;
 			}
 
-			public void Close()
+			public override void Close()
 			{
 			}
 
-			public DataTable GetSchemaTable()
+			public override DataTable GetSchemaTable()
 			{
 				throw new NotImplementedException();
 			}
 
-			public bool NextResult()
+			public override bool NextResult()
 			{
 				return false;
 			}
 
-			public bool Read()
+			public override bool Read()
 			{
 				return true;
 			}
 
-			public void Dispose()
+			public override IEnumerator GetEnumerator()
 			{
+				throw new NotImplementedException();
 			}
 		}
 
@@ -210,7 +210,7 @@ namespace Sylvan.Benchmarks
 
 		class ManualBinder : IDataBinder<Record>
 		{
-			public void Bind(IDataRecord record, Record item)
+			public void Bind(DbDataReader record, Record item)
 			{
 				item.B = record.GetBoolean(0);
 				item.D = record.GetDateTime(1);
@@ -220,14 +220,14 @@ namespace Sylvan.Benchmarks
 				item.S = record.GetString(5);
 			}
 
-			public void Bind(IDataRecord record, object item)
+			public void Bind(DbDataReader record, object item)
 			{
 				Bind(record, (Record)item);
-			}
+			}			
 		}
 
 		Record item;
-		IDataReader record;
+		DbDataReader record;
 		IDataBinder<Record> compiled, reflection;
 
 		[Benchmark]
@@ -248,7 +248,7 @@ namespace Sylvan.Benchmarks
 			Bench(compiled, record);
 		}
 
-		static void Bench(IDataBinder<Record> binder, IDataRecord record, Record item)
+		static void Bench(IDataBinder<Record> binder, DbDataReader record, Record item)
 		{
 			for (int i = 0; i < Count; i++)
 			{
@@ -256,7 +256,7 @@ namespace Sylvan.Benchmarks
 			}
 		}
 
-		static void Bench(IDataBinder<Record> binder, IDataRecord record)
+		static void Bench(IDataBinder<Record> binder, DbDataReader record)
 		{
 			for (int i = 0; i < Count; i++)
 			{

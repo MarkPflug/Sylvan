@@ -25,7 +25,7 @@ namespace Sylvan.Data
 			return null;
 		}
 
-		readonly Action<IDataRecord, BinderContext, T> recordBinderFunction;
+		readonly Action<DbDataReader, BinderContext, T> recordBinderFunction;
 		readonly object[] state;
 		readonly CultureInfo cultureInfo;
 		readonly BinderContext context;
@@ -113,7 +113,7 @@ namespace Sylvan.Data
 				return null;
 			}
 
-			var drType = typeof(IDataRecord);
+			var drType = typeof(DbDataReader);
 			var isDbNullMethod = drType.GetMethod("IsDBNull")!;
 
 			var recordType = typeof(T);
@@ -428,7 +428,7 @@ namespace Sylvan.Data
 			this.state = state.ToArray();
 			var body = Expression.Block(locals, bodyExpressions);
 
-			var lf = Expression.Lambda<Action<IDataRecord, BinderContext, T>>(body, recordParam, contextParam, itemParam);
+			var lf = Expression.Lambda<Action<DbDataReader, BinderContext, T>>(body, recordParam, contextParam, itemParam);
 			this.recordBinderFunction = lf.Compile();
 			this.context = new BinderContext(this.cultureInfo, this.state);
 		}
@@ -439,10 +439,8 @@ namespace Sylvan.Data
 			propertyType = ut ?? propertyType;
 
 			var code = Type.GetTypeCode(propertyType);
-			if (propertyType.IsEnum)
-				return typeof(string);
-			if (propertyType == typeof(DateTimeOffset))
-				return typeof(string);
+			if (propertyType.IsEnum || propertyType == typeof(DateTimeOffset))
+				return propertyType;
 
 			if (Type.GetTypeCode(propertyType) == TypeCode.Object)
 			{
@@ -711,12 +709,12 @@ namespace Sylvan.Data
 			return result;
 		}
 
-		void IDataBinder<T>.Bind(IDataRecord record, T item)
+		void IDataBinder<T>.Bind(DbDataReader record, T item)
 		{
 			recordBinderFunction(record, this.context, item);
 		}
 
-		public void Bind(IDataRecord record, object item)
+		public void Bind(DbDataReader record, object item)
 		{
 			throw new NotImplementedException();
 		}
