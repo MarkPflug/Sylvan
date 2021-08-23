@@ -1330,5 +1330,35 @@ namespace Sylvan.Data.Csv
 			csv.Read();
 			Assert.Throws<CsvRecordTooLargeException>(() => csv.Read());
 		}
+
+		[Fact]
+		public void Issue_76()
+		{
+			var content = @",,archimedes.library,archimedes.library/1.0.245,Archimedes.Library,1.0.245,2020-11-27T19:35:06.0046046Z,2020-11-27T19:33:25.687Z,Available,false,false,false,false,false,[],""[""""netstandard2.0""""]"",""[""""netstandard2.0""""]"",""[""""netstandard2.0""""]"",""[""""netstandard2.0""""]""
+,,eto.serialization.xaml,eto.serialization.xaml/2.5.8,Eto.Serialization.Xaml,2.5.8,2020-11-27T19:34:44.6917011Z,2020-11-27T19:32:26.743Z,Available,false,false,true,false,false,[],""[""""any"""",""""netstandard1.0"""",""""netstandard2.0""""]"",""[""""netstandard1.0"""",""""netstandard2.0""""]"",""[""""any"""",""""netstandard1.0"""",""""netstandard2.0""""]"",""[""""any"""",""""netstandard1.0"""",""""netstandard2.0""""]""
+";
+			using var csvReader = CsvDataReader.Create(new StringReader(content), new CsvDataReaderOptions
+			{
+				HasHeaders = false,
+			});
+
+			csvReader.Read();
+			Assert.Equal(19, csvReader.RowFieldCount);
+			csvReader.Read();
+			Assert.Equal(19, csvReader.RowFieldCount);
+		}
+
+		[Fact]
+		public void FinalCharQuote()
+		{
+			var content = @"""a""";
+			using var csvReader = CsvDataReader.Create(new StringReader(content), new CsvDataReaderOptions
+			{
+				HasHeaders = false,
+			});
+
+			csvReader.Read();
+			Assert.Equal(1, csvReader.RowFieldCount);
+		}
 	}
 }

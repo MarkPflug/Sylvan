@@ -338,6 +338,7 @@ namespace Sylvan.Data.Csv
 						// abort the SIMD path and let the single-data path process it
 						if (quoteIdx < lineEndIdx)
 						{
+							this.curFieldCount = fieldIdx;
 							return false;
 						}
 
@@ -506,6 +507,7 @@ namespace Sylvan.Data.Csv
 										{
 											idx--;
 											closeQuoteIdx = idx;
+											fieldEnd = closeQuoteIdx;
 											// the quote (escape) we just saw was a the closing quote
 											break;
 										}
@@ -514,6 +516,14 @@ namespace Sylvan.Data.Csv
 									{
 										if (atEndOfText)
 										{
+											if (escape == quote)
+											{
+												complete = true;
+												last = true;
+												closeQuoteIdx = idx - 1;
+												fieldEnd = closeQuoteIdx;
+												// the quote (escape) we just saw was a the closing quote
+											}
 											break;
 										}
 										return ReadResult.Incomplete;
@@ -526,6 +536,7 @@ namespace Sylvan.Data.Csv
 									// we can simply treat the remainder of the record like a normal unquoted field
 									// we are currently positioned on the quote, the next while loop will consume it
 									closeQuoteIdx = idx;
+									fieldEnd = closeQuoteIdx;
 									break;
 								}
 								if (IsEndOfLine(c))
