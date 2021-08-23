@@ -105,6 +105,10 @@ namespace Sylvan.Data.Csv
 		FieldInfo[] fieldInfos;
 		CsvColumn[] columns;
 
+		// in multi-result set mode carryRow indicates that a row is already parsed
+		// and needs to be carried into the next result set.
+		bool carryRow;
+
 		readonly Dictionary<string, int> headerMap;
 
 		readonly bool autoDetectDelimiter;

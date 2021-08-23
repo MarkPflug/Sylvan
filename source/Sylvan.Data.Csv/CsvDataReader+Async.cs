@@ -105,24 +105,38 @@ namespace Sylvan.Data.Csv
 			// read them, and use them to determine fieldCount.
 			if (hasHeaders)
 			{
-				if (await NextRecordAsync(cancel).ConfigureAwait(false))
+				if (carryRow || await NextRecordAsync(cancel).ConfigureAwait(false))
 				{
+					carryRow = false;
 					this.fieldCount = this.curFieldCount;
 					InitializeSchema();
+					var hasNext = await NextRecordAsync(cancel).ConfigureAwait(false);
+					this.state = State.Initialized;
+					if (resultSetMode == ResultSetMode.SingleResult)
+					{
+						this.hasRows = hasNext;
+					}
+					else
+					{
+						this.hasRows = hasNext && this.fieldCount == this.curFieldCount;
+						this.state = State.Initialized;
+						this.carryRow = this.hasRows == false && this.fieldCount > 0;
+					}
 				}
 				else
 				{
 					return false;
 				}
 			}
-
-			// read the first row of data to determine fieldCount (if there were no headers)
-			// and support calling HasRows before Read is first called.
-			this.hasRows = await NextRecordAsync(cancel).ConfigureAwait(false);
-			if (hasHeaders == false)
+			else
 			{
+				// read the first row of data to determine fieldCount (if there were no headers)
+				// and support calling HasRows before Read is first called.
+				this.hasRows = carryRow || await NextRecordAsync(cancel).ConfigureAwait(false);
+				this.carryRow = false;
 				this.fieldCount = this.curFieldCount;
 				InitializeSchema();
+				return fieldCount != 0;
 			}
 
 			return true;

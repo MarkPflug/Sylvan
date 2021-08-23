@@ -3,6 +3,7 @@
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0;netstandard2.1;netcoreapp3.0;net6.0</TargetFrameworks>
     <VersionPrefix>1.1.8</VersionPrefix>
+    <VersionSuffix>b0001</VersionSuffix>
     <Description>A .NET library for reading and writing delimited CSV data.</Description>
     <PackageTags>csv;delimited;data;datareader;datawriter;simd</PackageTags>
     <Nullable>enable</Nullable>
