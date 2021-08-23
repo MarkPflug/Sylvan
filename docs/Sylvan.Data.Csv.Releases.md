@@ -1,5 +1,8 @@
 # Sylvan.Data.Csv Release Notes
 
+_1.1.8_
+- Support custom formatting for CsvDataReader DateTimeOffset, DateOnly, TimeOnly, and TimeSpan.
+
 _1.1.7_
 - Fix for SIMD logic when encountering a quote that would cause incorrect number of records to be identified.
 - Fix issue with final character in file being a quote.
