@@ -28,5 +28,5 @@ jobs:
     - name: Publish coverage
       uses: coverallsapp/github-action@v1.0.1
       with:
-        github-token: ${{ secrets.REPO_TOKEN }}
+        github-token: ${{ secrets.GITHUB_TOKEN }}
         path-to-lcov: reports/Sylvan.Data.Csv.Tests/coverage.net6.0.info
