@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net5.0;net6.0;net461</TargetFrameworks>
+    <TargetFrameworks>net6.0;net461</TargetFrameworks>
     <IsPackable>false</IsPackable>
     <RootNamespace>Sylvan.Data</RootNamespace>
   </PropertyGroup>
@@ -13,7 +13,6 @@
 
   <ItemGroup>
     <PackageReference Include="System.ValueTuple" Version="4.5.0" />
-    <PackageReference Update="Microsoft.NET.Test.Sdk" Version="16.8.3" />
   </ItemGroup>
 
 </Project>
