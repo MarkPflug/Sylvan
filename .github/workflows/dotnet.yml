@@ -24,9 +24,9 @@ jobs:
     - name: Test
       run: dotnet test source -f net6.0 --no-build --verbosity normal
     - name: Coverage
-      run: dotnet --% test source/Sylvan.Data.Csv.Tests/ -c Release -f net6.0 /p:CollectCoverage=true /p:Include=\"[Sylvan.Data.Csv]*\"
-    #- name: Publish coverage
-    #  uses: coverallsapp/github-action@v1.0.1
-    #  with:
-    #    github-token: ${{ secrets.REPO_TOKEN }}
-    #    path-to-lcov: source/${{env.PROJECT_NAME}}.Tests/coverage.info
+      run: dotnet --% test source/Sylvan.Data.Csv.Tests/ -c Release -f net6.0 /p:CollectCoverage=true /p:CoverletOutputFormat=lcov /p:Include=\"[Sylvan.Data.Csv]*\"
+    - name: Publish coverage
+      uses: coverallsapp/github-action@v1.0.1
+      with:
+        github-token: ${{ secrets.REPO_TOKEN }}
+        path-to-lcov: source/Sylvan.Data.Csv.Tests/coverage.info
