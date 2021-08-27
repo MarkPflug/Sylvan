@@ -27,7 +27,7 @@ jobs:
       run: dotnet --% test source/Sylvan.Data.Csv.Tests/ -c Release -f net6.0 /p:CollectCoverage=true /p:CoverletOutputFormat=lcov /p:Include=\"[Sylvan.Data.Csv]*\"
     - name: Publish coverage
       uses: coverallsapp/github-action@v1.0.1
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      if: github.ref == 'refs/heads/main'
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         path-to-lcov: reports/Sylvan.Data.Csv.Tests/coverage.net6.0.info
