@@ -1066,16 +1066,21 @@ namespace Sylvan.Data.Csv
 		{
 			var format = columns[ordinal].Format ?? this.dateFormat;
 			var style = DateTimeStyles.None;
+			DateTimeOffset value;
 #if SPAN
 			var span = this.GetFieldSpan(ordinal);
-			if (format != null && DateTimeOffset.TryParseExact(span, format, culture, style, out var value))
+			
+			if (IsoDate.TryParse(span, out value))
+				return value;
+
+			if (format != null && DateTimeOffset.TryParseExact(span, format, culture, style, out value))
 			{
 				return value;
 			}
 			return DateTimeOffset.Parse(span, culture, style);
 #else
 			var str = this.GetString(ordinal);
-			if(format != null && DateTimeOffset.TryParseExact(str, format, culture, style, out var value))
+			if(format != null && DateTimeOffset.TryParseExact(str, format, culture, style, out value))
 			{
 				return value;
 			}
@@ -1088,16 +1093,19 @@ namespace Sylvan.Data.Csv
 		{
 			var format = columns[ordinal].Format ?? this.dateFormat;
 			var style = DateTimeStyles.AdjustToUniversal;
+			DateTime value;
 #if SPAN
 			var span = this.GetFieldSpan(ordinal);
-			if (format != null && DateTime.TryParseExact(span, format, culture, style, out var value))
+			if (IsoDate.TryParse(span, out value))
+				return value;
+			if (format != null && DateTime.TryParseExact(span, format, culture, style, out value))
 			{
 				return value;
 			}
 			return DateTime.Parse(span, culture, style);
 #else
 			var dateStr = this.GetString(ordinal);
-			if (format != null && DateTime.TryParseExact(dateStr, format, culture, style, out var value))
+			if (format != null && DateTime.TryParseExact(dateStr, format, culture, style, out value))
 			{
 				return value;
 			}

@@ -10,7 +10,7 @@ namespace Sylvan
 	/// <summary>
 	/// Provides ISO 8601 date parsing.
 	/// </summary>
-	public static class IsoDate
+	static partial class IsoDate
 	{
 		// This implementation is mostly copied from System.Text.Json internal code.
 		// There are a few changes:

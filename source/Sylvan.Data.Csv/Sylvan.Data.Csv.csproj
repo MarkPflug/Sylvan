@@ -1,9 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netstandard2.0;netstandard2.1;netcoreapp3.0;net6.0</TargetFrameworks>
+    <TargetFrameworks>net6.0;netstandard2.0;netstandard2.1;netcoreapp3.0</TargetFrameworks>
     <VersionPrefix>1.1.8</VersionPrefix>
-    <VersionSuffix>b0001</VersionSuffix>
+    <VersionSuffix>b0002</VersionSuffix>
     <Description>A .NET library for reading and writing delimited CSV data.</Description>
     <PackageTags>csv;delimited;data;datareader;datawriter;simd</PackageTags>
     <Nullable>enable</Nullable>
@@ -17,5 +17,6 @@
 
   <ItemGroup>
     <Compile Include="../Sylvan.Data/SchemaTable.cs" />
+    <Compile Condition="$(TargetFramework) != 'netstandard2.0'" Include="../Sylvan.Common/IsoDate.cs" Link="IsoDate.cs" />
   </ItemGroup>
 </Project>

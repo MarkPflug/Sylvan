@@ -3,6 +3,7 @@
 _1.1.8_
 - Support custom formatting for CsvDataReader DateTimeOffset, DateOnly, TimeOnly, and TimeSpan.
 - Fixes #79: `MultiResult` mode now correctly handles cases where a header row can exist without following data rows.
+- Improves date parsing performance for ISO formatted dates.
 
 _1.1.7_
 - Fix for SIMD logic when encountering a quote that would cause incorrect number of records to be identified.

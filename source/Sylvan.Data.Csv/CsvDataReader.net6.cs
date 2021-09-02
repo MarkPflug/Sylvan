@@ -33,8 +33,13 @@ namespace Sylvan.Data.Csv
 		{
 			var format = columns[ordinal].Format ?? this.dateFormat;
 			var span = this.GetFieldSpan(ordinal);
+			DateOnly value;
+			if (IsoDate.TryParse(span, out value))
+			{
+				return value;
+			}
 			var style = DateTimeStyles.None;
-			if (format != null && DateOnly.TryParseExact(span, format, culture, style, out var value))
+			if (format != null && DateOnly.TryParseExact(span, format, culture, style, out value))
 			{
 				return value;
 			}
