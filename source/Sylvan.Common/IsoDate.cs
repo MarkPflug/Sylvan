@@ -4,20 +4,21 @@ namespace Sylvan
 {
 	static class IsoDate
 	{
-		// 10: yyyy-MM-dd  
-		// 19: yyyy-MM-ddTHH:mm:ss
-		// 20: yyyy-MM-ddTHH:mm:ssZ
-		// 20: yyyy-MM-ddTHH:mm:ss.fffffff
-		// 20: yyyy-MM-ddTHH:mm:ss.fffffffZ
-
 		/// <summary>
-		/// Allows parsing ISO8601 formatted dates.
+		/// Parses and ISO8601 formatted date.
 		/// </summary>
 		/// <remarks> 
-		/// DateTime.Parse is quite slow when parsing date values because it has to account for
-		/// a variety of complexities introduced by culture and calendaring systems. 
+		/// <para>
+		/// DateTime.Parse is quite slow when parsing date values because it handles
+		/// a variety of formats and complexities introduced by culture and calendaring systems. 
 		/// ParseExact is somewhat faster when given the "O" round-trippable format. 
-		/// However, that requires 
+		/// However, that requires providing a fully specified input with fractional seconds.
+		/// </para>
+		/// <para>
+		/// IsoDate provides a much faster implementation specialized for ISO8601 formatted dates.
+		/// It doesn't have to account for culture or calendaring systems, which allows it to 
+		/// significantly faster than the DateTime.Parse implementations.
+		/// </para>
 		/// </remarks>
 		public static bool TryParse(ReadOnlySpan<char> s, out DateTime dt)
 		{
