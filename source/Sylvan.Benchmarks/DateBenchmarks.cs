@@ -37,9 +37,39 @@ namespace Sylvan.Benchmarks
 		}
 
 		[Benchmark]
-		public DateTime IsoDateTryParse()
+		public DateOnly DateOnlyParse()
 		{
-			return IsoDate.TryParse(DateStr, out var dt) 
+			// this will fail to parse all but the long formats
+			return DateOnly.Parse(DateStr, CultureInfo.InvariantCulture);
+		}
+
+		[Benchmark]
+		public DateOnly DateOnlyParseExactO()
+		{
+			// this will fail to parse all but the long formats
+			return DateOnly.ParseExact(DateStr, "O", CultureInfo.InvariantCulture);
+		}
+
+		[Benchmark]
+		public DateTime IsoDateTryParseDT()
+		{
+			return IsoDate.TryParse(DateStr, out DateTime dt) 
+				? dt
+				: throw new Exception();
+		}
+
+		[Benchmark]
+		public DateTime IsoDateTryParseDTO()
+		{
+			return IsoDate.TryParse(DateStr, out DateTime dt)
+				? dt
+				: throw new Exception();
+		}
+
+		[Benchmark]
+		public DateOnly IsoDateTryParseDO()
+		{
+			return IsoDate.TryParse(DateStr, out DateOnly dt)
 				? dt
 				: throw new Exception();
 		}
