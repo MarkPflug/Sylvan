@@ -17,7 +17,9 @@ namespace Sylvan
 		/// <para>
 		/// IsoDate provides a much faster implementation specialized for ISO8601 formatted dates.
 		/// It doesn't have to account for culture or calendaring systems, which allows it to 
-		/// significantly faster than the DateTime.Parse implementations.
+		/// significantly faster than the DateTime.Parse implementations. 
+		/// The ISO rules are relaxed to allow a space instead of a 'T' as the time separator.
+		/// A comma can also be used as the fractional seconds separator, in place of a period.
 		/// </para>
 		/// </remarks>
 		public static bool TryParse(ReadOnlySpan<char> s, out DateTime dt)

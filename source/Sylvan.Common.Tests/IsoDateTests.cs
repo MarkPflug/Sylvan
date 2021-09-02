@@ -15,16 +15,18 @@ namespace Sylvan
 		[InlineData("2020-10-11 12:13:14.1", true)]
 		[InlineData("2020-10-11 12:13:14.12", true)]
 		[InlineData("2020-10-11 12:13:14.123", true)]
-		[InlineData("2020-10-11 12:13:14.1235", true)]
-		[InlineData("2020-10-11 12:13:14.12356", true)]
-		[InlineData("2020-10-11 12:13:14.123567", true)]
-		[InlineData("2020-10-11 12:13:14.1235678", true)]
-		[InlineData("2020-10-11 12:13:14.1235678Z", true)]
-		[InlineData("2020-10-11 12:13:14.12356789", true)]
-		[InlineData("2020-10-11 12:13:14.12356789Z", true)]
-		[InlineData("2020-10-11 12:13", false)]
-		[InlineData("2020-10-11 12:13:14-07:00", false)]
+		[InlineData("2020-10-11 12:13:14.12345", true)]
+		[InlineData("2020-10-11 12:13:14.123456", true)]
+		[InlineData("2020-10-11 12:13:14.1234567", true)]
+		[InlineData("2020-10-11 12:13:14.1234567Z", true)]
+		[InlineData("2020-10-11 12:13:14.12345678Z", true)]
+		[InlineData("2020-10-11 12:13:14.123456789", true)]
+		[InlineData("2020-10-11 12:13:14.123456789Z", true)]
+		[InlineData("2020-10-11 23:59:59.99999999Z", true)]
 		[InlineData("2020-10-11Z12:13:14", false)]
+		//TODO: the following cases should be made to succeed.
+		[InlineData("2020-10-11T12:13", false)]
+		[InlineData("2020-10-11T12:13:14-07:00", false)]
 		public void TryParse(string str, bool success)
 		{
 			var result = IsoDate.TryParse(str, out var value);

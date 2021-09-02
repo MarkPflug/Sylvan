@@ -14,6 +14,7 @@ namespace Sylvan.Benchmarks
 			{
 				yield return "2020-10-11";
 				yield return "2020-10-11T12:13:14Z";
+				yield return "2020-10-11T12:13:14.1234567";
 				yield return "2020-10-11T12:13:14.1234567Z";
 				yield return "2020-10-11T12:13:14.1234567-07:00";
 			}
@@ -32,9 +33,7 @@ namespace Sylvan.Benchmarks
 		public DateTime DateTimeParseExactO()
 		{
 			// this will fail to parse all but the long formats
-			return DateTime.TryParseExact(DateStr, "O", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dt)
-				? dt
-				: throw new Exception();
+			return DateTime.ParseExact(DateStr, "O", CultureInfo.InvariantCulture);
 		}
 
 		[Benchmark]
