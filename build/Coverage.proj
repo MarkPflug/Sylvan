@@ -1,11 +1,15 @@
 <Project>
 
+  <PropertyGroup>
+    <ReportDir>../reports/</ReportDir>
+  </PropertyGroup>
+  
   <Target Name="Build">
-    <RemoveDir Directories="../reports/"/>
-    <MakeDir Directories="../reports/"/>
-    <MSBuild Projects="../source/Sylvan.sln" Targets="VSTest" Properties="CollectCoverage=true"/>
+    <RemoveDir Directories="$(ReportDir)"/>
+    <MakeDir Directories="$(ReportDir)"/>
+    <MSBuild Projects="../source/Sylvan.sln" Targets="Restore;Build;VSTest" Properties="Configuration=Debug;CollectCoverage=true"/>
     <Exec 
-      Command="reportgenerator.exe -reports:../reports/**/*.xml -targetDir:../reports" 
-      WorkingDirectory="../reports/"/>
+      Command="reportgenerator.exe -reports:$(ReportDir)**/*.xml -targetDir:$(ReportDir)" 
+      WorkingDirectory="$(ReportDir)"/>
   </Target>
 </Project>
