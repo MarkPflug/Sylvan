@@ -1,1 +1,2 @@
-bin\release\net5.0\Sylvan.Benchmarks.exe
+dotnet build -c Release source/Sylvan.sln
+bin\release\net6.0\Sylvan.Benchmarks.exe
