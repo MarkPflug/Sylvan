@@ -37,12 +37,11 @@ namespace Sylvan.Data.Csv
 			this.Culture = CultureInfo.InvariantCulture;
 			this.TrueString = bool.TrueString;
 			this.FalseString = bool.FalseString;
-			//this.DateTimeFormat = "O";
-			this.DateTimeFormat = "yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'FFFFFFFK";
+			this.DateTimeFormat = null;
 			this.DateFormat = this.DateTimeFormat;
-			this.TimeSpanFormat = "c";
+			this.TimeSpanFormat = null;
 #if NET6_0_OR_GREATER
-			this.TimeFormat = "O";
+			this.TimeFormat = null;
 #endif
 			this.WriteHeaders = true;
 		}
