@@ -46,7 +46,7 @@ namespace Sylvan.Data.Csv
 				};
 
 			var csv = GetCsv(data);
-			var expected = "Boolean,Integer,Double,Date,Text\nTrue,2147483647,15.25,2020-01-01T00:00:00,Abcd\n";
+			var expected = "Boolean,Integer,Double,Date,Text\nTrue,2147483647,15.25,2020-01-01,Abcd\n";
 			Assert.Equal(expected, csv);
 		}
 
@@ -83,7 +83,7 @@ namespace Sylvan.Data.Csv
 				};
 
 			var csv = GetCsv(data);
-			Assert.Equal("Name,Date\nDate1,2021-02-06T00:00:00\nDate2,2021-02-07T00:00:00\n", csv);
+			Assert.Equal("Name,Date\nDate1,2021-02-06\nDate2,2021-02-07\n", csv);
 		}
 
 		[Fact]

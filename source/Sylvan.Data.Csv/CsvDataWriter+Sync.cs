@@ -26,7 +26,7 @@ namespace Sylvan.Data.Csv
 			{
 				var type = reader.GetFieldType(i);
 				var allowNull = schema?[i].AllowDBNull ?? true;
-				var writer = GetWriter(type);
+				var writer = GetWriter(i);
 				fieldInfos[i] = new FieldInfo(allowNull, writer);
 			}
 

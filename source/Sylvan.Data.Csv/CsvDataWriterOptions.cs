@@ -37,11 +37,12 @@ namespace Sylvan.Data.Csv
 			this.Culture = CultureInfo.InvariantCulture;
 			this.TrueString = bool.TrueString;
 			this.FalseString = bool.FalseString;
-			this.DateTimeFormat = "O";
-			this.DateFormat = this.DateTimeFormat;
-			this.TimeSpanFormat = "c";
+			this.DateTimeFormat = null;
+			this.DateTimeOffsetFormat = null;
+			this.DateFormat = null;
+			this.TimeSpanFormat = null;
 #if NET6_0_OR_GREATER
-			this.TimeFormat = "O";
+			this.TimeFormat = null;
 #endif
 			this.WriteHeaders = true;
 		}
@@ -65,6 +66,11 @@ namespace Sylvan.Data.Csv
 		/// The format string used when writing DateTime values. The default is \"O\".
 		/// </summary>
 		public string? DateTimeFormat { get; set; }
+
+		/// <summary>
+		/// The format string used when writing DateTime values. The default is \"O\".
+		/// </summary>
+		public string? DateTimeOffsetFormat { get; set; }
 
 		/// <summary>
 		/// The format string used when writing DateTime values, or DateOnly values on supported frameworks, that have to time component. The default is \"O\".

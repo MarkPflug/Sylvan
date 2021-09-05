@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Data.Common;
 using System.Globalization;
 using System.IO;
 using System.Text;
@@ -29,8 +30,10 @@ namespace Sylvan.Data.Csv
 			public IFieldWriter writer;
 		}
 
-		IFieldWriter GetWriter(Type type)
+		IFieldWriter GetWriter(DbDataReader reader, int ordinal)
 		{
+			var type = reader.GetFieldType(ordinal);
+			
 			if (type == typeof(string))
 			{
 				return StringFieldWriter.Instance;
@@ -94,9 +97,20 @@ namespace Sylvan.Data.Csv
 			if (type == typeof(DateTime))
 			{
 #if SPAN
-				return IsFastDateTime
-					? DateTimeFastFieldWriter.Instance
-					: DateTimeFieldWriter.Instance;
+				var fmt = this.dateTimeFormat;
+				if(IsFastDateTime)
+				{
+					return fmt == null
+						? DateTimeIsoFastFieldWriter.Instance
+						: DateTimeFormatFastFieldWriter.Instance;
+				} 
+				else
+				{
+					return fmt == null
+						? DateTimeIsoFieldWriter.Instance
+						: DateTimeFormatFieldWriter.Instance;
+				}
+				
 #else
 				return DateTimeFieldWriter.Instance;
 #endif
@@ -142,8 +156,8 @@ namespace Sylvan.Data.Csv
 			if (type == typeof(DateOnly))
 			{
 				return IsFastDate
-					? DateOnlyFastFieldWriter.Instance
-					: DateOnlyFieldWriter.Instance;
+					? DateOnlyIsoFastFieldWriter.Instance
+					: DateOnlyIsoFieldWriter.Instance;
 			}
 
 			if (type == typeof(TimeOnly))
