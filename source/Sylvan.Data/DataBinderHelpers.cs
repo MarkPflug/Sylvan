@@ -267,6 +267,8 @@ namespace Sylvan.Data
 				case DbType.DateTime2:
 				case DbType.Date:
 					return typeof(DateTime);
+				case DbType.DateTimeOffset:
+					return typeof(DateTimeOffset);
 			}
 			throw new NotSupportedException();
 		}

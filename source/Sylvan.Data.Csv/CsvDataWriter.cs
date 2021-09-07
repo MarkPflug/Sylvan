@@ -90,14 +90,16 @@ namespace Sylvan.Data.Csv
 				return DecimalFieldWriter.Instance;
 #endif
 			}
+			
 			if (type == typeof(bool))
 			{
 				return BooleanFieldWriter.Instance;
 			}
+
 			if (type == typeof(DateTime))
 			{
+			var fmt = this.dateTimeFormat;
 #if SPAN
-				var fmt = this.dateTimeFormat;
 				if(IsFastDateTime)
 				{
 					return fmt == null
@@ -110,9 +112,8 @@ namespace Sylvan.Data.Csv
 						? DateTimeIsoFieldWriter.Instance
 						: DateTimeFormatFieldWriter.Instance;
 				}
-				
 #else
-				return DateTimeFieldWriter.Instance;
+				return DateTimeFormatFieldWriter.Instance;
 #endif
 			}
 
@@ -278,6 +279,7 @@ namespace Sylvan.Data.Csv
 		readonly string trueString;
 		readonly string falseString;
 		readonly string? dateTimeFormat;
+		readonly string? dateTimeOffsetFormat;
 		readonly string? timeSpanFormat;
 		readonly string? dateFormat;
 #if NET6_0_OR_GREATER
@@ -326,6 +328,7 @@ namespace Sylvan.Data.Csv
 			this.trueString = options.TrueString;
 			this.falseString = options.FalseString;
 			this.dateTimeFormat = options.DateTimeFormat;
+			this.dateTimeOffsetFormat = options.DateTimeOffsetFormat;
 			this.timeSpanFormat = options.TimeSpanFormat;
 			this.dateFormat = options.DateFormat;
 #if NET6_0_OR_GREATER

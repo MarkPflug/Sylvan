@@ -257,6 +257,7 @@ namespace Sylvan.Data.Csv
 			}
 		}
 
+#if SPAN
 		sealed class DateTimeIsoFieldWriter : FieldWriter
 		{
 			public static DateTimeIsoFieldWriter Instance = new DateTimeIsoFieldWriter();
@@ -267,7 +268,7 @@ namespace Sylvan.Data.Csv
 				var writer = context.writer;
 				var culture = writer.culture;
 				var value = reader.GetDateTime(ordinal);
-#if SPAN
+
 				Span<char> str = stackalloc char[IsoDate.MaxDateLength];
 				int len;
 				if(!IsoDate.TryFormatIso(value, str, out len))
@@ -275,12 +276,10 @@ namespace Sylvan.Data.Csv
 					return InsufficientSpace;
 				}
 				str = str.Slice(0, len);
-#else
-				var str = IsoDate.ToStringIso(value);
-#endif
 				return writer.csvWriter.Write(context, str, buffer, offset);
 			}
 		}
+#endif
 
 		sealed class DateTimeFormatFieldWriter : FieldWriter
 		{
@@ -292,7 +291,7 @@ namespace Sylvan.Data.Csv
 				var writer = context.writer;
 				var culture = writer.culture;
 				var value = reader.GetDateTime(ordinal);
-				var fmt = writer.dateTimeFormat;
+				var fmt = writer.dateTimeFormat ?? "O";
 #if SPAN
 				Span<char> str = stackalloc char[IsoDate.MaxDateLength];
 				int len;
