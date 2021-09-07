@@ -98,12 +98,12 @@ namespace Sylvan
 			var str =  IsoDate.ToStringIso(date);
 			Assert.Equal("2020-10-11T12:13:14.1234567Z", str);
 
-			date = new DateTime(2020, 10, 11, 12, 13, 14, DateTimeKind.Local).AddTicks(1234567);
-			str = IsoDate.ToStringIso(date);
+			var dto = new DateTimeOffset(2020, 10, 11, 12, 13, 14, TimeSpan.FromHours(-7)).AddTicks(1234567);
+			str = IsoDate.ToStringIso(dto);
 			Assert.Equal("2020-10-11T12:13:14.1234567-07:00", str);
 
-			date = new DateTime(2020, 10, 11, 12, 13, 14, DateTimeKind.Local);
-			str = IsoDate.ToStringIso(date);
+			dto = new DateTimeOffset(2020, 10, 11, 12, 13, 14, TimeSpan.FromHours(-7));
+			str = IsoDate.ToStringIso(dto);
 			Assert.Equal("2020-10-11T12:13:14-07:00", str);
 
 			date = new DateTime(2020, 10, 11, 12, 13, 14, DateTimeKind.Utc);
