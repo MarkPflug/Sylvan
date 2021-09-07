@@ -46,8 +46,15 @@ namespace Sylvan.Data.Csv
 				};
 
 			var csv = GetCsv(data);
-			var expected = "Boolean,Integer,Double,Date,Text\nTrue,2147483647,15.25,2020-01-01,Abcd\n";
-			Assert.Equal(expected, csv);
+
+			var r = CsvDataReader.Create(new StringReader(csv));
+			r.Read();
+			var expected = data[0];
+			Assert.Equal(expected.Boolean, r.GetBoolean(0));
+			Assert.Equal(expected.Integer, r.GetInt32(1));
+			Assert.Equal(expected.Double, r.GetDouble(2));
+			Assert.Equal(expected.Date, r.GetDateTime(3));
+			Assert.Equal(expected.Text, r.GetString(4));
 		}
 
 		[Fact]
@@ -70,20 +77,51 @@ namespace Sylvan.Data.Csv
 		{
 			var data = new[]
 				{
-					new 
-					{
-						Name = "Date1", 
-						Date = new DateTime(2021, 2, 6),
-					},
-					new 
-					{
-						Name = "Date2", 
-						Date = new DateTime(2021, 2, 7),
-					},
+					new { Date = new DateTime(2021, 2, 6, 0, 0, 0, DateTimeKind.Local) },
+					new { Date = new DateTime(2021, 2, 6, 1, 2, 3, DateTimeKind.Local) },
+					new { Date = new DateTime(2021, 2, 6, 0, 0, 0, DateTimeKind.Utc) },
+					new { Date = new DateTime(2021, 2, 6, 1, 2, 3, DateTimeKind.Utc) },
+					new { Date = new DateTime(2021, 2, 6, 0, 0, 0, DateTimeKind.Unspecified) },
+					new { Date = new DateTime(2021, 2, 6, 1, 2, 3, DateTimeKind.Unspecified) },
 				};
 
-			var csv = GetCsv(data);
-			Assert.Equal("Name,Date\nDate1,2021-02-06\nDate2,2021-02-07\n", csv);
+			var csvStr = GetCsv(data);
+			var csv = CsvDataReader.Create(new StringReader(csvStr));
+			var idx = 0;
+			while (csv.Read())
+			{
+				var expected = data[idx];
+				var result = csv.GetDateTime(0);
+				Assert.Equal(expected.Date.ToUniversalTime(), result.ToUniversalTime());
+				idx++;
+			}
+		}
+
+		[Fact]
+		public void WriteDateTimeOffset()
+		{
+			var offset = TimeZoneInfo.Local.GetUtcOffset(new DateTime(2021, 2, 6));
+			var offset1H = offset.Add(TimeSpan.FromHours(1));
+			var data = new[]
+				{
+					new { Date = new DateTimeOffset(2021, 2, 6, 0, 0, 0, offset) },
+					new { Date = new DateTimeOffset(2021, 2, 6, 1, 2, 3, offset ) },
+					new { Date = new DateTimeOffset(2021, 2, 6, 0, 0, 0, TimeSpan.Zero ) },
+					new { Date = new DateTimeOffset(2021, 2, 6, 1, 2, 3, TimeSpan.Zero ) },
+					new { Date = new DateTimeOffset(2021, 2, 6, 0, 0, 0, offset1H ) },
+					new { Date = new DateTimeOffset(2021, 2, 6, 1, 2, 3, offset1H ) },
+				};
+
+			var csvStr = GetCsv(data);
+			var csv = CsvDataReader.Create(new StringReader(csvStr));
+			var idx = 0;
+			while (csv.Read())
+			{
+				var expected = data[idx];
+				var result = csv.GetDateTimeOffset(0);
+				Assert.Equal(expected.Date, result);
+				idx++;
+			}
 		}
 
 		[Fact]
@@ -110,7 +148,7 @@ namespace Sylvan.Data.Csv
 			w.Write(data.AsDataReader());
 			var str = sw.ToString();
 			Assert.Equal("Name,Value\nValue with comma\\, and \\\r\n newline.,12\n\\#Comment,16\n", str);
-		}		
+		}
 
 		[Fact]
 		public void WriteQuote()
@@ -217,14 +255,14 @@ namespace Sylvan.Data.Csv
 			BufferSpanBug(i => Guid.NewGuid(), dr => dr.GetGuid(1));
 		}
 
-		void BufferSpanBug<T>(Func<int, T> allocator, Func<DbDataReader,T> selector)
+		void BufferSpanBug<T>(Func<int, T> allocator, Func<DbDataReader, T> selector)
 		{
 			// There was a bug where values that spanned buffers wouldn't be written at all
 			const int RecordCount = 10000;
 			var sw = new StringWriter();
 			var csv = CsvDataWriter.Create(sw, TestOptions);
-			
-			var data = 
+
+			var data =
 				Enumerable
 				.Range(0, RecordCount)
 				.Select(i => new { Id = i, Value = allocator(i) })

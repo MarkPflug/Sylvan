@@ -1063,7 +1063,7 @@ namespace Sylvan.Data.Csv
 		public DateTimeOffset GetDateTimeOffset(int ordinal)
 		{
 			var format = columns[ordinal].Format ?? this.dateFormat;
-			var style = DateTimeStyles.None;
+			var style = DateTimeStyles.RoundtripKind;
 			DateTimeOffset value;
 #if SPAN
 			var span = this.GetFieldSpan(ordinal);
@@ -1089,7 +1089,7 @@ namespace Sylvan.Data.Csv
 		/// <inheritdoc/>
 		public override DateTime GetDateTime(int ordinal)
 		{
-			var style = DateTimeStyles.AdjustToUniversal;
+			var style = DateTimeStyles.RoundtripKind;
 			DateTime value;
 #if SPAN
 			var span = this.GetFieldSpan(ordinal);
@@ -1105,7 +1105,7 @@ namespace Sylvan.Data.Csv
 #else
 			var dateStr = this.GetString(ordinal);
 			
-			var format = columns[ordinal].Format ?? this.dateFormat;
+			var format = columns[ordinal].Format ?? this.dateFormat ?? "O";
 			if (format != null && DateTime.TryParseExact(dateStr, format, culture, style, out value))
 			{
 				return value;
