@@ -27,6 +27,7 @@ namespace Sylvan
 		[InlineData("2020-10-11T12:13", true, DateTimeKind.Unspecified)]
 		[InlineData("2020-10-11T12:13:14-07:00", true, DateTimeKind.Utc)]
 
+		[InlineData("2020-10-11Z", false, DateTimeKind.Unspecified)]
 		[InlineData("2020-10-11X12:13:14", false, DateTimeKind.Unspecified)]
 		public void TryParseDateTime(string str, bool success, DateTimeKind expectedKind)
 		{
@@ -88,6 +89,30 @@ namespace Sylvan
 				var expected = DateOnly.FromDateTime(DateTime.Parse(str));
 				Assert.Equal(expected, value);
 			}
+		}
+
+		[Fact]
+		public void Format()
+		{
+			var date = new DateTime(2020, 10, 11, 12, 13, 14, DateTimeKind.Utc).AddTicks(1234567);
+			var str =  IsoDate.ToStringIso(date);
+			Assert.Equal("2020-10-11T12:13:14.1234567Z", str);
+
+			var dto = new DateTimeOffset(2020, 10, 11, 12, 13, 14, TimeSpan.FromHours(-7)).AddTicks(1234567);
+			str = IsoDate.ToStringIso(dto);
+			Assert.Equal("2020-10-11T12:13:14.1234567-07:00", str);
+
+			dto = new DateTimeOffset(2020, 10, 11, 12, 13, 14, TimeSpan.FromHours(-7));
+			str = IsoDate.ToStringIso(dto);
+			Assert.Equal("2020-10-11T12:13:14-07:00", str);
+
+			date = new DateTime(2020, 10, 11, 12, 13, 14, DateTimeKind.Utc);
+			str = IsoDate.ToStringIso(date);
+			Assert.Equal("2020-10-11T12:13:14Z", str);
+
+			date = new DateTime(2020, 10, 11);
+			str = IsoDate.ToStringIso(date);
+			Assert.Equal("2020-10-11", str);
 		}
 	}
 }

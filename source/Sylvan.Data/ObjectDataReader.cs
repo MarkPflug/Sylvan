@@ -141,13 +141,27 @@ namespace Sylvan.Data
 				return IsSupported(prop.PropertyType);
 			}
 
+			static readonly HashSet<Type> SupportedTypes = new HashSet<Type>
+			{
+				typeof(byte[]),
+				typeof(char[]),
+				typeof(Guid),
+				typeof(DateTime),
+				typeof(DateTimeOffset),
+				typeof(TimeSpan),
+
+#if NET6_0_OR_GREATER
+				typeof(DateOnly),
+				typeof(TimeOnly),
+#endif
+			};
+
 			static bool IsSupported(Type type)
 			{
-				if (type == typeof(byte[]) || type == typeof(char[])) return true;
+				if (SupportedTypes.Contains(type)) return true;
 
 				if (type.IsArray) return false;
 				if (type.IsPrimitive) return true;
-				if (type == typeof(DateTime) || type == typeof(Guid)) return true;
 				if (type == typeof(string)) return true;
 
 				var nt = Nullable.GetUnderlyingType(type);

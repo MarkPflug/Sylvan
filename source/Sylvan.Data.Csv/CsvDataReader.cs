@@ -12,10 +12,8 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Reflection;
 
 #if INTRINSICS
-using System.Numerics;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
 #endif
@@ -104,6 +102,10 @@ namespace Sylvan.Data.Csv
 		byte[]? scratch;
 		FieldInfo[] fieldInfos;
 		CsvColumn[] columns;
+
+		// in multi-result set mode carryRow indicates that a row is already parsed
+		// and needs to be carried into the next result set.
+		bool carryRow;
 
 		readonly Dictionary<string, int> headerMap;
 
@@ -1036,12 +1038,22 @@ namespace Sylvan.Data.Csv
 		/// </summary>
 		public TimeSpan GetTimeSpan(int ordinal)
 		{
+			var format = columns[ordinal].Format;
+			var style = TimeSpanStyles.None;
 #if SPAN
-			var f = this.GetField(ordinal);
-			return TimeSpan.TryParse(f.ToSpan(), out var value) ? value : throw new FormatException();
+			var span = this.GetFieldSpan(ordinal);
+			if (format != null && TimeSpan.TryParseExact(span, format, culture, style, out var value))
+			{
+				return value;
+			}
+			return TimeSpan.Parse(span, culture);
 #else
 			var str = this.GetString(ordinal);
-			return TimeSpan.Parse(str);
+			if(format != null && TimeSpan.TryParseExact(str, format, culture, style, out var value))
+			{
+				return value;
+			}
+			return TimeSpan.Parse(str, culture);
 #endif
 		}
 
@@ -1050,31 +1062,53 @@ namespace Sylvan.Data.Csv
 		/// </summary>
 		public DateTimeOffset GetDateTimeOffset(int ordinal)
 		{
+			var format = columns[ordinal].Format ?? this.dateFormat;
+			var style = DateTimeStyles.RoundtripKind;
+			DateTimeOffset value;
 #if SPAN
-			var f = this.GetField(ordinal);
-			return DateTimeOffset.TryParse(f.ToSpan(), out var value) ? value : throw new FormatException();
+			var span = this.GetFieldSpan(ordinal);
+			
+			if (IsoDate.TryParse(span, out value))
+				return value;
+
+			if (format != null && DateTimeOffset.TryParseExact(span, format, culture, style, out value))
+			{
+				return value;
+			}
+			return DateTimeOffset.Parse(span, culture, style);
 #else
 			var str = this.GetString(ordinal);
-			return DateTimeOffset.Parse(str);
+			if(format != null && DateTimeOffset.TryParseExact(str, format, culture, style, out value))
+			{
+				return value;
+			}
+			return DateTimeOffset.Parse(str, culture, style);
 #endif
 		}
 
 		/// <inheritdoc/>
 		public override DateTime GetDateTime(int ordinal)
 		{
-			var format = columns[ordinal].Format ?? this.dateFormat;
-			var style = DateTimeStyles.AdjustToUniversal;
+			var style = DateTimeStyles.RoundtripKind;
+			DateTime value;
 #if SPAN
-			if (format != null && DateTime.TryParseExact(this.GetFieldSpan(ordinal), format.AsSpan(), culture, style, out var dt))
+			var span = this.GetFieldSpan(ordinal);
+			if (IsoDate.TryParse(span, out value))
+				return value;
+
+			var format = columns[ordinal].Format ?? this.dateFormat;
+			if (format != null && DateTime.TryParseExact(span, format, culture, style, out value))
 			{
-				return dt;
+				return value;
 			}
-			return DateTime.Parse(this.GetFieldSpan(ordinal), culture, style);
+			return DateTime.Parse(span, culture, style);
 #else
 			var dateStr = this.GetString(ordinal);
-			if (format != null && DateTime.TryParseExact(dateStr, format, culture, style, out var dt))
+			
+			var format = columns[ordinal].Format ?? this.dateFormat ?? "O";
+			if (format != null && DateTime.TryParseExact(dateStr, format, culture, style, out value))
 			{
-				return dt;
+				return value;
 			}
 			return DateTime.Parse(dateStr, culture, style);
 #endif
@@ -1686,24 +1720,33 @@ namespace Sylvan.Data.Csv
 			return len;
 		}
 
-		IFieldAccessor<T> GetAccessor<T>(int ordinal)
+		static class Accessor<T>
 		{
-			var acc = CsvDataAccessor.Instance as IFieldAccessor<T>;
-			if (acc == null)
+			public static IFieldAccessor<T> Instance;
+			static Accessor()
 			{
-				if (typeof(T).IsEnum)
-				{
-					return EnumAccessor<T>.Instance;
-				}
-				throw new NotSupportedException(); // TODO: exception type?
+				Instance = GetAccessor();
 			}
-			return acc;
+
+			static IFieldAccessor<T> GetAccessor()
+			{
+				var acc = CsvDataAccessor.Instance as IFieldAccessor<T>;
+				if (acc == null)
+				{
+					if (typeof(T).IsEnum)
+					{
+						return EnumAccessor<T>.Instance;
+					}
+					throw new NotSupportedException(); // TODO: exception type?
+				}
+				return acc;
+			}
 		}
 
 		/// <inheritdoc/>
 		public override T GetFieldValue<T>(int ordinal)
 		{
-			var acc = this.GetAccessor<T>(ordinal);
+			var acc = Accessor<T>.Instance;
 			return acc.GetValue(this, ordinal);
 		}
 	}

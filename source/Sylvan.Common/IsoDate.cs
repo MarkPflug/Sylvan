@@ -10,10 +10,11 @@ namespace Sylvan
 	/// <summary>
 	/// Provides ISO 8601 date parsing.
 	/// </summary>
-	public static class IsoDate
+	static partial class IsoDate
 	{
 		// This implementation is mostly copied from System.Text.Json internal code.
 		// There are a few changes:
+		// - handles chars instead of bytes, as the S.T.Json impl was utf-8 specific
 		// - Allows ' ' in place of 'T' as time separator. Not ISO compliant, but common enough that I want to allow it.
 		// - Allows ',' in place of '.' as fractional time separator, which ISO8601 apparently allows but often isn't supported.
 		// - Rounds appropriately when more than 7 fracational second digits are parsed.
@@ -97,7 +98,6 @@ namespace Sylvan
 
 
 #if NET6_0_OR_GREATER
-
 		/// <summary>
 		/// Parse the given <paramref name="source"/> as extended ISO 8601 format.
 		/// </summary>
@@ -185,7 +185,8 @@ namespace Sylvan
 			parseData = default;
 
 			// too short datetime
-			Debug.Assert(source.Length >= 10);
+			if (source.Length < 10)
+				return false;
 
 			// Parse the calendar date
 			// -----------------------
@@ -280,7 +281,6 @@ namespace Sylvan
 			}
 
 			// We now have YYYY-MM-DDThh:mm
-			Debug.Assert(source.Length >= 16);
 			if (source.Length == 16)
 			{
 				return true;
@@ -313,7 +313,6 @@ namespace Sylvan
 			}
 
 			// We now have YYYY-MM-DDThh:mm:ss
-			Debug.Assert(source.Length >= 19);
 			if (source.Length == 19)
 			{
 				return true;
@@ -382,7 +381,6 @@ namespace Sylvan
 			}
 
 			// We now have YYYY-MM-DDThh:mm:ss.s
-			Debug.Assert(sourceIndex <= source.Length);
 			if (sourceIndex == source.Length)
 			{
 				return true;
@@ -543,9 +541,6 @@ namespace Sylvan
 			return true;
 		}
 
-		/// <summary>
-		/// Overflow-safe DateTime factory.
-		/// </summary>
 		static bool TryCreateDateTime(DateTimeParseData parseData, DateTimeKind kind, out DateTime value)
 		{
 			if (parseData.Year == 0)
@@ -603,6 +598,264 @@ namespace Sylvan
 
 			return true;
 		}
+		
+		static string GetString(Span<char> buffer)
+		{
+#if NETSTANDARD2_0
+			throw new NotImplementedException();
+#else
+			return new string(buffer);
+#endif
+		}
+
+		// "yyyy-MM-ddTHH:mm:ss.fffffff+HH:mm"
+		internal const int MaxDateLength = 35;
+
+		public static string ToStringIso(DateTime value)
+		{
+			Span<char> buffer = stackalloc char[MaxDateLength];
+			bool known = false;
+			int offset = 0;
+			switch (value.Kind)
+			{
+				case DateTimeKind.Local:
+					offset = (int)(TimeZoneInfo.Local.GetUtcOffset(value).Ticks / TimeSpan.TicksPerMinute);
+					known = true;
+					break;
+				case DateTimeKind.Utc:
+					known = true;
+					break;
+			}
+
+			var len = FormatIsoInternal(value.Ticks, offset, known, buffer);
+			return GetString(buffer.Slice(0, len));
+		}
+
+		public static bool TryFormatIso(DateTime value, Span<char> buffer, out int charsWritten)
+		{
+
+			if (buffer.Length < MaxDateLength)
+			{
+				charsWritten = 0;
+				return false;
+			}
+			bool known = false;
+			int offset = 0;
+			switch (value.Kind)
+			{
+				case DateTimeKind.Local:
+					offset = (int)(TimeZoneInfo.Local.GetUtcOffset(value).Ticks / TimeSpan.TicksPerMinute);
+					known = true;
+					break;
+				case DateTimeKind.Utc:
+					known = true;
+					break;
+			}
+
+			charsWritten = FormatIsoInternal(value.Ticks, offset, known, buffer);
+			return true;
+		}
+
+		public static string ToStringIso(DateTimeOffset value)
+		{
+			Span<char> buffer = stackalloc char[MaxDateLength];
+			var offsetMinutes = (int)(value.Offset.Ticks / TimeSpan.TicksPerMinute);
+			var length = FormatIsoInternal(value.Ticks, offsetMinutes, true, buffer);
+			return GetString(buffer.Slice(0, length));
+		}
+
+#if NET6_0_OR_GREATER
+
+		internal const int MaxDateOnlyLength = 10;
+
+		public static string ToStringIso(DateOnly value)
+		{
+			Span<char> buffer = stackalloc char[MaxDateOnlyLength];
+			var success = TryFormatIso(value, buffer, out int length);
+			Debug.Assert(success);
+			return GetString(buffer.Slice(0, length));
+		}
+
+		public static bool TryFormatIso(DateOnly value, Span<char> buffer, out int charsWritten)
+		{
+			if (buffer.Length < MaxDateOnlyLength)
+			{
+				charsWritten = 0;
+				return false;
+			}
+			charsWritten = FormatIsoInternal(value.DayNumber * TimeSpan.TicksPerDay, 0, false, buffer);
+			return true;
+		}
+
+#endif
+		public static bool TryFormatIso(DateTimeOffset value, Span<char> buffer, out int charsWritten)
+		{
+			if (buffer.Length < MaxDateLength)
+			{
+				charsWritten = 0;
+				return false;
+			}
+			charsWritten = FormatIsoInternal(value.Ticks, (int)(value.Offset.Ticks / TimeSpan.TicksPerMinute), true, buffer);
+			return true;
+		}
+
+		static int FormatIsoInternal(long ticks, int offsetMinutes, bool offsetKnown, Span<char> buffer)
+		{
+			int len = 10;
+
+			// n = number of days since 1/1/0001
+			var n = Math.DivRem(ticks, TimeSpan.TicksPerDay, out long remain);
+
+			// y400 = number of whole 400-year periods since 1/1/0001
+			var y400 = n / DaysPer400Years;
+			// n = day number within 400-year period
+			n -= y400 * DaysPer400Years;
+			// y100 = number of whole 100-year periods within 400-year period
+			var y100 = n / DaysPer100Years;
+			// Last 100-year period has an extra day, so decrement result if 4
+			if (y100 == 4) y100 = 3;
+			// n = day number within 100-year period
+			n -= y100 * DaysPer100Years;
+			// y4 = number of whole 4-year periods within 100-year period
+			var y4 = n / DaysPer4Years;
+			// n = day number within 4-year period
+			n -= y4 * DaysPer4Years;
+			// y1 = number of whole years within 4-year period
+			var y1 = n / DaysPerYear;
+			// Last year has an extra day, so decrement result if 4
+			if (y1 == 4) y1 = 3;
+			// compute year
+			var year = (int)(y400 * 400 + y100 * 100 + y4 * 4 + y1 + 1);
+			// n = day number within year
+			n -= y1 * DaysPerYear;
+			// dayOfYear = n + 1;
+			// Leap year calculation looks different from IsLeapYear since y1, y4,
+			// and y100 are relative to year 1, not year 0
+			int[] days = y1 == 3 && (y4 != 24 || y100 == 3) ? DaysToMonth366 : DaysToMonth365;
+			// All months have less than 32 days, so n >> 5 is a good conservative
+			// estimate for the month
+			var m = (n >> 5) + 1;
+			// m = 1-based month number
+			while (n >= days[m]) m++;
+			// compute month and day
+			var month = (int)m;
+			var day = (int)(n - days[m - 1] + 1);
+
+			WriteFourDigits((uint)year, buffer, 0);
+			buffer[4] = '-';
+			WriteTwoDigits((uint)month, buffer, 5);
+			buffer[7] = '-';
+			WriteTwoDigits((uint)day, buffer, 8);
+
+			if (offsetKnown || remain != 0)
+			{
+				len = 19;
+				var seconds = remain / TimeSpan.TicksPerSecond;
+				var tick = (int)(remain - (seconds * TimeSpan.TicksPerSecond));
+				var minutes = seconds / 60;
+				var second = (int)(seconds - (minutes * 60));
+				var hours = minutes / 60;
+				var minute = (int)(minutes - (hours * 60));
+				var hour = (int)((uint)hours % 24);
+
+
+				buffer[10] = 'T';
+				WriteTwoDigits((uint)hour, buffer, 11);
+				buffer[13] = ':';
+				WriteTwoDigits((uint)minute, buffer, 14);
+				buffer[16] = ':';
+				WriteTwoDigits((uint)second, buffer, 17);
+				if (tick > 0)
+				{
+					buffer[19] = '.';
+					WriteDigits((uint)tick, buffer.Slice(20, 7));
+					len = 27;
+				}
+
+				if (offsetKnown)
+				{
+					if (offsetMinutes == 0)
+					{
+						buffer[len] = 'Z';
+						len++;
+					}
+					else
+					{
+						char tzSep;
+						if (offsetMinutes < 0)
+						{
+							tzSep = '-';
+							offsetMinutes = -offsetMinutes;
+						}
+						else
+						{
+							tzSep = '+';
+						}
+						int value = Math.DivRem(offsetMinutes, 60, out var r);
+						WriteTwoDigits((uint)r, buffer, len + 4);
+						buffer[len + 3] = ':';
+						WriteTwoDigits((uint)value, buffer.Slice(len + 1));
+						buffer[len] = tzSep;
+						len += 6;
+					}
+				}
+			}
+			return len;
+		}
+
+		/// <summary>
+		/// Writes a value [ 0000 .. 9999 ] to the buffer starting at the specified offset.
+		/// This method performs best when the starting index is a constant literal.
+		/// </summary>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		static void WriteFourDigits(uint value, Span<char> buffer, int startingIndex = 0)
+		{
+			Debug.Assert(value <= 9999);
+
+			uint temp = '0' + value;
+			value /= 10;
+			buffer[startingIndex + 3] = (char)(temp - (value * 10));
+
+			temp = '0' + value;
+			value /= 10;
+			buffer[startingIndex + 2] = (char)(temp - (value * 10));
+
+			temp = '0' + value;
+			value /= 10;
+			buffer[startingIndex + 1] = (char)(temp - (value * 10));
+
+			buffer[startingIndex] = (char)('0' + value);
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		static void WriteTwoDigits(uint value, Span<char> buffer, int startingIndex = 0)
+		{
+			Debug.Assert(value <= 99);
+			uint temp = '0' + value;
+			value /= 10;
+			buffer[startingIndex + 1] = (char)(temp - (value * 10));
+
+			buffer[startingIndex] = (char)('0' + value);
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		static void WriteDigits(uint value, Span<char> buffer)
+		{
+			for (int i = buffer.Length - 1; i >= 1; i--)
+			{
+				uint temp = '0' + value;
+				value /= 10;
+				buffer[i] = (char)(temp - (value * 10));
+			}
+
+			Debug.Assert(value < 10);
+			buffer[0] = (char)('0' + value);
+		}
+
+		const int DaysPerYear = 365;
+		const int DaysPer4Years = DaysPerYear * 4 + 1;
+		const int DaysPer100Years = DaysPer4Years * 25 - 1;
+		const int DaysPer400Years = DaysPer100Years * 4 + 1;
 
 		static readonly int[] DaysToMonth365 = { 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365 };
 		static readonly int[] DaysToMonth366 = { 0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335, 366 };

@@ -4,6 +4,9 @@ using System.IO;
 
 namespace Sylvan.Data.Csv
 {
+	// these accessors support the GetFieldValue<T> generic accessor method.
+	// most of them defer to CsvDataReader.GetXXX methods.
+
 	interface IFieldAccessor<T>
 	{
 		T GetValue(CsvDataReader reader, int ordinal);
