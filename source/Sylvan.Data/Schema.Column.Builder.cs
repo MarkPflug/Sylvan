@@ -101,6 +101,9 @@ namespace Sylvan.Data
 							}
 							if(type == typeof(DateTimeOffset))
 							{
+								this.NumericPrecision = 27;
+								this.NumericScale = 7;
+								this.ColumnSize = 16;
 								break;
 							}
 							goto default;

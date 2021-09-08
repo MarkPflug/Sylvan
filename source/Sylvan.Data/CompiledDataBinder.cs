@@ -143,7 +143,7 @@ namespace Sylvan.Data
 					cultureInfoExpr,
 					Expression.Field(
 						contextParam,
-						typeof(BinderContext).GetField("cultureInfo")
+						typeof(BinderContext).GetField("cultureInfo")!
 					)
 				)
 			);
@@ -156,7 +156,7 @@ namespace Sylvan.Data
 					stateVar,
 					Expression.Field(
 						contextParam,
-						typeof(BinderContext).GetField("state")
+						typeof(BinderContext).GetField("state")!
 					)
 				)
 			);
@@ -217,6 +217,10 @@ namespace Sylvan.Data
 				}
 
 				var accessorMethod = DataBinder.GetAccessorMethod(accessorType);
+				if(accessorMethod == null)
+				{
+					continue;
+				}
 
 				var ordinalExpr = Expression.Constant(ordinal, typeof(int));
 
@@ -326,6 +330,9 @@ namespace Sylvan.Data
 							{
 								expr = Convert(tempVar, underlyingType, cultureInfoExpr);
 							}
+
+							if (expr == null)
+								continue;
 
 							expr =
 								Expression.Block(
@@ -706,7 +713,7 @@ namespace Sylvan.Data
 			var args = new object?[] { seriesCol, physicalSchema, null };
 			var result = method.Invoke(null, args)!;
 			boundColumns = (IEnumerable<DbColumn>)args[2]!;
-			return result;
+			return result!;
 		}
 
 		void IDataBinder<T>.Bind(DbDataReader record, T item)

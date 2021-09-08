@@ -1360,5 +1360,65 @@ namespace Sylvan.Data.Csv
 			csvReader.Read();
 			Assert.Equal(1, csvReader.RowFieldCount);
 		}
+
+		[Fact]
+		public void Issue_79_Headers()
+		{
+			var opts = new CsvDataReaderOptions
+			{
+				ResultSetMode = ResultSetMode.MultiResult,
+				HasHeaders = true,
+			};
+			var csv = CsvDataReader.Create("Data/Issue_79.csv", opts);
+
+			Assert.Equal(2, csv.FieldCount);
+			Assert.False(csv.HasRows);
+			Assert.False(csv.Read());
+			Assert.True(csv.NextResult());
+			Assert.Equal(5, csv.FieldCount);
+			Assert.True(csv.Read());
+			Assert.True(csv.Read());
+			Assert.False(csv.Read());
+			Assert.True(csv.NextResult());
+			Assert.Equal(2, csv.FieldCount);
+			Assert.False(csv.HasRows);
+			Assert.True(csv.NextResult());
+			Assert.Equal(3, csv.FieldCount);
+			Assert.True(csv.Read());
+			Assert.True(csv.Read());
+			Assert.False(csv.Read());
+			Assert.False(csv.NextResult());
+		}
+
+		[Fact]
+		public void Issue_79_NoHeaders()
+		{
+			var opts = new CsvDataReaderOptions { 
+				ResultSetMode = ResultSetMode.MultiResult,
+				HasHeaders = false,
+			};
+			var csv = CsvDataReader.Create("Data/Issue_79.csv", opts);
+
+			Assert.Equal(2, csv.FieldCount);
+			Assert.True(csv.HasRows);
+			Assert.True(csv.Read());
+			Assert.True(csv.NextResult());
+			Assert.Equal(5, csv.FieldCount);
+			Assert.True(csv.Read());
+			Assert.True(csv.Read());
+			Assert.True(csv.Read());
+			Assert.False(csv.Read());
+			Assert.True(csv.NextResult());
+			Assert.Equal(2, csv.FieldCount);
+			Assert.True(csv.HasRows);
+			Assert.True(csv.Read());
+			Assert.True(csv.NextResult());
+			Assert.Equal(3, csv.FieldCount);
+			Assert.True(csv.Read());
+			Assert.True(csv.Read());
+			Assert.True(csv.Read());
+			Assert.False(csv.Read());
+			Assert.False(csv.NextResult());
+		}
 	}
 }

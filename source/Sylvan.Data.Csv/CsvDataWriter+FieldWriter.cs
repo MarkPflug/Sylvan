@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Data.Common;
 
 namespace Sylvan.Data.Csv
 {
@@ -258,9 +257,10 @@ namespace Sylvan.Data.Csv
 			}
 		}
 
-		sealed class DateTimeFieldWriter : FieldWriter
+#if SPAN
+		sealed class DateTimeIsoFieldWriter : FieldWriter
 		{
-			public static DateTimeFieldWriter Instance = new DateTimeFieldWriter();
+			public static DateTimeIsoFieldWriter Instance = new DateTimeIsoFieldWriter();
 
 			public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
 			{
@@ -268,7 +268,59 @@ namespace Sylvan.Data.Csv
 				var writer = context.writer;
 				var culture = writer.culture;
 				var value = reader.GetDateTime(ordinal);
-				var fmt = value.TimeOfDay == TimeSpan.Zero ? writer.dateFormat : writer.dateTimeFormat;
+
+				Span<char> str = stackalloc char[IsoDate.MaxDateLength];
+				int len;
+				if(!IsoDate.TryFormatIso(value, str, out len))
+				{
+					return InsufficientSpace;
+				}
+				str = str.Slice(0, len);
+				return writer.csvWriter.Write(context, str, buffer, offset);
+			}
+		}
+#endif
+
+		sealed class DateTimeFormatFieldWriter : FieldWriter
+		{
+			public static DateTimeFormatFieldWriter Instance = new DateTimeFormatFieldWriter();
+
+			public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
+			{
+				var reader = context.reader;
+				var writer = context.writer;
+				var culture = writer.culture;
+				var value = reader.GetDateTime(ordinal);
+				var fmt = writer.dateTimeFormat ?? "O";
+#if SPAN
+				Span<char> str = stackalloc char[IsoDate.MaxDateLength];
+				int len;
+
+				if (!value.TryFormat(str, out len, fmt, culture))
+				{
+					return InsufficientSpace;
+				}
+
+				str = str.Slice(0, len);
+
+#else
+				var str = value.ToString(fmt, culture);
+#endif
+				return writer.csvWriter.Write(context, str, buffer, offset);
+			}
+		}
+
+		sealed class TimeSpanFieldWriter : FieldWriter
+		{
+			public static TimeSpanFieldWriter Instance = new TimeSpanFieldWriter();
+
+			public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
+			{
+				var reader = context.reader;
+				var writer = context.writer;
+				var culture = writer.culture;
+				var value = reader.GetFieldValue<TimeSpan>(ordinal);
+				var fmt = writer.timeSpanFormat;
 #if SPAN
 
 				Span<char> str = stackalloc char[32];
@@ -299,7 +351,7 @@ namespace Sylvan.Data.Csv
 				var writer = context.writer;
 				var culture = writer.culture;
 				var value = reader.GetInt32(ordinal);
-				var span = buffer.AsSpan().Slice(offset);
+				var span = buffer.AsSpan(offset);
 				if (!value.TryFormat(span, out int len, default, culture))
 				{
 					return InsufficientSpace;
@@ -318,7 +370,7 @@ namespace Sylvan.Data.Csv
 				var writer = context.writer;
 				var culture = writer.culture;
 				var value = reader.GetInt64(ordinal);
-				var span = buffer.AsSpan().Slice(offset);
+				var span = buffer.AsSpan(offset);
 				if (!value.TryFormat(span, out int len, default, culture))
 				{
 					return InsufficientSpace;
@@ -327,9 +379,9 @@ namespace Sylvan.Data.Csv
 			}
 		}
 
-		sealed class DateTimeFastFieldWriter : FieldWriter
+		sealed class DateTimeFormatFastFieldWriter : FieldWriter
 		{
-			public static DateTimeFastFieldWriter Instance = new DateTimeFastFieldWriter();
+			public static DateTimeFormatFastFieldWriter Instance = new DateTimeFormatFastFieldWriter();
 
 			public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
 			{
@@ -337,8 +389,78 @@ namespace Sylvan.Data.Csv
 				var writer = context.writer;
 				var culture = writer.culture;
 				var value = reader.GetDateTime(ordinal);
-				var fmt = value.TimeOfDay == TimeSpan.Zero ? writer.dateFormat : writer.dateTimeFormat;
-				var span = buffer.AsSpan().Slice(offset);
+				var fmt = writer.dateTimeFormat;
+				var span = buffer.AsSpan(offset);
+				return
+					value.TryFormat(span, out int len, fmt, culture)
+					? len
+					: InsufficientSpace;
+			}
+		}
+
+		sealed class DateTimeIsoFastFieldWriter : FieldWriter
+		{
+			public static DateTimeIsoFastFieldWriter Instance = new DateTimeIsoFastFieldWriter();
+
+			public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
+			{
+				var reader = context.reader;
+				var value = reader.GetDateTime(ordinal);
+				var span = buffer.AsSpan(offset);
+				return
+					IsoDate.TryFormatIso(value, span, out int len)
+					? len
+					: InsufficientSpace;
+			}
+		}
+
+		sealed class DateTimeOffsetFormatFastFieldWriter : FieldWriter
+		{
+			public static DateTimeOffsetFormatFastFieldWriter Instance = new DateTimeOffsetFormatFastFieldWriter();
+
+			public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
+			{
+				var reader = context.reader;
+				var writer = context.writer;
+				var culture = writer.culture;
+				var value = reader.GetFieldValue<DateTimeOffset>(ordinal);
+				var fmt = writer.dateTimeOffsetFormat;
+				var span = buffer.AsSpan(offset);
+				return
+					value.TryFormat(span, out int len, fmt, culture)
+					? len
+					: InsufficientSpace;
+			}
+		}
+
+		sealed class DateTimeOffsetIsoFastFieldWriter : FieldWriter
+		{
+			public static DateTimeOffsetIsoFastFieldWriter Instance = new DateTimeOffsetIsoFastFieldWriter();
+
+			public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
+			{
+				var reader = context.reader;
+				var value = reader.GetFieldValue<DateTimeOffset>(ordinal);
+				var span = buffer.AsSpan(offset);
+				return
+					IsoDate.TryFormatIso(value, span, out int len)
+					? len
+					: InsufficientSpace;
+			}
+		}
+
+		sealed class TimeSpanFastFieldWriter : FieldWriter
+		{
+			public static TimeSpanFastFieldWriter Instance = new TimeSpanFastFieldWriter();
+
+			public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
+			{
+				var reader = context.reader;
+				var writer = context.writer;
+				var culture = writer.culture;
+				var value = reader.GetFieldValue<TimeSpan>(ordinal);
+				var fmt = writer.timeSpanFormat;
+				var span = buffer.AsSpan(offset);
 				if (!value.TryFormat(span, out int len, fmt, culture))
 				{
 					return InsufficientSpace;
@@ -346,6 +468,131 @@ namespace Sylvan.Data.Csv
 				return len;
 			}
 		}
+
+#if NET6_0_OR_GREATER
+
+		sealed class DateOnlyFormatFastFieldWriter : FieldWriter
+		{
+			public static DateOnlyFormatFastFieldWriter Instance = new DateOnlyFormatFastFieldWriter();
+
+			public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
+			{
+				var reader = context.reader;
+				var writer = context.writer;
+				var culture = writer.culture;
+				var value = reader.GetFieldValue<DateOnly>(ordinal);
+				var fmt = writer.dateFormat;
+				var span = buffer.AsSpan(offset);
+				int len;
+				return
+					value.TryFormat(span, out len, fmt, culture)
+					? len
+					: InsufficientSpace;
+			}
+		}
+
+		sealed class DateOnlyIsoFastFieldWriter : FieldWriter
+		{
+			public static DateOnlyIsoFastFieldWriter Instance = new DateOnlyIsoFastFieldWriter();
+
+			public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
+			{
+				var reader = context.reader;
+				var value = reader.GetFieldValue<DateOnly>(ordinal);
+				var span = buffer.AsSpan(offset);
+				int len;
+				return IsoDate.TryFormatIso(value, span, out len)
+					? len
+					: InsufficientSpace;
+			}
+		}
+
+		sealed class DateOnlyFormatFieldWriter : FieldWriter
+		{
+			public static DateOnlyFormatFieldWriter Instance = new DateOnlyFormatFieldWriter();
+
+			public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
+			{
+				var reader = context.reader;
+				var writer = context.writer;
+				var culture = writer.culture;
+				var value = reader.GetFieldValue<DateOnly>(ordinal);
+				var fmt = writer.dateFormat;
+				int len;
+				Span<char> str = stackalloc char[IsoDate.MaxDateLength];
+				if (!value.TryFormat(str, out len, fmt, culture))
+				{
+					return InsufficientSpace;
+				}
+				str = str.Slice(0, len);
+				return writer.csvWriter.Write(context, str, buffer, offset);
+			}
+		}
+
+		sealed class DateOnlyIsoFieldWriter : FieldWriter
+		{
+			public static DateOnlyIsoFieldWriter Instance = new DateOnlyIsoFieldWriter();
+
+			public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
+			{
+				var reader = context.reader;
+				var writer = context.writer;
+				var culture = writer.culture;
+				var value = reader.GetFieldValue<DateOnly>(ordinal);
+				int len;
+				Span<char> str = stackalloc char[IsoDate.MaxDateOnlyLength];
+				if (!IsoDate.TryFormatIso(value, str, out len))
+				{
+					return InsufficientSpace;
+				}
+				str = str.Slice(0, len);
+				return writer.csvWriter.Write(context, str, buffer, offset);
+			}
+		}
+
+		sealed class TimeOnlyFastFieldWriter : FieldWriter
+		{
+			public static TimeOnlyFastFieldWriter Instance = new TimeOnlyFastFieldWriter();
+
+			public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
+			{
+				var reader = context.reader;
+				var writer = context.writer;
+				var culture = writer.culture;
+				var value = reader.GetFieldValue<TimeOnly>(ordinal);
+				var fmt = writer.timeFormat;
+				var span = buffer.AsSpan(offset);
+				if (!value.TryFormat(span, out int len, fmt, culture))
+				{
+					return InsufficientSpace;
+				}
+				return len;
+			}
+		}
+
+		sealed class TimeOnlyFieldWriter : FieldWriter
+		{
+			public static TimeOnlyFieldWriter Instance = new TimeOnlyFieldWriter();
+
+			public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
+			{
+				var reader = context.reader;
+				var writer = context.writer;
+				var culture = writer.culture;
+				var value = reader.GetDateTime(ordinal);
+				var fmt = writer.timeFormat;
+				Span<char> span = stackalloc char[32];
+				if (!value.TryFormat(span, out int len, fmt, culture))
+				{
+					throw new FormatException(); // this shouldn't happen
+				}
+
+				span = span.Slice(0, len);
+				return writer.csvWriter.Write(context, span, buffer, offset);
+			}
+		}
+
+#endif
 
 		sealed class SingleFastFieldWriter : FieldWriter
 		{
@@ -357,7 +604,7 @@ namespace Sylvan.Data.Csv
 				var writer = context.writer;
 				var culture = writer.culture;
 				var value = reader.GetFloat(ordinal);
-				var span = buffer.AsSpan().Slice(offset);
+				var span = buffer.AsSpan(offset);
 				if (!value.TryFormat(span, out int len, default, culture))
 				{
 					return InsufficientSpace;
@@ -376,7 +623,7 @@ namespace Sylvan.Data.Csv
 				var writer = context.writer;
 				var culture = writer.culture;
 				var value = reader.GetDouble(ordinal);
-				var span = buffer.AsSpan().Slice(offset);
+				var span = buffer.AsSpan(offset);
 				if (!value.TryFormat(span, out int len, default, culture))
 				{
 					return InsufficientSpace;
@@ -395,7 +642,7 @@ namespace Sylvan.Data.Csv
 				var writer = context.writer;
 				var culture = writer.culture;
 				var value = reader.GetDecimal(ordinal);
-				var span = buffer.AsSpan().Slice(offset);
+				var span = buffer.AsSpan(offset);
 				if (!value.TryFormat(span, out int len, default, culture))
 				{
 					return InsufficientSpace;
@@ -414,7 +661,7 @@ namespace Sylvan.Data.Csv
 				var writer = context.writer;
 				var culture = writer.culture;
 				var value = reader.GetGuid(ordinal);
-				var span = buffer.AsSpan().Slice(offset);
+				var span = buffer.AsSpan(offset);
 				if (!value.TryFormat(span, out int len, default))
 				{
 					return InsufficientSpace;

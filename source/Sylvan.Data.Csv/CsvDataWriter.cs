@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Data.Common;
 using System.Globalization;
 using System.IO;
 using System.Text;
@@ -29,8 +30,10 @@ namespace Sylvan.Data.Csv
 			public IFieldWriter writer;
 		}
 
-		IFieldWriter GetWriter(Type type)
+		IFieldWriter GetWriter(DbDataReader reader, int ordinal)
 		{
+			var type = reader.GetFieldType(ordinal);
+			
 			if (type == typeof(string))
 			{
 				return StringFieldWriter.Instance;
@@ -87,18 +90,30 @@ namespace Sylvan.Data.Csv
 				return DecimalFieldWriter.Instance;
 #endif
 			}
+			
 			if (type == typeof(bool))
 			{
 				return BooleanFieldWriter.Instance;
 			}
+
 			if (type == typeof(DateTime))
 			{
+			var fmt = this.dateTimeFormat;
 #if SPAN
-				return IsFastDateTime
-					? DateTimeFastFieldWriter.Instance
-					: DateTimeFieldWriter.Instance;
+				if(IsFastDateTime)
+				{
+					return fmt == null
+						? DateTimeIsoFastFieldWriter.Instance
+						: DateTimeFormatFastFieldWriter.Instance;
+				} 
+				else
+				{
+					return fmt == null
+						? DateTimeIsoFieldWriter.Instance
+						: DateTimeFormatFieldWriter.Instance;
+				}
 #else
-				return DateTimeFieldWriter.Instance;
+				return DateTimeFormatFieldWriter.Instance;
 #endif
 			}
 
@@ -124,6 +139,37 @@ namespace Sylvan.Data.Csv
 				}
 				return BinaryFieldWriter.Instance;
 			}
+
+			if (type == typeof(TimeSpan))
+			{
+#if SPAN
+				return IsFastTimeSpan
+					? TimeSpanFastFieldWriter.Instance
+					: TimeSpanFieldWriter.Instance;
+#else
+				return TimeSpanFieldWriter.Instance;
+#endif
+
+			}
+
+#if NET6_0_OR_GREATER // SPAN implied
+
+			if (type == typeof(DateOnly))
+			{
+				return IsFastDate
+					? DateOnlyIsoFastFieldWriter.Instance
+					: DateOnlyIsoFieldWriter.Instance;
+			}
+
+			if (type == typeof(TimeOnly))
+			{
+				return IsFastTime
+					? TimeOnlyFastFieldWriter.Instance
+					: TimeOnlyFieldWriter.Instance;
+			}
+
+#endif
+
 
 			// for everything else fallback to GetValue/ToString
 			return ObjectFieldWriter.Instance;
@@ -182,10 +228,38 @@ namespace Sylvan.Data.Csv
 			get
 			{
 				return IsInvariantCulture && IsFastConfig
-					&& this.dateFormat == CsvDataWriterOptions.Default.DateFormat
 					&& this.dateTimeFormat == CsvDataWriterOptions.Default.DateTimeFormat;
 			}
 		}
+
+		bool IsFastDate
+		{
+			get
+			{
+				return IsInvariantCulture && IsFastConfig
+					&& this.dateFormat == CsvDataWriterOptions.Default.DateFormat;
+			}
+		}
+
+		bool IsFastTimeSpan
+		{
+			get
+			{
+				return IsInvariantCulture && IsFastConfig
+					&& this.timeSpanFormat == CsvDataWriterOptions.Default.TimeSpanFormat;
+			}
+		}
+
+#if NET6_0_OR_GREATER
+		bool IsFastTime
+		{
+			get
+			{
+				return IsInvariantCulture && IsFastConfig
+					&& this.timeFormat == CsvDataWriterOptions.Default.TimeFormat;
+			}
+		}
+#endif
 
 #endif
 
@@ -205,7 +279,12 @@ namespace Sylvan.Data.Csv
 		readonly string trueString;
 		readonly string falseString;
 		readonly string? dateTimeFormat;
+		readonly string? dateTimeOffsetFormat;
+		readonly string? timeSpanFormat;
 		readonly string? dateFormat;
+#if NET6_0_OR_GREATER
+		readonly string? timeFormat;
+#endif
 
 		readonly CultureInfo culture;
 
@@ -249,7 +328,12 @@ namespace Sylvan.Data.Csv
 			this.trueString = options.TrueString;
 			this.falseString = options.FalseString;
 			this.dateTimeFormat = options.DateTimeFormat;
+			this.dateTimeOffsetFormat = options.DateTimeOffsetFormat;
+			this.timeSpanFormat = options.TimeSpanFormat;
 			this.dateFormat = options.DateFormat;
+#if NET6_0_OR_GREATER
+			this.timeFormat = options.TimeFormat;
+#endif
 			this.writeHeaders = options.WriteHeaders;
 			this.delimiter = options.Delimiter;
 			this.quote = options.Quote;

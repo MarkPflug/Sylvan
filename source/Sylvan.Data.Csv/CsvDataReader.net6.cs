@@ -31,10 +31,16 @@ namespace Sylvan.Data.Csv
 		/// </summary>
 		public DateOnly GetDate(int ordinal)
 		{
-			var format = columns[ordinal].Format ?? this.dateFormat;
+			DateOnly value;
 			var span = this.GetFieldSpan(ordinal);
+			if (IsoDate.TryParse(span, out value))
+			{
+				return value;
+			}
+
+			var format = columns[ordinal].Format;
 			var style = DateTimeStyles.None;
-			if (format != null && DateOnly.TryParseExact(span, format, culture, style, out var value))
+			if (format != null && DateOnly.TryParseExact(span, format, culture, style, out value))
 			{
 				return value;
 			}

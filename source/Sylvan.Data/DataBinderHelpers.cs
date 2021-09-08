@@ -204,14 +204,14 @@ namespace Sylvan.Data
 			}
 			else
 			{
-				var parseMethod = type.GetMethod("TryParse", BindingFlags.Static | BindingFlags.Public, null, new Type[] { typeof(string), type.MakeByRefType() }, null);
+				var parseMethod = type.GetMethod("TryParse", BindingFlags.Static | BindingFlags.Public, null, new Type[] { typeof(string), type.MakeByRefType() }, null)!;
 				
 				f = (s) =>
 				{
 					var parse = parseMethod;
 					args[0] = s;
 					args[1] = null;
-					var success = (bool)parse!.Invoke(null, args)!;
+					var success = (bool)parse.Invoke(null, args)!;
 					if (success)
 					{
 						return new Option<TK>(true, (TK)args[1]!);

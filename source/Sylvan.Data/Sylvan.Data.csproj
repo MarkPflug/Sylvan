@@ -2,17 +2,11 @@
 
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0;netstandard2.1</TargetFrameworks>
-    <!--<TargetFramework>netcoreapp3.1</TargetFramework>-->
     <VersionPrefix>0.1.0</VersionPrefix>
-    <VersionSuffix>b0024</VersionSuffix>
+    <VersionSuffix>b0025</VersionSuffix>
     <Description>A .NET library of types for working with data objects.</Description>
     <PackageTags>data;datareader;ADO.NET</PackageTags>    
     <Nullable>enable</Nullable>
   </PropertyGroup>
-
-  <!--<ItemGroup Condition="$(TargetFramework) == 'netstandard2.0'">-->
-  <ItemGroup>
-    <PackageReference Include="System.Reflection.Emit" Version="4.3.0" />
-  </ItemGroup>
 
 </Project>

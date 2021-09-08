@@ -12,10 +12,8 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Reflection;
 
 #if INTRINSICS
-using System.Numerics;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
 #endif
@@ -104,6 +102,10 @@ namespace Sylvan.Data.Csv
 		byte[]? scratch;
 		FieldInfo[] fieldInfos;
 		CsvColumn[] columns;
+
+		// in multi-result set mode carryRow indicates that a row is already parsed
+		// and needs to be carried into the next result set.
+		bool carryRow;
 
 		readonly Dictionary<string, int> headerMap;
 
@@ -1061,17 +1063,22 @@ namespace Sylvan.Data.Csv
 		public DateTimeOffset GetDateTimeOffset(int ordinal)
 		{
 			var format = columns[ordinal].Format ?? this.dateFormat;
-			var style = DateTimeStyles.None;
+			var style = DateTimeStyles.RoundtripKind;
+			DateTimeOffset value;
 #if SPAN
 			var span = this.GetFieldSpan(ordinal);
-			if (format != null && DateTimeOffset.TryParseExact(span, format, culture, style, out var value))
+			
+			if (IsoDate.TryParse(span, out value))
+				return value;
+
+			if (format != null && DateTimeOffset.TryParseExact(span, format, culture, style, out value))
 			{
 				return value;
 			}
 			return DateTimeOffset.Parse(span, culture, style);
 #else
 			var str = this.GetString(ordinal);
-			if(format != null && DateTimeOffset.TryParseExact(str, format, culture, style, out var value))
+			if(format != null && DateTimeOffset.TryParseExact(str, format, culture, style, out value))
 			{
 				return value;
 			}
@@ -1082,18 +1089,24 @@ namespace Sylvan.Data.Csv
 		/// <inheritdoc/>
 		public override DateTime GetDateTime(int ordinal)
 		{
-			var format = columns[ordinal].Format ?? this.dateFormat;
-			var style = DateTimeStyles.AdjustToUniversal;
+			var style = DateTimeStyles.RoundtripKind;
+			DateTime value;
 #if SPAN
 			var span = this.GetFieldSpan(ordinal);
-			if (format != null && DateTime.TryParseExact(span, format, culture, style, out var value))
+			if (IsoDate.TryParse(span, out value))
+				return value;
+
+			var format = columns[ordinal].Format ?? this.dateFormat;
+			if (format != null && DateTime.TryParseExact(span, format, culture, style, out value))
 			{
 				return value;
 			}
 			return DateTime.Parse(span, culture, style);
 #else
 			var dateStr = this.GetString(ordinal);
-			if (format != null && DateTime.TryParseExact(dateStr, format, culture, style, out var value))
+			
+			var format = columns[ordinal].Format ?? this.dateFormat ?? "O";
+			if (format != null && DateTime.TryParseExact(dateStr, format, culture, style, out value))
 			{
 				return value;
 			}
