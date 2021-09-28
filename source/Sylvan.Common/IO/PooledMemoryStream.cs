@@ -245,7 +245,7 @@ namespace Sylvan.IO
 				var blockOffset = (int)(position & blockMask);
 				var blockCount = blockSize - blockOffset;
 				var blockLen = rem < blockCount ? (int)rem : blockCount;
-#if NETSTANDARD2_1
+#if NETSTANDARD2_1 || NETCOREAPP3_0_OR_GREATER
 				await destination.WriteAsync(block.AsMemory().Slice(blockOffset, blockLen), cancellationToken).ConfigureAwait(false);
 #else
 				await destination.WriteAsync(block, blockOffset, blockLen, cancellationToken).ConfigureAwait(false);
@@ -253,7 +253,8 @@ namespace Sylvan.IO
 				position += blockLen;
 			}
 		}
-#if NETSTANDARD2_1
+
+#if NETSTANDARD2_1 || NETCOREAPP3_0_OR_GREATER
 		public override void CopyTo(Stream destination, int bufferSize)
 		{
 			if (destination == null) throw new ArgumentNullException(nameof(destination));

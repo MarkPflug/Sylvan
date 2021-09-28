@@ -1,11 +1,36 @@
 ﻿using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Jobs;
+using BenchmarkDotNet.Characteristics;
+using BenchmarkDotNet.Loggers;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using BenchmarkDotNet.Configs;
 
 namespace Sylvan.Benchmarks
 {
-	[SimpleJob(1, 4, 10, 100_000)]
+	public class SimpleInProc : Attribute, IConfigSource {
+
+		public IConfig Config { get; }
+
+		public SimpleInProc()
+		{
+
+			var job = new Job(Job.InProcess)
+			{
+
+			};
+
+			Config = ManualConfig
+				.Create(DefaultConfig.Instance)
+				.AddJob(Job.InProcess.WithInvocationCount(100000).WithIterationCount(4))
+				.AddLogger(new ConsoleLogger())
+				.WithUnionRule(ConfigUnionRule.AlwaysUseLocal);
+
+		}
+	}
+
+	[SimpleInProc]
 	public class DateFormatBenchmarks
 	{
 		public DateFormatBenchmarks()
@@ -61,10 +86,20 @@ namespace Sylvan.Benchmarks
 		}
 
 		[Benchmark]
-		public string DateTimeToStringDateOnlyOInvariant()
+		public string InterpolatedStringComponents()
 		{
-			return Date.date.ToString("O", CultureInfo.InvariantCulture);
+			var d = Date.date;
+			return $"{d.Year:0000}-{d.Month:00}-{d.Day:00}";
 		}
+
+		[Benchmark]
+		public string ConcatStringComponents()
+		{
+			var d = Date.date;
+			return d.Year.ToString("0000") + "-" + d.Month.ToString("00") + "-" + d.Day.ToString("00");
+		}
+
+
 
 		[Benchmark]
 		public string IsoDateFormat()

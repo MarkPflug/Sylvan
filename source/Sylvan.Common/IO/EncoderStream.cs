@@ -46,7 +46,7 @@ namespace Sylvan.IO
 
 		public override async Task FlushAsync(CancellationToken cancel)
 		{
-#if NETSTANDARD2_1
+#if NETSTANDARD2_1 || NETCOREAPP3_0_OR_GREATER
 			await this.stream.WriteAsync(this.buffer.AsMemory().Slice(0, bufferIdx), cancel).ConfigureAwait(false);
 #else
 			await this.stream.WriteAsync(this.buffer, 0, bufferIdx, cancel).ConfigureAwait(false);

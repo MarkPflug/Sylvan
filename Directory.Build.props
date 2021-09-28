@@ -34,6 +34,10 @@
       <Visible>false</Visible>
     </None>
   </ItemGroup>
+
+	<PropertyGroup Condition="$(IsTestProject) == true">
+		<NoWarn>xunit2013</NoWarn>
+	</PropertyGroup>
     
 
 </Project>

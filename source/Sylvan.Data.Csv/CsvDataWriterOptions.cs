@@ -129,6 +129,7 @@ namespace Sylvan.Data.Csv
 		/// The buffer to use when writing records.
 		/// The default is null, in which case the writer will allocate a buffer of BufferSize.
 		/// </summary>
+		[Obsolete("Use the buffer parameter to CsvDataWriter.Create instead.")]
 		public char[]? Buffer { get; set; }
 
 		/// <summary>
@@ -144,7 +145,9 @@ namespace Sylvan.Data.Csv
 				Quote == Delimiter ||
 				(NewLine != "\r" && NewLine != "\n" && NewLine != "\r\n") ||
 				TrueString == FalseString ||
+#pragma warning disable CS0618 // Type or member is obsolete
 				(Buffer != null && Buffer.Length < MinBufferSize) ||
+#pragma warning restore CS0618 // Type or member is obsolete
 				Delimiter >= 128 ||
 				Quote >= 128 ||
 				Escape >= 128 ||

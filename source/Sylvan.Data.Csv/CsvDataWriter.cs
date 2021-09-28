@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Data.Common;
 using System.Globalization;
 using System.IO;
+using System.Reflection;
 using System.Text;
 
 namespace Sylvan.Data.Csv
@@ -33,7 +36,7 @@ namespace Sylvan.Data.Csv
 		IFieldWriter GetWriter(DbDataReader reader, int ordinal)
 		{
 			var type = reader.GetFieldType(ordinal);
-			
+
 			if (type == typeof(string))
 			{
 				return StringFieldWriter.Instance;
@@ -90,7 +93,7 @@ namespace Sylvan.Data.Csv
 				return DecimalFieldWriter.Instance;
 #endif
 			}
-			
+
 			if (type == typeof(bool))
 			{
 				return BooleanFieldWriter.Instance;
@@ -98,14 +101,14 @@ namespace Sylvan.Data.Csv
 
 			if (type == typeof(DateTime))
 			{
-			var fmt = this.dateTimeFormat;
+				var fmt = this.dateTimeFormat;
 #if SPAN
-				if(IsFastDateTime)
+				if (IsFastDateTime)
 				{
 					return fmt == null
 						? DateTimeIsoFastFieldWriter.Instance
 						: DateTimeFormatFastFieldWriter.Instance;
-				} 
+				}
 				else
 				{
 					return fmt == null
@@ -170,12 +173,66 @@ namespace Sylvan.Data.Csv
 
 #endif
 
+#if SPAN
+			if (type.IsEnum)
+			{
+				IFieldWriter? writer;
+				if (!enumMap.TryGetValue(type, out writer))
+				{
+					if (IsCandidateEnum(type))
+					{
+						// multiple calls to MakeGenericType return the same instance.
+						var prop = typeof(EnumFastFieldWriter<>).MakeGenericType(type).GetField("Instance", BindingFlags.Static | BindingFlags.Public)!;
+						writer = (IFieldWriter)prop.GetValue(null)!;
+					}
+					else
+					{
+						writer = ObjectFieldWriter.Instance;
+					}
+					enumMap.TryAdd(type, writer);
+				}
+
+				return writer;
+			}
+
+#endif
 
 			// for everything else fallback to GetValue/ToString
 			return ObjectFieldWriter.Instance;
 		}
 
 #if SPAN
+
+		static ConcurrentDictionary<Type, IFieldWriter> enumMap = new ConcurrentDictionary<Type, IFieldWriter>();
+
+		// determines if the type is an enum type that can be
+		// efficiently optimized.
+		static bool IsCandidateEnum(Type type)
+		{
+			if (!type.IsEnum)
+			{
+				return false;
+			}
+			if (type.GetEnumUnderlyingType() != typeof(int))
+			{
+				return false;
+			}
+			if (type.GetCustomAttribute(typeof(FlagsAttribute)) != null)
+			{
+				return false;
+			}
+
+			Array arr = Enum.GetValues(type);
+			for (int i = 0; i < arr.Length; i++)
+			{
+				var val = (int)arr.GetValue(i)!;
+				if (val < 0 || val >= 0x100)
+				{
+					return false;
+				}
+			}
+			return true;
+		}
 
 		bool IsInvariantCulture
 		{
@@ -305,7 +362,7 @@ namespace Sylvan.Data.Csv
 		{
 			options = options ?? CsvDataWriterOptions.Default;
 			var writer = new StreamWriter(fileName, false, Encoding.UTF8);
-			return new CsvDataWriter(writer, options);
+			return new CsvDataWriter(writer, null, options);
 		}
 
 		/// <summary>
@@ -316,10 +373,22 @@ namespace Sylvan.Data.Csv
 		public static CsvDataWriter Create(TextWriter writer, CsvDataWriterOptions? options = null)
 		{
 			options = options ?? CsvDataWriterOptions.Default;
-			return new CsvDataWriter(writer, options);
+			return new CsvDataWriter(writer, null, options);
 		}
 
-		CsvDataWriter(TextWriter writer, CsvDataWriterOptions? options = null)
+		/// <summary>
+		/// Creates a new CsvDataWriter.
+		/// </summary>
+		/// <param name="writer">The TextWriter to receive the delimited data.</param>
+		/// <param name="buffer">A buffer to use for internal processing.</param>
+		/// <param name="options">The options used to configure the writer, or null to use the defaults.</param>
+		public static CsvDataWriter Create(TextWriter writer, char[] buffer, CsvDataWriterOptions? options = null)
+		{
+			options = options ?? CsvDataWriterOptions.Default;
+			return new CsvDataWriter(writer, buffer, options);
+		}
+
+		CsvDataWriter(TextWriter writer, char[]? buffer, CsvDataWriterOptions? options = null)
 		{
 			options = options ?? CsvDataWriterOptions.Default;
 			options.Validate();
@@ -341,7 +410,9 @@ namespace Sylvan.Data.Csv
 			this.comment = options.Comment;
 			this.newLine = options.NewLine;
 			this.culture = options.Culture;
-			this.buffer = options.Buffer ?? new char[options.BufferSize];
+#pragma warning disable CS0618 // Type or member is obsolete
+			this.buffer = buffer ?? options.Buffer ?? new char[options.BufferSize];
+#pragma warning restore CS0618 // Type or member is obsolete
 			this.pos = 0;
 
 			// create a lookup of all the characters that need to be escaped.
