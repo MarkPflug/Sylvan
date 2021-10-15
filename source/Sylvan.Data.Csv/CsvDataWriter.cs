@@ -133,14 +133,21 @@ namespace Sylvan.Data.Csv
 
 			if (type == typeof(byte[]))
 			{
-				if (IsBase64Symbol(quote) || IsBase64Symbol(delimiter) || IsBase64Symbol(escape))
+				if (this.binaryEncoding == BinaryEncoding.Base64)
 				{
-					// if the csv writer is configured to use a symbol that collides with the
-					// base64 alphabet, we throw early to avoid creating a potentially ambiguous file.
-					// this doesn't happen with default configuration.
-					throw new CsvConfigurationException();
+					if (IsBase64Symbol(quote) || IsBase64Symbol(delimiter) || IsBase64Symbol(escape))
+					{
+						// if the csv writer is configured to use a symbol that collides with the
+						// base64 alphabet, we throw early to avoid creating a potentially ambiguous file.
+						// this doesn't happen with default configuration.
+						throw new CsvConfigurationException();
+					}
+					return BinaryBase64FieldWriter.Instance;
 				}
-				return BinaryFieldWriter.Instance;
+				else
+				{
+					return BinaryHexFieldWriter.Instance;
+				}
 			}
 
 			if (type == typeof(TimeSpan))
@@ -332,6 +339,7 @@ namespace Sylvan.Data.Csv
 		readonly char escape;
 		readonly char comment;
 		readonly string newLine;
+		readonly BinaryEncoding binaryEncoding;
 
 		readonly string trueString;
 		readonly string falseString;
@@ -392,6 +400,7 @@ namespace Sylvan.Data.Csv
 		{
 			options = options ?? CsvDataWriterOptions.Default;
 			options.Validate();
+			this.binaryEncoding = options.BinaryEncoding;
 			this.writer = writer ?? throw new ArgumentNullException(nameof(writer));
 			this.csvWriter = options.Style == CsvStyle.Standard ? CsvWriter.Quoted : CsvWriter.Escaped;
 			this.trueString = options.TrueString;

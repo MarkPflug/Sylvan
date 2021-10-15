@@ -27,6 +27,7 @@ namespace Sylvan.Data.Csv
 		/// </summary>
 		public CsvDataWriterOptions()
 		{
+			this.BinaryEncoding = BinaryEncoding.Base64;
 			this.Style = CsvStyle.Standard;
 			this.Delimiter = DefaultDelimiter;
 			this.Quote = DefaultQuote;
@@ -46,6 +47,11 @@ namespace Sylvan.Data.Csv
 #endif
 			this.WriteHeaders = true;
 		}
+
+		/// <summary>
+		/// Indicates the encoding format to use when writing binary columns.
+		/// </summary>
+		public BinaryEncoding BinaryEncoding { get; set; }
 
 		/// <summary>
 		/// Indicates if the header row should be written.

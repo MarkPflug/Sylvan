@@ -5,6 +5,7 @@ _1.1.9_
 - CsvDataReaderOptions and CsvDataWriterOptions `Buffer` property moved to be a separate parameter to constructors. 
 Existing options property continues to work, but marked `Obsolete`. 
 This was done to allow options objects to be reused, but the buffer can't be shared between instances.
+- CsvDataWriterOptions allows configuring binary format.
 
 _1.1.8_
 - Support custom formatting for CsvDataReader DateTimeOffset, DateOnly, TimeOnly, and TimeSpan.
