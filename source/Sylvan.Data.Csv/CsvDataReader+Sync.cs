@@ -18,16 +18,9 @@ namespace Sylvan.Data.Csv
 			// TextReader must be owned when we open it.
 			if (options?.OwnsReader == false) throw new CsvConfigurationException();
 
-			var bufferSize = options?.BufferSize ?? options?.Buffer?.Length ?? CsvDataReaderOptions.Default.BufferSize;
-			bufferSize = Math.Max(bufferSize, Environment.SystemPageSize);
-			var stream = new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize, FileOptions.SequentialScan);
-			var reader = new StreamReader(stream, Encoding.Default, true, bufferSize);
-			var csv = new CsvDataReader(reader, options);
-			if (!csv.Initialize())
-			{
-				throw new CsvMissingHeadersException();
-			}
-			return csv;
+			var stream = new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read, 1, FileOptions.SequentialScan);
+			var reader = new StreamReader(stream, Encoding.Default);
+			return CreateInternal(reader, null, options);
 		}
 
 		/// <summary>
@@ -38,7 +31,30 @@ namespace Sylvan.Data.Csv
 		/// <returns>A CsvDataReader instance.</returns>
 		public static CsvDataReader Create(TextReader reader, CsvDataReaderOptions? options = null)
 		{
-			return CreateAsync(reader, options).GetAwaiter().GetResult();
+			return CreateInternal(reader, null, options);
+		}
+
+		/// <summary>
+		/// Creates a new CsvDataReader.
+		/// </summary>
+		/// <param name="reader">The TextReader for the delimited data.</param>
+		/// <param name="buffer">A buffer to use for internal processing.</param>
+		/// <param name="options">The options to configure the reader, or null to use the default options.</param>
+		/// <returns>A CsvDataReader instance.</returns>
+		public static CsvDataReader Create(TextReader reader, char[] buffer, CsvDataReaderOptions? options = null)
+		{
+			return CreateInternal(reader, buffer, options);
+		}
+
+		static CsvDataReader CreateInternal(TextReader reader, char[]? buffer, CsvDataReaderOptions? options)
+		{
+			if (reader == null) throw new ArgumentNullException(nameof(reader));
+			var csv = new CsvDataReader(reader, buffer, options);
+			if (!csv.Initialize())
+			{
+				throw new CsvMissingHeadersException();
+			}
+			return csv;
 		}
 
 		bool Initialize()
@@ -50,7 +66,7 @@ namespace Sylvan.Data.Csv
 		{
 			this.curFieldCount = 0;
 			this.recordStart = this.idx;
-			start:
+		start:
 			if (this.idx >= bufferEnd)
 			{
 				FillBuffer();

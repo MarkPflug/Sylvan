@@ -22,10 +22,10 @@ namespace Sylvan.Data.Csv
 			return GetCsv(dr);
 		}
 
-		static string GetCsv(DbDataReader dr)
+		static string GetCsv(DbDataReader dr, CsvDataWriterOptions opts = null)
 		{
 			var sw = new StringWriter();
-			var csv = CsvDataWriter.Create(sw, TestOptions);
+			var csv = CsvDataWriter.Create(sw, opts?? TestOptions);
 			csv.Write(dr);
 			return sw.ToString();
 		}
@@ -58,7 +58,7 @@ namespace Sylvan.Data.Csv
 		}
 
 		[Fact]
-		public void Binary()
+		public void BinaryBase64()
 		{
 			var data =
 				new[] {
@@ -70,6 +70,73 @@ namespace Sylvan.Data.Csv
 
 			var csv = GetCsv(data);
 			Assert.Equal("Name,Value\nA,AQIDBAU=\n", csv);
+		}
+
+		[Fact]
+		public void BinaryHex()
+		{
+			var data =
+				new[] {
+					 new {
+						  Name = "A",
+						  Value = new byte[] { 1, 2, 3, 4, 5, 15, 16 },
+					}
+				};
+
+			var opt = 
+				new CsvDataWriterOptions { 
+					BinaryEncoding = BinaryEncoding.Hexadecimal,
+					NewLine = "\n"
+				};
+
+			var csv = GetCsv(data.AsDataReader(), opt);
+			Assert.Equal("Name,Value\nA,01020304050f10\n", csv);
+		}
+
+		[Fact]
+		public void BinaryBase64Big()
+		{
+			BinaryBig(BinaryEncoding.Base64);
+		}
+
+		[Fact]
+		public void BinaryHexBig()
+		{
+			BinaryBig(BinaryEncoding.Hexadecimal);
+		}
+
+		void BinaryBig(BinaryEncoding encoding)
+		{
+			var bytes = Enumerable.Range(0, 0x1800).Select(i => (byte)i).ToArray();
+			var data =
+				new[] {
+					 new {
+						  Name = "A",
+						  Value = bytes,
+						  Value2 = bytes,
+					}
+				};
+
+			var opt =
+				new CsvDataWriterOptions
+				{
+					BinaryEncoding = encoding,
+					NewLine = "\n",
+					Delimiter = '\t',
+				};
+
+			var csv = GetCsv(data.AsDataReader(), opt);
+
+			var readerOpts = 
+				new CsvDataReaderOptions { 
+					BufferSize = 0x10000, 
+					BinaryEncoding = encoding 
+				};
+
+			var csvr = CsvDataReader.Create(new StringReader(csv), readerOpts);
+			Assert.True(csvr.Read());
+			Assert.Equal(bytes, csvr.GetBytes(1));
+			Assert.Equal(bytes, csvr.GetBytes(2));
 		}
 
 		[Fact]
