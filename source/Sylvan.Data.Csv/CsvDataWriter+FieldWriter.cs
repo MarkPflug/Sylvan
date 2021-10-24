@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Linq.Expressions;
 
 namespace Sylvan.Data.Csv
 {
@@ -46,9 +49,9 @@ namespace Sylvan.Data.Csv
 			}
 		}
 
-		sealed class BinaryFieldWriter : FieldWriter
+		sealed class BinaryBase64FieldWriter : FieldWriter
 		{
-			public static BinaryFieldWriter Instance = new BinaryFieldWriter();
+			public static BinaryBase64FieldWriter Instance = new BinaryBase64FieldWriter();
 
 			public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
 			{
@@ -76,6 +79,62 @@ namespace Sylvan.Data.Csv
 					pos += c;
 				}
 				return pos - offset;
+			}
+		}
+
+		sealed class BinaryHexFieldWriter : FieldWriter
+		{
+			static char[] HexMap = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
+
+			public static BinaryHexFieldWriter Instance = new BinaryHexFieldWriter();
+
+			public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
+			{
+				var reader = context.reader;
+				var writer = context.writer;
+
+				if (writer.dataBuffer.Length == 0)
+				{
+					writer.dataBuffer = new byte[Base64EncSize];
+				}
+				var dataBuffer = writer.dataBuffer;
+				var idx = 0;
+
+				int len;
+				var pos = offset;
+				while ((len = (int)reader.GetBytes(ordinal, idx, dataBuffer, 0, Base64EncSize)) != 0)
+				{
+					var req = len * 2;
+					if (pos + req >= buffer.Length)
+					{
+						// force a flush
+						return InsufficientSpace;
+					}
+
+					var c = ToHexCharArray(dataBuffer, 0, len, buffer, pos);
+
+					idx += len;
+					pos += c;
+				}
+				return pos - offset;
+			}
+
+			static int ToHexCharArray(byte[] dataBuffer, int offset, int length, char[] outputBuffer, int outputOffset)
+			{
+				if (length * 2 > outputBuffer.Length - outputOffset)
+					throw new ArgumentException();
+
+				var idx = offset;
+				var end = offset + length;
+				for(; idx < end; idx++)
+				{
+					var b = dataBuffer[idx];
+					var lo = HexMap[b & 0xf];
+					var hi = HexMap[b >> 4];
+					outputBuffer[outputOffset++] = hi;
+					outputBuffer[outputOffset++] = lo;
+				}
+				return length * 2;
 			}
 		}
 
@@ -271,7 +330,7 @@ namespace Sylvan.Data.Csv
 
 				Span<char> str = stackalloc char[IsoDate.MaxDateLength];
 				int len;
-				if(!IsoDate.TryFormatIso(value, str, out len))
+				if (!IsoDate.TryFormatIso(value, str, out len))
 				{
 					return InsufficientSpace;
 				}
@@ -593,6 +652,65 @@ namespace Sylvan.Data.Csv
 		}
 
 #endif
+
+		sealed class EnumFastFieldWriter<T> : FieldWriter where T : Enum
+		{
+			public static EnumFastFieldWriter<T> Instance = new EnumFastFieldWriter<T>();
+
+			readonly string[] values;
+
+			readonly Func<EnumFastFieldWriter<T>, T, string> func;
+
+			private EnumFastFieldWriter()
+			{
+				var values = Enum.GetValues(typeof(T));
+				var map = new Dictionary<int, string>();
+				foreach (var value in values)
+				{
+					var v = Convert.ToInt32(value);
+					map.Add(v, value!.ToString()!);
+				}
+				this.values = new string[map.Keys.Max() + 1];
+				foreach (var kvp in map)
+				{
+					this.values[kvp.Key] = kvp.Value;
+				}
+
+				var thisParam = Expression.Parameter(typeof(EnumFastFieldWriter<T>), "this");
+				var valueParam = Expression.Parameter(typeof(T), "value");
+
+				var body =
+					Expression.Condition(
+						Expression.LessThan(
+							Expression.Convert(valueParam, typeof(uint)),
+							Expression.Constant((uint)this.values.Length)
+						),
+						Expression.ArrayAccess(
+							Expression.Field(thisParam, nameof(values)),
+							Expression.Convert(valueParam, typeof(int))
+						),
+						Expression.Constant(null, typeof(string))
+					);
+
+				var lambda = Expression.Lambda<Func<EnumFastFieldWriter<T>, T, string>>(body, thisParam, valueParam);
+				this.func = lambda.Compile();
+			}
+
+			public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
+			{
+				var reader = context.reader;
+				var value = reader.GetFieldValue<T>(ordinal);
+				var span = buffer.AsSpan(offset);
+				var str = func(this, value) ?? value.ToString();
+				var len = str.Length;
+				if (len <= span.Length)
+				{
+					str.AsSpan().CopyTo(span);
+					return len;
+				}
+				return InsufficientSpace;
+			}
+		}
 
 		sealed class SingleFastFieldWriter : FieldWriter
 		{

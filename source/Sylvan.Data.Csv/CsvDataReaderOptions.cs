@@ -225,6 +225,7 @@ namespace Sylvan.Data.Csv
 		/// The buffer to use when reading records.
 		/// The default is null, in which case the reader will allocate the buffer.
 		/// </summary>
+		[Obsolete("Use buffer parameter to CsvDataReader.Create instead.")]
 		public char[]? Buffer { get; set; }
 
 		/// <summary>
@@ -257,7 +258,9 @@ namespace Sylvan.Data.Csv
 				Delimiter == Quote ||
 				BufferSize < MinBufferSize ||
 				(StringComparer.OrdinalIgnoreCase.Equals(TrueString, FalseString) && TrueString != null) ||
+#pragma warning disable CS0618 // Type or member is obsolete
 				(Buffer != null && Buffer.Length < MinBufferSize) ||
+#pragma warning restore CS0618 // Type or member is obsolete
 				Delimiter >= 128 ||
 				Quote >= 128 ||
 				Escape >= 128;

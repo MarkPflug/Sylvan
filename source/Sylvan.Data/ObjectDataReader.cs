@@ -143,6 +143,7 @@ namespace Sylvan.Data
 
 			static readonly HashSet<Type> SupportedTypes = new HashSet<Type>
 			{
+				typeof(string),
 				typeof(byte[]),
 				typeof(char[]),
 				typeof(Guid),
@@ -162,7 +163,7 @@ namespace Sylvan.Data
 
 				if (type.IsArray) return false;
 				if (type.IsPrimitive) return true;
-				if (type == typeof(string)) return true;
+				if (type.IsEnum) return true;
 
 				var nt = Nullable.GetUnderlyingType(type);
 				if(nt != null)

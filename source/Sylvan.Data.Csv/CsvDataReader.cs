@@ -145,14 +145,16 @@ namespace Sylvan.Data.Csv
 			return bufferLen;
 		}
 
-		private CsvDataReader(TextReader reader, CsvDataReaderOptions? options = null)
+		private CsvDataReader(TextReader reader, char[]? buffer, CsvDataReaderOptions? options = null)
 		{
 			if (options != null)
 				options.Validate();
 			options ??= CsvDataReaderOptions.Default;
 			this.reader = reader;
 			var bufferLen = GetBufferSize(reader, options);
-			this.buffer = options.Buffer ?? new char[bufferLen];
+#pragma warning disable CS0618 // Type or member is obsolete
+			this.buffer = buffer ?? options.Buffer ?? new char[bufferLen];
+#pragma warning restore CS0618 // Type or member is obsolete
 
 			this.hasHeaders = options.HasHeaders;
 			this.autoDetectDelimiter = options.Delimiter == null;

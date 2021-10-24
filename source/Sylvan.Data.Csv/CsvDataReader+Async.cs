@@ -14,22 +14,15 @@ namespace Sylvan.Data.Csv
 		/// <param name="filename">The name of a file containing CSV data.</param>
 		/// <param name="options">The options to configure the reader, or null to use the default options.</param>
 		/// <returns>A task representing the asynchronous creation of a CsvDataReader instance.</returns>
-		public static async Task<CsvDataReader> CreateAsync(string filename, CsvDataReaderOptions? options = null)
+		public static Task<CsvDataReader> CreateAsync(string filename, CsvDataReaderOptions? options = null)
 		{
 			if (filename == null) throw new ArgumentNullException(nameof(filename));
 			// TextReader must be owned when we open it.
 			if (options?.OwnsReader == false) throw new CsvConfigurationException();
 
-			var bufferSize = options?.BufferSize ?? options?.Buffer?.Length ?? CsvDataReaderOptions.Default.BufferSize;
-			bufferSize = Math.Max(bufferSize, Environment.SystemPageSize);
-			var stream = new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize, FileOptions.SequentialScan | FileOptions.Asynchronous);
-			var reader = new StreamReader(stream, Encoding.Default, true, bufferSize);
-			var csv = new CsvDataReader(reader, options);
-			if (!await csv.InitializeAsync().ConfigureAwait(false))
-			{
-				throw new CsvMissingHeadersException();
-			}
-			return csv;
+			var stream = new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read, 1, FileOptions.SequentialScan | FileOptions.Asynchronous);
+			var reader = new StreamReader(stream, Encoding.Default);
+			return CreateAsyncInternal(reader, null, options);
 		}
 
 		/// <summary>
@@ -38,10 +31,27 @@ namespace Sylvan.Data.Csv
 		/// <param name="reader">The TextReader for the delimited data.</param>
 		/// <param name="options">The options to configure the reader, or null to use the default options.</param>
 		/// <returns>A task representing the asynchronous creation of a CsvDataReader instance.</returns>
-		public static async Task<CsvDataReader> CreateAsync(TextReader reader, CsvDataReaderOptions? options = null)
+		public static Task<CsvDataReader> CreateAsync(TextReader reader, CsvDataReaderOptions? options = null)
+		{
+			return CreateAsyncInternal(reader, null, options);
+		}
+
+		/// <summary>
+		/// Creates a new CsvDataReader asynchronously.
+		/// </summary>
+		/// <param name="reader">The TextReader for the delimited data.</param>
+		/// <param name="buffer">A buffer to use for internal processing.</param>
+		/// <param name="options">The options to configure the reader, or null to use the default options.</param>
+		/// <returns>A task representing the asynchronous creation of a CsvDataReader instance.</returns>
+		public static Task<CsvDataReader> CreateAsync(TextReader reader, char[] buffer, CsvDataReaderOptions? options = null)
+		{
+			return CreateAsyncInternal(reader, buffer, options);
+		}
+
+		static async Task<CsvDataReader> CreateAsyncInternal(TextReader reader, char[]? buffer, CsvDataReaderOptions? options)
 		{
 			if (reader == null) throw new ArgumentNullException(nameof(reader));
-			var csv = new CsvDataReader(reader, options);
+			var csv = new CsvDataReader(reader, buffer, options);
 			if (!await csv.InitializeAsync().ConfigureAwait(false))
 			{
 				throw new CsvMissingHeadersException();
