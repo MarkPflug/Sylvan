@@ -351,5 +351,25 @@ namespace Sylvan.Data.Csv
 			}
 			Assert.Equal(RecordCount, c);
 		}
+
+
+		[Fact]
+		public void CsvWriteBatches()
+		{
+			using var tw = File.CreateText("output.csv");
+			var data = "A,B,C\n1,2,3\n4,5,6\n";
+
+			{
+				var r = CsvDataReader.Create(new StringReader(data));
+				var csvWriter = CsvDataWriter.Create(tw);
+				csvWriter.Write(r);
+			}
+
+			{
+				var r = CsvDataReader.Create(new StringReader(data));
+				var csvWriter = CsvDataWriter.Create(tw, new CsvDataWriterOptions { WriteHeaders = false });
+				csvWriter.Write(r);
+			}
+		}
 	}
 }

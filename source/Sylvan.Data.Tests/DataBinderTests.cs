@@ -27,7 +27,7 @@ namespace Sylvan.Data
 		public int Id { get; private set; }
 		public string Name { get; private set; }
 		//[ColumnSeries("{Integer}")]
-		public Series<int,int> Values { get; private set; }
+		public Series<int, int> Values { get; private set; }
 	}
 
 	class SeriesStringRecord
@@ -42,7 +42,7 @@ namespace Sylvan.Data
 	{
 		public int Id { get; set; }
 		public string Name { get; set; }
-		public Series<DateTime,int> Values { get; set; }
+		public Series<DateTime, int> Values { get; set; }
 	}
 
 	enum Severity
@@ -319,7 +319,7 @@ namespace Sylvan.Data
 			var schemaSpec = "Id:int,Name,{Date}>Values*:int";
 			var schema = Schema.Parse(schemaSpec);
 			var cols = schema.GetColumnSchema();
-			
+
 			var csvData = "Id,Name,2020-09-19,2020-09-20,2020-09-21,2020-09-22\n1,Test,7,8,9,10\n";
 			var tr = new StringReader(csvData);
 			var opts = new CsvDataReaderOptions() { Schema = new CsvSchema(schema) };
@@ -373,7 +373,7 @@ namespace Sylvan.Data
 			var csvData = "A,B\n1,2\n3,4";
 			var tr = new StringReader(csvData);
 			var data = CsvDataReader.Create(tr);
-			var ex = Assert.Throws<DataBinderException>(() => DataBinder.Create<UnboundPropertyType>(data));
+			var ex = Assert.Throws<UnboundMemberException>(() => DataBinder.Create<UnboundPropertyType>(data));
 			Assert.Contains("C", ex.UnboundProperties);
 		}
 
@@ -384,7 +384,7 @@ namespace Sylvan.Data
 			var tr = new StringReader(csvData);
 			var data = CsvDataReader.Create(tr);
 			var opts = new DataBinderOptions { BindingMode = DataBindingMode.All };
-			var ex = Assert.Throws<DataBinderException>(() => DataBinder.Create<UnboundPropertyType>(data, opts));
+			var ex = Assert.Throws<UnboundMemberException>(() => DataBinder.Create<UnboundPropertyType>(data, opts));
 			Assert.Contains("D", ex.UnboundColumns);
 		}
 
@@ -423,11 +423,16 @@ namespace Sylvan.Data
 				this.series0 = new DataSeriesAccessor<DateTime, int>(seriesCols);
 			}
 
-			public void Bind(IDataRecord record, SeriesDateRecord item)
+			public void Bind(DbDataReader record, SeriesDateRecord item)
 			{
 				item.Id = record.GetInt32(idIdx);
 				item.Name = record.GetString(nameIdx);
 				item.Values = new Series<DateTime, int>(this.series0, record);
+			}
+
+			public void Bind(DbDataReader record, object item)
+			{
+				Bind(record, (SeriesDateRecord)item);
 			}
 		}
 
@@ -451,7 +456,7 @@ namespace Sylvan.Data
 		public void BindContructorTests()
 		{
 			var dataStr = "Id,Name,Data,Version\n1,a,0x1234,1.2.3.4";
-			var schema = 
+			var schema =
 				new Schema.Builder()
 				.Add<int>()
 				.Add<string>()
@@ -460,7 +465,7 @@ namespace Sylvan.Data
 				.Build();
 
 			var data = CsvDataReader.Create(new StringReader(dataStr), new CsvDataReaderOptions { Schema = new CsvSchema(schema), BinaryEncoding = BinaryEncoding.Hexadecimal });
-			var binder = DataBinder.Create<Simple>(data, new DataBinderOptions { BindingMode = DataBindingMode.Any});
+			var binder = DataBinder.Create<Simple>(data, new DataBinderOptions { BindingMode = DataBindingMode.Any });
 			Assert.True(data.Read());
 			var r = binder.GetRecord(data);
 			Assert.Equal(1, r.Id);

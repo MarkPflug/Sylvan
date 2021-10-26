@@ -593,7 +593,7 @@ namespace Sylvan.Data
 				};
 			}
 
-			if (this.isInt)
+			if (isInt)
 			{
 				if (intMin == 0 && intMax == 1 && count > 2)
 				{
@@ -608,11 +608,11 @@ namespace Sylvan.Data
 				return new Schema.Column.Builder(name, type, isNullable);
 			}
 
-			if (this.isFloat)
+			if (isFloat)
 			{
 				if (isDecimal)
 				{
-					if (IsDecimalHeader(this.name) || this.IsDecimalRange())
+					if (/*IsDecimalHeader(this.name) ||*/ this.IsDecimalRange())
 					{
 						return new Schema.Column.Builder(name, typeof(decimal), isNullable);
 					}
@@ -670,22 +670,22 @@ namespace Sylvan.Data
 		static string[] TrueStrings = new[] { "y", "yes", "t", "true" };
 		static string[] FalseStrings = new[] { "n", "no", "f", "false" };
 
-		static bool IsDecimalHeader(string? name)
-		{
-			if (name == null) return false;
-			var clean = Regex.Replace(name, "[^a-z]", " ", RegexOptions.IgnoreCase);
-			foreach (var str in DecimalStrings)
-			{
-				if (clean.IndexOf(str, StringComparison.OrdinalIgnoreCase) >= 0)
-				{
-					return true;
-				}
-			}
-			return false;
-		}
+		//static bool IsDecimalHeader(string? name)
+		//{
+		//	if (name == null) return false;
+		//	var clean = Regex.Replace(name, "[^a-z]", " ", RegexOptions.IgnoreCase);
+		//	foreach (var str in DecimalStrings)
+		//	{
+		//		if (clean.IndexOf(str, StringComparison.OrdinalIgnoreCase) >= 0)
+		//		{
+		//			return true;
+		//		}
+		//	}
+		//	return false;
+		//}
 
 		// look for these strings in the header to try to make a determination about appropriate type
-		static string[] DecimalStrings = new[] { "amount", "revenue", "price", "cost" };
+		//static string[] DecimalStrings = new[] { "amount", "revenue", "price", "cost" };
 		//static string[] DoubleStrings = new[] { "lat", "long", "elev", "length", "area", "volume",  };
 	}
 

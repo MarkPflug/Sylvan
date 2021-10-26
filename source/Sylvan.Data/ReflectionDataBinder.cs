@@ -1,4 +1,7 @@
-﻿using System;
+﻿
+#if DEBUG
+
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Data;
@@ -134,7 +137,12 @@ namespace Sylvan.Data
 			this.propBinders = propBinderList.ToArray();
 		}
 
-		void IDataBinder<T>.Bind(IDataRecord record, T item)
+		public void Bind(DbDataReader record, object item)
+		{
+			throw new NotImplementedException();
+		}
+
+		void IDataBinder<T>.Bind(DbDataReader record, T item)
 		{
 			foreach (var pb in propBinders)
 			{
@@ -143,3 +151,6 @@ namespace Sylvan.Data
 		}
 	}
 }
+
+
+#endif

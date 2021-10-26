@@ -34,7 +34,7 @@ namespace Sylvan.Data
 		static Dictionary<string, DbType> InitializeTypeMap()
 		{
 			var map = new Dictionary<string, DbType>(StringComparer.OrdinalIgnoreCase);
-			var values = Enum.GetValues(typeof(DbType));
+			var values = (DbType[])Enum.GetValues(typeof(DbType));
 			foreach (DbType type in values)
 			{
 				map.Add(type.ToString(), type);

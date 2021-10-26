@@ -15,7 +15,6 @@ namespace Sylvan.Data
 	sealed class CompiledDataBinder<T>
 		: IDataBinder<T>, IDataSeriesBinder
 	{
-
 		object? IDataSeriesBinder.GetSeriesAccessor(string seriesName)
 		{
 			if (this.seriesAccessors != null && this.seriesAccessors.TryGetValue(seriesName, out object? val))
@@ -25,14 +24,12 @@ namespace Sylvan.Data
 			return null;
 		}
 
-		readonly Action<IDataRecord, BinderContext, T> recordBinderFunction;
+		readonly Action<DbDataReader, BinderContext, T> recordBinderFunction;
 		readonly object[] state;
 		readonly CultureInfo cultureInfo;
 		readonly BinderContext context;
 
 		Dictionary<string, object>? seriesAccessors;
-
-		//static readonly Type drType = typeof(IDataRecord);
 
 		internal CompiledDataBinder(
 			DataBinderOptions opts,
@@ -113,7 +110,7 @@ namespace Sylvan.Data
 				return null;
 			}
 
-			var drType = typeof(IDataRecord);
+			var drType = typeof(DbDataReader);
 			var isDbNullMethod = drType.GetMethod("IsDBNull")!;
 
 			var recordType = typeof(T);
@@ -210,7 +207,7 @@ namespace Sylvan.Data
 				var targetType = setter.GetParameters()[0].ParameterType!;
 
 				Type accessorType = colType;
-				if (opts.InferColumnTypeFromProperty)
+				if (opts.InferColumnTypeFromMember)
 				{
 					accessorType = GetInferredAccessorType(targetType);
 					canBeNull = Nullable.GetUnderlyingType(targetType) != null;
@@ -429,13 +426,13 @@ namespace Sylvan.Data
 
 			if (unboundColumns != null || unboundProperties != null)
 			{
-				throw new DataBinderException(unboundProperties, unboundColumns);
+				throw new UnboundMemberException(unboundProperties, unboundColumns);
 			}
 
 			this.state = state.ToArray();
 			var body = Expression.Block(locals, bodyExpressions);
 
-			var lf = Expression.Lambda<Action<IDataRecord, BinderContext, T>>(body, recordParam, contextParam, itemParam);
+			var lf = Expression.Lambda<Action<DbDataReader, BinderContext, T>>(body, recordParam, contextParam, itemParam);
 			this.recordBinderFunction = lf.Compile();
 			this.context = new BinderContext(this.cultureInfo, this.state);
 		}
@@ -446,10 +443,8 @@ namespace Sylvan.Data
 			propertyType = ut ?? propertyType;
 
 			var code = Type.GetTypeCode(propertyType);
-			if (propertyType.IsEnum)
-				return typeof(string);
-			if (propertyType == typeof(DateTimeOffset))
-				return typeof(string);
+			if (propertyType.IsEnum || propertyType == typeof(DateTimeOffset))
+				return propertyType;
 
 			if (Type.GetTypeCode(propertyType) == TypeCode.Object)
 			{
@@ -551,16 +546,18 @@ namespace Sylvan.Data
 			// conversion is not supported
 			// might be handled otherwise by a constructor
 			NotSupported = 0,
-			// no op
+			// no op, the source and target are the same type.
 			Identity = 1,
 			// simple primitive widening type cast
 			Cast = 2,
 			// convert via ToString operation
 			ToString = 3,
 			// simple primitive narrowing type cast, must be checked
-			UnsafeCast = 4,
+			NarrowingCast = 4,
 			// convert via Parse operation
 			Parse = 5,
+			// this one only (currently) applies to string => char binding
+			// which is special-cased.
 			Custom = 6,
 		}
 
@@ -668,7 +665,7 @@ namespace Sylvan.Data
 					return expr;
 				case ConversionType.Cast:
 					return Expression.MakeUnary(ExpressionType.Convert, expr, dstType);
-				case ConversionType.UnsafeCast:
+				case ConversionType.NarrowingCast:
 					// TODO: should this be opt-in when constructing the binder?
 					return Expression.MakeUnary(ExpressionType.ConvertChecked, expr, dstType);
 				case ConversionType.ToString:
@@ -713,14 +710,19 @@ namespace Sylvan.Data
 			var method = typeof(DataBinder).GetMethod("GetSeriesAccessor", BindingFlags.Static | BindingFlags.NonPublic)!;
 			method = method.MakeGenericMethod(new Type[] { seriesCol.SeriesType! });
 			var args = new object?[] { seriesCol, physicalSchema, null };
-			var result = method.Invoke(null, args);
+			var result = method.Invoke(null, args)!;
 			boundColumns = (IEnumerable<DbColumn>)args[2]!;
 			return result!;
 		}
 
-		void IDataBinder<T>.Bind(IDataRecord record, T item)
+		void IDataBinder<T>.Bind(DbDataReader record, T item)
 		{
 			recordBinderFunction(record, this.context, item);
+		}
+
+		public void Bind(DbDataReader record, object item)
+		{
+			throw new NotImplementedException();
 		}
 	}
 }

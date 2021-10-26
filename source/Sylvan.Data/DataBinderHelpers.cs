@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 
@@ -27,6 +28,7 @@ namespace Sylvan.Data
 		}
 
 		internal static readonly Type IDataRecordType = typeof(IDataRecord);
+		internal static readonly Type DbDataRecordType = typeof(DbDataRecord);
 
 		internal static readonly MethodInfo IsDbNullMethod;
 		internal static readonly MethodInfo GetBooleanMethod;
@@ -41,11 +43,13 @@ namespace Sylvan.Data
 		internal static readonly MethodInfo GetGuidMethod;
 		internal static readonly MethodInfo GetStringMethod;
 		internal static readonly MethodInfo GetDateTimeMethod;
+		internal static readonly MethodInfo GetDateTimeOffsetMethod;
 		internal static readonly MethodInfo GetValueMethod;
 
 		static DataBinder()
 		{
 			IDataRecordType = typeof(IDataRecord);
+			DbDataRecordType = typeof(DbDataReader);
 			IsDbNullMethod = IDataRecordType.GetMethod("IsDBNull")!;
 			GetBooleanMethod = IDataRecordType.GetMethod("GetBoolean")!;
 			GetCharMethod = IDataRecordType.GetMethod("GetChar")!;
@@ -59,8 +63,8 @@ namespace Sylvan.Data
 			GetStringMethod = IDataRecordType.GetMethod("GetString")!;
 			GetGuidMethod = IDataRecordType.GetMethod("GetGuid")!;
 			GetDateTimeMethod = IDataRecordType.GetMethod("GetDateTime")!;
-
 			GetValueMethod = IDataRecordType.GetMethod("GetValue")!;
+			GetDateTimeOffsetMethod = DbDataRecordType.GetMethods().Single(m => m.Name =="GetFieldValue").MakeGenericMethod(typeof(DateTimeOffset));
 		}
 
 		internal static MethodInfo? GetAccessorMethod(Type type)
@@ -103,6 +107,12 @@ namespace Sylvan.Data
 					{
 						return GetValueMethod;
 					}
+
+					if(type == typeof(DateTimeOffset))
+					{
+						return GetDateTimeOffsetMethod;
+					}
+
 					break;
 			}
 
@@ -318,7 +328,7 @@ namespace Sylvan.Data
 			return null;
 		}
 
-		public static T GetRecord<T>(this IDataBinder<T> binder, IDataRecord record, Func<IDataRecord, Exception, bool>? errorHandler = null) where T : new()
+		public static T GetRecord<T>(this IDataBinder<T> binder, DbDataReader record, Func<IDataRecord, Exception, bool>? errorHandler = null) where T : new()
 		{
 			var t = new T();
 			try
@@ -335,7 +345,7 @@ namespace Sylvan.Data
 			return t;
 		}
 
-		public static IDataSeriesRange<TK>? GetSeriesRange<TK>(this IDataBinder binder, string seriesName)
+		public static IDataSeriesRange<TK>? GetSeriesRange<TK>(this object binder, string seriesName)
 		{
 			if (binder is IDataSeriesBinder b)
 			{
