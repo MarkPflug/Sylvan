@@ -5,19 +5,19 @@ using System.Data.Common;
 
 namespace Sylvan.Data
 {
-	public static class DataBinderFactory
-	{
-		public static IDataBinder<T> Create<T>(this IDataBinderFactory<T> factory, DbDataReader reader, DataBinderOptions? options = null)
-		{
-			var schema = reader.GetColumnSchema();
-			return factory.Create(schema, options);
-		}
+	//public static class DataBinderFactory
+	//{
+	//	public static IDataBinder<T> Create<T>(this IDataBinderFactory<T> factory, DbDataReader reader, DataBinderOptions? options = null)
+	//	{
+	//		var schema = reader.GetColumnSchema();
+	//		return factory.Create(schema, options);
+	//	}
 
-		public static IDataBinder<T> Create<T>(this IDataBinderFactory<T> factory, IReadOnlyList<DbColumn> schema)
-		{
-			return factory.Create(schema, null);
-		}
-	}
+	//	public static IDataBinder<T> Create<T>(this IDataBinderFactory<T> factory, IReadOnlyList<DbColumn> schema)
+	//	{
+	//		return factory.Create(schema, null);
+	//	}
+	//}
 
 	/// <summary>
 	/// A factory for creating a data binder for a given schema.
@@ -70,12 +70,12 @@ namespace Sylvan.Data
 			return Schema.GetWeakSchema(dr).GetColumnSchema();
 		}
 
-		public static IDataBinder<T> CreateDynamic<T>(ReadOnlyCollection<DbColumn> schema, DataBinderOptions? opts = null)
-		{
-			var bf = ObjectBinder.Get<T>();
-			var b = bf.Create(schema, opts);
-			return b;
-		}
+		//public static IDataBinder<T> CreateDynamic<T>(ReadOnlyCollection<DbColumn> schema, DataBinderOptions? opts = null)
+		//{
+		//	var bf = ObjectBinder.Get<T>();
+		//	var b = bf.Create(schema, opts);
+		//	return b;
+		//}
 
 		public static IDataBinder<T> Create<T>(ReadOnlyCollection<DbColumn> schema, DataBinderOptions? opts = null)
 		{
@@ -83,15 +83,18 @@ namespace Sylvan.Data
 			return new CompiledDataBinder<T>(opts, schema);
 		}
 
-		public static IDataBinder<T> Create<T>(IDataReader dr, DataBinderOptions? opts = null)
+		public static IDataBinder<T> Create<T>(IDataReader reader, DataBinderOptions? opts = null)
 		{
+			var dr = reader.AsDbDataReader();
 			opts = opts ?? new DataBinderOptions();
-			return new CompiledDataBinder<T>(opts, GetSchema(dr));
+			return CompiledBinderCache<T>.GetBinder(dr, opts);
 		}
 
-		public static IDataBinder<T> Create<T>(IDataReader dr, ReadOnlyCollection<DbColumn> logicalSchema, DataBinderOptions? opts = null)
+		public static IDataBinder<T> Create<T>(IDataReader reader, ReadOnlyCollection<DbColumn> logicalSchema, DataBinderOptions? opts = null)
 		{
+			var dr = reader.AsDbDataReader();
 			opts = opts ?? new DataBinderOptions();
+			//return CompiledBinderCache<T>.GetBinder(dr, opts);
 			return new CompiledDataBinder<T>(opts, GetSchema(dr), logicalSchema);
 		}
 	}

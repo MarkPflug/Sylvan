@@ -15,7 +15,6 @@ namespace Sylvan.Data
 	sealed class CompiledDataBinder<T>
 		: IDataBinder<T>, IDataSeriesBinder
 	{
-
 		object? IDataSeriesBinder.GetSeriesAccessor(string seriesName)
 		{
 			if (this.seriesAccessors != null && this.seriesAccessors.TryGetValue(seriesName, out object? val))
@@ -31,8 +30,6 @@ namespace Sylvan.Data
 		readonly BinderContext context;
 
 		Dictionary<string, object>? seriesAccessors;
-
-		//static readonly Type drType = typeof(IDataRecord);
 
 		internal CompiledDataBinder(
 			DataBinderOptions opts,
@@ -210,7 +207,7 @@ namespace Sylvan.Data
 				var targetType = setter.GetParameters()[0].ParameterType!;
 
 				Type accessorType = colType;
-				if (opts.InferColumnTypeFromProperty)
+				if (opts.InferColumnTypeFromMember)
 				{
 					accessorType = GetInferredAccessorType(targetType);
 					canBeNull = Nullable.GetUnderlyingType(targetType) != null;
@@ -429,7 +426,7 @@ namespace Sylvan.Data
 
 			if (unboundColumns != null || unboundProperties != null)
 			{
-				throw new DataBinderException(unboundProperties, unboundColumns);
+				throw new UnboundMemberException(unboundProperties, unboundColumns);
 			}
 
 			this.state = state.ToArray();
@@ -549,16 +546,18 @@ namespace Sylvan.Data
 			// conversion is not supported
 			// might be handled otherwise by a constructor
 			NotSupported = 0,
-			// no op
+			// no op, the source and target are the same type.
 			Identity = 1,
 			// simple primitive widening type cast
 			Cast = 2,
 			// convert via ToString operation
 			ToString = 3,
 			// simple primitive narrowing type cast, must be checked
-			UnsafeCast = 4,
+			NarrowingCast = 4,
 			// convert via Parse operation
 			Parse = 5,
+			// this one only (currently) applies to string => char binding
+			// which is special-cased.
 			Custom = 6,
 		}
 
@@ -666,7 +665,7 @@ namespace Sylvan.Data
 					return expr;
 				case ConversionType.Cast:
 					return Expression.MakeUnary(ExpressionType.Convert, expr, dstType);
-				case ConversionType.UnsafeCast:
+				case ConversionType.NarrowingCast:
 					// TODO: should this be opt-in when constructing the binder?
 					return Expression.MakeUnary(ExpressionType.ConvertChecked, expr, dstType);
 				case ConversionType.ToString:

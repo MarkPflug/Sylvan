@@ -373,7 +373,7 @@ namespace Sylvan.Data
 			var csvData = "A,B\n1,2\n3,4";
 			var tr = new StringReader(csvData);
 			var data = CsvDataReader.Create(tr);
-			var ex = Assert.Throws<DataBinderException>(() => DataBinder.Create<UnboundPropertyType>(data));
+			var ex = Assert.Throws<UnboundMemberException>(() => DataBinder.Create<UnboundPropertyType>(data));
 			Assert.Contains("C", ex.UnboundProperties);
 		}
 
@@ -384,7 +384,7 @@ namespace Sylvan.Data
 			var tr = new StringReader(csvData);
 			var data = CsvDataReader.Create(tr);
 			var opts = new DataBinderOptions { BindingMode = DataBindingMode.All };
-			var ex = Assert.Throws<DataBinderException>(() => DataBinder.Create<UnboundPropertyType>(data, opts));
+			var ex = Assert.Throws<UnboundMemberException>(() => DataBinder.Create<UnboundPropertyType>(data, opts));
 			Assert.Contains("D", ex.UnboundColumns);
 		}
 

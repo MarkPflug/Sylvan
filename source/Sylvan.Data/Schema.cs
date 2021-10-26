@@ -11,7 +11,7 @@ namespace Sylvan.Data
 	/// <summary>
 	/// Provides schema information for data.
 	/// </summary>
-	public sealed partial class Schema : IEnumerable<Schema.Column>, IDbColumnSchemaGenerator
+	public sealed partial class Schema : IReadOnlyList<Schema.Column>, IDbColumnSchemaGenerator
 	{
 		static T? GetValue<T>(DataRow row, string name)
 		{
@@ -73,6 +73,10 @@ namespace Sylvan.Data
 		// LastName:string[32]?;
 		// *:double?;
 		Column[] columns;
+
+		public int Count => columns.Length;
+
+		public Column this[int index] => columns[index];
 
 		private Schema(IEnumerable<Column> cols)
 		{

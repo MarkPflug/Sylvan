@@ -131,7 +131,7 @@ namespace Sylvan.Data
 	}
 
 	/// <summary>
-	/// A column in a <see cref="DataSeriesAccessor{,}"/>.
+	/// A column in a <see cref="DataSeriesAccessor{TK, TV}"/>.
 	/// </summary>
 	/// <typeparam name="TK">The type of column key.</typeparam>
 	public sealed class DataSeriesColumn<TK>
@@ -168,8 +168,19 @@ namespace Sylvan.Data
 	/// <typeparam name="TK"></typeparam>
 	public interface IDataSeriesRange<TK> : IReadOnlyList<TK>
 	{
+		/// <summary>
+		/// Gets the keys of the series.
+		/// </summary>
 		IReadOnlyList<TK> Keys { get; }
+		
+		/// <summary>
+		/// Gets the minimum key value.
+		/// </summary>
 		TK Minimum { get; }
+
+		/// <summary>
+		/// Gets the maximum key value.
+		/// </summary>
 		TK Maximum { get; }
 	}
 
@@ -191,14 +202,19 @@ namespace Sylvan.Data
 		/// </summary>
 		public IReadOnlyList<TK> Keys => keys;
 
+		/// <inheritdoc/>
 		public TK Minimum => keys[0];
+		/// <inheritdoc/>
 		public TK Maximum => keys[keys.Length - 1];
 
 		/// <summary>
 		/// Gets the number of elements in the series.
 		/// </summary>
 		public int Count => keys.Length;
-
+		
+		/// <summary>
+		/// Gets the key at the given index.
+		/// </summary>
 		public TK this[int index] => keys[index];
 
 		static IDataAccessor<TV> GetAccessor(Type t)
@@ -272,6 +288,10 @@ namespace Sylvan.Data
 			}
 		}
 
+		/// <summary>
+		/// Enumerates the the keys in the series.
+		/// </summary>
+		/// <returns></returns>
 		public IEnumerator<TK> GetEnumerator()
 		{
 			return this.Keys.GetEnumerator();
