@@ -19,14 +19,14 @@ namespace Sylvan.Data
 	//	}
 	//}
 
-	/// <summary>
-	/// A factory for creating a data binder for a given schema.
-	/// </summary>
-	/// <typeparam name="T"></typeparam>
-	public interface IDataBinderFactory<T>
-	{
-		IDataBinder<T> Create(IReadOnlyList<DbColumn> schema, DataBinderOptions? options);
-	}
+	///// <summary>
+	///// A factory for creating a data binder for a given schema.
+	///// </summary>
+	///// <typeparam name="T"></typeparam>
+	//public interface IDataBinderFactory<T>
+	//{
+	//	IDataBinder<T> Create(IReadOnlyList<DbColumn> schema, DataBinderOptions? options);
+	//}
 
 	public interface IDataBinder
 	{

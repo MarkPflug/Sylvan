@@ -27,13 +27,13 @@ namespace Sylvan.Data
 		}
 	}
 
-	sealed class ExampleDynamicBinderFactory : IDataBinderFactory<ExampleClass>
-	{
-		public IDataBinder<ExampleClass> Create(IReadOnlyList<DbColumn> schema, DataBinderOptions options)
-		{
-			return new ExampleDynamicBinder(schema);
-		}
-	}
+	//sealed class ExampleDynamicBinderFactory : IDataBinderFactory<ExampleClass>
+	//{
+	//	public IDataBinder<ExampleClass> Create(IReadOnlyList<DbColumn> schema, DataBinderOptions options)
+	//	{
+	//		return new ExampleDynamicBinder(schema);
+	//	}
+	//}
 
 	sealed class ExampleDynamicBinder : IDataBinder<ExampleClass>
 	{
