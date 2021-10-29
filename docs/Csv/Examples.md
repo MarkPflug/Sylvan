@@ -1,13 +1,15 @@
 # API usage by example
 
 It is probably easiest to understand how to use libraries by looking at examples. 
+Some of the most common use-cases are demonstrated here.
+
+## CsvDataReader Examples
+
 The `CsvDataReader` type implements the `DbDataReader` base type, so using it should be familiar for anyone who
 has experience with ADO.NET. This also allows it to interoperate with other ADO.NET providers for things 
 like bulk loading data into a database or loading data into a `DataTable`.
 
-## CsvDataReader Examples
-
-### Access columns by ordinal
+### Basic reading with column ordinal
 
 When the order of the columns in the CSV are fixed, it is possible to access them directly by ordinal.
 
@@ -27,7 +29,7 @@ while(await csv.ReadAsync())
 ### Access columns by name
 
 When the order of the columns in the CSV are not necessarily fixed, and the column order might change,
-the ordinal should be looked up outside the read loop.
+the ordinal can be determined from the header names.
 
 ```C#
 using var csv = CsvDataReader.Create("demo.csv");
@@ -53,7 +55,7 @@ similar bulk load cababilities which follow this same pattern.
 This example requires the CSV file to contain data that is compatible with
 the target table's schema. It applies the schema of the target database table
 to the `CsvDataReader` which allows the bulk load operation to
-coerce the incomming CSV data to the shape of the table.
+process CSV data without manually coercing the data types.
 
 ```C#
 
@@ -79,30 +81,27 @@ bcp.BatchSize = 10000;
 bcp.WriteToServer(dataReader);
 ```
 
-### Bind to objects with Sylvan.Data
+### CSV Data Binder example
 
-The `Sylvan.Data` package includes a general-purpose data binder, that can bind any properly implemented DbDataReader
-to objects.
+The `Sylvan.Data` library includes a generic data binder which makes it 
+very easy to bind to stronly typed objects. This data binder can be used
+with any `DbDataReader` instance, and is not specific to `Sylvan.Data.Csv`.
 
-```C#
+```
+using Sylvan.Data;
+using Sylvan.Data.Csv;
 
-class SalesRecord {
-    public int Id { get; private set; }
-    public string Product { get; private set; }
-    public int Quantity { get; private set; }
-    public decimal SalePrice { get; private set; }
+class Record {
+    public int Id {get; set;}
+    public int Name {get; set;}
+    public int Date {get; set;}
 }
 
-public IEnumerable<SalesRecord> GetRecords(string csvFile) {
-
-    using var csv = CsvDataReader.Create(csvFile);
-    var binder = DataBinder.Create<SalesRecord>(csv);
-
-    while(csv.Read()) {
-        var record = new SalesRecord();
-        binder.Bind(record);
-        yield return record;
-    }
+using var csv = CsvDataReader.Create("demo.csv");
+foreach(var record in csv.GetRecords<Record>())
+    var id = record.Id;
+    var name = record.Name;
+    var date = record.Date;
 }
 ```
 
@@ -120,4 +119,58 @@ var dataTable = new DataTable();
 var schema = new CsvSchema(Sylvan.Data.Schema.Parse("Id:int,Name,Quantity:int,SalePrice:decimal"));
 using var csv = CsvDataReader.Create("SalesData.csv", new CsvDataReaderOptions { Schema = schema});
 dataTable.Load(csv);
+```
+
+
+## CsvDataWriter examples
+
+The `CsvDataWriter` consumes a `DbDataReader` to produce CSV data.
+
+### Data to CSV Writer Example
+
+Any data source that provides a `DbDataReader` can be easily converted to CSV.
+
+```C#
+using Sylvan.Data.Csv;
+ // query a table from SqlServer, MySql, etc
+DbDataReader dr = await GetDataAsync();
+
+using var csvWriter = CsvDataWriter.Create("data.csv");
+await csvWriter.WriteAsync(dr);
+```
+
+### Object to CSV Writer Example
+
+The `Sylvan.Data` package provides an implementation of `DbDataReader` over
+an `IEnumerable<T>`, making it easy to write object data to CSV.
+
+```C#
+using Sylvan.Data;
+using Sylvan.Data.Csv;
+
+var records = 
+	new[]
+	{
+		new { 
+			Id = 1, 
+			Name = "Alpha", 
+			Date = new DateTime(2021, 1, 1),
+		},
+		new { 
+			Id = 2,
+			Name = "Beta", 
+			Date = new DateTime(2022, 1, 1),
+		},
+		new {
+			Id = 3,
+			Name = "Gamma, Iota, Omega",
+			Date = new DateTime(2023, 1, 1),
+		}
+	};
+
+// create a DbDataReader over the anonymous records.
+var recordReader = records.AsDataReader();
+
+var csvWriter = CsvDataWriter.Create("demo.csv");
+await csvWriter.WriteAsync(recordReader);
 ```
