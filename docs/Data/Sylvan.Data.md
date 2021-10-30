@@ -1,4 +1,4 @@
-# <img src="../Sylvan.png" height="48" alt="Sylvan Logo"/> Sylvan.Data
+# <img src="../../Sylvan.png" height="48" alt="Sylvan Logo"/> Sylvan.Data
 
 The `Sylvan.Data` library provides types for working with ADO.NET data objects, primarily the `DbDataReader` type.
 Many of these were developed to be used with the `Sylvan.Data.Csv` package, but they aren't specific to CSV and 

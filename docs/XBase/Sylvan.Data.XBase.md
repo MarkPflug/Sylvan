@@ -1,4 +1,4 @@
-# Sylvan.Data.XBase
+# <img src="../../Sylvan.png" height="48" alt="Sylvan Logo"/> Sylvan.Data.XBase
 
 The fastest "XBase" data reader available for .NET. XBase is a file format used by DBase, FoxPro, and Clipper database applications which were popular in the '90s. It still used as the storage format for metadata in ESRI shape files.
 

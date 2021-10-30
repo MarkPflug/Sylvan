@@ -4,9 +4,9 @@ Sylvan.Data.Csv is a high-performance .NET library for reading and writing CSV d
 Of the [many CSV libraries that I've benchmarked](https://github.com/MarkPflug/Benchmarks) it is the
 fastest.
 It has also been [independently benchmarked](https://www.joelverhagen.com/blog/2020/12/fastest-net-csv-parsers)
-among an extensive collection of libraries.
+among an extensive collection of .NET CSV libraries.
 
-In addition to being fast, it also offers a complete CSV implementation.
+In addition to being fast, it also offers a complete CSV implementation with an intuitive API.
 It supports headers, custom delimiters, quoted fields with delimiters and new lines, escapes, etc. 
 The primary class, `CsvDataReader`, derives from `System.Data.Common.DbDataReader`, 
 and so provides a familiar API for anyone who's worked with ADO.NET, and allows it to
@@ -20,13 +20,13 @@ interoperate easily with other common libraries.
 
 [Release Notes](Sylvan.Data.Csv.Releases.md)
 
-## [Usage Examples](Csv/Examples.md)
+## [Usage Examples](Examples.md)
 
-A few examples of common use cases are [documented here](Csv/Examples.md).
+A few examples of common use cases are [documented here](Examples.md).
 
-## [Options](Csv/Options.md)
+## [Options](Options.md)
 
-The default behavior should be sufficient for most cases, and there are a number of [options](Csv/Options.md) for configuring the behavior of the CSV data reader and writer.
+The default behavior should be sufficient for most cases, and there are a number of [options](Options.md) for configuring the behavior of the CSV data reader and writer.
 
 ## Null/Empty field handling
 
@@ -67,6 +67,18 @@ library doesn't provide an implementation, but `Sylvan.Common` library provides 
 This implementation is faster and requires fewer allocations than de-duping using a `HashSet<string>` after the fact, as
 it will de-dupe directly out of the internal CSV read buffer.
 
+```C#
+using Sylvan;
+using Sylvan.Data.Csv;
+
+var pool = new StringPool();
+var opts = new CsvDataReaderOptions { StringFactory = pool.GetString };
+var csv1 = CsvDataReader.Create("demo1.csv", opts);
+// the pool can be re-used across multiple files
+var csv2 = CsvDataReader.Create("demo2.csv", opts);
+
+```
+
 Here are some real-world examples of the impact of string pooling. 
 These examples load the entire CSV data set into memory binding to a strongly-typed object.
 The memory usage is as reported in Windows Task Manager, so includes more than just the raw data size.
@@ -97,6 +109,7 @@ csv.GetBytes(1, buffer, 0, len);
 ```
 
 _Comments_
+
 While the RFC 4180 makes no mention of comments, it is common that comment lines might appear at the beginning of a CSV starting with the `#` character. Sylvan will skip over such comments lines, and the prefix character can be configured to a different character if needed.
 
 ## Limitations
