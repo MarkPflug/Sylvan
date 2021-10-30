@@ -192,7 +192,34 @@ namespace Sylvan.Data.Csv
 		}
 
 		[Fact]
-		public void UnquotedStyle()
+		public void EscapedStyle1()
+		{
+			var opts = new CsvDataWriterOptions { Style = CsvStyle.Escaped, Escape = '\\', NewLine = "\n" };
+			var sw = new StringWriter();
+			var w = CsvDataWriter.Create(sw, opts);
+
+			var data = new[]
+				{
+					new
+					{
+						Name = "Value with comma, and \r\n newline.",
+						Value = 12,
+					},
+					new
+					{
+						Name = "#Comment",
+						Value = 16,
+					},
+				};
+
+			w.Write(data.AsDataReader());
+			var str = sw.ToString();
+			Assert.Equal("Name,Value\nValue with comma\\, and \\\r\n newline.,12\n\\#Comment,16\n", str);
+		}
+
+
+		[Fact]
+		public void EscapedStyle2()
 		{
 			var opts = new CsvDataWriterOptions { Style = CsvStyle.Escaped, Escape = '\\', NewLine = "\n" };
 			var sw = new StringWriter();
