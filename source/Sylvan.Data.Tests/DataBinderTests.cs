@@ -74,22 +74,22 @@ namespace Sylvan.Data
 			return schema.GetColumnSchema();
 		}
 
-		[Fact]
-		public void Test1()
-		{
-			var schema = BuildSchema();
-			var binder = new ReflectionDataBinder<MyDataRecord>(schema);
+		//[Fact]
+		//public void Test1()
+		//{
+		//	var schema = BuildSchema();
+		//	var binder = new ReflectionDataBinder<MyDataRecord>(schema);
 
-			var csvData = "Id,Name,Date\n1,Test,2020-08-12\n";
-			var tr = new StringReader(csvData);
-			var opts = new CsvDataReaderOptions() { Schema = new CsvSchema(schema) };
-			DbDataReader data = CsvDataReader.Create(tr, opts);
+		//	var csvData = "Id,Name,Date\n1,Test,2020-08-12\n";
+		//	var tr = new StringReader(csvData);
+		//	var opts = new CsvDataReaderOptions() { Schema = new CsvSchema(schema) };
+		//	DbDataReader data = CsvDataReader.Create(tr, opts);
 
-			while (data.Read())
-			{
-				var item = binder.GetRecord(data);
-			}
-		}
+		//	while (data.Read())
+		//	{
+		//		var item = binder.GetRecord(data);
+		//	}
+		//}
 
 		[Fact]
 		public void Test2()

@@ -205,7 +205,7 @@ namespace Sylvan.Benchmarks
 			this.record = new TestRecord();
 			this.item = new Record();
 			this.compiled = new CompiledDataBinder<Record>(DataBinderOptions.Default, schema.GetColumnSchema());
-			this.reflection = new ReflectionDataBinder<Record>(schema.GetColumnSchema());
+			//this.reflection = new ReflectionDataBinder<Record>(schema.GetColumnSchema());
 		}
 
 		class ManualBinder : IDataBinder<Record>
@@ -228,13 +228,13 @@ namespace Sylvan.Benchmarks
 
 		Record item;
 		DbDataReader record;
-		IDataBinder<Record> compiled, reflection;
+		IDataBinder<Record> compiled;//, reflection;
 
-		[Benchmark]
-		public void Reflection()
-		{
-			Bench(reflection, record);
-		}
+		//[Benchmark]
+		//public void Reflection()
+		//{
+		//	Bench(reflection, record);
+		//}
 
 		[Benchmark]
 		public void Compiled()
