@@ -36,10 +36,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Docs", "Docs", "{BF19FE51-6
 		..\readme.md = ..\readme.md
 	EndProjectSection
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sylvan.Data.XBase", "Sylvan.Data.XBase\Sylvan.Data.XBase.csproj", "{E4C6FE26-BB63-448A-A0F1-B81B4E83597B}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sylvan.Data.XBase.Tests", "Sylvan.Data.XBase.Tests\Sylvan.Data.XBase.Tests.csproj", "{8B707398-D57B-47CF-B858-9052E60AC4A9}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Csv", "Csv", "{AEE4C9CD-23ED-4C22-BFEF-AA4E0B5CD2FC}"
 	ProjectSection(SolutionItems) = preProject
 		..\docs\Csv\Examples.md = ..\docs\Csv\Examples.md
@@ -48,11 +44,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Csv", "Csv", "{AEE4C9CD-23E
 		..\docs\Csv\Sylvan.Data.Csv.Design.md = ..\docs\Csv\Sylvan.Data.Csv.Design.md
 		..\docs\Csv\Sylvan.Data.Csv.md = ..\docs\Csv\Sylvan.Data.Csv.md
 		..\docs\Csv\Sylvan.Data.Csv.Releases.md = ..\docs\Csv\Sylvan.Data.Csv.Releases.md
-	EndProjectSection
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "XBase", "XBase", "{9CE1F31C-1293-4598-9617-0613FAC18091}"
-	ProjectSection(SolutionItems) = preProject
-		..\docs\XBase\Sylvan.Data.XBase.md = ..\docs\XBase\Sylvan.Data.XBase.md
 	EndProjectSection
 EndProject
 Global
@@ -149,30 +140,6 @@ Global
 		{7C6433C4-CE77-43D9-B888-A0A7C5B17C4D}.Release|x64.Build.0 = Release|Any CPU
 		{7C6433C4-CE77-43D9-B888-A0A7C5B17C4D}.Release|x86.ActiveCfg = Release|Any CPU
 		{7C6433C4-CE77-43D9-B888-A0A7C5B17C4D}.Release|x86.Build.0 = Release|Any CPU
-		{E4C6FE26-BB63-448A-A0F1-B81B4E83597B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{E4C6FE26-BB63-448A-A0F1-B81B4E83597B}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{E4C6FE26-BB63-448A-A0F1-B81B4E83597B}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{E4C6FE26-BB63-448A-A0F1-B81B4E83597B}.Debug|x64.Build.0 = Debug|Any CPU
-		{E4C6FE26-BB63-448A-A0F1-B81B4E83597B}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{E4C6FE26-BB63-448A-A0F1-B81B4E83597B}.Debug|x86.Build.0 = Debug|Any CPU
-		{E4C6FE26-BB63-448A-A0F1-B81B4E83597B}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{E4C6FE26-BB63-448A-A0F1-B81B4E83597B}.Release|Any CPU.Build.0 = Release|Any CPU
-		{E4C6FE26-BB63-448A-A0F1-B81B4E83597B}.Release|x64.ActiveCfg = Release|Any CPU
-		{E4C6FE26-BB63-448A-A0F1-B81B4E83597B}.Release|x64.Build.0 = Release|Any CPU
-		{E4C6FE26-BB63-448A-A0F1-B81B4E83597B}.Release|x86.ActiveCfg = Release|Any CPU
-		{E4C6FE26-BB63-448A-A0F1-B81B4E83597B}.Release|x86.Build.0 = Release|Any CPU
-		{8B707398-D57B-47CF-B858-9052E60AC4A9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{8B707398-D57B-47CF-B858-9052E60AC4A9}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{8B707398-D57B-47CF-B858-9052E60AC4A9}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{8B707398-D57B-47CF-B858-9052E60AC4A9}.Debug|x64.Build.0 = Debug|Any CPU
-		{8B707398-D57B-47CF-B858-9052E60AC4A9}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{8B707398-D57B-47CF-B858-9052E60AC4A9}.Debug|x86.Build.0 = Debug|Any CPU
-		{8B707398-D57B-47CF-B858-9052E60AC4A9}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{8B707398-D57B-47CF-B858-9052E60AC4A9}.Release|Any CPU.Build.0 = Release|Any CPU
-		{8B707398-D57B-47CF-B858-9052E60AC4A9}.Release|x64.ActiveCfg = Release|Any CPU
-		{8B707398-D57B-47CF-B858-9052E60AC4A9}.Release|x64.Build.0 = Release|Any CPU
-		{8B707398-D57B-47CF-B858-9052E60AC4A9}.Release|x86.ActiveCfg = Release|Any CPU
-		{8B707398-D57B-47CF-B858-9052E60AC4A9}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -182,9 +149,7 @@ Global
 		{9550B025-23E5-47EC-99F5-5D3676357C5A} = {395AEB56-67B5-4510-A19C-9E8811062C87}
 		{50FBCD70-BE18-49FF-8D65-9E0F8ABDC580} = {395AEB56-67B5-4510-A19C-9E8811062C87}
 		{7C6433C4-CE77-43D9-B888-A0A7C5B17C4D} = {395AEB56-67B5-4510-A19C-9E8811062C87}
-		{8B707398-D57B-47CF-B858-9052E60AC4A9} = {395AEB56-67B5-4510-A19C-9E8811062C87}
 		{AEE4C9CD-23ED-4C22-BFEF-AA4E0B5CD2FC} = {BF19FE51-6183-4B10-888C-B85E3BFBA9C0}
-		{9CE1F31C-1293-4598-9617-0613FAC18091} = {BF19FE51-6183-4B10-888C-B85E3BFBA9C0}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {DBE90730-1E35-44B9-9C20-707675F7BD3A}
