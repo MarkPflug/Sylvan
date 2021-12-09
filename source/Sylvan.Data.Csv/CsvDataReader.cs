@@ -145,11 +145,9 @@ namespace Sylvan.Data.Csv
 			return bufferLen;
 		}
 
-		private CsvDataReader(TextReader reader, char[]? buffer, CsvDataReaderOptions? options = null)
+		private CsvDataReader(TextReader reader, char[]? buffer, CsvDataReaderOptions options)
 		{
-			if (options != null)
-				options.Validate();
-			options ??= CsvDataReaderOptions.Default;
+			options.Validate();			
 			this.reader = reader;
 			var bufferLen = GetBufferSize(reader, options);
 #pragma warning disable CS0618 // Type or member is obsolete

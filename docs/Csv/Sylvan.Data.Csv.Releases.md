@@ -1,4 +1,6 @@
 # Sylvan.Data.Csv Release Notes
+_1.1.10_
+- Fix behavior when handling empty files and HasHeader option is false.
 
 _1.1.9_
 - Add support for writing Enum values via CsvDataWriter.

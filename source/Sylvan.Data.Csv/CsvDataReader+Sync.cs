@@ -48,9 +48,10 @@ namespace Sylvan.Data.Csv
 
 		static CsvDataReader CreateInternal(TextReader reader, char[]? buffer, CsvDataReaderOptions? options)
 		{
+			options = options ?? CsvDataReaderOptions.Default;
 			if (reader == null) throw new ArgumentNullException(nameof(reader));
 			var csv = new CsvDataReader(reader, buffer, options);
-			if (!csv.Initialize())
+			if (!csv.Initialize() && options.HasHeaders)
 			{
 				throw new CsvMissingHeadersException();
 			}

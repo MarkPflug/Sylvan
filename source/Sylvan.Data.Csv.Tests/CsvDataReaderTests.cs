@@ -1420,5 +1420,33 @@ namespace Sylvan.Data.Csv
 			Assert.False(csv.Read());
 			Assert.False(csv.NextResult());
 		}
+
+		[Fact]
+		public void EmptyHeader()
+		{
+			Assert.Throws<CsvMissingHeadersException>(() => CsvDataReader.Create(new StringReader("")));
+		}
+
+		[Fact]
+		public void EmptyNoHeader()
+		{
+			var csv = CsvDataReader.Create(new StringReader(""), new CsvDataReaderOptions { HasHeaders = false });
+			Assert.Equal(0, csv.FieldCount);
+			Assert.False(csv.Read());
+		}
+
+		[Fact]
+		public async Task EmptyHeaderAsync()
+		{
+			await Assert.ThrowsAsync<CsvMissingHeadersException>(async () => await CsvDataReader.CreateAsync(new StringReader("")));
+		}
+
+		[Fact]
+		public async Task EmptyNoHeaderAsync()
+		{
+			var csv = await CsvDataReader.CreateAsync(new StringReader(""), new CsvDataReaderOptions { HasHeaders = false });
+			Assert.Equal(0, csv.FieldCount);
+			Assert.False(await csv.ReadAsync());
+		}
 	}
 }
