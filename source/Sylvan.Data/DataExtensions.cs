@@ -21,6 +21,11 @@ namespace Sylvan.Data
 			return new IDataReaderAdpater(r);
 		}
 
+		public static DbDataReader WithColumns(this DbDataReader r, params IDataColumn[] columns)
+		{
+			return new ExtendedDataReader(r, columns);
+		}
+
 		/// <summary>
 		/// Binds the DbDataReader data to produce a sequence of T.
 		/// </summary>
