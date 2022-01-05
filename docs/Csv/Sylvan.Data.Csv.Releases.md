@@ -1,4 +1,8 @@
 # Sylvan.Data.Csv Release Notes
+
+_1.1.11_
+- Fix an issue where the final field in a file would be read incorrectly if it was both quoted and there was no trailing newline.
+
 _1.1.10_
 - Fix behavior when handling empty files and HasHeader option is false.
 

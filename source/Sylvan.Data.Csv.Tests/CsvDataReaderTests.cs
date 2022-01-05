@@ -1448,5 +1448,27 @@ namespace Sylvan.Data.Csv
 			Assert.Equal(0, csv.FieldCount);
 			Assert.False(await csv.ReadAsync());
 		}
+
+		[Fact]
+		public void LastCellQuotedNoNewLine()
+		{
+			var data = new StringReader("a,b\nc,d\nc,\"d\"");
+			var csv = CsvDataReader.Create(data);
+			Assert.True(csv.Read());
+			Assert.True(csv.Read());
+			Assert.Equal("c", csv.GetString(0));
+			Assert.Equal("d", csv.GetString(1));
+		}
+
+		[Fact]
+		public void LastCellQuotedWithNewLine()
+		{
+			var data = new StringReader("a,b\nc,d\nc,\"d\"\n");
+			var csv = CsvDataReader.Create(data);
+			Assert.True(csv.Read());
+			Assert.True(csv.Read());
+			Assert.Equal("c", csv.GetString(0));
+			Assert.Equal("d", csv.GetString(1));
+		}
 	}
 }
