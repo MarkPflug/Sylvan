@@ -522,7 +522,7 @@ namespace Sylvan.Data.Csv
 											{
 												complete = true;
 												last = true;
-												closeQuoteIdx = idx - 1;
+												closeQuoteIdx = idx;
 												fieldEnd = closeQuoteIdx;
 												// the quote (escape) we just saw was a the closing quote
 											}
