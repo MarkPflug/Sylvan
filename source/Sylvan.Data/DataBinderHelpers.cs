@@ -345,7 +345,7 @@ namespace Sylvan.Data
 			return t;
 		}
 
-		public static IDataSeriesRange<TK>? GetSeriesRange<TK>(this object binder, string seriesName)
+		internal static IDataSeriesRange<TK>? GetSeriesRange<TK>(this object binder, string seriesName)
 		{
 			if (binder is IDataSeriesBinder b)
 			{
