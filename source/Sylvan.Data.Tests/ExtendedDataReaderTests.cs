@@ -20,7 +20,7 @@ namespace Sylvan.Data
 				new CustomDataColumn<int>("RowNum", r => csvReader.RowNumber)
 			);
 			var sw = new StringWriter();
-			var wo = new CsvDataWriterOptions { NewLine = "\n" };
+			var wo = new CsvDataWriterOptions { NewLine = "\n", DateTimeFormat = "yyyy-MM-dd" };
 			var csvWriter = CsvDataWriter.Create(sw, wo);
 			csvWriter.Write(data);
 			Assert.Equal("Name,Number,Date,ImportDate,RowNum\na,1010,2022-01-01,2022-01-03,1\nb,1020,2022-01-02,2022-01-03,2\n", sw.ToString());			
