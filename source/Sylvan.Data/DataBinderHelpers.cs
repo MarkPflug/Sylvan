@@ -12,7 +12,7 @@ namespace Sylvan.Data
 	{
 		internal static string? MapName(string columnName, int ordinal)
 		{
-			var name = Regex.Replace(columnName, "[^A-Za-z0-9_]", "");
+			var name = IdentifierStyle.PascalCase.Convert(columnName);
 			if (name.Length == 0)
 			{
 				return "Column" + ordinal;

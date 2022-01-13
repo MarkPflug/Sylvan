@@ -45,6 +45,12 @@ namespace Sylvan.Data
 		public Series<DateTime, int> Values { get; set; }
 	}
 
+	class Record
+	{
+		public int AccountNumber { get; set; }
+		public int DayOfWeek { get; set; }
+	}
+
 	enum Severity
 	{
 		Critical = 1,
@@ -90,6 +96,23 @@ namespace Sylvan.Data
 		//		var item = binder.GetRecord(data);
 		//	}
 		//}
+
+		[Theory]
+		[InlineData("Account Number,Day Of Week\n1,2\n")]
+		[InlineData("Account_Number,day_of_week\n1,2\n")]
+		[InlineData("account-number,day-of-week\n1,2\n")]
+		[InlineData("accountnumber,dayofweek\n1,2\n")]
+		[InlineData("ACCOUNTNUMBER,DAYOFWEEK\n1,2\n")]
+		public void BinderHeaderMapping(string csvData)
+		{
+			var csv = CsvDataReader.Create(new StringReader(csvData));
+
+			foreach(var record in csv.GetRecords<Record>())
+			{
+				Assert.Equal(1, record.AccountNumber);
+				Assert.Equal(2, record.DayOfWeek);
+			}
+		}
 
 		[Fact]
 		public void Test2()
