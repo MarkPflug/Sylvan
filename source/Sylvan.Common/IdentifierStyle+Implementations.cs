@@ -5,8 +5,6 @@ namespace Sylvan
 {
 	abstract partial class IdentifierStyle
 	{
-
-
 		/// <summary>
 		/// A "camelCase" identifier style.
 		/// </summary>
@@ -16,13 +14,12 @@ namespace Sylvan
 		/// A "database_name" identifier style".
 		/// </summary>
 		public static readonly IdentifierStyle Database = new QuotedIdentifierStyle(CasingStyle.LowerCase, '_');
-
-
 	}
-		/// <summary>
-		/// The camel case identifier style.
-		/// </summary>
-		sealed class CamelCaseStyle : IdentifierStyle
+
+	/// <summary>
+	/// The camel case identifier style.
+	/// </summary>
+	sealed class CamelCaseStyle : IdentifierStyle
 	{
 		/// <inheritdoc/>
 		public override string Convert(string str)
@@ -65,8 +62,6 @@ namespace Sylvan
 			return sw.ToString();
 		}
 	}
-
-	
 
 	/// <summary>
 	/// An identifier style that uses underscores to separate segments, commonly called "snake_case".

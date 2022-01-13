@@ -9,7 +9,7 @@ namespace Sylvan
 	/// The casing style used within segments.
 	/// </summary>
 #if PublicCasingStyle
-// hack to allow it linked internally to Sylvan.Data
+	// hack to allow it linked internally to Sylvan.Data
 	public
 #endif
 	enum CasingStyle
@@ -115,7 +115,7 @@ namespace Sylvan
 
 			for (var i = 0; i < identifier.Length; i++)
 			{
-			startLabel:
+startLabel:
 				var c = identifier[i];
 				var cat = char.GetUnicodeCategory(c);
 				switch (cat)
@@ -161,7 +161,7 @@ namespace Sylvan
 						}
 						i = identifier.Length;
 
-					done:
+done:
 						break;
 					case UnicodeCategory.LowercaseLetter:
 						if (length == 0)
@@ -196,7 +196,7 @@ namespace Sylvan
 						}
 						i = identifier.Length;
 
-					done2:
+done2:
 						break;
 					default:
 						if (length > 0)
