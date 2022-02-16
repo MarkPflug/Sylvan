@@ -498,6 +498,25 @@ namespace Sylvan.Data
 			Assert.Equal(0x34, r.Data.data[1]);
 			Assert.Equal(new Version(1, 2, 3, 4), r.Version);
 		}
+
+		[Fact]
+		public void BindErrorTest()
+		{
+			var dataStr = "Id,Name,Date\n1,a,broken";
+			var schema =
+				new Schema.Builder()
+				.Add<int>()
+				.Add<string>()
+				.Add<DateTime>()
+				.Build();
+
+			var data = CsvDataReader.Create(new StringReader(dataStr), new CsvDataReaderOptions { Schema = new CsvSchema(schema) });
+			var binder = DataBinder.Create<MyDataRecord>(data, new DataBinderOptions { BindingMode = DataBindingMode.All });
+			data.Read();
+			var record = new MyDataRecord();
+			var ex = Assert.Throws<DataBinderException>(() => binder.Bind(data, record));
+			Assert.Equal(2, ex.Ordinal);
+		}
 	}
 
 	class Simple
