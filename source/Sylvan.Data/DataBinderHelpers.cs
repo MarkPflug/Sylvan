@@ -140,7 +140,7 @@ namespace Sylvan.Data
 			}
 			else
 			{
-				throw new InvalidEnumValueDataBinderException(typeof(TE), value);
+				throw new InvalidEnumValueException(typeof(TE), value);
 			}
 		}
 

@@ -118,12 +118,16 @@ namespace Sylvan.Data
 			var recordParam = Expression.Parameter(drType);
 			var contextParam = Expression.Parameter(typeof(BinderContext));
 			var itemParam = Expression.Parameter(recordType);
+			var idxVar = Expression.Parameter(typeof(int));
 			//var localsMap = new Dictionary<Type, ParameterExpression>();
-			var locals = new List<ParameterExpression>();
+			var stateVar = Expression.Variable(typeof(object[]));
 			var bodyExpressions = new List<Expression>();
-
 			var cultureInfoExpr = Expression.Variable(typeof(CultureInfo));
+
+			var locals = new List<ParameterExpression>();
 			locals.Add(cultureInfoExpr);
+			locals.Add(idxVar);
+			locals.Add(stateVar);
 
 			// To provide special handling empty string as a null for a nullable primtivite type
 			// we want to construct the following:
@@ -145,8 +149,6 @@ namespace Sylvan.Data
 				)
 			);
 
-			var stateVar = Expression.Variable(typeof(object[]));
-			locals.Add(stateVar);
 			bodyExpressions.Add(
 				Expression
 				.Assign(
@@ -382,6 +384,7 @@ namespace Sylvan.Data
 				}
 
 				var setExpr = Expression.Call(itemParam, setter, expr);
+				bodyExpressions.Add(Expression.Assign(idxVar, ordinalExpr));
 				bodyExpressions.Add(setExpr);
 				physicalColumns.Remove(col);
 				properties.Remove(key);
@@ -430,7 +433,21 @@ namespace Sylvan.Data
 			}
 
 			this.state = state.ToArray();
-			var body = Expression.Block(locals, bodyExpressions);
+			Expression body = Expression.Block(bodyExpressions);
+
+			var exParam = Expression.Parameter(typeof(Exception));
+			var exCtor =
+				typeof(DataBinderException)
+				.GetConstructor(
+					BindingFlags.NonPublic | BindingFlags.Instance,
+					null,
+					new Type[] { typeof(int), typeof(Exception) },
+					null
+				);
+
+			var catchExpr = Expression.Catch(exParam, Expression.Throw(Expression.New(exCtor, idxVar, exParam)));
+			body = Expression.TryCatch(body, catchExpr);
+			body = Expression.Block(locals, body);
 
 			var lf = Expression.Lambda<Action<DbDataReader, BinderContext, T>>(body, recordParam, contextParam, itemParam);
 			this.recordBinderFunction = lf.Compile();
