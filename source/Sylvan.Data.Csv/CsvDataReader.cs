@@ -139,7 +139,9 @@ namespace Sylvan.Data.Csv
 				var s = sr.BaseStream;
 				if (s.CanSeek && s.Length < bufferLen)
 				{
-					bufferLen = (int)s.Length;
+					// allocate an extra byte, which allows detecting
+					// that the end of stream is reached.
+					bufferLen = (int)s.Length + 1;
 				}
 			}
 			return bufferLen;
@@ -1503,7 +1505,7 @@ namespace Sylvan.Data.Csv
 		}
 
 		/// <inheritdoc/>
-		public override int GetValues(object?[] values)
+		public override int GetValues(object[] values)
 		{
 			var count = Math.Min(this.fieldCount, values.Length);
 			for (int i = 0; i < count; i++)

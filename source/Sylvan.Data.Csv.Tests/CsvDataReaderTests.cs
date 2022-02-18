@@ -1470,5 +1470,20 @@ namespace Sylvan.Data.Csv
 			Assert.Equal("c", csv.GetString(0));
 			Assert.Equal("d", csv.GetString(1));
 		}
+
+		[Fact]
+		public async Task OneLine()
+		{
+			var data = "a,b,c";
+			var dataBytes = Encoding.UTF8.GetBytes(data);
+			var reader = new StreamReader(new MemoryStream(dataBytes),Encoding.UTF8);
+			
+			var opts = new CsvDataReaderOptions { HasHeaders = false };
+			var csv = await CsvDataReader.CreateAsync(reader, opts);
+			while (csv.Read())
+			{
+
+			}
+		}
 	}
 }
