@@ -171,6 +171,6 @@ var records =
 // create a DbDataReader over the anonymous records.
 var recordReader = records.AsDataReader();
 
-var csvWriter = CsvDataWriter.Create("demo.csv");
+using var csvWriter = CsvDataWriter.Create("demo.csv");
 await csvWriter.WriteAsync(recordReader);
 ```
