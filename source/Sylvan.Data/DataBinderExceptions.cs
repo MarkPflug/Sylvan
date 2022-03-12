@@ -6,7 +6,7 @@ namespace Sylvan.Data
 	/// <summary>
 	/// An exception thrown when a data binder encounters an invalid enum value.
 	/// </summary>
-	public sealed class InvalidEnumValueDataBinderException : FormatException
+	public sealed class InvalidEnumValueException : FormatException
 	{
 		/// <summary>
 		/// The invalid string value.
@@ -18,7 +18,7 @@ namespace Sylvan.Data
 		/// </summary>
 		public Type EnumType { get; }
 
-		internal InvalidEnumValueDataBinderException(Type enumType, string value)
+		internal InvalidEnumValueException(Type enumType, string value)
 		{
 			this.EnumType = enumType;
 			this.Value = value;
@@ -28,7 +28,41 @@ namespace Sylvan.Data
 	/// <summary>
 	/// A base type for exceptions thrown when binding data.
 	/// </summary>
-	public abstract class DataBinderException : Exception { }
+	public class DataBinderException : Exception
+	{
+		const string DefaultMessage = "DataBinder encountered an exception.";
+
+		/// <summary>
+		/// Gets the ordinal of the column that encountered an exception.
+		/// </summary>
+		public int Ordinal
+		{
+			get;
+		}
+
+		internal DataBinderException()
+		{
+			this.Ordinal = -1;
+		}
+
+		internal DataBinderException(int ordinal, string message)
+			: base(message)
+		{
+			this.Ordinal = ordinal;
+		}
+
+		internal DataBinderException(int ordinal, Exception exception)
+			: base(DefaultMessage, exception)
+		{
+			this.Ordinal = ordinal;
+		}
+
+		internal DataBinderException(int ordinal, string message, Exception exception) 
+			: base(message, exception)
+		{
+			this.Ordinal = ordinal;
+		}
+	}
 
 	/// <summary>
 	/// An exception thrown when a data binder enounters unbound columns or properties and is configured
@@ -39,7 +73,7 @@ namespace Sylvan.Data
 		/// <summary>
 		/// The names of the unbound properties.
 		/// </summary>
-		public IReadOnlyList<string> UnboundProperties { get;}
+		public IReadOnlyList<string> UnboundProperties { get; }
 
 		/// <summary>
 		/// The names of the unbound columns.

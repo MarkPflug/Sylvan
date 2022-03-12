@@ -1,17 +1,17 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
-    <VersionPrefix>0.1.3</VersionPrefix>
-    <Description>A .NET library of types for working with data objects.</Description>
-    <PackageTags>data;datareader;ADO.NET</PackageTags>    
-    <Nullable>enable</Nullable>
-	<!--TODO: <GenerateDocumentationFile>true</GenerateDocumentationFile>-->
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>netstandard2.0</TargetFramework>
+		<VersionPrefix>0.2.0</VersionPrefix>
+		<Description>A .NET library of types for working with data objects.</Description>
+		<PackageTags>data;datareader;ADO.NET</PackageTags>
+		<Nullable>enable</Nullable>
+		<!--TODO: <GenerateDocumentationFile>true</GenerateDocumentationFile>-->
+	</PropertyGroup>
 
-  <ItemGroup>
-    <Compile Include="..\Sylvan.Common\IdentifierStyle+PascalCaseStyle.cs" Link="IdentifierStyle+PascalCaseStyle.cs" />
-    <Compile Include="..\Sylvan.Common\IdentifierStyle.cs" Link="IdentifierStyle.cs" />
-  </ItemGroup>
+	<ItemGroup>
+		<Compile Include="..\Sylvan.Common\IdentifierStyle+PascalCaseStyle.cs" Link="IdentifierStyle+PascalCaseStyle.cs" />
+		<Compile Include="..\Sylvan.Common\IdentifierStyle.cs" Link="IdentifierStyle.cs" />
+	</ItemGroup>
 
 </Project>
