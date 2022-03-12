@@ -3,7 +3,6 @@
 	<PropertyGroup>
 		<TargetFramework>netstandard2.0</TargetFramework>
 		<VersionPrefix>0.2.0</VersionPrefix>
-		<VersionSuffix>b0001</VersionSuffix>
 		<Description>A .NET library of types for working with data objects.</Description>
 		<PackageTags>data;datareader;ADO.NET</PackageTags>
 		<Nullable>enable</Nullable>
