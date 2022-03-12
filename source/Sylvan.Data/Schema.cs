@@ -26,12 +26,17 @@ namespace Sylvan.Data
 			return default;
 		}
 
-		internal static Schema FromSchemaTable(DataTable dt)
+		/// <summary>
+		/// Gets a Schema instance defining the schema from schemaTable.
+		/// </summary>
+		/// <param name="schemaTable">A DataTable returned from a <see cref="IDataReader.GetSchemaTable()"/></param>
+		/// <returns>A schema instance.</returns>
+		public static Schema FromSchemaTable(DataTable schemaTable)
 		{
-			var builder = 
+			var builder =
 				new Builder();
 
-			foreach(DataRow? row in dt.Rows)
+			foreach (DataRow? row in schemaTable.Rows)
 			{
 				if (row == null) continue;
 
@@ -40,21 +45,21 @@ namespace Sylvan.Data
 				cb.ColumnName = GetValue<string>(row, SchemaTableColumn.ColumnName) ?? string.Empty;
 				cb.ColumnOrdinal = GetValue<int?>(row, SchemaTableColumn.ColumnOrdinal);
 				cb.DataType = GetValue<Type>(row, SchemaTableColumn.DataType);
-				builder.Add(cb);				
+				builder.Add(cb);
 			}
 
-			return builder.Build();			
+			return builder.Build();
 		}
 
 		internal static Schema GetWeakSchema(IDataReader dr)
 		{
 			var builder = new Builder();
 
-			for(int i = 0; i < dr.FieldCount; i++)
+			for (int i = 0; i < dr.FieldCount; i++)
 			{
 				var name = dr.GetName(i);
 				var type = dr.GetFieldType(i);
-				
+
 				var cb = new Column.Builder();
 				// without a schema, have to assume can be null.
 				cb.AllowDBNull = true;
