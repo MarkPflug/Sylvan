@@ -149,7 +149,7 @@ namespace Sylvan.Data.Csv
 
 		private CsvDataReader(TextReader reader, char[]? buffer, CsvDataReaderOptions options)
 		{
-			options.Validate();			
+			options.Validate();
 			this.reader = reader;
 			var bufferLen = GetBufferSize(reader, options);
 #pragma warning disable CS0618 // Type or member is obsolete
@@ -1069,7 +1069,7 @@ namespace Sylvan.Data.Csv
 			DateTimeOffset value;
 #if SPAN
 			var span = this.GetFieldSpan(ordinal);
-			
+
 			if (IsoDate.TryParse(span, out value))
 				return value;
 
@@ -1268,23 +1268,14 @@ namespace Sylvan.Data.Csv
 			return string.Empty;
 		}
 
-#if SPAN
-
-		/// <summary>
-		/// Gets a span containing the characters of a field.
-		/// </summary>
-		/// <param name="ordinal">The field ordinal.</param>
-		/// <returns>A span containing the characters of the field.</returns>
-		internal ReadOnlySpan<char> GetFieldSpan(int ordinal)
-		{
-			var s = GetField(ordinal);
-			return s.ToSpan();
-		}
-
-#endif
-
 		internal readonly struct CharSpan
 		{
+			internal readonly static CharSpan Empty = new CharSpan(Array.Empty<char>(), 0, 0);
+
+			public readonly char[] buffer;
+			public readonly int offset;
+			public readonly int length;
+
 			public CharSpan(char[] buffer, int offset, int length)
 			{
 				Debug.Assert(offset >= 0);
@@ -1329,10 +1320,6 @@ namespace Sylvan.Data.Csv
 
 #endif
 
-			public readonly char[] buffer;
-			public readonly int offset;
-			public readonly int length;
-
 #if DEBUG
 			public override string ToString()
 			{
@@ -1348,10 +1335,8 @@ namespace Sylvan.Data.Csv
 			{
 				return GetFieldUnsafe(ordinal);
 			}
-			// this is only called from numeric accessors
-			// which would effectively be the same as trying to parse
-			// an empty string.
-			throw new FormatException();
+
+			return CharSpan.Empty;
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1688,6 +1673,18 @@ namespace Sylvan.Data.Csv
 		}
 
 #if SPAN
+
+		/// <summary>
+		/// Gets a span containing the characters of a field.
+		/// </summary>
+		/// <remarks> The contents of the returned span will have any quotes removed and be fully unescaped. </remarks>
+		/// <param name="ordinal">The field ordinal.</param>
+		/// <returns>A span containing the characters of the field.</returns>
+		public ReadOnlySpan<char> GetFieldSpan(int ordinal)
+		{
+			var s = GetField(ordinal);
+			return s.ToSpan();
+		}
 
 		/// <summary>
 		/// Gets a span containing the current record data, including the line ending.

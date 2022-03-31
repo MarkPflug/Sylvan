@@ -1,5 +1,8 @@
 # Sylvan.Data.Csv Release Notes
 
+_1.1.13_
+- Expose `CsvDataReader.GetFieldSpan`.
+
 _1.1.12_
 - Fix an issue where CsvRecordTooLargeException would be thrown for a single-line file.
 
