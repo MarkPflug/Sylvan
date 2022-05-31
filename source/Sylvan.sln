@@ -46,6 +46,12 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Csv", "Csv", "{AEE4C9CD-23E
 		..\docs\Csv\Sylvan.Data.Csv.Releases.md = ..\docs\Csv\Sylvan.Data.Csv.Releases.md
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Data", "Data", "{BD69AD0D-66F4-491E-A362-43DDB4C2ECC9}"
+	ProjectSection(SolutionItems) = preProject
+		..\docs\Data\Sylvan.Data.md = ..\docs\Data\Sylvan.Data.md
+		..\docs\Data\Sylvan.Data.Releases.md = ..\docs\Data\Sylvan.Data.Releases.md
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -150,6 +156,7 @@ Global
 		{50FBCD70-BE18-49FF-8D65-9E0F8ABDC580} = {395AEB56-67B5-4510-A19C-9E8811062C87}
 		{7C6433C4-CE77-43D9-B888-A0A7C5B17C4D} = {395AEB56-67B5-4510-A19C-9E8811062C87}
 		{AEE4C9CD-23ED-4C22-BFEF-AA4E0B5CD2FC} = {BF19FE51-6183-4B10-888C-B85E3BFBA9C0}
+		{BD69AD0D-66F4-491E-A362-43DDB4C2ECC9} = {BF19FE51-6183-4B10-888C-B85E3BFBA9C0}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {DBE90730-1E35-44B9-9C20-707675F7BD3A}

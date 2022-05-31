@@ -42,6 +42,24 @@ namespace Sylvan.Data
 			}
 		}
 
+#if IAsyncEnumerable
+		/// <summary>
+		/// Binds the DbDataReader data to produce a sequence of T.
+		/// </summary>
+		/// <typeparam name="T">The type of record to bind to.</typeparam>
+		/// <param name="reader">The data reader.</param>
+		public static async IAsyncEnumerable<T> GetRecordsAsync<T>(this DbDataReader reader) where T : new()
+		{
+			var binder = DataBinder.Create<T>(reader);
+			while (await reader.ReadAsync())
+			{
+				var item = new T();
+				binder.Bind(reader, item);
+				yield return item;
+			}
+		}
+#endif
+
 		/// <example>
 		/// var reader = seq.AsDataReader()
 		/// </example>
@@ -114,14 +132,16 @@ namespace Sylvan.Data
 			return new TransformDataReader(reader, null, predicate);
 		}
 
-		//public static DbDataReader Take(this DbDataReader reader, int count)
-		//{
-		//	throw new NotImplementedException();
-		//}
+		public static DbDataReader Take(this DbDataReader reader, int count)
+		{
+			if(count < 0) throw new ArgumentOutOfRangeException(nameof(count));
+			return new SkipTakeDataReader(reader, -1, count);
+		}
 
-		//public static DbDataReader Skip(this DbDataReader reader, int count)
-		//{
-		//	throw new NotImplementedException();
-		//}
+		public static DbDataReader Skip(this DbDataReader reader, int count)
+		{
+			if (count < 0) throw new ArgumentOutOfRangeException(nameof(count));
+			return new SkipTakeDataReader(reader, count, -1);
+		}
 	}
 }

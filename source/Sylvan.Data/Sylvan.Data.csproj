@@ -1,12 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFramework>netstandard2.0</TargetFramework>
-		<VersionPrefix>0.2.0</VersionPrefix>
+		<TargetFrameworks>netstandard2.0;netstandard2.1</TargetFrameworks>
+		<VersionPrefix>0.2.1</VersionPrefix>
 		<Description>A .NET library of types for working with data objects.</Description>
 		<PackageTags>data;datareader;ADO.NET</PackageTags>
 		<Nullable>enable</Nullable>
 		<!--TODO: <GenerateDocumentationFile>true</GenerateDocumentationFile>-->
+		<DefineConstants Condition="$(TargetFramework) == 'netstandard2.1'">IAsyncEnumerable</DefineConstants>
 	</PropertyGroup>
 
 	<ItemGroup>
