@@ -143,5 +143,11 @@ namespace Sylvan.Data
 			if (count < 0) throw new ArgumentOutOfRangeException(nameof(count));
 			return new SkipTakeDataReader(reader, count, -1);
 		}
+
+		public static DbDataReader TakeWhile(this DbDataReader reader, Func<DbDataReader, bool> predicate)
+		{
+			if (predicate == null) throw new ArgumentNullException(nameof(predicate));
+			return new TakeWhileDataReader(reader, predicate);
+		}
 	}
 }

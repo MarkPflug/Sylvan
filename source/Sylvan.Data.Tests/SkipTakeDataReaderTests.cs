@@ -47,4 +47,20 @@ public class SkipTakeDataReaderTests
 		}
 		Assert.False(reader.Read());
 	}
+
+	[Fact]
+	public void TakeWhileTest()
+	{
+		var seq = Enumerable.Range(0, 100).Select(i => new { Name = "test" + i, Value = i });
+		var reader = seq.AsDataReader();
+		
+		reader = reader.TakeWhile(dr => dr.GetInt32(1) < 50);
+
+		for (int i = 0; i < 50; i++)
+		{
+			Assert.True(reader.Read());
+			Assert.Equal(i, reader.GetInt32(1));
+		}
+		Assert.False(reader.Read());
+	}
 }
