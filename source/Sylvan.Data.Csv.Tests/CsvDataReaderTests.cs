@@ -1393,7 +1393,8 @@ namespace Sylvan.Data.Csv
 		[Fact]
 		public void Issue_79_NoHeaders()
 		{
-			var opts = new CsvDataReaderOptions { 
+			var opts = new CsvDataReaderOptions
+			{
 				ResultSetMode = ResultSetMode.MultiResult,
 				HasHeaders = false,
 			};
@@ -1476,14 +1477,46 @@ namespace Sylvan.Data.Csv
 		{
 			var data = "a,b,c";
 			var dataBytes = Encoding.UTF8.GetBytes(data);
-			var reader = new StreamReader(new MemoryStream(dataBytes),Encoding.UTF8);
-			
+			var reader = new StreamReader(new MemoryStream(dataBytes), Encoding.UTF8);
+
 			var opts = new CsvDataReaderOptions { HasHeaders = false };
 			var csv = await CsvDataReader.CreateAsync(reader, opts);
 			while (csv.Read())
 			{
 
 			}
+		}
+
+		[Fact]
+		public async Task CommentOnlyNoLineTerminatorAsync()
+		{
+			var csv = await CsvDataReader.CreateAsync(new StringReader("# comment no line terminator"), new CsvDataReaderOptions { HasHeaders = false });
+			Assert.Equal(0, csv.FieldCount);
+			Assert.False(await csv.ReadAsync());
+		}
+
+		[Fact]
+		public async Task CommentOnlyWithLineTerminatorAsync()
+		{
+			var csv = await CsvDataReader.CreateAsync(new StringReader("# comment with line terminator\n"), new CsvDataReaderOptions { HasHeaders = false });
+			Assert.Equal(0, csv.FieldCount);
+			Assert.False(await csv.ReadAsync());
+		}
+
+		[Fact]
+		public void CommentOnlyNoLineTerminator()
+		{
+			var csv = CsvDataReader.Create(new StringReader("# comment no line terminator"), new CsvDataReaderOptions { HasHeaders = false });
+			Assert.Equal(0, csv.FieldCount);
+			Assert.False(csv.Read());
+		}
+
+		[Fact]
+		public void CommentOnlyWithLineTerminator()
+		{
+			var csv = CsvDataReader.Create(new StringReader("# comment with line terminator\n"), new CsvDataReaderOptions { HasHeaders = false });
+			Assert.Equal(0, csv.FieldCount);
+			Assert.False(csv.Read());
 		}
 	}
 }

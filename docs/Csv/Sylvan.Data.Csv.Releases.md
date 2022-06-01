@@ -1,5 +1,8 @@
 # Sylvan.Data.Csv Release Notes
 
+_1.1.14_
+- Fix for reading CSV file containing a comment at the end of the file with no line terminator.
+
 _1.1.13_
 - Expose `CsvDataReader.GetFieldSpan`.
 
