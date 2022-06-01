@@ -172,7 +172,7 @@ namespace Sylvan.Data.Csv
 			{
 				if (result == ReadResult.Incomplete)
 				{
-					if (recordStart == 0)
+					if (recordStart == 0 && this.bufferEnd == this.buffer.Length)
 					{
 						throw new CsvRecordTooLargeException(this.RowNumber, 0, null, null);
 					}
