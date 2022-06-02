@@ -1,5 +1,8 @@
 # Sylvan.Data.Csv Release Notes
 
+_1.1.15_
+- Fix for CSV comment not being terminated, and being included in subsequent row.
+
 _1.1.14_
 - Fix for reading CSV file containing a comment at the end of the file with no line terminator.
 
