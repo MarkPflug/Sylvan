@@ -1518,5 +1518,21 @@ namespace Sylvan.Data.Csv
 			Assert.Equal(0, csv.FieldCount);
 			Assert.False(csv.Read());
 		}
+
+		[Fact]
+		public void CommentTermination()
+		{
+			var data = "#comment\na,b\n1,2\n";
+			var opts = new CsvDataReaderOptions { HasHeaders = false };
+			var csv = CsvDataReader.Create(new StringReader(data), opts);
+
+			Assert.True(csv.Read());
+			Assert.Equal("a", csv.GetString(0));
+			Assert.Equal("b", csv.GetString(1));
+			Assert.True(csv.Read());
+			Assert.Equal("1", csv.GetString(0));
+			Assert.Equal("2", csv.GetString(1));
+			Assert.False(csv.Read());
+		}
 	}
 }
