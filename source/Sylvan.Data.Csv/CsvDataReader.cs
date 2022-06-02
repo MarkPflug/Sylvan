@@ -683,12 +683,14 @@ namespace Sylvan.Data.Csv
 							this.commentHandler.HandleComment(this, str);
 						}
 						idx = i;
+						this.recordStart = idx;
 						return ReadResult.True;
 					}
 				}
 				if (atEndOfText)
 				{
 					idx = i;
+					this.recordStart = idx;
 					return ReadResult.True;
 				}
 				return ReadResult.Incomplete;
