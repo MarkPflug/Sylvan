@@ -1,6 +1,8 @@
+using Sylvan.Data.Excel;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Data.SqlClient;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -28,6 +30,21 @@ namespace Sylvan.Data.Csv
 			var csv = CsvDataWriter.Create(sw, opts?? TestOptions);
 			csv.Write(dr);
 			return sw.ToString();
+		}
+
+		[Fact]
+		public void VariableColumn()
+		{
+			var csvData = "a,b,c\n1,2,3\n1,2,3,4\n1,2\n1\n,,,,5\n";
+			var r = 
+				CsvDataReader.Create(new StringReader(csvData))
+				.AsVariableField(r => r.RowFieldCount);
+			var sw = new StringWriter();
+			var cw = CsvDataWriter.Create(sw, new CsvDataWriterOptions { NewLine = "\n" });
+			cw.Write(r);
+
+			var str = sw.ToString();
+			Assert.Equal(csvData, str);
 		}
 
 		[Fact]

@@ -79,7 +79,7 @@ namespace Sylvan.Data.Csv
 			state = State.Initializing;
 			await FillBufferAsync(cancel).ConfigureAwait(false);
 
-			bool skip = true;
+			bool skip = resultSetMode == ResultSetMode.MultiResult;
 			while (skip)
 			{
 				skip = false;

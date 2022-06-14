@@ -22,6 +22,10 @@
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+
+	<ProjectReadmeFile>$(MSBuildProjectDirectory)packagereadme.md</ProjectReadmeFile>
+	<PackageReadmeFile
+		Condition="Exists($(ProjectReadmeFile))">$(ProjectReadmeFile)</PackageReadmeFile>
     
     
     <IsTestProject Condition="$(MSBuildProjectName.EndsWith('.Tests')) == 'true'">true</IsTestProject>

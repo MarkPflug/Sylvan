@@ -7,7 +7,6 @@ using System.IO;
 
 namespace Sylvan.Data
 {
-
 	public interface IDataColumn
 	{
 		string Name { get; }

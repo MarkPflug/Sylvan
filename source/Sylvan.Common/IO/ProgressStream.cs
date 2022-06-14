@@ -11,7 +11,7 @@ namespace Sylvan.IO
 		long length;
 		long progressAccumulator;
 
-		public ProgressStream(Stream inner, Action<double> callback, double factor)
+		public ProgressStream(Stream inner, Action<double> callback, double factor = 0.01)
 		{
 			this.inner = inner;
 			this.callback = callback;
@@ -39,15 +39,20 @@ namespace Sylvan.IO
 		{
 			var l = inner.Read(buffer, offset, count);
 			progressAccumulator += l;
-			bool needsUpdate = false;
-			while (progressSize > 0 && progressAccumulator > progressSize)
+			
+			bool needsUpdate = inner.Length == 0; // if the inner stream is empty, force a progress update
+
+			while (progressSize > 0 && progressAccumulator >= progressSize)
 			{
 				progressAccumulator -= progressSize;
 				needsUpdate = true;
 			}
 			if (needsUpdate)
 			{
-				callback((double)inner.Position / inner.Length);
+				var progress = inner.Length == 0
+					? 1.0d
+					: (double)inner.Position / inner.Length;
+				callback(progress);
 			}
 			return l;
 		}

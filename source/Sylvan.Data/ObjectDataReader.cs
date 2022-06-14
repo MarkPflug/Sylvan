@@ -9,7 +9,7 @@ using System.Reflection;
 
 namespace Sylvan.Data
 {
-	public static class ObjectDataReader
+	static class ObjectDataReader
 	{
 		/// <summary>
 		/// Creates a DbDataReader over a sequence of objects.

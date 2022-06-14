@@ -23,6 +23,8 @@ namespace Sylvan.Data.Csv
 
 		class FieldInfo
 		{
+			internal static readonly FieldInfo Generic = new FieldInfo(true, ObjectFieldWriter.Instance);
+
 			public FieldInfo(bool allowNull, IFieldWriter writer)
 			{
 				this.allowNull = allowNull;
