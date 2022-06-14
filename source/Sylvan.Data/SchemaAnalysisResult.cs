@@ -5,6 +5,9 @@ using System.Text.RegularExpressions;
 
 namespace Sylvan.Data;
 
+/// <summary>
+/// The result of a data analysis process.
+/// </summary>
 public class AnalysisResult : IEnumerable<ColumnInfo>
 {
 	readonly ColumnInfo[] columns;
@@ -16,6 +19,10 @@ public class AnalysisResult : IEnumerable<ColumnInfo>
 		this.columns = columns;
 	}
 
+	/// <summary>
+	/// Enumerates the columns in the analysis result.
+	/// </summary>
+	/// <returns></returns>
 	public IEnumerator<ColumnInfo> GetEnumerator()
 	{
 		foreach (var col in columns)
@@ -27,11 +34,18 @@ public class AnalysisResult : IEnumerable<ColumnInfo>
 		return this.GetEnumerator();
 	}
 
+	/// <summary>
+	/// Gets a schema representing the analysis result.
+	/// </summary>
+	/// <returns></returns>
 	public Schema GetSchema()
 	{
 		return GetSchemaBuilder().Build();
 	}
 
+	/// <summary>
+	/// Gets the schema builder for the analysis result.
+	/// </summary>
 	public Schema.Builder GetSchemaBuilder()
 	{
 		var series = detectSeries ? DetectSeries(columns) : null;

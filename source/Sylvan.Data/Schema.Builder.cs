@@ -22,8 +22,14 @@ partial class Schema
 			this.columns = new List<Column.Builder>();
 		}
 
+		/// <summary>
+		/// Gets the number of columns the builder defines.
+		/// </summary>
 		public int Count { get => this.columns.Count; }
 
+		/// <summary>
+		/// Gets the builder at the given ordinal.
+		/// </summary>
 		public Column.Builder this[int ordinal]
 		{
 			get
@@ -46,6 +52,9 @@ partial class Schema
 			}
 		}
 
+		/// <summary>
+		/// Adds a column to the schema.
+		/// </summary>
 		public Builder Add(Column.Builder columnBuilder)
 		{
 			var ordinal = this.columns.Count;
@@ -57,6 +66,9 @@ partial class Schema
 			return this;
 		}
 
+		/// <summary>
+		/// Adds a column to the schema.
+		/// </summary>
 		public Builder Add<T>(string? name = null, bool allowNull = false)
 		{
 			var t = typeof(T);
@@ -85,6 +97,10 @@ partial class Schema
 			return new Schema(cols);
 		}
 
+		/// <summary>
+		/// Gets the columns in the schema.
+		/// </summary>
+		/// <returns></returns>
 		public IEnumerator<Column.Builder> GetEnumerator()
 		{
 			foreach (var col in this.columns)

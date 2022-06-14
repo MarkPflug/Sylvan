@@ -3,6 +3,8 @@
 _0.2.2_
 - Expose DbDataReaderAdapter base class.
 - Add DbDataReader.AsVariableField extension method.
+- Add `TakeWhile`.
+- Add API documentation.
 
 _0.2.1_
 - Adds `DbDataReader.Skip`/`Take` extension methods.

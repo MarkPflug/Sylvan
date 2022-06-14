@@ -8,8 +8,14 @@ partial class Schema
 {
 	public sealed partial class Column : DbColumn
 	{
+		/// <summary>
+		/// Gets the ordinal of the column in the base data source.
+		/// </summary>
 		public int? BaseColumnOrdinal { get; private set; }
 
+		/// <summary>
+		/// Gets the data type of the column.
+		/// </summary>
 		public DbType? CommonDataType { get; private set; }
 
 		internal int? SeriesOrdinal { get; private set; }
@@ -22,8 +28,14 @@ partial class Schema
 
 		internal Type? SeriesType { get; private set; }
 
+		/// <summary>
+		/// Gets the preferred format string for the column data.
+		/// </summary>
 		public string? Format { get; private set; }
 
+		/// <summary>
+		/// Gets the metadata property value with the given name.
+		/// </summary>
 		public override object? this[string property]
 		{
 			get

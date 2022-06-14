@@ -48,7 +48,20 @@ public static class DataExtensions
 		}
 	}
 
+	/// <summary>
+	/// Creates a DbDataReader that reads until a certain condition is met.
+	/// </summary>
+	/// <param name="reader">The base DbDataReader</param>
+	/// <param name="predicate">The predicate, which once false will end the reader.</param>
+	/// <returns>A DbDataReader</returns>
+	public static DbDataReader TakeWhile(this DbDataReader reader, Func<DbDataReader, bool> predicate)
+	{
+		if (predicate == null) throw new ArgumentNullException(nameof(predicate));
+		return new TakeWhileDataReader(reader, predicate);
+	}
+
 #if IAsyncEnumerable
+
 	/// <summary>
 	/// Binds the DbDataReader data to produce a sequence of T.
 	/// </summary>
@@ -173,6 +186,7 @@ public static class DataExtensions
 	/// </remarks>
 	/// <param name="reader">A DbDataReader implementation.</param>
 	/// <param name="rowFieldCountAccessor">A function that returns the number of </param>
+	/// <param name="fieldType">Gets the type of the extra fields</param>
 	public static DbDataReader AsVariableField<T>(this T reader, Func<T, int> rowFieldCountAccessor, Type? fieldType = null)
 		where T : DbDataReader
 	{

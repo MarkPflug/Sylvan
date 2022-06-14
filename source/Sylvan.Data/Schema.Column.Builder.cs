@@ -6,19 +6,31 @@ namespace Sylvan.Data;
 
 partial class Schema
 {
+	/// <summary>
+	/// A column in the schema.
+	/// </summary>
 	partial class Column
 	{
+		/// <summary>
+		/// A builder for a <see cref="Schema.Column"/>.
+		/// </summary>
 		public sealed class Builder
 		{
 			Column? column;
 
 			Column Column => column ?? throw new InvalidOperationException();
 
+			/// <summary>
+			/// Creates a new column builder.
+			/// </summary>
 			public Builder()
 			{
 				column = new Column();
 			}
 
+			/// <summary>
+			/// Creates a new column builder.
+			/// </summary>
 			public Builder(string name, Type type, bool allowNull = true)
 				: this()
 			{
@@ -27,6 +39,9 @@ partial class Schema
 				this.AllowDBNull = allowNull;
 			}
 
+			/// <summary>
+			/// Creates a new column builder.
+			/// </summary>
 			public Builder(string name, DbType commonType, bool allowNull = true)
 				: this()
 			{
@@ -37,6 +52,9 @@ partial class Schema
 				this.AllowDBNull = allowNull;
 			}
 
+			/// <summary>
+			/// Sets the column type.
+			/// </summary>
 			public void SetType(Type type)
 			{
 				this.DataType = type;
@@ -112,6 +130,9 @@ partial class Schema
 				}
 			}
 
+			/// <summary>
+			/// Creates a new column builder, copying an existing DbColumn.
+			/// </summary>
 			public Builder(DbColumn col)
 			{
 				column = new Column();
@@ -154,139 +175,207 @@ partial class Schema
 
 			#region base properties
 
+			/// <summary>
+			/// Gets or sets a value indicating if the column allows nulls.
+			/// </summary>
 			public bool? AllowDBNull
 			{
 				get => Column.AllowDBNull;
 				set => Column.AllowDBNull = value;
 			}
 
+			/// <summary>
+			/// Gets or sets the base catalog name.
+			/// </summary>
 			public string? BaseCatalogName
 			{
 				get => Column.BaseCatalogName;
 				set => Column.BaseCatalogName = value;
 			}
 
+			/// <summary>
+			/// Gets or sets the base column name.
+			/// </summary>
 			public string? BaseColumnName
 			{
 				get => Column.BaseColumnName;
 				set => Column.BaseColumnName = value;
 			}
 
+			/// <summary>
+			/// Gets or sets the base schema name.
+			/// </summary>
 			public string? BaseSchemaName
 			{
 				get => Column.BaseSchemaName;
 				set => Column.BaseSchemaName = value;
 			}
 
+			/// <summary>
+			/// Gets or sets the base server name.
+			/// </summary>
 			public string? BaseServerName
 			{
 				get => Column.BaseServerName;
 				set => Column.BaseServerName = value;
 			}
 
+			/// <summary>
+			/// Gets or sets the base table name.
+			/// </summary>
 			public string? BaseTableName
 			{
 				get => Column.BaseTableName;
 				set => Column.BaseTableName = value;
 			}
 
+			/// <summary>
+			/// Gets or sets the column ordinal.
+			/// </summary>
 			public int? ColumnOrdinal
 			{
 				get => Column.ColumnOrdinal;
 				set => Column.ColumnOrdinal = value;
 			}
 
+			/// <summary>
+			/// Gets or sets the column name.
+			/// </summary>
 			public string ColumnName
 			{
 				get => Column.ColumnName;
 				set => Column.ColumnName = value;
 			}
 
+			/// <summary>
+			/// Gets or sets the column size.
+			/// </summary>
 			public int? ColumnSize
 			{
 				get => Column.ColumnSize;
 				set => Column.ColumnSize = value;
 			}
 
+			/// <summary>
+			/// Gets or sets the data type.
+			/// </summary>
 			public Type? DataType
 			{
 				get => Column.DataType;
 				set => Column.DataType = value;
 			}
 
+			/// <summary>
+			/// Gets or sets the data type name.
+			/// </summary>
 			public string? DataTypeName
 			{
 				get => Column.DataTypeName;
 				set => Column.DataTypeName = value;
 			}
 
-
+			/// <summary>
+			/// Gets or sets a value indicating if the column is aliased.
+			/// </summary>
 			public bool? IsAliased
 			{
 				get => Column.IsAliased;
 				set => Column.IsAliased = value;
 			}
 
+			/// <summary>
+			/// Gets or sets a value indicating if the column is auto-increment.
+			/// </summary>
 			public bool? IsAutoIncrement
 			{
 				get => Column.IsAutoIncrement;
 				set => Column.IsAutoIncrement = value;
 			}
 
+			/// <summary>
+			/// Gets or sets a value indicating if the column is an expression.
+			/// </summary>
 			public bool? IsExpression
 			{
 				get => Column.IsExpression;
 				set => Column.IsExpression = value;
 			}
 
+			/// <summary>
+			/// Gets or sets a value indicating if the column is hidden.
+			/// </summary>
 			public bool? IsHidden
 			{
 				get => Column.IsHidden;
 				set => Column.IsHidden = value;
 			}
 
+			/// <summary>
+			/// Gets or sets a value indicating if the column is an identity column.
+			/// </summary>
 			public bool? IsIdentity
 			{
 				get => Column.IsIdentity;
 				set => Column.IsIdentity = value;
 			}
 
+			/// <summary>
+			/// Gets or sets a value indicating if the column is a key column.
+			/// </summary>
 			public bool? IsKey
 			{
 				get => Column.IsKey;
 				set => Column.IsKey = value;
 			}
 
+			/// <summary>
+			/// Gets or sets a value indicating if the column is long.
+			/// </summary>
 			public bool? IsLong
 			{
 				get => Column.IsLong;
 				set => Column.IsLong = value;
 			}
 
+			/// <summary>
+			/// Gets or sets a value indicating if the column is read-only.
+			/// </summary>
 			public bool? IsReadOnly
 			{
 				get => Column.IsReadOnly;
 				set => Column.IsReadOnly = value;
 			}
 
+			/// <summary>
+			/// Gets or sets a value indicating if the column is unique.
+			/// </summary>
 			public bool? IsUnique
 			{
 				get => Column.IsUnique;
 				set => Column.IsUnique = value;
 			}
 
+			/// <summary>
+			/// Gets or sets the numeric precision of the column.
+			/// </summary>
 			public int? NumericPrecision
 			{
 				get => Column.NumericPrecision;
 				set => Column.NumericPrecision = value;
 			}
 
+			/// <summary>
+			/// Gets or sets the scale precision of the column.
+			/// </summary>
 			public int? NumericScale
 			{
 				get => Column.NumericScale;
 				set => Column.NumericScale = value;
 			}
 
+			/// <summary>
+			/// Gets or sets user-defined assembly qualified name.
+			/// </summary>
 			public string? UdtAssemblyQualifiedName
 			{
 				get => Column.UdtAssemblyQualifiedName;
@@ -297,12 +386,18 @@ partial class Schema
 
 			#region custom properties
 
+			/// <summary>
+			/// Gets or sets the base column ordinal.
+			/// </summary>
 			public int? BaseColumnOrdinal
 			{
 				get => Column.BaseColumnOrdinal;
 				set => Column.BaseColumnOrdinal = value;
 			}
 
+			/// <summary>
+			/// Gets or sets the column data type.
+			/// </summary>
 			public DbType? CommonDataType
 			{
 				get => Column.CommonDataType;
@@ -347,6 +442,9 @@ partial class Schema
 
 			#endregion
 
+			/// <summary>
+			/// Builds the immutable Schema.Column.
+			/// </summary>
 			public Column Build()
 			{
 				var col = Column;

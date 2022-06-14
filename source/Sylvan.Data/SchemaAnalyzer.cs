@@ -7,114 +7,138 @@ using System.Threading.Tasks;
 
 namespace Sylvan.Data;
 
+/// <summary>
+/// Options for a data schema analysis operation.
+/// </summary>
 public sealed class SchemaAnalyzerOptions
 {
 	internal static readonly SchemaAnalyzerOptions Default = new SchemaAnalyzerOptions();
 
+	/// <summary>
+	/// Creates a new SchemaAnalyzerOptions with the default values.
+	/// </summary>
 	public SchemaAnalyzerOptions()
 	{
 		this.AnalyzeRowCount = 10000;
-		this.ColumnSizer = ColumnSize.Human;
+		//this.ColumnSizer = ColumnSize.Human;
 		this.DetectSeries = false;
 	}
 
+	/// <summary>
+	/// The number of rows to analyze.
+	/// </summary>
 	public int AnalyzeRowCount { get; set; }
 
+	/// <summary>
+	/// Indicates if series detection should be enabled.
+	/// </summary>
 	public bool DetectSeries { get; set; }
 
-	public IColumnSizeStrategy ColumnSizer { get; set; }
+	//public IColumnSizeStrategy ColumnSizer { get; set; }
 }
 
-public class ColumnSize
-{
-	class ExactColumnSizer : IColumnSizeStrategy
-	{
-		public int GetSize(int maxLen)
-		{
-			return maxLen;
-		}
-	}
+//public class ColumnSize
+//{
+//	class ExactColumnSizer : IColumnSizeStrategy
+//	{
+//		public int GetSize(int maxLen)
+//		{
+//			return maxLen;
+//		}
+//	}
 
-	class ProgrammerNumberColumnSizer : IColumnSizeStrategy
-	{
-		public int GetSize(int maxLen)
-		{
-			var size = 1;
-			while (size < maxLen)
-			{
-				size = size * 2;
-			}
-			return size;
-		}
-	}
+//	class ProgrammerNumberColumnSizer : IColumnSizeStrategy
+//	{
+//		public int GetSize(int maxLen)
+//		{
+//			var size = 1;
+//			while (size < maxLen)
+//			{
+//				size = size * 2;
+//			}
+//			return size;
+//		}
+//	}
 
-	class HumanNumberColumnSizer : IColumnSizeStrategy
-	{
-		static readonly int[] Sizes = new int[] { 1, 2, 3, 4, 5, 10, 25, 50, 100, 150, 200 };
+//	class HumanNumberColumnSizer : IColumnSizeStrategy
+//	{
+//		static readonly int[] Sizes = new int[] { 1, 2, 3, 4, 5, 10, 25, 50, 100, 150, 200 };
 
-		public int GetSize(int maxLen)
-		{
-			if (maxLen > 1000) return ushort.MaxValue;
+//		public int GetSize(int maxLen)
+//		{
+//			if (maxLen > 1000) return ushort.MaxValue;
 
-			var size = 0;
-			for (int i = 0; i < Sizes.Length; i++)
-			{
-				size = Sizes[i];
-				if (size > maxLen)
-					return size;
-			}
-			while (size < maxLen)
-				size += 100;
-			return size;
-		}
-	}
+//			var size = 0;
+//			for (int i = 0; i < Sizes.Length; i++)
+//			{
+//				size = Sizes[i];
+//				if (size > maxLen)
+//					return size;
+//			}
+//			while (size < maxLen)
+//				size += 100;
+//			return size;
+//		}
+//	}
 
-	class FixedColumnSizer : IColumnSizeStrategy
-	{
-		readonly int size;
-		public FixedColumnSizer(int size)
-		{
-			this.size = size;
-		}
+//	class FixedColumnSizer : IColumnSizeStrategy
+//	{
+//		readonly int size;
+//		public FixedColumnSizer(int size)
+//		{
+//			this.size = size;
+//		}
 
-		public int GetSize(int maxLen)
-		{
-			return size;
-		}
-	}
+//		public int GetSize(int maxLen)
+//		{
+//			return size;
+//		}
+//	}
 
-	public static readonly IColumnSizeStrategy Exact = new ExactColumnSizer();
-	public static readonly IColumnSizeStrategy Programmer = new ProgrammerNumberColumnSizer();
-	public static readonly IColumnSizeStrategy Human = new HumanNumberColumnSizer();
+//	public static readonly IColumnSizeStrategy Exact = new ExactColumnSizer();
+//	public static readonly IColumnSizeStrategy Programmer = new ProgrammerNumberColumnSizer();
+//	public static readonly IColumnSizeStrategy Human = new HumanNumberColumnSizer();
 
-	public static readonly IColumnSizeStrategy Size256 = new FixedColumnSizer(256);
-	public static readonly IColumnSizeStrategy Size1024 = new FixedColumnSizer(1024);
-}
+//	public static readonly IColumnSizeStrategy Size256 = new FixedColumnSizer(256);
+//	public static readonly IColumnSizeStrategy Size1024 = new FixedColumnSizer(1024);
+//}
 
-public interface IColumnSizeStrategy
-{
-	int GetSize(int maxLen);
-}
+//public interface IColumnSizeStrategy
+//{
+//	int GetSize(int maxLen);
+//}
 
+/// <summary>
+/// Analyzes weakly-typed string data to determine schema information.
+/// </summary>
 public sealed partial class SchemaAnalyzer
 {
 	int rowCount;
-	IColumnSizeStrategy sizer;
+	//IColumnSizeStrategy sizer;
 	bool detectSeries;
 
+	/// <summary>
+	/// Creates a new SchemaAnalyzer.
+	/// </summary>
 	public SchemaAnalyzer(SchemaAnalyzerOptions? options = null)
 	{
 		options ??= SchemaAnalyzerOptions.Default;
 		this.rowCount = options.AnalyzeRowCount;
-		this.sizer = options.ColumnSizer;
+		//this.sizer = options.ColumnSizer;
 		this.detectSeries = options.DetectSeries;
 	}
 
+	/// <summary>
+	/// Analyzes a data set.
+	/// </summary>
 	public AnalysisResult Analyze(DbDataReader dataReader)
 	{
 		return AnalyzeAsync(dataReader).GetAwaiter().GetResult();
 	}
 
+	/// <summary>
+	/// Analyzes a data set.
+	/// </summary>
 	public async Task<AnalysisResult> AnalyzeAsync(DbDataReader dataReader)
 	{
 		var colInfos = new ColumnInfo[dataReader.FieldCount];
@@ -138,6 +162,9 @@ public sealed partial class SchemaAnalyzer
 	}
 }
 
+/// <summary>
+/// Schema analysis information for a data column.
+/// </summary>
 public sealed class ColumnInfo
 {
 	internal ColumnInfo(DbDataReader dr, int ordinal)
@@ -205,9 +232,19 @@ public sealed class ColumnInfo
 		this.valueCount = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 	}
 
+	/// <summary>
+	/// Indicates if the column allows null values.
+	/// </summary>
 	public bool AllowDbNull => isNullable;
 
+	/// <summary>
+	/// Gets the column oridnal.
+	/// </summary>
 	public int Ordinal => this.ordinal;
+
+	/// <summary>
+	/// Gets the column name.
+	/// </summary>
 	public string? Name => this.name;
 	Type type;
 
@@ -237,7 +274,7 @@ public sealed class ColumnInfo
 
 	Dictionary<string, int> valueCount;
 
-	public void Analyze(DbDataReader dr, int ordinal)
+	internal void Analyze(DbDataReader dr, int ordinal)
 	{
 		count++;
 		var isNull = dr.IsDBNull(ordinal);
