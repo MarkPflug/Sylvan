@@ -328,23 +328,6 @@ partial class DataBinder
 		return null;
 	}
 
-	public static T GetRecord<T>(this IDataBinder<T> binder, DbDataReader record, Func<IDataRecord, Exception, bool>? errorHandler = null) where T : new()
-	{
-		var t = new T();
-		try
-		{
-			binder.Bind(record, t);
-		}
-		catch (Exception e) when (errorHandler != null)
-		{
-			if (!errorHandler(record, e))
-			{
-				throw;
-			}
-		}
-		return t;
-	}
-
 	internal static IDataSeriesRange<TK>? GetSeriesRange<TK>(this object binder, string seriesName)
 	{
 		if (binder is IDataSeriesBinder b)

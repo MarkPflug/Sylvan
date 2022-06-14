@@ -79,8 +79,14 @@ public sealed partial class Schema : IReadOnlyList<Schema.Column>, IDbColumnSche
 	// *:double?;
 	Column[] columns;
 
+	/// <summary>
+	/// Gets the number of columns in the schema.
+	/// </summary>
 	public int Count => columns.Length;
 
+	/// <summary>
+	/// Gets the column at the given index.
+	/// </summary>
 	public Column this[int index] => columns[index];
 
 	private Schema(IEnumerable<Column> cols)
@@ -88,9 +94,13 @@ public sealed partial class Schema : IReadOnlyList<Schema.Column>, IDbColumnSche
 		this.columns = cols.ToArray();
 	}
 
+	/// <summary>
+	/// Converts the schema to a <see cref="ReadOnlyCollection{DbColumn}"/>.
+	/// </summary>
+	/// <param name="schema"></param>
 	public static implicit operator ReadOnlyCollection<DbColumn>(Schema schema)
 	{
-		return new ReadOnlyCollection<DbColumn>(schema.columns);
+		return schema.GetColumnSchema();
 	}
 
 	/// <summary>
@@ -117,16 +127,25 @@ public sealed partial class Schema : IReadOnlyList<Schema.Column>, IDbColumnSche
 		return SimpleSchemaSerializer.SingleLine.GetSchemaSpec(this);
 	}
 
+	/// <summary>
+	/// Parses the specification string into a Schema object.
+	/// </summary>
 	public static Schema Parse(string spec)
 	{
 		return SimpleSchemaSerializer.SingleLine.Parse(spec);
 	}
 
+	/// <summary>
+	/// Gets a column schema representing the current schema.
+	/// </summary>
 	public ReadOnlyCollection<DbColumn> GetColumnSchema()
 	{
 		return new ReadOnlyCollection<DbColumn>(this.columns);
 	}
 
+	/// <summary>
+	/// Gets an enumerator of the schema column.
+	/// </summary>
 	public IEnumerator<Column> GetEnumerator()
 	{
 		return this.columns.AsEnumerable().GetEnumerator();

@@ -143,7 +143,6 @@ sealed class SimpleSchemaSerializer
 	/// <summary>
 	/// Gets the specification string for this schema.
 	/// </summary>
-	/// <param name="multiline">Indicates if the spec should be singleline, or multiline.</param>
 	/// <returns>A string.</returns>
 	public string GetSchemaSpec(Schema schema)
 	{

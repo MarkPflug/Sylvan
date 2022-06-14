@@ -1,39 +1,33 @@
-﻿using System.Collections.ObjectModel;
+﻿using System;
+using System.Collections.ObjectModel;
 using System.Data;
 using System.Data.Common;
 
 namespace Sylvan.Data;
 
-//public static class DataBinderFactory
-//{
-//	public static IDataBinder<T> Create<T>(this IDataBinderFactory<T> factory, DbDataReader reader, DataBinderOptions? options = null)
-//	{
-//		var schema = reader.GetColumnSchema();
-//		return factory.Create(schema, options);
-//	}
-
-//	public static IDataBinder<T> Create<T>(this IDataBinderFactory<T> factory, IReadOnlyList<DbColumn> schema)
-//	{
-//		return factory.Create(schema, null);
-//	}
-//}
-
-///// <summary>
-///// A factory for creating a data binder for a given schema.
-///// </summary>
-///// <typeparam name="T"></typeparam>
-//public interface IDataBinderFactory<T>
-//{
-//	IDataBinder<T> Create(IReadOnlyList<DbColumn> schema, DataBinderOptions? options);
-//}
-
+/// <summary>
+/// An interface that defines the ability to bind a DbDataReader to an object.
+/// </summary>
 public interface IDataBinder
 {
+	/// <summary>
+	/// Binds a data record to an object.
+	/// </summary>
+	/// <param name="record">The data reader.</param>
+	/// <param name="item">The item to bind to.</param>
 	void Bind(DbDataReader record, object item);
 }
 
+/// <summary>
+/// An interface that defines the ability to bind a DbDataReader to an object.
+/// </summary>
 public interface IDataBinder<T> : IDataBinder
 {
+	/// <summary>
+	/// Binds a data record to an object.
+	/// </summary>
+	/// <param name="record">The data reader.</param>
+	/// <param name="item">The item to bind to.</param>
 	void Bind(DbDataReader record, T item);
 }
 
@@ -42,6 +36,9 @@ interface IDataSeriesBinder
 	object? GetSeriesAccessor(string seriesName);
 }
 
+/// <summary>
+/// Defines methods to create a general purpose data binder.
+/// </summary>
 public static partial class DataBinder
 {
 	// make every effort to construct a schema.
@@ -70,19 +67,26 @@ public static partial class DataBinder
 		return Schema.GetWeakSchema(dr).GetColumnSchema();
 	}
 
-	//public static IDataBinder<T> CreateDynamic<T>(ReadOnlyCollection<DbColumn> schema, DataBinderOptions? opts = null)
-	//{
-	//	var bf = ObjectBinder.Get<T>();
-	//	var b = bf.Create(schema, opts);
-	//	return b;
-	//}
-
+	/// <summary>
+	/// Creates a data binder.
+	/// </summary>
+	/// <typeparam name="T">The type of record to bind to.</typeparam>
+	/// <param name="schema">The schema of incoming data.</param>
+	/// <param name="opts">The binding options.</param>
+	/// <returns>An IDataBinder{T} instance.</returns>
 	public static IDataBinder<T> Create<T>(ReadOnlyCollection<DbColumn> schema, DataBinderOptions? opts = null)
 	{
 		opts = opts ?? new DataBinderOptions();
 		return new CompiledDataBinder<T>(opts, schema);
 	}
 
+	/// <summary>
+	/// Creates a data binder.
+	/// </summary>
+	/// <typeparam name="T">The type of record to bind to.</typeparam>
+	/// <param name="reader">A data reader.</param>
+	/// <param name="opts">The binding options.</param>
+	/// <returns>An IDataBinder{T} instance.</returns>
 	public static IDataBinder<T> Create<T>(IDataReader reader, DataBinderOptions? opts = null)
 	{
 		var dr = reader.AsDbDataReader();
@@ -90,11 +94,50 @@ public static partial class DataBinder
 		return CompiledBinderCache<T>.GetBinder(dr, opts);
 	}
 
-	public static IDataBinder<T> Create<T>(IDataReader reader, ReadOnlyCollection<DbColumn> logicalSchema, DataBinderOptions? opts = null)
+	/// <summary>
+	/// Creates a data binder.
+	/// </summary>
+	/// <typeparam name="T">The type of record to bind to.</typeparam>
+	/// <param name="reader">A data reader.</param>
+	/// <param name="schema">The schema of the incoming data.</param>
+	/// <param name="opts">The binding options.</param>
+	/// <returns>An IDataBinder{T} instance.</returns>
+	public static IDataBinder<T> Create<T>(IDataReader reader, ReadOnlyCollection<DbColumn> schema, DataBinderOptions? opts = null)
 	{
 		var dr = reader.AsDbDataReader();
 		opts = opts ?? new DataBinderOptions();
-		//return CompiledBinderCache<T>.GetBinder(dr, opts);
-		return new CompiledDataBinder<T>(opts, GetSchema(dr), logicalSchema);
+		return new CompiledDataBinder<T>(opts, GetSchema(dr), schema);
+	}
+
+	/// <summary>
+	/// Binds the current record to a new object instance.
+	/// </summary>
+	public static T GetRecord<T>(this IDataBinder<T> binder, DbDataReader record)
+		where T : new()
+	{
+		var item = new T();
+		binder.Bind(record, item);
+		return item;
+	}
+
+	/// <summary>
+	/// Binds the current record to a new object instance.
+	/// </summary>
+	public static T GetRecord<T>(this IDataBinder<T> binder, DbDataReader record, Func<IDataRecord, T, Exception, bool>? errorHandler = null)
+		where T : new()
+	{
+		var item = new T();
+		try
+		{
+			binder.Bind(record, item);
+		}
+		catch (Exception e) when (errorHandler != null)
+		{
+			if (!errorHandler(record, item, e))
+			{
+				throw;
+			}
+		}
+		return item;
 	}
 }

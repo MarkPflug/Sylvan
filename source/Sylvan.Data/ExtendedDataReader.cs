@@ -7,24 +7,63 @@ using System.IO;
 
 namespace Sylvan.Data;
 
+/// <summary>
+/// Defines a data column.
+/// </summary>
 public interface IDataColumn
 {
+	/// <summary>
+	/// The column name.
+	/// </summary>
 	string Name { get; }
+
+	/// <summary>
+	/// The column data type.
+	/// </summary>
 	Type ColumnType { get; }
+
+	/// <summary>
+	/// Indicates if the column allows null values.
+	/// </summary>
 	bool AllowNull { get; }
 
+	/// <summary>
+	/// Determines if the column value is null.
+	/// </summary>
 	bool IsDbNull(DbDataReader reader);
+
+	/// <summary>
+	/// Gets the object value of the column.
+	/// </summary>
+	/// <param name="reader"></param>
+	/// <returns></returns>
 	object GetValue(DbDataReader reader);
+
+	/// <summary>
+	/// Gets the value of the column.
+	/// </summary>
 	T GetValue<T>(DbDataReader reader);
+
+	/// <summary>
+	/// Gets a range of data from the column.
+	/// </summary>
 	int GetData<T>(DbDataReader reader, T[] buffer, long dataOffset, int bufferOffset, int length);
 }
 
+/// <summary>
+/// Defines a custom data column.
+/// </summary>
+/// <typeparam name="T"></typeparam>
 public class CustomDataColumn<T> : IDataColumn
 {
+	/// <inheritdoc/>
 	public string Name { get; }
+	/// <inheritdoc/>
 	public Type ColumnType { get; }
+	/// <inheritdoc/>
 	public bool AllowNull { get; }
 
+	/// <inheritdoc/>
 	public bool IsDbNull(DbDataReader reader)
 	{
 		return
@@ -33,6 +72,7 @@ public class CustomDataColumn<T> : IDataColumn
 			: GetValue(reader) == DBNull.Value;
 	}
 
+	/// <inheritdoc/>
 	public TValue GetValue<TValue>(DbDataReader reader)
 	{
 		if (typeof(TValue) != typeof(T))
@@ -49,6 +89,7 @@ public class CustomDataColumn<T> : IDataColumn
 		}
 	}
 
+	/// <inheritdoc/>
 	public object GetValue(DbDataReader reader)
 	{
 		var obj = valueSource(reader);
@@ -59,6 +100,7 @@ public class CustomDataColumn<T> : IDataColumn
 		return obj;
 	}
 
+	/// <inheritdoc/>
 	public int GetData<TData>(DbDataReader reader, TData[] buffer, long dataOffset, int bufferOffset, int length)
 	{
 		var t = valueSource(reader);
@@ -71,6 +113,9 @@ public class CustomDataColumn<T> : IDataColumn
 
 	Func<DbDataReader, T> valueSource;
 
+	/// <summary>
+	/// Creates a new CustomDataColumn instance.
+	/// </summary>
 	public CustomDataColumn(string name, Func<DbDataReader, T> valueSource)
 	{
 		this.Name = name;
