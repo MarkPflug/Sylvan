@@ -23,9 +23,9 @@
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
 
-	<ProjectReadmeFile>$(MSBuildProjectDirectory)packagereadme.md</ProjectReadmeFile>
+	<ProjectReadmeFile>$(MSBuildProjectDirectory)/PackageReadme.md</ProjectReadmeFile>
 	<PackageReadmeFile
-		Condition="Exists($(ProjectReadmeFile))">$(ProjectReadmeFile)</PackageReadmeFile>
+		Condition="Exists($(ProjectReadmeFile))">readme.md</PackageReadmeFile>
     
     
     <IsTestProject Condition="$(MSBuildProjectName.EndsWith('.Tests')) == 'true'">true</IsTestProject>
@@ -37,6 +37,13 @@
     <None Include="$(MSBuildThisFileDirectory)Sylvan.png" Pack="true" PackagePath="">
       <Visible>false</Visible>
     </None>
+
+	<None
+		Condition="Exists($(ProjectReadmeFile))"
+		Include="$(ProjectReadmeFile)"
+		Pack="true"
+		PackagePath="readme.md">
+	</None>
   </ItemGroup>
 
 	<PropertyGroup Condition="$(IsTestProject) == true">

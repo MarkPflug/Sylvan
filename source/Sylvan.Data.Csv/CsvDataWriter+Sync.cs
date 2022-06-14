@@ -21,15 +21,17 @@ partial class CsvDataWriter
 		int bufferSize = this.buffer.Length;
 
 		int result;
-
-		for (int i = 0; i < c; i++)
+		if (schema != null)
 		{
-			var allowNull = schema?[i].AllowDBNull ?? true;
-			var writer = GetWriter(reader, i);
-			fieldInfos[i] = new FieldInfo(allowNull, writer);
+			for (int i = 0; i < schema.Count; i++)
+			{
+				var allowNull = schema[i].AllowDBNull ?? true;
+				var writer = GetWriter(reader, i);
+				fieldInfos[i] = new FieldInfo(allowNull, writer);
+			}
 		}
 
-		var fieldCount = c;
+		var fieldCount = fieldInfos.Length;
 
 		var wc = new WriterContext(this, reader);
 
@@ -90,7 +92,8 @@ partial class CsvDataWriter
 					}
 					buffer[pos++] = delimiter;
 				}
-				var field = i < fieldCount ? fieldInfos[i] : FieldInfo.Generic;
+				var field = i < fieldCount ? fieldInfos[i] : null;
+				field = field ?? FieldInfo.Generic;
 				if (field.allowNull && reader.IsDBNull(i))
 				{
 					continue;

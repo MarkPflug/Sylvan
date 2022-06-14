@@ -1,13 +1,23 @@
 ﻿# Sylvan.Data.Csv
 
 A cross-platform .NET library for reading and writing CSV data files.
-The CsvDataReader provides readonly, row by row, forward-only access to the data.
+The `CsvDataReader` provides readonly, row by row, forward-only access to the data.
 Exposes a familiar API via `DbDataReader`, which is ideal for accessing rectangular, tabular data sets.
+Sylvan.Data.Csv is currently the [fastest library for reading CSV data](https://github.com/MarkPflug/Benchmarks/blob/main/docs/CsvReaderBenchmarks.md) 
+ in the .NET ecosystem.
 
-This library is currently the [fastest](https://github.com/MarkPflug/Benchmarks/blob/main/docs/CsvReaderBenchmarks.md) 
-library for reading CSV data in the .NET ecosystem.
+## Features
+
+- Auto detect delimiters.
+- Supports asynchronous IO.
+- Strongly-typed accessors that avoid allocations.
+	- Supported types includes all standard .NET primitive types,  `DateOnly` and `TimeOnly` on .NET 6, 
+	- Binary data encoded with either base64 or hexadecimal.
+- Schema information to support database bulk-load operations.
 
 ## Usage Examples
+
+### Basic
 
 ```C#
 using Sylvan.Data.Csv;
@@ -30,7 +40,8 @@ while(dr.Read())
 }
 ```
 
-Bind CSV data to objects using Sylvan.Data.
+### Bind CSV data to objects using Sylvan.Data.
+
 ```C#
 using Sylvan.Data;
 using Sylvan.Data.Csv;
@@ -46,4 +57,25 @@ class Record {
 	public DateTime Date { get; set; }
 	public decimal Amount { get; set; }
 }
+```
+
+### Convert Excel data to CSV using Sylvan.Data and Sylvan.Data.Excel
+
+```C#
+using Sylvan.Data.Csv;
+using Sylvan.Data;
+using Sylvan.Data.Excel;
+using System.Data.Common;
+
+// create reader for excel data file
+ExcelDataReader edr = ExcelDataReader.Create("example.xlsx");
+
+// (optional) create data reader which allows variable-length rows
+DbDataReader reader = edr.AsVariableField(edr => edr.RowFieldCount);
+
+// create CSV writer to standard out
+var csvWriter = CsvDataWriter.Create(Console.Out);
+
+// write excel data as csv
+csvWriter.Write(reader);
 ```
