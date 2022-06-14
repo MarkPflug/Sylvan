@@ -1505,17 +1505,19 @@ namespace Sylvan.Data.Csv
 		/// <inheritdoc/>
 		public override bool IsDBNull(int ordinal)
 		{
-			ThrowIfOutOfRange(ordinal);
-			var col = columns[ordinal];
-
-			if (col.AllowDBNull == false)
+			if (ordinal < this.fieldCount)
 			{
-				// if the schema claims it is not nullable then we will honor that claim
-				// if the schema is wrong a FormatException or CastException may result
-				// when trying to access the value.
-				return false;
-			}
+				var col = columns[ordinal];
 
+				if (col.AllowDBNull == false)
+				{
+					// if the schema claims it is not nullable then we will honor that claim
+					// if the schema is wrong a FormatException or CastException may result
+					// when trying to access the value.
+					return false;
+				}
+			}
+			
 			if ((uint)ordinal >= (uint)curFieldCount)
 			{
 				// if the current row has missing fields, consider them null

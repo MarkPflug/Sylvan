@@ -29,6 +29,8 @@ namespace Sylvan.Data.Csv
 				fieldInfos[i] = new FieldInfo(allowNull, writer);
 			}
 
+			var fieldCount = c;
+
 			var wc = new WriterContext(this, reader);
 
 			if (writeHeaders)
@@ -77,7 +79,7 @@ namespace Sylvan.Data.Csv
 			{
 				row++;
 				int i = 0; // field
-
+				c = reader.FieldCount;
 				for (; i < c; i++)
 				{
 					if (i > 0)
@@ -88,7 +90,7 @@ namespace Sylvan.Data.Csv
 						}
 						buffer[pos++] = delimiter;
 					}
-					var field = fieldInfos[i];
+					var field = i < fieldCount ? fieldInfos[i] : FieldInfo.Generic;
 					if (field.allowNull && reader.IsDBNull(i))
 					{
 						continue;

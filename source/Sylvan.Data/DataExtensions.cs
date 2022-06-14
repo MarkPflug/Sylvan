@@ -13,17 +13,23 @@ namespace Sylvan.Data
 		/// <summary>
 		/// Converts an IDataReader to a DbDataReader.
 		/// This conversion might be a no-op if the IDataReader is already
-		/// a DbDataReader, or it might adapt via a wrapper.
+		/// a DbDataReader, or it might adapt the reader using a wrapper.
 		/// </summary>
-		public static DbDataReader AsDbDataReader(this IDataReader r)
+		public static DbDataReader AsDbDataReader(this IDataReader reader)
 		{
-			if (r is DbDataReader dr) return dr;
-			return new IDataReaderAdpater(r);
+			if (reader is DbDataReader dr) return dr;
+			return new IDataReaderAdpater(reader);
 		}
 
-		public static DbDataReader WithColumns(this DbDataReader r, params IDataColumn[] columns)
+		/// <summary>
+		/// Creates a DbDataReader by attaching additional columns to an existing DbDataReader.
+		/// </summary>
+		/// <param name="reader">The base data reader.</param>
+		/// <param name="columns">The extra columns to attach.</param>
+		/// <returns>A Db</returns>
+		public static DbDataReader WithColumns(this DbDataReader reader, params IDataColumn[] columns)
 		{
-			return new ExtendedDataReader(r, columns);
+			return new ExtendedDataReader(reader, columns);
 		}
 
 		/// <summary>
@@ -132,16 +138,46 @@ namespace Sylvan.Data
 			return new TransformDataReader(reader, null, predicate);
 		}
 
+		/// <summary>
+		/// Creates a DbDataReader that reads the first number of rows.
+		/// </summary>
+		/// <param name="reader">The base data reader.</param>
+		/// <param name="count">The maximum number of rows to read.</param>
+		/// <returns>A DbDataReader.</returns>
 		public static DbDataReader Take(this DbDataReader reader, int count)
 		{
 			if(count < 0) throw new ArgumentOutOfRangeException(nameof(count));
 			return new SkipTakeDataReader(reader, -1, count);
 		}
 
+		/// <summary>
+		/// Creates a DbDataReader that skips the first number of rows.
+		/// </summary>
+		/// <param name="reader">The base data reader.</param>
+		/// <param name="count">The number of rows to skip.</param>
+		/// <returns>A DbDataReader.</returns>
 		public static DbDataReader Skip(this DbDataReader reader, int count)
 		{
 			if (count < 0) throw new ArgumentOutOfRangeException(nameof(count));
 			return new SkipTakeDataReader(reader, count, -1);
+		}
+
+		/// <summary>
+		/// Creates a DbDataReader where FieldCount can return different values for each row.
+		/// </summary>
+		/// <remarks>
+		/// Most DbDataReader implementations work on purely rectangular data. However, some implementations
+		/// might operate file formats that support variable fields. This allows accessing those extra columns
+		/// using the standard DbDataReader base type APIs only. 
+		/// Specifically, this is to support the Sylvan CSV and Excel data readers.
+		/// </remarks>
+		/// <param name="reader">A DbDataReader implementation.</param>
+		/// <param name="rowFieldCountAccessor">A function that returns the number of </param>
+		public static DbDataReader AsVariableField<T>(this T reader, Func<T, int> rowFieldCountAccessor, Type? fieldType = null)
+			where T : DbDataReader
+		{
+			fieldType = fieldType ?? typeof(object);
+			return new VariableDataReader<T>(reader, rowFieldCountAccessor, fieldType);
 		}
 	}
 }

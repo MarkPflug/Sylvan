@@ -1,5 +1,9 @@
 # Sylvan.Data.Csv Release Notes
 
+_1.1.16_
+- CsvDataWriter support for writing variable field count.
+- CsvDataReader no longer skips empty leading rows in SingleResult mode.
+
 _1.1.15_
 - Fix for CSV comment not being terminated, and being included in subsequent row.
 

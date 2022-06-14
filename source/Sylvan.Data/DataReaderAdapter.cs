@@ -7,9 +7,12 @@ using System.IO;
 
 namespace Sylvan.Data
 {
-	abstract partial class DataReaderAdapter : DbDataReader, IDbColumnSchemaGenerator
+	/// <summary>
+	/// A base class for DbDataReaders that wrap and modify other DbDataReaders.
+	/// </summary>
+	public abstract partial class DataReaderAdapter : DbDataReader, IDbColumnSchemaGenerator
 	{
-		DbDataReader dr;
+		readonly DbDataReader dr;
 
 		protected DbDataReader Reader => dr;
 
@@ -83,7 +86,10 @@ namespace Sylvan.Data
 
 		public override IEnumerator GetEnumerator()
 		{
-			return ((IEnumerable)dr).GetEnumerator();
+			while (this.Read())
+			{
+				yield return this;
+			}
 		}
 
 		public override Type GetFieldType(int ordinal)

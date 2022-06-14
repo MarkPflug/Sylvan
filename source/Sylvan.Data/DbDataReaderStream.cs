@@ -4,6 +4,9 @@ using System.IO;
 
 namespace Sylvan.Data
 {
+	/// <summary>
+	/// A Stream implementation over DbDataReader.GetBytes
+	/// </summary>
 	sealed class DbDataReaderStream : Stream
 	{
 		readonly DbDataReader reader;

@@ -4,6 +4,9 @@ using System.IO;
 
 namespace Sylvan.Data
 {
+	/// <summary>
+	/// A TextReader implementation over DbDataReader.GetChars
+	/// </summary>
 	sealed class DbDataReaderTextReader : TextReader
 	{
 		readonly DbDataReader reader;

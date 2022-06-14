@@ -82,6 +82,7 @@ namespace Sylvan.Data.Csv
 				cancel.ThrowIfCancellationRequested();
 				row++;
 				int i = 0; // field
+				c = reader.FieldCount;
 
 				for (; i < c; i++)
 				{
