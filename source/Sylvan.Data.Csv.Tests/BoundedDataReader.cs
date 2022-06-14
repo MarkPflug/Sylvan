@@ -1,26 +1,25 @@
 ﻿using System.Data.Common;
 
-namespace Sylvan.Data.Csv
+namespace Sylvan.Data.Csv;
+
+class BoundedDataReader : DataReaderAdapter
 {
-	class BoundedDataReader : DataReaderAdapter
+	int rows;
+	int count = 0;
+
+	public BoundedDataReader(DbDataReader dr, int rows) : base(dr)
 	{
-		int rows;
-		int count = 0;
+		this.rows = rows;
+	}		
 
-		public BoundedDataReader(DbDataReader dr, int rows) : base(dr)
+	public override bool Read()
+	{
+		var success = count < rows && base.Read();
+
+		if (success)
 		{
-			this.rows = rows;
-		}		
-
-		public override bool Read()
-		{
-			var success = count < rows && base.Read();
-
-			if (success)
-			{
-				count++;
-			}
-			return success;
+			count++;
 		}
+		return success;
 	}
 }

@@ -1,16 +1,15 @@
 ﻿using System;
 using Xunit;
 
-namespace Sylvan
+namespace Sylvan;
+
+public class SystemClockTests
 {
-	public class SystemClockTests
+	[Fact]
+	public void Test1()
 	{
-		[Fact]
-		public void Test1()
-		{
-			var now = DateTime.UtcNow;
-			var time = SystemClock.Instance.UtcNow;
-			Assert.True(time >= now);
-		}
+		var now = DateTime.UtcNow;
+		var time = SystemClock.Instance.UtcNow;
+		Assert.True(time >= now);
 	}
 }
