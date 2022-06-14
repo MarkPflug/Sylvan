@@ -1,37 +1,36 @@
-﻿namespace Sylvan.Primitives
+﻿namespace Sylvan.Primitives;
+
+/// <summary>
+/// Defines the types of values that can be stored in a <see cref="Primitive"/> struct.
+/// </summary>
+public enum PrimitiveType : byte
 {
 	/// <summary>
-	/// Defines the types of values that can be stored in a <see cref="Primitive"/> struct.
+	/// Indicates that the <see cref="TypedPrimitive"/> holds no value.
 	/// </summary>
-	public enum PrimitiveType : byte
-	{
-		/// <summary>
-		/// Indicates that the <see cref="TypedPrimitive"/> holds no value.
-		/// </summary>
-		None = 0,
+	None = 0,
 
-		Boolean,
+	Boolean,
 
-		Char,
+	Char,
 
-		Byte,
-		Int16,
-		Int32,
-		Int64,
+	Byte,
+	Int16,
+	Int32,
+	Int64,
 
-		SByte,
-		UInt16,
-		UInt32,
-		UInt64,
+	SByte,
+	UInt16,
+	UInt32,
+	UInt64,
 
-		Float,
-		Double,
+	Float,
+	Double,
 
-		DateTime,
-		DateTimeOffset,
-		TimeSpan,
+	DateTime,
+	DateTimeOffset,
+	TimeSpan,
 
-		Decimal,
-		Guid,
-	}
+	Decimal,
+	Guid,
 }

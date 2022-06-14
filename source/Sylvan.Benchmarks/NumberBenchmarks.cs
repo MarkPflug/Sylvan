@@ -1,59 +1,57 @@
 ﻿using BenchmarkDotNet.Attributes;
 
-namespace Sylvan.Benchmarks
+namespace Sylvan.Benchmarks;
+
+[SimpleJob(1, 2, 4, 1)]
+[MemoryDiagnoser]
+public class NumberBenchmarks
 {
-	[SimpleJob(1, 2, 4, 1)]
-	[MemoryDiagnoser]
-	public class NumberBenchmarks
+	const int Count = 100000;
+
+	[Benchmark]
+	public void IntToString()
 	{
-
-		const int Count = 100000;
-
-		[Benchmark]
-		public void IntToString()
+		for (int i = 0; i < Count; i++)
 		{
-			for (int i = 0; i < Count; i++)
-			{
-				var s = i.ToString();
-			}
+			var s = i.ToString();
 		}
+	}
 
-		[Benchmark]
-		public double IntToDoubleCast()
+	[Benchmark]
+	public double IntToDoubleCast()
+	{
+		double d = 0d;
+		for (int i = 0; i < Count; i++)
 		{
-			double d = 0d;
-			for (int i = 0; i < Count; i++)
-			{
-				d += (double)i;
-			}
-			return d;
+			d += (double)i;
 		}
+		return d;
+	}
 
-		[Benchmark]
-		public void DoubleToString()
+	[Benchmark]
+	public void DoubleToString()
+	{
+		for (int i = 0; i < Count; i++)
 		{
-			for (int i = 0; i < Count; i++)
-			{
-				var s = ((double)i).ToString();
-			}
+			var s = ((double)i).ToString();
 		}
+	}
 
-		[Benchmark]
-		public void IntParse()
+	[Benchmark]
+	public void IntParse()
+	{
+		for (int i = 0; i < Count; i++)
 		{
-			for (int i = 0; i < Count; i++)
-			{
-				var x = int.Parse("123456");
-			}
+			var x = int.Parse("123456");
 		}
+	}
 
-		[Benchmark]
-		public void DoubleParse()
+	[Benchmark]
+	public void DoubleParse()
+	{
+		for (int i = 0; i < Count; i++)
 		{
-			for (int i = 0; i < Count; i++)
-			{
-				var x = double.Parse("123.45");
-			}
+			var x = double.Parse("123.45");
 		}
 	}
 }

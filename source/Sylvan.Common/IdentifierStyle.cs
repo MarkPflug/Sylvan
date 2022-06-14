@@ -3,238 +3,237 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 
-namespace Sylvan
+namespace Sylvan;
+
+/// <summary>
+/// The casing style used within segments.
+/// </summary>
+#if PublicCasingStyle
+// hack to allow it linked internally to Sylvan.Data
+public
+#endif
+enum CasingStyle
 {
 	/// <summary>
-	/// The casing style used within segments.
+	/// Use the casing of the original identifier.
 	/// </summary>
-#if PublicCasingStyle
-	// hack to allow it linked internally to Sylvan.Data
-	public
-#endif
-	enum CasingStyle
+	Unchanged = 0,
+	/// <summary>
+	/// UpperCase every character.
+	/// </summary>
+	UpperCase,
+	/// <summary>
+	/// LowerCase every character.
+	/// </summary>
+	LowerCase,
+	/// <summary>
+	/// UpperCase first character, and lowercase the rest.
+	/// </summary>
+	TitleCase,
+}
+
+/// <summary>
+/// Provides conversions between different styles of identifiers.
+/// </summary>
+abstract partial class IdentifierStyle
+{
+	/// <summary>
+	/// Converts a string to the given identifier style.
+	/// </summary>
+	public abstract string Convert(string str);
+
+	internal static string Separated(string str, CasingStyle segmentStyle, char separator = '\0', char quote = '\0')
 	{
-		/// <summary>
-		/// Use the casing of the original identifier.
-		/// </summary>
-		Unchanged = 0,
-		/// <summary>
-		/// UpperCase every character.
-		/// </summary>
-		UpperCase,
-		/// <summary>
-		/// LowerCase every character.
-		/// </summary>
-		LowerCase,
-		/// <summary>
-		/// UpperCase first character, and lowercase the rest.
-		/// </summary>
-		TitleCase,
+		if (str == null) throw new ArgumentNullException(nameof(str));
+
+		using var sw = new StringWriter();
+		if (quote != '\0')
+		{
+			sw.Write(quote);
+		}
+		bool isUpper = IsAllUpper(str);
+
+		bool first = true;
+
+		foreach (var segment in GetSegments(str))
+		{
+			if (!first)
+			{
+				if (separator != '\0')
+					sw.Write(separator);
+			}
+			for (int i = segment.Start; i < segment.End; i++)
+			{
+				var c = str[i];
+
+				if (i == segment.Start)
+				{
+					switch (segmentStyle)
+					{
+						case CasingStyle.LowerCase:
+							c = char.ToLowerInvariant(c);
+							break;
+						case CasingStyle.TitleCase:
+						case CasingStyle.UpperCase:
+							c = char.ToUpperInvariant(c);
+							break;
+					}
+				}
+				else
+				{
+					switch (segmentStyle)
+					{
+						case CasingStyle.LowerCase:
+							c = char.ToLowerInvariant(c);
+							break;
+						case CasingStyle.TitleCase:
+							if (isUpper)
+							{
+								c = char.ToLowerInvariant(c);
+							}
+							break;
+						case CasingStyle.UpperCase:
+							c = char.ToUpperInvariant(c);
+							break;
+					}
+				}
+				sw.Write(c);
+			}
+			first = false;
+		}
+		if (quote != '\0')
+		{
+			sw.Write(quote);
+		}
+		return sw.ToString();
 	}
 
-	/// <summary>
-	/// Provides conversions between different styles of identifiers.
-	/// </summary>
-	abstract partial class IdentifierStyle
+	internal static IEnumerable<Range> GetSegments(string identifier)
 	{
-		/// <summary>
-		/// Converts a string to the given identifier style.
-		/// </summary>
-		public abstract string Convert(string str);
+		int start = 0;
+		int length = 0;
 
-		internal static string Separated(string str, CasingStyle segmentStyle, char separator = '\0', char quote = '\0')
+		for (var i = 0; i < identifier.Length; i++)
 		{
-			if (str == null) throw new ArgumentNullException(nameof(str));
-
-			using var sw = new StringWriter();
-			if (quote != '\0')
+		startLabel:
+			var c = identifier[i];
+			var cat = char.GetUnicodeCategory(c);
+			switch (cat)
 			{
-				sw.Write(quote);
-			}
-			bool isUpper = IsAllUpper(str);
-
-			bool first = true;
-
-			foreach (var segment in GetSegments(str))
-			{
-				if (!first)
-				{
-					if (separator != '\0')
-						sw.Write(separator);
-				}
-				for (int i = segment.Start; i < segment.End; i++)
-				{
-					var c = str[i];
-
-					if (i == segment.Start)
+				case UnicodeCategory.UppercaseLetter:
+					if (length > 0)
 					{
-						switch (segmentStyle)
-						{
-							case CasingStyle.LowerCase:
-								c = char.ToLowerInvariant(c);
-								break;
-							case CasingStyle.TitleCase:
-							case CasingStyle.UpperCase:
-								c = char.ToUpperInvariant(c);
-								break;
-						}
+						yield return new Range(start, length);
 					}
-					else
+					start = i;
+					length = 1;
+					for (int j = i + 1; j < identifier.Length; j++)
 					{
-						switch (segmentStyle)
+						c = identifier[j];
+						cat = char.GetUnicodeCategory(c);
+						switch (cat)
 						{
-							case CasingStyle.LowerCase:
-								c = char.ToLowerInvariant(c);
+							case UnicodeCategory.UppercaseLetter:
+								length++;
 								break;
-							case CasingStyle.TitleCase:
-								if (isUpper)
+							case UnicodeCategory.LowercaseLetter:
+								if (length > 1)
 								{
-									c = char.ToLowerInvariant(c);
+									yield return new Range(start, length - 1);
+									start = j - 1;
+									i = j;
+									length = 2;
 								}
-								break;
-							case CasingStyle.UpperCase:
-								c = char.ToUpperInvariant(c);
-								break;
+								goto done;
+							case UnicodeCategory.DecimalDigitNumber:
+								yield return new Range(start, length);
+								start = j;
+								i = j;
+								length = 0;
+								goto startLabel;
+							default:
+								yield return new Range(start, length);
+								i = j;
+								start = j;
+								length = 0;
+								goto done;
 						}
 					}
-					sw.Write(c);
-				}
-				first = false;
-			}
-			if (quote != '\0')
-			{
-				sw.Write(quote);
-			}
-			return sw.ToString();
-		}
+					i = identifier.Length;
 
-		internal static IEnumerable<Range> GetSegments(string identifier)
-		{
-			int start = 0;
-			int length = 0;
-
-			for (var i = 0; i < identifier.Length; i++)
-			{
-startLabel:
-				var c = identifier[i];
-				var cat = char.GetUnicodeCategory(c);
-				switch (cat)
-				{
-					case UnicodeCategory.UppercaseLetter:
-						if (length > 0)
-						{
-							yield return new Range(start, length);
-						}
+				done:
+					break;
+				case UnicodeCategory.LowercaseLetter:
+					if (length == 0)
+					{
 						start = i;
-						length = 1;
-						for (int j = i + 1; j < identifier.Length; j++)
+					}
+					length++;
+					break;
+				case UnicodeCategory.DecimalDigitNumber:
+					if (length > 0)
+					{
+						yield return new Range(start, length);
+					}
+					start = i;
+					length = 1;
+					for (int j = i + 1; j < identifier.Length; j++)
+					{
+						c = identifier[j];
+						cat = char.GetUnicodeCategory(c);
+						switch (cat)
 						{
-							c = identifier[j];
-							cat = char.GetUnicodeCategory(c);
-							switch (cat)
-							{
-								case UnicodeCategory.UppercaseLetter:
-									length++;
-									break;
-								case UnicodeCategory.LowercaseLetter:
-									if (length > 1)
-									{
-										yield return new Range(start, length - 1);
-										start = j - 1;
-										i = j;
-										length = 2;
-									}
-									goto done;
-								case UnicodeCategory.DecimalDigitNumber:
-									yield return new Range(start, length);
-									start = j;
-									i = j;
-									length = 0;
-									goto startLabel;
-								default:
-									yield return new Range(start, length);
-									i = j;
-									start = j;
-									length = 0;
-									goto done;
-							}
+							case UnicodeCategory.DecimalDigitNumber:
+								length++;
+								break;
+							default:
+								yield return new Range(start, length);
+								i = j - 1;
+								start = j;
+								length = 0;
+								goto done2;
 						}
-						i = identifier.Length;
+					}
+					i = identifier.Length;
 
-done:
-						break;
-					case UnicodeCategory.LowercaseLetter:
-						if (length == 0)
-						{
-							start = i;
-						}
-						length++;
-						break;
-					case UnicodeCategory.DecimalDigitNumber:
-						if (length > 0)
-						{
-							yield return new Range(start, length);
-						}
-						start = i;
-						length = 1;
-						for (int j = i + 1; j < identifier.Length; j++)
-						{
-							c = identifier[j];
-							cat = char.GetUnicodeCategory(c);
-							switch (cat)
-							{
-								case UnicodeCategory.DecimalDigitNumber:
-									length++;
-									break;
-								default:
-									yield return new Range(start, length);
-									i = j - 1;
-									start = j;
-									length = 0;
-									goto done2;
-							}
-						}
-						i = identifier.Length;
-
-done2:
-						break;
-					default:
-						if (length > 0)
-						{
-							yield return new Range(start, length);
-							length = 0;
-						}
-						break;
-				}
-			}
-			if (length > 0)
-			{
-				yield return new Range(start, length);
+				done2:
+					break;
+				default:
+					if (length > 0)
+					{
+						yield return new Range(start, length);
+						length = 0;
+					}
+					break;
 			}
 		}
-
-		internal static bool IsAllUpper(string str)
+		if (length > 0)
 		{
-			for (int i = str.Length - 1; i >= 0; i--)
-			{
-				if (char.IsLower(str[i]))
-					return false;
-			}
-			return true;
+			yield return new Range(start, length);
 		}
+	}
 
-		internal struct Range
+	internal static bool IsAllUpper(string str)
+	{
+		for (int i = str.Length - 1; i >= 0; i--)
 		{
-			public int Start { get; }
-			public int Length { get; }
+			if (char.IsLower(str[i]))
+				return false;
+		}
+		return true;
+	}
 
-			public int End => Start + Length;
+	internal struct Range
+	{
+		public int Start { get; }
+		public int Length { get; }
 
-			public Range(int start, int length)
-			{
-				this.Start = start;
-				this.Length = length;
-			}
+		public int End => Start + Length;
+
+		public Range(int start, int length)
+		{
+			this.Start = start;
+			this.Length = length;
 		}
 	}
 }

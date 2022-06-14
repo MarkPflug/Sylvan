@@ -1,148 +1,147 @@
 ﻿using System;
 using System.Data.Common;
 
-namespace Sylvan.Data.Csv
+namespace Sylvan.Data.Csv;
+
+partial class CsvDataWriter
 {
-	partial class CsvDataWriter
+	/// <summary>
+	/// Synchronously writes delimited data.
+	/// </summary>
+	/// <param name="reader">The DbDataReader to be written.</param>
+	/// <returns>A task representing the asynchronous write operation.</returns>
+	public long Write(DbDataReader reader)
 	{
-		/// <summary>
-		/// Synchronously writes delimited data.
-		/// </summary>
-		/// <param name="reader">The DbDataReader to be written.</param>
-		/// <returns>A task representing the asynchronous write operation.</returns>
-		public long Write(DbDataReader reader)
+		var c = reader.FieldCount;
+		var fieldInfos = new FieldInfo[c];
+
+		var schema = (reader as IDbColumnSchemaGenerator)?.GetColumnSchema();
+
+		char[] buffer = this.buffer;
+		int bufferSize = this.buffer.Length;
+
+		int result;
+
+		for (int i = 0; i < c; i++)
 		{
-			var c = reader.FieldCount;
-			var fieldInfos = new FieldInfo[c];
+			var allowNull = schema?[i].AllowDBNull ?? true;
+			var writer = GetWriter(reader, i);
+			fieldInfos[i] = new FieldInfo(allowNull, writer);
+		}
 
-			var schema = (reader as IDbColumnSchemaGenerator)?.GetColumnSchema();
+		var fieldCount = c;
 
-			char[] buffer = this.buffer;
-			int bufferSize = this.buffer.Length;
+		var wc = new WriterContext(this, reader);
 
-			int result;
-
+		if (writeHeaders)
+		{
 			for (int i = 0; i < c; i++)
 			{
-				var allowNull = schema?[i].AllowDBNull ?? true;
-				var writer = GetWriter(reader, i);
-				fieldInfos[i] = new FieldInfo(allowNull, writer);
-			}
-
-			var fieldCount = c;
-
-			var wc = new WriterContext(this, reader);
-
-			if (writeHeaders)
-			{
-				for (int i = 0; i < c; i++)
+				if (i > 0)
 				{
-					if (i > 0)
+					if (pos + 1 >= bufferSize)
 					{
-						if (pos + 1 >= bufferSize)
-						{
-							FlushBuffer();
-						}
-						buffer[pos++] = delimiter;
+						FlushBuffer();
 					}
+					buffer[pos++] = delimiter;
+				}
 
-					var header = reader.GetName(i) ?? "";
+				var header = reader.GetName(i) ?? "";
+				result = csvWriter.Write(wc, header, buffer, pos);
+				if (result < 0)
+				{
+					FlushBuffer();
 					result = csvWriter.Write(wc, header, buffer, pos);
 					if (result < 0)
 					{
-						FlushBuffer();
-						result = csvWriter.Write(wc, header, buffer, pos);
-						if (result < 0)
-						{
-							throw new CsvRecordTooLargeException(0, i);
-						}
-						else
-						{
-							pos += result;
-						}
+						throw new CsvRecordTooLargeException(0, i);
 					}
 					else
 					{
 						pos += result;
 					}
 				}
-
-				if (pos + 2 >= bufferSize)
+				else
 				{
-					FlushBuffer();
+					pos += result;
 				}
-				EndRecord();
 			}
 
-			int row = 0;
-			while (reader.Read())
+			if (pos + 2 >= bufferSize)
 			{
-				row++;
-				int i = 0; // field
-				c = reader.FieldCount;
-				for (; i < c; i++)
+				FlushBuffer();
+			}
+			EndRecord();
+		}
+
+		int row = 0;
+		while (reader.Read())
+		{
+			row++;
+			int i = 0; // field
+			c = reader.FieldCount;
+			for (; i < c; i++)
+			{
+				if (i > 0)
 				{
-					if (i > 0)
+					if (pos + 1 >= bufferSize)
 					{
-						if (pos + 1 >= bufferSize)
-						{
-							FlushBuffer();
-						}
-						buffer[pos++] = delimiter;
+						FlushBuffer();
 					}
-					var field = i < fieldCount ? fieldInfos[i] : FieldInfo.Generic;
-					if (field.allowNull && reader.IsDBNull(i))
+					buffer[pos++] = delimiter;
+				}
+				var field = i < fieldCount ? fieldInfos[i] : FieldInfo.Generic;
+				if (field.allowNull && reader.IsDBNull(i))
+				{
+					continue;
+				}
+
+				for (int retry = 0; retry < 2; retry++)
+				{
+					var r = field.writer.Write(wc, i, buffer, pos);
+
+					if (r >= 0)
 					{
+						pos += r;
+						goto success;
+					}
+					else
+					{
+						FlushBuffer();
 						continue;
 					}
-
-					for (int retry = 0; retry < 2; retry++)
-					{
-						var r = field.writer.Write(wc, i, buffer, pos);
-
-						if (r >= 0)
-						{
-							pos += r;
-							goto success;
-						}
-						else
-						{
-							FlushBuffer();
-							continue;
-						}
-					}
-					// we arrive here only when there isn't enough room in the buffer
-					// to hold the field.				
-					throw new CsvRecordTooLargeException(row, i);
-					success:;
 				}
-
-				if (pos + 2 >= bufferSize)
-				{
-					FlushBuffer();
-				}
-				EndRecord();
+				// we arrive here only when there isn't enough room in the buffer
+				// to hold the field.				
+				throw new CsvRecordTooLargeException(row, i);
+			success:;
 			}
-			// flush any pending data on the way out.
-			FlushBuffer();
-			return row;
-		}
 
-		void FlushBuffer()
-		{
-			if (this.pos == 0) return;
-			writer.Write(buffer, 0, pos);
-			pos = 0;
-		}
-
-		void IDisposable.Dispose()
-		{
-			GC.SuppressFinalize(this);
-			if (!disposedValue)
+			if (pos + 2 >= bufferSize)
 			{
-				this.writer.Dispose();
-				disposedValue = true;
+				FlushBuffer();
 			}
+			EndRecord();
+		}
+		// flush any pending data on the way out.
+		FlushBuffer();
+		return row;
+	}
+
+	void FlushBuffer()
+	{
+		if (this.pos == 0) return;
+		writer.Write(buffer, 0, pos);
+		pos = 0;
+	}
+
+	void IDisposable.Dispose()
+	{
+		GC.SuppressFinalize(this);
+		if (!disposedValue)
+		{
+			this.writer.Dispose();
+			disposedValue = true;
 		}
 	}
 }

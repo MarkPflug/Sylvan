@@ -2,71 +2,69 @@
 
 using System;
 using System.Globalization;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Sylvan.Data.Csv
+namespace Sylvan.Data.Csv;
+
+partial class CsvDataAccessor :
+	IFieldAccessor<DateOnly>,
+	IFieldAccessor<TimeOnly>
+
 {
-	partial class CsvDataAccessor :
-		IFieldAccessor<DateOnly>,
-		IFieldAccessor<TimeOnly>
-
+	DateOnly IFieldAccessor<DateOnly>.GetValue(CsvDataReader reader, int ordinal)
 	{
-		DateOnly IFieldAccessor<DateOnly>.GetValue(CsvDataReader reader, int ordinal)
-		{
-			return reader.GetDate(ordinal);
-		}
-
-		TimeOnly IFieldAccessor<TimeOnly>.GetValue(CsvDataReader reader, int ordinal)
-		{
-			return reader.GetTime(ordinal);
-		}
+		return reader.GetDate(ordinal);
 	}
 
-	partial class CsvDataReader
+	TimeOnly IFieldAccessor<TimeOnly>.GetValue(CsvDataReader reader, int ordinal)
 	{
-		/// <summary>
-		/// Gets the value of the field as a <see cref="DateOnly"/>.
-		/// </summary>
-		public DateOnly GetDate(int ordinal)
-		{
-			DateOnly value;
-			var span = this.GetFieldSpan(ordinal);
-			if (IsoDate.TryParse(span, out value))
-			{
-				return value;
-			}
+		return reader.GetTime(ordinal);
+	}
+}
 
-			var format = columns[ordinal].Format;
-			var style = DateTimeStyles.None;
-			if (format != null && DateOnly.TryParseExact(span, format, culture, style, out value))
-			{
-				return value;
-			}
-			return DateOnly.Parse(span, culture, style);
+partial class CsvDataReader
+{
+	/// <summary>
+	/// Gets the value of the field as a <see cref="DateOnly"/>.
+	/// </summary>
+	public DateOnly GetDate(int ordinal)
+	{
+		DateOnly value;
+		var span = this.GetFieldSpan(ordinal);
+		if (IsoDate.TryParse(span, out value))
+		{
+			return value;
 		}
 
-		/// <summary>
-		/// Gets the value of the field as a <see cref="TimeOnly"/>.
-		/// </summary>
-		public TimeOnly GetTime(int ordinal)
+		var format = columns[ordinal].Format;
+		var style = DateTimeStyles.None;
+		if (format != null && DateOnly.TryParseExact(span, format, culture, style, out value))
 		{
-			var format = columns[ordinal].Format;
-			var span = this.GetFieldSpan(ordinal);
-			var style = DateTimeStyles.None;
-			if (format != null && TimeOnly.TryParseExact(span, format, culture, style, out var value))
-			{
-				return value;
-			}
-			return TimeOnly.Parse(span, culture, style);
+			return value;
 		}
+		return DateOnly.Parse(span, culture, style);
+	}
 
-		/// <inheritdoc/>
-		public override Task<T> GetFieldValueAsync<T>(int ordinal, CancellationToken cancellationToken)
+	/// <summary>
+	/// Gets the value of the field as a <see cref="TimeOnly"/>.
+	/// </summary>
+	public TimeOnly GetTime(int ordinal)
+	{
+		var format = columns[ordinal].Format;
+		var span = this.GetFieldSpan(ordinal);
+		var style = DateTimeStyles.None;
+		if (format != null && TimeOnly.TryParseExact(span, format, culture, style, out var value))
 		{
-			return Task.FromResult(GetFieldValue<T>(ordinal));
+			return value;
 		}
+		return TimeOnly.Parse(span, culture, style);
+	}
+
+	/// <inheritdoc/>
+	public override Task<T> GetFieldValueAsync<T>(int ordinal, CancellationToken cancellationToken)
+	{
+		return Task.FromResult(GetFieldValue<T>(ordinal));
 	}
 }
 

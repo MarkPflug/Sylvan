@@ -1,155 +1,154 @@
 ﻿using System.Globalization;
 using System.IO;
 
-namespace Sylvan
-{
-	abstract partial class IdentifierStyle
-	{
-		/// <summary>
-		/// A "camelCase" identifier style.
-		/// </summary>
-		public static readonly IdentifierStyle CamelCase = new CamelCaseStyle();
+namespace Sylvan;
 
-		/// <summary>
-		/// A "database_name" identifier style".
-		/// </summary>
-		public static readonly IdentifierStyle Database = new QuotedIdentifierStyle(CasingStyle.LowerCase, '_');
-	}
+abstract partial class IdentifierStyle
+{
+	/// <summary>
+	/// A "camelCase" identifier style.
+	/// </summary>
+	public static readonly IdentifierStyle CamelCase = new CamelCaseStyle();
 
 	/// <summary>
-	/// The camel case identifier style.
+	/// A "database_name" identifier style".
 	/// </summary>
-	sealed class CamelCaseStyle : IdentifierStyle
-	{
-		/// <inheritdoc/>
-		public override string Convert(string str)
-		{
-			using var sw = new StringWriter();
-			bool isUpper = IsAllUpper(str);
+	public static readonly IdentifierStyle Database = new QuotedIdentifierStyle(CasingStyle.LowerCase, '_');
+}
 
-			bool first = true;
-			char last = '\0';
-			foreach (var segment in GetSegments(str))
+/// <summary>
+/// The camel case identifier style.
+/// </summary>
+sealed class CamelCaseStyle : IdentifierStyle
+{
+	/// <inheritdoc/>
+	public override string Convert(string str)
+	{
+		using var sw = new StringWriter();
+		bool isUpper = IsAllUpper(str);
+
+		bool first = true;
+		char last = '\0';
+		foreach (var segment in GetSegments(str))
+		{
+			for (int i = segment.Start; i < segment.End; i++)
 			{
-				for (int i = segment.Start; i < segment.End; i++)
+				var c = str[i];
+				if (first)
 				{
-					var c = str[i];
-					if (first)
+					c = char.ToLowerInvariant(c);
+				}
+				else
+				{
+					if (i == segment.Start)
 					{
-						c = char.ToLowerInvariant(c);
+						if (char.IsDigit(c) && char.IsDigit(last))
+							sw.Write('_');
+						c = char.ToUpper(c, CultureInfo.InvariantCulture);
 					}
 					else
 					{
-						if (i == segment.Start)
+						if (isUpper)
 						{
-							if (char.IsDigit(c) && char.IsDigit(last))
-								sw.Write('_');
-							c = char.ToUpper(c, CultureInfo.InvariantCulture);
-						}
-						else
-						{
-							if (isUpper)
-							{
-								c = char.ToLower(c, CultureInfo.InvariantCulture);
-							}
+							c = char.ToLower(c, CultureInfo.InvariantCulture);
 						}
 					}
-					sw.Write(c);
-					last = c;
 				}
-				first = false;
+				sw.Write(c);
+				last = c;
 			}
-			return sw.ToString();
+			first = false;
 		}
+		return sw.ToString();
 	}
+}
+
+/// <summary>
+/// An identifier style that uses underscores to separate segments, commonly called "snake_case".
+/// </summary>
+sealed class UnderscoreStyle : IdentifierStyle
+{
+	readonly CasingStyle style;
 
 	/// <summary>
-	/// An identifier style that uses underscores to separate segments, commonly called "snake_case".
+	/// Constructs a new UnderscoreStyle.
 	/// </summary>
-	sealed class UnderscoreStyle : IdentifierStyle
+	public UnderscoreStyle(CasingStyle style = CasingStyle.LowerCase)
 	{
-		readonly CasingStyle style;
-
-		/// <summary>
-		/// Constructs a new UnderscoreStyle.
-		/// </summary>
-		public UnderscoreStyle(CasingStyle style = CasingStyle.LowerCase)
-		{
-			this.style = style;
-		}
-
-		/// <inheritdoc/>
-		public override string Convert(string str)
-		{
-			return Separated(str, style, '_');
-		}
+		this.style = style;
 	}
 
-	/// <summary>
-	/// An identifier style that uses dashes to separate segments, commonly called "kebab-case".
-	/// </summary>
-	sealed class DashStyle : IdentifierStyle
+	/// <inheritdoc/>
+	public override string Convert(string str)
 	{
-		readonly CasingStyle style;
+		return Separated(str, style, '_');
+	}
+}
 
-		/// <summary>
-		/// Constructs a new DashStyle.
-		/// </summary>
-		public DashStyle(CasingStyle style)
-		{
-			this.style = style;
-		}
+/// <summary>
+/// An identifier style that uses dashes to separate segments, commonly called "kebab-case".
+/// </summary>
+sealed class DashStyle : IdentifierStyle
+{
+	readonly CasingStyle style;
 
-		/// <inheritdoc/>
-		public override string Convert(string str)
-		{
-			return Separated(str, style, '-');
-		}
+	/// <summary>
+	/// Constructs a new DashStyle.
+	/// </summary>
+	public DashStyle(CasingStyle style)
+	{
+		this.style = style;
 	}
 
-	/// <summary>
-	/// An identifier style that uses spaces to separate segments. This can be useful to convert identifiers to be presented in non-localized UI elements.
-	/// </summary>
-	sealed class SentenceStyle : IdentifierStyle
+	/// <inheritdoc/>
+	public override string Convert(string str)
 	{
-		readonly CasingStyle style;
+		return Separated(str, style, '-');
+	}
+}
 
-		/// <summary>
-		/// Constructs a new SentenceStyle.
-		/// </summary>
-		public SentenceStyle(CasingStyle style = CasingStyle.LowerCase)
-		{
-			this.style = style;
-		}
+/// <summary>
+/// An identifier style that uses spaces to separate segments. This can be useful to convert identifiers to be presented in non-localized UI elements.
+/// </summary>
+sealed class SentenceStyle : IdentifierStyle
+{
+	readonly CasingStyle style;
 
-		/// <inheritdoc/>
-		public override string Convert(string str)
-		{
-			return Separated(str, style, '-');
-		}
+	/// <summary>
+	/// Constructs a new SentenceStyle.
+	/// </summary>
+	public SentenceStyle(CasingStyle style = CasingStyle.LowerCase)
+	{
+		this.style = style;
 	}
 
-	/// <summary>
-	/// An identifier style commonly used by database languages like sql.
-	/// </summary>
-	sealed class QuotedIdentifierStyle : IdentifierStyle
+	/// <inheritdoc/>
+	public override string Convert(string str)
 	{
-		readonly CasingStyle style;
-		readonly char separator;
+		return Separated(str, style, '-');
+	}
+}
 
-		/// <summary>
-		/// Constructs a new QuotedIdentifierStyle.
-		/// </summary>
-		public QuotedIdentifierStyle(CasingStyle style = CasingStyle.LowerCase, char separator = '_')
-		{
-			this.style = style;
-			this.separator = separator;
-		}
+/// <summary>
+/// An identifier style commonly used by database languages like sql.
+/// </summary>
+sealed class QuotedIdentifierStyle : IdentifierStyle
+{
+	readonly CasingStyle style;
+	readonly char separator;
 
-		/// <inheritdoc/>
-		public override string Convert(string str)
-		{
-			return Separated(str, style, separator, '\"');
-		}
+	/// <summary>
+	/// Constructs a new QuotedIdentifierStyle.
+	/// </summary>
+	public QuotedIdentifierStyle(CasingStyle style = CasingStyle.LowerCase, char separator = '_')
+	{
+		this.style = style;
+		this.separator = separator;
+	}
+
+	/// <inheritdoc/>
+	public override string Convert(string str)
+	{
+		return Separated(str, style, separator, '\"');
 	}
 }

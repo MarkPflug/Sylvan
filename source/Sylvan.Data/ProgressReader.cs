@@ -1,23 +1,22 @@
 ﻿using System;
 using System.Data.Common;
 
-namespace Sylvan.Data
+namespace Sylvan.Data;
+
+class ProgressDataReader : DataReaderAdapter
 {
-	class ProgressDataReader : DataReaderAdapter
+	Action<int> progressCallback;
+
+	int row = 0;
+
+	public ProgressDataReader(DbDataReader dr, Action<int> progressCallback) : base(dr)
 	{
-		Action<int> progressCallback;
+		this.progressCallback = progressCallback;
+	}
 
-		int row = 0;
-
-		public ProgressDataReader(DbDataReader dr, Action<int> progressCallback) : base(dr)
-		{
-			this.progressCallback = progressCallback;
-		}
-
-		public override bool Read()
-		{
-			progressCallback(row++);
-			return base.Read();
-		}
+	public override bool Read()
+	{
+		progressCallback(row++);
+		return base.Read();
 	}
 }
