@@ -1,6 +1,5 @@
-﻿namespace Sylvan
+﻿namespace Sylvan;
+
+public static partial class IsoDate
 {
-	public static partial class IsoDate
-	{
-	}
 }

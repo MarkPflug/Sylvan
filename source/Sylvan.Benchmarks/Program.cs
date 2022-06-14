@@ -1,15 +1,13 @@
 ﻿using BenchmarkDotNet.Running;
-using System.Threading.Tasks;
 
-namespace Sylvan.Benchmarks
+namespace Sylvan.Benchmarks;
+
+static class Program
 {
-	static class Program
+	public static void Main(string[] args)
 	{
-		public static void Main(string[] args)
-		{
-			BenchmarkSwitcher
-				.FromAssembly(typeof(Program).Assembly)
-				.Run(args);
-		}
+		BenchmarkSwitcher
+			.FromAssembly(typeof(Program).Assembly)
+			.Run(args);
 	}
 }

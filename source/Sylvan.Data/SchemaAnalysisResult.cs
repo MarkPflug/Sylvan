@@ -3,155 +3,154 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
-namespace Sylvan.Data
+namespace Sylvan.Data;
+
+public class AnalysisResult : IEnumerable<ColumnInfo>
 {
-	public class AnalysisResult : IEnumerable<ColumnInfo>
+	readonly ColumnInfo[] columns;
+	readonly bool detectSeries;
+
+	internal AnalysisResult(bool detectSeries, ColumnInfo[] columns)
 	{
-		readonly ColumnInfo[] columns;
-		readonly bool detectSeries;
+		this.detectSeries = detectSeries;
+		this.columns = columns;
+	}
 
-		internal AnalysisResult(bool detectSeries, ColumnInfo[] columns)
+	public IEnumerator<ColumnInfo> GetEnumerator()
+	{
+		foreach (var col in columns)
+			yield return col;
+	}
+
+	IEnumerator IEnumerable.GetEnumerator()
+	{
+		return this.GetEnumerator();
+	}
+
+	public Schema GetSchema()
+	{
+		return GetSchemaBuilder().Build();
+	}
+
+	public Schema.Builder GetSchemaBuilder()
+	{
+		var series = detectSeries ? DetectSeries(columns) : null;
+		var schema = new Schema.Builder();
+
+		for (int i = 0; i < columns.Length; i++)
 		{
-			this.detectSeries = detectSeries;
-			this.columns = columns;
-		}
+			var col = columns[i];
 
-		public IEnumerator<ColumnInfo> GetEnumerator()
-		{
-			foreach (var col in columns)
-				yield return col;
-		}
-
-		IEnumerator IEnumerable.GetEnumerator()
-		{
-			return this.GetEnumerator();
-		}
-
-		public Schema GetSchema()
-		{
-			return GetSchemaBuilder().Build();
-		}
-
-		public Schema.Builder GetSchemaBuilder()
-		{
-			var series = detectSeries ? DetectSeries(columns) : null;
-			var schema = new Schema.Builder();
-
-			for (int i = 0; i < columns.Length; i++)
+			if (series?.seriesStart == i)
 			{
-				var col = columns[i];
-
-				if (series?.seriesStart == i)
-				{					
-					string? prefix = series.prefix;
-					var types = col.GetColType();
-					var allowNull = false;
-					for (; i <= series.seriesEnd; i++)
-					{
-						col = columns[i];
-						allowNull |= col.AllowDbNull;
-						types &= col.GetColType();
-					}
-					var type = ColumnInfo.GetType(types);
-
-					var name = string.IsNullOrEmpty(series.prefix) ? "Values" : series.prefix;
-					var cb = new Schema.Column.Builder(name + "*", type, allowNull)
-					{
-						IsSeries = true,
-						SeriesName = name,
-						SeriesOrdinal = 0,
-						SeriesType = series.type == SeriesType.Integer ? typeof(int) : typeof(DateTime),
-						SeriesHeaderFormat = prefix + "{" + series.type + "}",
-					};
-
-					i = series.seriesEnd;
-					schema.Add(cb);
-					continue;
+				string? prefix = series.prefix;
+				var types = col.GetColType();
+				var allowNull = false;
+				for (; i <= series.seriesEnd; i++)
+				{
+					col = columns[i];
+					allowNull |= col.AllowDbNull;
+					types &= col.GetColType();
 				}
-				var dbCol = col.CreateColumnSchema();
-				schema.Add(dbCol);
+				var type = ColumnInfo.GetType(types);
+
+				var name = string.IsNullOrEmpty(series.prefix) ? "Values" : series.prefix;
+				var cb = new Schema.Column.Builder(name + "*", type, allowNull)
+				{
+					IsSeries = true,
+					SeriesName = name,
+					SeriesOrdinal = 0,
+					SeriesType = series.type == SeriesType.Integer ? typeof(int) : typeof(DateTime),
+					SeriesHeaderFormat = prefix + "{" + series.type + "}",
+				};
+
+				i = series.seriesEnd;
+				schema.Add(cb);
+				continue;
 			}
-			return schema;
+			var dbCol = col.CreateColumnSchema();
+			schema.Add(dbCol);
+		}
+		return schema;
+	}
+
+	class SeriesInfo
+	{
+		public SeriesInfo(int idx)
+		{
+			this.seriesStart = idx;
+			this.seriesEnd = idx;
 		}
 
-		class SeriesInfo
+		public SeriesType type;
+		public string? prefix;
+		public int value = -1;
+		public int step;
+		public int seriesStart;
+		public int seriesEnd;
+
+		public int Length => seriesEnd - seriesStart + 1;
+	}
+
+	static string? GetDateSeriesPrefix(string name)
+	{
+		for (int i = 0; i < name.Length - 4; i++)
 		{
-			public SeriesInfo(int idx)
+			if (DateTime.TryParse(name.Substring(i), out DateTime value))
 			{
-				this.seriesStart = idx;
-				this.seriesEnd = idx;
+				return name.Substring(0, i);
 			}
-
-			public SeriesType type;
-			public string? prefix;
-			public int value = -1;
-			public int step;
-			public int seriesStart;
-			public int seriesEnd;
-
-			public int Length => seriesEnd - seriesStart + 1;
 		}
+		return null;
+	}
 
-		static string? GetDateSeriesPrefix(string name)
+	SeriesInfo? DetectSeries(ColumnInfo[] cols)
+	{
+		var series = new SeriesInfo[cols.Length];
+
+		SeriesInfo? ss = null;
+
+		for (int i = 0; i < this.columns.Length; i++)
 		{
-			for (int i = 0; i < name.Length - 4; i++)
+			var s = series[i] = new SeriesInfo(i);
+
+			var col = this.columns[i];
+			var name = col.Name;
+			if (name == null) continue;
+
+			var dateSeriesPrefix = GetDateSeriesPrefix(name);
+
+			if (dateSeriesPrefix != null)
 			{
-				if (DateTime.TryParse(name.Substring(i), out DateTime value))
-				{
-					return name.Substring(0, i);
-				}
+				s.prefix = dateSeriesPrefix;
+				s.type |= SeriesType.Date;
 			}
-			return null;
-		}
-
-		SeriesInfo? DetectSeries(ColumnInfo[] cols)
-		{
-			var series = new SeriesInfo[cols.Length];
-
-			SeriesInfo? ss = null;
-
-			for (int i = 0; i < this.columns.Length; i++)
+			else
 			{
-				var s = series[i] = new SeriesInfo(i);
-
-				var col = this.columns[i];
-				var name = col.Name;
-				if (name == null) continue;
-
-				var dateSeriesPrefix = GetDateSeriesPrefix(name);
-
-				if (dateSeriesPrefix != null)
+				var match = Regex.Match(name, @"\d+$");
+				if (match.Success)
 				{
-					s.prefix = dateSeriesPrefix;
-					s.type |= SeriesType.Date;
-				}
-				else
-				{
-					var match = Regex.Match(name, @"\d+$");
-					if (match.Success)
-					{
-						var prefix = name.Substring(0, name.Length - match.Length);
-						s.prefix = prefix;
-						s.value = int.Parse(match.Captures[0].Value);
-						s.type |= SeriesType.Integer;
-					}
-				}
-
-				if (i > 0 && s.type != SeriesType.None)
-				{
-					var prev = series[i - 1];
-					var start = series[prev.seriesStart];
-					var step = s.value - prev.value;
-					if (prev.type == s.type && StringComparer.InvariantCultureIgnoreCase.Equals(prev.prefix, s.prefix))
-					{
-						s.seriesStart = prev.seriesStart;
-						ss = ss == null ? start : ss != start && start.Length > ss.Length ? start : ss;
-						s.step = step;
-						series[s.seriesStart].seriesEnd = i;
-					}
+					var prefix = name.Substring(0, name.Length - match.Length);
+					s.prefix = prefix;
+					s.value = int.Parse(match.Captures[0].Value);
+					s.type |= SeriesType.Integer;
 				}
 			}
-			return ss;
+
+			if (i > 0 && s.type != SeriesType.None)
+			{
+				var prev = series[i - 1];
+				var start = series[prev.seriesStart];
+				var step = s.value - prev.value;
+				if (prev.type == s.type && StringComparer.InvariantCultureIgnoreCase.Equals(prev.prefix, s.prefix))
+				{
+					s.seriesStart = prev.seriesStart;
+					ss = ss == null ? start : ss != start && start.Length > ss.Length ? start : ss;
+					s.step = step;
+					series[s.seriesStart].seriesEnd = i;
+				}
+			}
 		}
+		return ss;
 	}
 }
