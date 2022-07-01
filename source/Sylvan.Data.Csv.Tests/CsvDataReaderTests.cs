@@ -1553,4 +1553,47 @@ public class CsvDataReaderTests
 		Assert.Equal("2", csv.GetString(1));
 		Assert.False(csv.Read());
 	}
+
+	[Fact]
+	public void NumbersAsBoolean()
+	{
+		var data = "a,b\n0,1\n1,2";
+
+		var csv = CsvDataReader.Create(new StringReader(data));
+		Assert.True(csv.Read());
+
+		Assert.False(csv.GetBoolean(0));
+		Assert.True(csv.GetBoolean(1));
+
+		Assert.True(csv.Read());
+		Assert.True(csv.GetBoolean(0));
+		Assert.True(csv.GetBoolean(1));
+		Assert.False(csv.Read());
+	}
+
+#if NET6_0_OR_GREATER
+
+	[Fact]
+	public void DateOnlyFormatsCulture()
+	{
+		var opts = new CsvDataReaderOptions { Culture = CultureInfo.GetCultureInfo("en-AU") };
+		var data = "a,b\n1,30/06/2022";	
+		var csv = CsvDataReader.Create(new StringReader(data), opts);
+		Assert.True(csv.Read());
+		Assert.Equal(new DateOnly(2022, 06, 30), csv.GetDate(1));
+	}
+
+	[Fact]
+	public void DateOnlyFormatsSchema()
+	{
+		var schema = Schema.Parse("a:int,b:date{ddMMyyyy}");
+		var opts = new CsvDataReaderOptions { Schema = new CsvSchema(schema) };
+		var data = "a,b\n1,30062022";
+		var csv = CsvDataReader.Create(new StringReader(data), opts);
+		Assert.True(csv.Read());
+		Assert.Equal(new DateOnly(2022, 06, 30), csv.GetDate(1));
+	}
+
+#endif
+
 }
