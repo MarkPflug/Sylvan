@@ -13,7 +13,7 @@ public class ObjectDataReaderBenchmarks
 	{
 		Builder =
 			ObjectDataReader
-			.Build<TestRecord>()
+			.CreateBuilder<TestRecord>()
 			.AddAllProperties();
 	}
 
@@ -43,7 +43,7 @@ public class ObjectDataReaderBenchmarks
 	{
 		var fac =
 			ObjectDataReader
-			.Build<TestRecord>()
+			.CreateBuilder<TestRecord>()
 			.AddColumn("Id", r => r.Id)
 			.AddColumn("Date", r => r.Date)
 			.AddColumn("IsActive", r => r.IsActive)
@@ -57,7 +57,7 @@ public class ObjectDataReaderBenchmarks
 	{
 		var fac =
 			ObjectDataReader
-			.Build<TestRecord>()
+			.CreateBuilder<TestRecord>()
 			.AddAllProperties();
 		var dr = fac.Build(GetData());
 		dr.Process();

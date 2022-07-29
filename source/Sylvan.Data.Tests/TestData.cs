@@ -133,7 +133,7 @@ namespace Sylvan.Data
 
 		static ObjectDataReader.Builder<TestRecord> Builder =
 			ObjectDataReader
-				.Build<TestRecord>()
+				.CreateBuilder<TestRecord>()
 				.AddColumn("Id", i => i.Id)
 				.AddColumn("Name", i => i.Name)
 				.AddColumn("Date", i => i.Date)
@@ -180,7 +180,7 @@ namespace Sylvan.Data
 
 		static ObjectDataReader.Builder<BinaryData> BinaryBuilder =
 			ObjectDataReader
-				.Build<BinaryData>()
+				.CreateBuilder<BinaryData>()
 				.AddColumn("Id", d => d.Id)
 				.AddColumn("Data", d => d.Data);
 
@@ -207,7 +207,7 @@ namespace Sylvan.Data
 			var items = GetTestObjects(recordCount, valueCount);
 			return
 				ObjectDataReader
-				.Build<TestRecord>()
+				.CreateBuilder<TestRecord>()
 				.AddColumn("Id", i => i.Id)
 				.AddColumn("Name", i => i.Name)
 				.AddColumn("Date", i => i.Date)

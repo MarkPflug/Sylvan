@@ -37,7 +37,8 @@ public static class DataExtensions
 	/// </summary>
 	/// <typeparam name="T">The type of record to bind to.</typeparam>
 	/// <param name="reader">The data reader.</param>
-	public static IEnumerable<T> GetRecords<T>(this DbDataReader reader) where T : new()
+	public static IEnumerable<T> GetRecords<T>(this DbDataReader reader) 
+		where T : class, new()
 	{
 		var binder = DataBinder.Create<T>(reader);
 		while (reader.Read())
@@ -67,7 +68,8 @@ public static class DataExtensions
 	/// </summary>
 	/// <typeparam name="T">The type of record to bind to.</typeparam>
 	/// <param name="reader">The data reader.</param>
-	public static async IAsyncEnumerable<T> GetRecordsAsync<T>(this DbDataReader reader) where T : new()
+	public static async IAsyncEnumerable<T> GetRecordsAsync<T>(this DbDataReader reader) 
+		where T : class, new()
 	{
 		var binder = DataBinder.Create<T>(reader);
 		while (await reader.ReadAsync())

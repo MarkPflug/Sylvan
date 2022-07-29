@@ -14,6 +14,7 @@ namespace Sylvan.Data;
 
 sealed class CompiledDataBinder<T>
 	: IDataBinder<T>, IDataSeriesBinder
+	where T : class
 {
 	object? IDataSeriesBinder.GetSeriesAccessor(string seriesName)
 	{
@@ -163,7 +164,7 @@ sealed class CompiledDataBinder<T>
 		var properties =
 			recordType
 			.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
-			//.Where(p => p.GetSetMethod() != null)
+			.Where(p => p.SetMethod != null)
 			.ToDictionary(p => p.Name, p => p, StringComparer.OrdinalIgnoreCase);
 
 		foreach (var kvp in properties.ToArray())
