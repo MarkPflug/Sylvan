@@ -4,6 +4,7 @@ using System.Data.Common;
 namespace Sylvan.Data;
 
 sealed class CompiledBinderCache<T>
+	where T : class
 {
 	static ConcurrentDictionary<SchemaKey, CompiledDataBinder<T>> SchemaCache =
 		new ConcurrentDictionary<SchemaKey, CompiledDataBinder<T>>();

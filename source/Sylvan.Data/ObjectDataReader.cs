@@ -9,7 +9,11 @@ using System.Reflection;
 
 namespace Sylvan.Data;
 
-static class ObjectDataReader
+/// <summary>
+/// Provides methods for constructing DbDataReader instances
+/// over object collections.
+/// </summary>
+public static class ObjectDataReader
 {
 	/// <summary>
 	/// Creates a DbDataReader over a sequence of objects.
@@ -19,43 +23,71 @@ static class ObjectDataReader
 		return new ObjectDataReader<T>(data);
 	}
 
-	public static Builder<T> Build<T>(IEnumerable<T> data)
+	/// <summary>
+	/// Creates an ObjectDataReader.Builder for the provided data.
+	/// </summary>
+	/// <remarks>
+	/// This overload is useful when the type T is an anonymous type.
+	/// </remarks>
+	public static Builder<T> CreateBuilder<T>(IEnumerable<T> data)
 	{
 		return new Builder<T>();
 	}
 
-	public static Builder<T> Build<T>()
+	/// <summary>
+	/// Creates an ObjectDataReader.Builder for reading data from the type T.
+	/// </summary>
+	public static Builder<T> CreateBuilder<T>()
 	{
 		return new Builder<T>();
 	}
 
+	/// <summary>
+	/// A builder for constructing DbDataReader over object data.
+	/// </summary>
+	/// <typeparam name="T"></typeparam>
 	public sealed class Builder<T>
 	{
 		ObjectDataReader<T>.Builder builder;
 
+		/// <summary>
+		/// Creates a new ObjectDataReader.Builder{T}.
+		/// </summary>
 		public Builder()
 		{
 			this.builder = new ObjectDataReader<T>.Builder();
 		}
 
+		/// <summary>
+		/// Adds a column to the DbDataReader.
+		/// </summary>
 		public Builder<T> AddColumn<T0>(string name, Func<T, T0?> func) where T0 : struct
 		{
 			this.builder.AddColumn(name, func);
 			return this;
 		}
 
+		/// <summary>
+		/// Adds a column to the DbDataReader.
+		/// </summary>
 		public Builder<T> AddColumn<T0>(string name, Func<T, T0> func)
 		{
 			this.builder.AddColumn(name, func);
 			return this;
 		}
 
+		/// <summary>
+		/// Adds all public properties to the DbDataReader.
+		/// </summary>
 		public Builder<T> AddAllProperties()
 		{
 			this.builder.AddDefaultColumns();
 			return this;
 		}
 
+		/// <summary>
+		/// Builds a DbDataReader over the data that will read the columns defined by the builder.
+		/// </summary>
 		public DbDataReader Build(IEnumerable<T> data)
 		{
 			return builder.Build(data);

@@ -9,64 +9,6 @@ using Xunit;
 
 namespace Sylvan.Data
 {
-	class MyDataRecord
-	{
-		public int Id { get; private set; }
-		public string Name { get; private set; }
-		public DateTime? Date { get; private set; }
-	}
-
-	class NumericNullRecord
-	{
-		public string Name { get; set; }
-		public double? Value { get; set; }
-	}
-
-	class SeriesRecord
-	{
-		public int Id { get; private set; }
-		public string Name { get; private set; }
-		//[ColumnSeries("{Integer}")]
-		public Series<int, int> Values { get; private set; }
-	}
-
-	class SeriesStringRecord
-	{
-		public int Id { get; private set; }
-		public string Name { get; private set; }
-		//[ColumnSeries("{Integer}")]
-		public Series<string, int> Values { get; private set; }
-	}
-
-	class SeriesDateRecord
-	{
-		public int Id { get; set; }
-		public string Name { get; set; }
-		public Series<DateTime, int> Values { get; set; }
-	}
-
-	class Record
-	{
-		public int AccountNumber { get; set; }
-		public int DayOfWeek { get; set; }
-	}
-
-	enum Severity
-	{
-		Critical = 1,
-		Error = 2,
-		Warning = 3,
-		Info = 4,
-		Verbose = 5,
-	}
-
-	class EnumRecord
-	{
-		public int Id { get; set; }
-		public string Name { get; set; }
-		public Severity Severity { get; set; }
-	}
-
 	public class DataBinderTests
 	{
 		static ReadOnlyCollection<DbColumn> BuildSchema()
@@ -107,7 +49,7 @@ namespace Sylvan.Data
 		{
 			var csv = CsvDataReader.Create(new StringReader(csvData));
 
-			foreach(var record in csv.GetRecords<Record>())
+			foreach (var record in csv.GetRecords<Record>())
 			{
 				Assert.Equal(1, record.AccountNumber);
 				Assert.Equal(2, record.DayOfWeek);
@@ -128,6 +70,21 @@ namespace Sylvan.Data
 			while (data.Read())
 			{
 				var item = binder.GetRecord(data);
+			}
+		}
+
+		[Fact]
+		public void RecordClass()
+		{
+			var csvData = "Id,Name,Date\n1,Test,2020-08-12\n";
+			var tr = new StringReader(csvData);
+			var data = CsvDataReader.Create(tr);
+
+			foreach(var record in data.GetRecords<MyRecordClass>())
+			{
+				Assert.Equal(1, record.Id);
+				Assert.Equal("Test", record.Name);
+				Assert.Equal(new DateTime(2020,8,12), record.Date);
 			}
 		}
 
@@ -534,5 +491,70 @@ namespace Sylvan.Data
 		{
 			this.data = data;
 		}
+	}
+
+	class MyDataRecord
+	{
+		public int Id { get; private set; }
+		public string Name { get; private set; }
+		public DateTime? Date { get; private set; }
+	}
+
+	class NumericNullRecord
+	{
+		public string Name { get; set; }
+		public double? Value { get; set; }
+	}
+
+	class SeriesRecord
+	{
+		public int Id { get; private set; }
+		public string Name { get; private set; }
+		//[ColumnSeries("{Integer}")]
+		public Series<int, int> Values { get; private set; }
+	}
+
+	class SeriesStringRecord
+	{
+		public int Id { get; private set; }
+		public string Name { get; private set; }
+		//[ColumnSeries("{Integer}")]
+		public Series<string, int> Values { get; private set; }
+	}
+
+	class SeriesDateRecord
+	{
+		public int Id { get; set; }
+		public string Name { get; set; }
+		public Series<DateTime, int> Values { get; set; }
+	}
+
+	class Record
+	{
+		public int AccountNumber { get; set; }
+		public int DayOfWeek { get; set; }
+	}
+
+	enum Severity
+	{
+		Critical = 1,
+		Error = 2,
+		Warning = 3,
+		Info = 4,
+		Verbose = 5,
+	}
+
+	class EnumRecord
+	{
+		public int Id { get; set; }
+		public string Name { get; set; }
+		public Severity Severity { get; set; }
+	}
+
+	record class MyRecordClass
+	{
+		public int Id { get; set; }
+		public string Name { get; set; }
+		public DateTime Date { get; set; }
 	}
 }

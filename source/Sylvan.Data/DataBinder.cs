@@ -75,6 +75,7 @@ public static partial class DataBinder
 	/// <param name="opts">The binding options.</param>
 	/// <returns>An IDataBinder{T} instance.</returns>
 	public static IDataBinder<T> Create<T>(ReadOnlyCollection<DbColumn> schema, DataBinderOptions? opts = null)
+		where T : class
 	{
 		opts = opts ?? new DataBinderOptions();
 		return new CompiledDataBinder<T>(opts, schema);
@@ -88,6 +89,7 @@ public static partial class DataBinder
 	/// <param name="opts">The binding options.</param>
 	/// <returns>An IDataBinder{T} instance.</returns>
 	public static IDataBinder<T> Create<T>(IDataReader reader, DataBinderOptions? opts = null)
+		where T : class
 	{
 		var dr = reader.AsDbDataReader();
 		opts = opts ?? new DataBinderOptions();
@@ -103,6 +105,7 @@ public static partial class DataBinder
 	/// <param name="opts">The binding options.</param>
 	/// <returns>An IDataBinder{T} instance.</returns>
 	public static IDataBinder<T> Create<T>(IDataReader reader, ReadOnlyCollection<DbColumn> schema, DataBinderOptions? opts = null)
+		where T : class
 	{
 		var dr = reader.AsDbDataReader();
 		opts = opts ?? new DataBinderOptions();
