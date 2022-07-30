@@ -195,4 +195,16 @@ public static class DataExtensions
 		fieldType = fieldType ?? typeof(object);
 		return new VariableDataReader<T>(reader, rowFieldCountAccessor, fieldType);
 	}
+
+	/// <summary>
+	/// Creates a DbDataReader that validates data against a schema as it reads.
+	/// </summary>
+	/// <param name="reader">The DbDataReader</param>
+	/// <param name="errorHandler">The errorHandler callback.</param>
+	/// <returns></returns>
+	public static DbDataReader ValidateSchema<T>(this T reader, SchemaViolationErrorHandler errorHandler)
+		where T : DbDataReader
+	{
+		return new SchemaValidatingDataReader(reader, errorHandler);
+	}
 }
