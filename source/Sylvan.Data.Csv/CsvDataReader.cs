@@ -256,18 +256,9 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 
 	void InitIntrinsics()
 	{
-		delimiterMaskVector = GetCharVector(this.delimiter);
-		lineEndMaskVector = GetCharVector('\n');
-		quoteMaskVector = GetCharVector(this.quote);
-	}
-
-	static Vector128<ushort> GetCharVector(char c)
-	{
-		ushort b = c;
-		return Vector128.Create(
-			b, b, b, b,
-			b, b, b, b
-		);
+		delimiterMaskVector = Vector128.Create((ushort)this.delimiter);
+		lineEndMaskVector = Vector128.Create((ushort)'\n');
+		quoteMaskVector = Vector128.Create((ushort)this.quote);
 	}
 
 	// this method uses SIMD instructions to optimistically read records
