@@ -356,6 +356,11 @@ public class CsvDataReaderTests
 			return new ExcelColumn("" + (char)('A' + ordinal));
 		}
 
+		public int GetFieldCount(CsvDataReader reader)
+		{
+			return reader.RowFieldCount;
+		}
+
 		class ExcelColumn : DbColumn
 		{
 			public ExcelColumn(string name)
@@ -428,6 +433,11 @@ public class CsvDataReaderTests
 
 			//exceptions are better than infinite loops.
 			throw new NotSupportedException();
+		}
+
+		public int GetFieldCount(CsvDataReader reader)
+		{
+			return reader.RowFieldCount;
 		}
 	}
 
@@ -1571,13 +1581,29 @@ public class CsvDataReaderTests
 		Assert.False(csv.Read());
 	}
 
+	[Fact]
+	public void BufferGrow()
+	{
+		var data = new StringReader(new string(',', 0xc0));
+		var opts = new CsvDataReaderOptions {
+			BufferSize = 0x80, 
+			MaxBufferSize = 0x100,
+			HasHeaders = false,
+		};
+
+		var reader = CsvDataReader.Create(data, opts);
+		Assert.True(reader.Read());
+		Assert.Equal(0xc1, reader.RowFieldCount);
+
+	}
+
 #if NET6_0_OR_GREATER
 
 	[Fact]
 	public void DateOnlyFormatsCulture()
 	{
 		var opts = new CsvDataReaderOptions { Culture = CultureInfo.GetCultureInfo("en-AU") };
-		var data = "a,b\n1,30/06/2022";	
+		var data = "a,b\n1,30/06/2022";
 		var csv = CsvDataReader.Create(new StringReader(data), opts);
 		Assert.True(csv.Read());
 		Assert.Equal(new DateOnly(2022, 06, 30), csv.GetDate(1));

@@ -44,6 +44,7 @@ public class SampleTests
 	sealed class Schema : ICsvSchemaProvider
 	{
 		readonly ReadOnlyCollection<DbColumn> schema;
+
 		public Schema(ReadOnlyCollection<DbColumn> schema)
 		{
 			this.schema = schema;
@@ -52,6 +53,11 @@ public class SampleTests
 		public DbColumn GetColumn(string name, int ordinal)
 		{
 			return schema[ordinal];
+		}
+
+		public int GetFieldCount(CsvDataReader reader)
+		{
+			return reader.RowFieldCount;
 		}
 	}
 
@@ -91,6 +97,7 @@ public class SampleTests
 	class SchemaProvider : ICsvSchemaProvider
 	{
 		readonly ReadOnlyCollection<DbColumn> schema;
+
 		public SchemaProvider(ReadOnlyCollection<DbColumn> schema)
 		{
 			this.schema = schema;
@@ -99,6 +106,11 @@ public class SampleTests
 		public DbColumn GetColumn(string name, int ordinal)
 		{
 			return schema[ordinal];
+		}
+
+		public int GetFieldCount(CsvDataReader reader)
+		{
+			return reader.RowFieldCount;
 		}
 	}
 

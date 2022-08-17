@@ -89,8 +89,9 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 
 	readonly TextReader reader;
 	bool hasRows;
-	readonly char[] buffer;
+	char[] buffer;
 
+	int maxBufferSize;
 	int idx;
 	int bufferEnd;
 	int recordStart;
@@ -176,6 +177,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		this.trueString = options.TrueString;
 		this.falseString = options.FalseString;
 
+		this.maxBufferSize = options.MaxBufferSize ?? -1;
 		this.recordStart = 0;
 		this.bufferEnd = 0;
 		this.idx = 0;
@@ -230,8 +232,9 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 
 	void InitializeSchema()
 	{
-		columns = new CsvColumn[this.fieldCount];
-		for (int i = 0; i < this.fieldCount; i++)
+		var count = schema?.GetFieldCount(this) ?? this.fieldCount;
+		columns = new CsvColumn[count];
+		for (int i = 0; i < count; i++)
 		{
 			var name = hasHeaders ? GetString(i) : null;
 			var columnSchema = schema?.GetColumn(name, i);
@@ -419,6 +422,24 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	}
 
 #endif
+
+	bool GrowBuffer()
+	{
+		var len = buffer.Length;
+		if (maxBufferSize > 0 && len < maxBufferSize)
+		{
+			var newLen = Math.Min(len * 2, maxBufferSize);
+			var newBuffer = new char[newLen];
+			Array.Copy(buffer, recordStart, newBuffer, 0, bufferEnd - recordStart);
+			this.idx -= recordStart;
+			this.bufferEnd -= recordStart;
+			this.recordStart = 0;
+
+			this.buffer = newBuffer;
+			return true;
+		}
+		return false;
+	}
 
 	// attempt to read a field. 
 	// returns True if there are more in record (hit delimiter), 

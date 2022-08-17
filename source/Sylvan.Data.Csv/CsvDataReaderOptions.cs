@@ -232,6 +232,11 @@ public sealed class CsvDataReaderOptions
 	public int BufferSize { get; set; }
 
 	/// <summary>
+	/// The maximum size the internal buffer will be allowed to grow.
+	/// </summary>
+	public int? MaxBufferSize { get; set; }
+
+	/// <summary>
 	/// The buffer to use when reading records.
 	/// The default is null, in which case the reader will allocate the buffer.
 	/// </summary>

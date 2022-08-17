@@ -174,12 +174,12 @@ partial class CsvDataReader
 			{
 				if (recordStart == 0 && this.bufferEnd == this.buffer.Length)
 				{
-					throw new CsvRecordTooLargeException(this.RowNumber, 0, null, null);
+					if (!GrowBuffer())
+					{
+						throw new CsvRecordTooLargeException(this.RowNumber, 0, null, null);
+					}
 				}
-				else
-				{
-					await FillBufferAsync(cancel).ConfigureAwait(false);
-				}
+				await FillBufferAsync(cancel).ConfigureAwait(false);
 			}
 			goto start;
 		}
@@ -210,15 +210,15 @@ partial class CsvDataReader
 			// we were unable to read an entire record out of the buffer
 			if (recordStart == 0 && bufferEnd == buffer.Length)
 			{
-				// if we consumed the entire buffer reading this record, then this is an exceptional situation
-				// we expect a record to be able to fit entirely within the buffer.
-				throw new CsvRecordTooLargeException(this.RowNumber, fieldIdx, null, null);
+				if (!GrowBuffer())
+				{
+					// if we consumed the entire buffer reading this record, then this is an exceptional situation
+					// we expect a record to be able to fit entirely within the buffer.
+					throw new CsvRecordTooLargeException(this.RowNumber, fieldIdx, null, null);
+				}
 			}
-			else
-			{
-				await FillBufferAsync(cancel).ConfigureAwait(false);
-				// after filling the buffer, we will resume reading fields from where we left off.
-			}
+			await FillBufferAsync(cancel).ConfigureAwait(false);
+			// after filling the buffer, we will resume reading fields from where we left off.
 		}
 	}
 

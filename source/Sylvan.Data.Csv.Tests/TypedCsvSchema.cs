@@ -71,4 +71,9 @@ public class TypedCsvSchema : ICsvSchemaProvider
 		}
 		return null;
 	}
+
+	public int GetFieldCount(CsvDataReader reader)
+	{
+		return reader.RowFieldCount;
+	}
 }
