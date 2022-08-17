@@ -15,12 +15,12 @@ This code was largely taken from an implementation in `System.Text.Json`, which 
 - Handles chars instead of bytes, as the S.T.Json impl was utf-8 specific.
 - Allows ' ' in place of 'T' as time separator. Not ISO compliant, but common enough that I wanted to support it.
 - Allows ',' in place of '.' as fractional time separator, which ISO8601 apparently allows, but isn't supported by S.T.Json.
-- Rounds appropriately when more than 7 fracational second digits are parsed. Nanoseconds are important, right.
+- Rounds appropriately when more than 7 fractional second digits are parsed. Nanoseconds are important, right.
 
 ### StringPool
 
 This type provides a means of de-duping strings upon construction. 
-It is conceptually similar to the `System.Xml.NameTable` type, which is intended to de-dupe the repetetive names in XML.
+It is conceptually similar to the `System.Xml.NameTable` type, which is intended to de-dupe the repetitive names in XML.
 This implements a dictionary that only allows adding by calling `string GetString(char[] buffer, int offset, int length)`, which
 will return an existing string if the same sequence has already been seen. This was created to de-dupe strings in the `Sylvan.Data.Csv.CsvDataReader` implementation. This type has no eviction policy, so it is essentially a giant memory leak until it is GCed.
 If you are intending to use this along with the Sylvan CSV reader, you might investigate using [Ben.StringPool](https://www.nuget.org/packages/Ben.StringIntern/) instead, which offers a more robust implementation that includes LRU cache eviction, making it suitable for use in longer-lived scopes.

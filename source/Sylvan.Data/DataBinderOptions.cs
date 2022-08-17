@@ -29,7 +29,7 @@ public sealed class DataBinderOptions
 	/// </summary>
 	/// <remarks>
 	/// This is primarily to support the Sylvan CSV, which allows
-	/// accesssing CSV (string) fields using any DbDataReader accessor.
+	/// accessing CSV (string) fields using any DbDataReader accessor.
 	/// </remarks>
 	public bool InferColumnTypeFromMember { get; set; }
 

@@ -60,7 +60,7 @@ _Async_
 _String Pooling_
 
 CsvDataReader supports de-duplicating strings during reading. CSV files often contain very
-repetetive data, so loading each value as a unique string can be extremely wasteful. 
+repetitive data, so loading each value as a unique string can be extremely wasteful. 
 By default, repeated values will be returned as a new, duplicated string. However,
 one can optionally provide a function which allows de-duplicating strings. The `Sylvan.Data.Csv`
 library doesn't provide an implementation, but `Sylvan.Common` library provides one via the `StringPool` class.
@@ -124,7 +124,7 @@ Record delimiters cannot be configured in the `CsvDataReader`, which expects  ei
 
 _Overlarge Records_
 
-CsvDataReader will fail to parse data if a record doesn't fit entirely within the internal buffer. The buffer size can be configured however, so unusually large records can be accomodated by providing a larger buffer. 
+CsvDataReader will fail to parse data if a record doesn't fit entirely within the internal buffer. The buffer size can be configured however, so unusually large records can be accommodated by providing a larger buffer. 
 
 _Missing Fields_
 

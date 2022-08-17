@@ -13,13 +13,13 @@ public enum CsvStyle
 	Standard = 1,
 
 	/// <summary>
-	/// Interprets fields as if they are implicitly quoted. Delimiters and new lines within fields are preceeded by an escape character.
+	/// Interprets fields as if they are implicitly quoted. Delimiters and new lines within fields are preceded by an escape character.
 	/// </summary>
 	[Obsolete("Use CsvStyle.Escaped instead.")]
 	Unquoted = 2,
 
 	/// <summary>
-	/// Interprets fields as if they are implicitly quoted. Delimiters and new lines within fields are preceeded by an escape character.
+	/// Interprets fields as if they are implicitly quoted. Delimiters and new lines within fields are preceded by an escape character.
 	/// </summary>
 	Escaped = 2,
 }

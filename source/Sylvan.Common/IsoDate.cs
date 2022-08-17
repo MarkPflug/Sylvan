@@ -17,7 +17,7 @@ static partial class IsoDate
 	// - handles chars instead of bytes, as the S.T.Json impl was utf-8 specific
 	// - Allows ' ' in place of 'T' as time separator. Not ISO compliant, but common enough that I want to allow it.
 	// - Allows ',' in place of '.' as fractional time separator, which ISO8601 apparently allows but often isn't supported.
-	// - Rounds appropriately when more than 7 fracational second digits are parsed.
+	// - Rounds appropriately when more than 7 fractional second digits are parsed.
 
 	const int DateTimeParseNumFractionDigits = 16;
 	const int DateTimeNumFractionDigits = 7;
@@ -259,7 +259,7 @@ static partial class IsoDate
 		// Decimal fractions are allowed for hours, minutes and seconds (5.3.14).
 		// We only allow fractions for seconds currently. Lower order components
 		// can't follow, i.e. you can have T23.3, but not T23.3:04. There must be
-		// one digit, but the max number of digits is implemenation defined. We
+		// one digit, but the max number of digits is implementation defined. We
 		// currently allow up to 16 digits of fractional seconds only. While we
 		// support 16 fractional digits we only parse the first seven, anything
 		// past that is considered a zero. This is to stay compatible with the
