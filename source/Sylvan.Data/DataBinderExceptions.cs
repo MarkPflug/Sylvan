@@ -65,7 +65,7 @@ public class DataBinderException : Exception
 }
 
 /// <summary>
-/// An exception thrown when a data binder enounters unbound columns or properties and is configured
+/// An exception thrown when a data binder encounters unbound columns or properties and is configured
 /// to require them to be bound.
 /// </summary>
 public sealed class UnboundMemberException : DataBinderException

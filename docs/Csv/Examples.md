@@ -50,7 +50,7 @@ while(await csv.ReadAsync())
 
 Easily load CSV data into strongly typed data tables.
 This example is specific to SqlServer, but most database providers offer
-similar bulk load cababilities which follow this same pattern.
+similar bulk load capabilities which follow this same pattern.
 
 This example requires the CSV file to contain data that is compatible with
 the target table's schema. It applies the schema of the target database table
@@ -84,7 +84,7 @@ bcp.WriteToServer(dataReader);
 ### CSV Data Binder example
 
 The `Sylvan.Data` library includes a generic data binder which makes it 
-very easy to bind to stronly typed objects. This data binder can be used
+very easy to bind to strongly typed objects. This data binder can be used
 with any `DbDataReader` instance, and is not specific to `Sylvan.Data.Csv`.
 
 ```

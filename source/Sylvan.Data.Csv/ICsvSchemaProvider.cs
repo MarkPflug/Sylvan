@@ -8,7 +8,7 @@ namespace Sylvan.Data.Csv;
 public interface ICsvSchemaProvider
 {
 	/// <summary>
-	/// Gets the schema for a column with the given name and/or oridinal.
+	/// Gets the schema for a column with the given name and/or ordinal.
 	/// </summary>
 	/// <param name="name">The name of the column, or null if the data contains no headers.</param>
 	/// <param name="ordinal">The zero-based ordinal of the column.</param>

@@ -68,7 +68,7 @@ namespace Sylvan.Data
 		public ExampleDynamicBinder(IReadOnlyList<DbColumn> schema)
 		{
 			// this method body will be generated with ILEmit
-			// it is called one time to constuct a binder from DbDataReader to T.
+			// it is called one time to construct a binder from DbDataReader to T.
 			idx0 = -1;
 			idx1 = -1;
 			idx2 = -1;

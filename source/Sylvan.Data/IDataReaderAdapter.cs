@@ -7,11 +7,11 @@ using System.Data.Common;
 namespace Sylvan.Data;
 
 // Adapts an IDataReader into a DbDataReader.
-sealed class IDataReaderAdpater : DbDataReader, IDbColumnSchemaGenerator
+sealed class IDataReaderAdapter : DbDataReader, IDbColumnSchemaGenerator
 {
 	readonly IDataReader dr;
 
-	public IDataReaderAdpater(IDataReader dr)
+	public IDataReaderAdapter(IDataReader dr)
 	{
 		if (dr == null) throw new ArgumentNullException(nameof(dr));
 		this.dr = dr;

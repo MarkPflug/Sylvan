@@ -18,7 +18,7 @@ public static class DataExtensions
 	public static DbDataReader AsDbDataReader(this IDataReader reader)
 	{
 		if (reader is DbDataReader dr) return dr;
-		return new IDataReaderAdpater(reader);
+		return new IDataReaderAdapter(reader);
 	}
 
 	/// <summary>

@@ -41,7 +41,7 @@
 //			{
 //				if (!string.IsNullOrEmpty(name))
 //				{
-//					// interesting that this needs to be annoted with not-null
+//					// interesting that this needs to be annotated with not-null
 //					if (ordinalMap!.TryGetValue(name!, out var c))
 //					{
 //						return c.Column;

@@ -3,7 +3,7 @@
 _0.2.3_
 - Fix an issue binding to `record class` types.
 - Add `class` constraint to binder methods, as structs are not currently supported.
-- Restore ObjectDataReader methods that were inadvertantly removed in the previous release.
+- Restore ObjectDataReader methods that were inadvertently removed in the previous release.
 
 _0.2.2_
 - Expose DbDataReaderAdapter base class.

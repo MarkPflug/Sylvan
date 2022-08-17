@@ -91,7 +91,7 @@ sealed class CompiledDataBinder<T>
 		{
 			if (!string.IsNullOrEmpty(name))
 			{
-				// interesting that this needs to be annoted with not-null
+				// interesting that this needs to be annotated with not-null
 				if (nameMap.TryGetValue(name!, out var c))
 				{
 					return c;
@@ -130,12 +130,12 @@ sealed class CompiledDataBinder<T>
 		locals.Add(idxVar);
 		locals.Add(stateVar);
 
-		// To provide special handling empty string as a null for a nullable primtivite type
+		// To provide special handling empty string as a null for a nullable primitive type
 		// we want to construct the following:
 		// tempStr = GetString(ordinal);
 		// if(!IsNullString(tempStr)) { target.Value = double.Parse(tempStr); }
 		// specifically, we want to avoid calling GetString(ordinal) twice.
-		// so we use this singluar temporary variable for that purpose.
+		// so we use this singular temporary variable for that purpose.
 		var tempStrExpr = Expression.Variable(typeof(string));
 		locals.Add(tempStrExpr);
 

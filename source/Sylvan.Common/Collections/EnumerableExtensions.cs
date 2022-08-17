@@ -38,7 +38,7 @@ public static class EnumerableExtensions
 	}
 
 	/// <summary>
-	/// Enumerates a heirarchy depth first.
+	/// Enumerates a hierarchy depth first.
 	/// </summary>
 	public static IEnumerable<T> RecurseDepthFirst<T>(this T item, Func<T, IEnumerable<T>> selector)
 	{
@@ -48,7 +48,7 @@ public static class EnumerableExtensions
 	}
 
 	/// <summary>
-	/// Enumerates a heirarchy depth first.
+	/// Enumerates a hierarchy depth first.
 	/// </summary>
 	public static IEnumerable<T> RecurseDepthFirst<T>(this IEnumerable<T> seq, Func<T, IEnumerable<T>> selector)
 	{

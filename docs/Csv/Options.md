@@ -4,7 +4,7 @@ The CsvDataReader accepts several options that control it's behavior. If no opti
 
 __HasHeaders__
 
-Indicates if the first row of the file contains header names. Defaults to true. In the absense of a header row, and without providing a schema that includes column names, columns can only be accessed ordinally. In the even that the header row defines duplicate column names, the duplicate columns cannot be accessed by name, GetName(int ordinal) will throw an exception.
+Indicates if the first row of the file contains header names. Defaults to true. In the absence of a header row, and without providing a schema that includes column names, columns can only be accessed ordinally. In the even that the header row defines duplicate column names, the duplicate columns cannot be accessed by name, GetName(int ordinal) will throw an exception.
 
 __Delimiter__ (`char?`)
 
@@ -22,7 +22,7 @@ __TrueString/FalseString__
 
 A string representing the `true` and/or `false` value when reading boolean fields. 
 
-These defaults to `null`, which attempt to parse the values as the default "true"/"false" string, then fallback to parsing the field as an integer where `0` is intrepreted as `false`, and all other integer values as `true`.
+These defaults to `null`, which attempt to parse the values as the default "true"/"false" string, then fallback to parsing the field as an integer where `0` is interpreted as `false`, and all other integer values as `true`.
 
 If either `TrueString` or `FalseString` are non-null, then that value is the singular, case-insensitive string that will be interpreted as the associated boolean value. If only one of the two is assigned it causes all other values to be interpreted as the negation. If both are assigned any value that is not one or the other will result in a `FormatException` being thrown.
 
@@ -34,7 +34,7 @@ Some CSV data sources use a compact date format like `"yyyyMMdd"` which cannot b
 
 __BinaryEncoding__
 
-The encoding format used to interpret binary data, either Base64 or Hexadecimal. Hexadicmal values can optionally be prefixed with "0x".
+The encoding format used to interpret binary data, either Base64 or Hexadecimal. Hexadecimal values can optionally be prefixed with "0x".
 
 __BufferSize__
 
@@ -71,7 +71,7 @@ Allows providing a schema for the csv data. This is the most complicated of the 
 
 __StringFactory__
 
-The StringFactory option allows providing a custom mechanism for string construction. The default of `null`, will result in strings being constructed normally, each call to GetString will produce a new value. The intent of this option is allowing deduplication of strings during parsing. CSV files often contain very repetetive strings; city or state names, for example, and by providing a custom `StringFactory` implementation these strings can be de-duped as they are read. This can be significantly more efficient than de-duping after the fact with a `HashSet<string>` for example.
+The StringFactory option allows providing a custom mechanism for string construction. The default of `null`, will result in strings being constructed normally, each call to GetString will produce a new value. The intent of this option is allowing deduplication of strings during parsing. CSV files often contain very repetitive strings; city or state names, for example, and by providing a custom `StringFactory` implementation these strings can be de-duped as they are read. This can be significantly more efficient than de-duping after the fact with a `HashSet<string>` for example.
 
 Providing a string factory can affect performance both positively, and adversely depending on how much duplication there is in the file, and of course depends on the implementation of the factory method itself.
 

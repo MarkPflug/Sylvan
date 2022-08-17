@@ -28,7 +28,7 @@ public enum EncoderResult
 	RequiresOutputSpace,
 
 	/// <summary>
-	/// Indicates that the entire input buffer was encoded to the output and the result can be considerd complete.
+	/// Indicates that the entire input buffer was encoded to the output and the result can be considered complete.
 	/// </summary>
 	Complete,
 }

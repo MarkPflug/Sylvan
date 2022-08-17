@@ -32,7 +32,7 @@ public abstract class CommentHandler
 	/// <summary>
 	/// Implicitly casts an Action to a CommentHandler.
 	/// </summary>
-	/// <param name="handler">The method to recive the comment.</param>
+	/// <param name="handler">The method to receive the comment.</param>
 	public static implicit operator CommentHandler(Action<CsvDataReader, string> handler)
 	{
 		return new StringCommentHandler(handler);
@@ -41,7 +41,7 @@ public abstract class CommentHandler
 	/// <summary>
 	/// Implicitly casts an Action to a CommentHandler.
 	/// </summary>
-	/// <param name="handler">The method to recive the comment.</param>
+	/// <param name="handler">The method to receive the comment.</param>
 	public static implicit operator CommentHandler(Action<string> handler)
 	{
 		return new StringCommentHandler((r, c) => handler(c));

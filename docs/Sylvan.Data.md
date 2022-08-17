@@ -14,7 +14,7 @@ The library is provider-agnostic, and the APIs typically target `DbDataReader`.
 
 This type provides a general purpose data binder that binds a `DbDataReader` to
 strongly-typed objects. The data binder uses the schema (`GetColumnSchema`/`GetSchemaTable`) of the
-data reader to produce a near-optimimally efficient binder; the performance is essentially equivalent
+data reader to produce a near-optimally efficient binder; the performance is essentially equivalent
 to a hand-written binder.
 
 primitives

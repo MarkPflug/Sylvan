@@ -358,7 +358,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 						{
 							var endIdx = pos + (lineEndIdx / 2);
 							ref var field = ref SetFieldEnd(ref fieldIdx, endIdx);
-							// might need to also remove a preceeding '\r'
+							// might need to also remove a preceding '\r'
 							if (p[endIdx - 1] == '\r')
 							{
 								field.endIdx--;
@@ -442,7 +442,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 						c = buffer[idx++]; // the escaped char
 						if (IsEndOfLine(c))
 						{
-							// if the escape preceed an EOL, we might have to consume 2 chars
+							// if the escape precede an EOL, we might have to consume 2 chars
 							var r = ConsumeLineEnd(buffer, ref idx);
 							if (r == ReadResult.Incomplete)
 							{
@@ -1612,7 +1612,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 			this.BaseTableName = schema?.BaseTableName;
 			this.BaseServerName = schema?.BaseServerName;
 			this.BaseSchemaName = schema?.BaseSchemaName;
-			this.BaseColumnName = schema?.BaseColumnName ?? name; // default in the orignal header name if they chose to remap it.
+			this.BaseColumnName = schema?.BaseColumnName ?? name; // default in the original header name if they chose to remap it.
 			this.BaseCatalogName = schema?.BaseCatalogName;
 			this.UdtAssemblyQualifiedName = schema?.UdtAssemblyQualifiedName;
 			this.Format = schema?[nameof(Format)] as string;
