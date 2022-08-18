@@ -41,7 +41,7 @@ public class SampleTests
 		return File.OpenText(DataFileName);
 	}
 
-	sealed class Schema : ICsvSchemaProvider
+	sealed class Schema : CsvSchemaProvider
 	{
 		readonly ReadOnlyCollection<DbColumn> schema;
 
@@ -50,14 +50,9 @@ public class SampleTests
 			this.schema = schema;
 		}
 
-		public DbColumn GetColumn(string name, int ordinal)
+		public override DbColumn GetColumn(string name, int ordinal)
 		{
 			return schema[ordinal];
-		}
-
-		public int GetFieldCount(CsvDataReader reader)
-		{
-			return reader.RowFieldCount;
 		}
 	}
 

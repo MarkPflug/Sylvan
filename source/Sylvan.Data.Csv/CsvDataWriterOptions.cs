@@ -38,13 +38,6 @@ public sealed class CsvDataWriterOptions
 		this.Culture = CultureInfo.InvariantCulture;
 		this.TrueString = bool.TrueString;
 		this.FalseString = bool.FalseString;
-		this.DateTimeFormat = null;
-		this.DateTimeOffsetFormat = null;
-		this.DateFormat = null;
-		this.TimeSpanFormat = null;
-#if NET6_0_OR_GREATER
-		this.TimeFormat = null;
-#endif
 		this.WriteHeaders = true;
 	}
 
@@ -79,7 +72,7 @@ public sealed class CsvDataWriterOptions
 	public string? DateTimeOffsetFormat { get; set; }
 
 	/// <summary>
-	/// The format string used when writing DateTime values, or DateOnly values on supported frameworks, that have to time component. The default is \"O\".
+	/// The format string used when writing DateTime values, or DateOnly values on supported frameworks, that have a time component. The default is \"O\".
 	/// </summary>
 	public string? DateFormat { get; set; }
 
@@ -89,10 +82,27 @@ public sealed class CsvDataWriterOptions
 	public string? TimeSpanFormat { get; set; }
 
 #if NET6_0_OR_GREATER
+
+	/// <summary>
+	/// The format string used when writing DateTime values, or DateOnly values on supported frameworks, that have a time component. The default is \"O\".
+	/// </summary>
+	public string? DateOnlyFormat { get; set; }
+
+	/// <summary>
+	/// The format string used when writing TimeOnly values.
+	/// </summary>
+	public string? TimeOnlyFormat { get; set; }
+
 	/// <summary>
 	/// The format string used when writing TimeSpan values that have to time component. The default is \"O\".
 	/// </summary>
-	public string? TimeFormat { get; set; }
+	[Obsolete("Use TimeOnlyFormat instead.")] 
+	public string? TimeFormat { 
+
+		get => TimeOnlyFormat; 
+		set => TimeOnlyFormat = value; 
+	}
+
 #endif
 
 	/// <summary>

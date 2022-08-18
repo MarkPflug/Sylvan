@@ -349,16 +349,11 @@ public class CsvDataReaderTests
 		}
 	}
 
-	class ExcelHeaders : ICsvSchemaProvider
+	sealed class ExcelHeaders : CsvSchemaProvider
 	{
-		public DbColumn GetColumn(string name, int ordinal)
+		public override DbColumn GetColumn(string name, int ordinal)
 		{
 			return new ExcelColumn("" + (char)('A' + ordinal));
-		}
-
-		public int GetFieldCount(CsvDataReader reader)
-		{
-			return reader.RowFieldCount;
 		}
 
 		class ExcelColumn : DbColumn
@@ -397,7 +392,7 @@ public class CsvDataReaderTests
 
 	}
 
-	class FixHeaders : ICsvSchemaProvider
+	sealed class FixHeaders : CsvSchemaProvider
 	{
 
 		HashSet<string> h;
@@ -416,7 +411,7 @@ public class CsvDataReaderTests
 			}
 		}
 
-		public DbColumn GetColumn(string name, int ordinal)
+		public override DbColumn GetColumn(string name, int ordinal)
 		{
 			if (h.Add(name))
 			{
@@ -433,11 +428,6 @@ public class CsvDataReaderTests
 
 			//exceptions are better than infinite loops.
 			throw new NotSupportedException();
-		}
-
-		public int GetFieldCount(CsvDataReader reader)
-		{
-			return reader.RowFieldCount;
 		}
 	}
 
