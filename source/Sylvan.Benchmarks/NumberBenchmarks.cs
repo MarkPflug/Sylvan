@@ -2,7 +2,6 @@
 
 namespace Sylvan.Benchmarks;
 
-[SimpleJob(1, 2, 4, 1)]
 [MemoryDiagnoser]
 public class NumberBenchmarks
 {

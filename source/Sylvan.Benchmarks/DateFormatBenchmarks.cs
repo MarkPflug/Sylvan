@@ -23,7 +23,6 @@ public class SimpleInProc : Attribute, IConfigSource {
 	}
 }
 
-[SimpleInProc]
 public class DateFormatBenchmarks
 {
 	public DateFormatBenchmarks()

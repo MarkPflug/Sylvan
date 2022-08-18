@@ -6,7 +6,6 @@ using System.IO;
 
 namespace Sylvan.Benchmarks;
 
-[SimpleJob(1, 1, 8, 1)]
 [MemoryDiagnoser]
 public class MemoryStreamBenchmarks
 {
