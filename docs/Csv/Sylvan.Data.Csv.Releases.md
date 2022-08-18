@@ -1,28 +1,46 @@
 # Sylvan.Data.Csv Release Notes
 
+_1.2.0_
+
+- Adds MaxBufferSize option, which allows the internal buffer to grow when necessary. 
+  Defaults to `null`, which disallows growth, and is consistent with the previous behavior.
+- Adds `ICsvSchemaProvider.GetFieldCount()` which gives the provider the ability to explicitly
+  control the number of columns. 
+  Previously, the field count of the current row would be used to determine the number of
+  columns. This is an (unlikely) breaking change for users on .NET framework, who will need
+  to provide an implementation.
+
 _1.1.16_
+
 - CsvDataWriter support for writing variable field count.
 - CsvDataReader no longer skips empty leading rows in SingleResult mode.
 
 _1.1.15_
+
 - Fix for CSV comment not being terminated, and being included in subsequent row.
 
 _1.1.14_
+
 - Fix for reading CSV file containing a comment at the end of the file with no line terminator.
 
 _1.1.13_
+
 - Expose `CsvDataReader.GetFieldSpan`.
 
 _1.1.12_
+
 - Fix an issue where CsvRecordTooLargeException would be thrown for a single-line file.
 
 _1.1.11_
+
 - Fix an issue where the final field in a file would be read incorrectly if it was both quoted and there was no trailing newline.
 
 _1.1.10_
+
 - Fix behavior when handling empty files and HasHeader option is false.
 
 _1.1.9_
+
 - Add support for writing Enum values via CsvDataWriter.
 - CsvDataReaderOptions and CsvDataWriterOptions `Buffer` property moved to be a separate parameter to constructors. 
 Existing options property continues to work, but marked `Obsolete`. 
@@ -30,36 +48,45 @@ This was done to allow options objects to be reused, but the buffer can't be sha
 - CsvDataWriterOptions allows configuring binary format.
 
 _1.1.8_
+
 - Support custom formatting for CsvDataReader DateTimeOffset, DateOnly, TimeOnly, and TimeSpan.
 - Fixes #79: `MultiResult` mode now correctly handles cases where a header row can exist without following data rows.
 - Improves date parsing performance for ISO formatted dates.
 
 _1.1.7_
+
 - Fix for SIMD logic when encountering a quote that would cause incorrect number of records to be identified.
 - Fix issue with final character in file being a quote.
 - Increase the default buffer size for CsvDataReader and CsvDataWriter from 4k to 16k to be able handle
 more extreme scenarios without requiring configuration.
 
 _1.1.6_
+
 - Improve performance of CsvDataReader SIMD logic on AMD Zen2 architecture.
 
 _1.1.5_
+
 - Fix regression introduced in 1.1.4.
 
 _1.1.4_
+
 - Fix for issue with detecting overlarge records when reading asynchronously, or creating a new reader.
 
 _1.1.3_
+
 - Improve CsvDataReader performance for some files that contain a lot of quoted fields.
 
 _1.1.2_
+
 - Add CsvDataReader support for accessing enum values via `GetFieldValue<T>`.
 - Fix for issue #67, which was caused by some incorrect simd logic.
 
 _1.1.1
+
 - Fixes some capabilities exposed in netcoreapp3.0.
 
 _1.1.0_
+
 - CsvDataReader now provides a proper implementation overriding `DbDataReader.GetFieldValue<T>`.
 - Adds a `net6.0` target framework.
 - Adds CsvDataReader support for reading GetDate and GetTime for `net6.0`.
@@ -68,27 +95,33 @@ _1.1.0_
 - Improve CsvDataReader performance in some scenarios.
 
 _1.0.3_
+
 - Fix CsvDataWriter not writing certain types when writing the value would span a buffer.
 
 _1.0.2_
+
 - Fix CsvDataWriter.WriteAsync to consume the data reader asynchronously with `ReadAsync` instead of `Read`, 
 which caused failures when used in ASP.NET Core where synchronous IO is disallowed by default.
 - Seal CsvDataWriter class.
 - Fix bug that could allow reading invalid hex binary data, will now throw an exception instead of producing invalid result.
 
 _1.0.1_
+
 - Adds support for Unquoted style to CsvDataWriter.
 - Fix for sync IO when performing async read on CsvDataReader.
 
 _1.0.0_
+
 - Adds ability to read comments via CommentHandler in CsvDataReader.
 - Writes date values (where time component is at midnight) with `DateFormat` as opposed to `DateTimeFormat`.
 
 _0.10.1_
+
 - Fix potential issue with reading a comment line where the newline sequence spans a buffer boundary.
 - Add source link.
 
 _0.10.0_
+
 - Adds support for Unquoted CSV parsing style where fields with delimiters and newlines don't use quotes, but only use escaping.
 - Removed CsvWriter. CsvDataWriter will continue to exist.
 - CsvWriterOptions renamed to CsvDataWriterOptions.
@@ -99,12 +132,14 @@ _0.10.0_
 - Multiple result sets support.
 
 _0.9.2_
+
 - Add support for per-column boolean format specification.
 - Add CsvDataReader.GetRawRecord and GetRawRecordSpan methods.
 - Configure binary encoding for whole file via options.
 - Add support for tolerating "0x" prefix on hex encoded values.
 
 _0.9.1_
+
 - Add support for hexadecimal encoded binary data.
 - Performance improvement for synchronous accessors.
 
@@ -132,7 +167,6 @@ _0.8.0_
 - Add some nullability annotations to align with new annotations exposed in net5.0.
 	Most notably, this means that schema column names can no longer be reported as null, 
 	but will instead be empty string when no headers are present.
-
 
 _0.7.4_
 
@@ -246,7 +280,6 @@ _0.2.0_
 _0.1.2_ 
 
 - Adds column schema to reader.
-
 
 _0.1.1_ 
 

@@ -14,4 +14,18 @@ public interface ICsvSchemaProvider
 	/// <param name="ordinal">The zero-based ordinal of the column.</param>
 	/// <returns>A DbColumn for the given column, or null to use the default.</returns>
 	DbColumn? GetColumn(string? name, int ordinal);
+
+	/// <summary>
+	/// Gets the number of fields in the schema.
+	/// </summary>
+	/// <param name="reader">The data reader being initialized.</param>
+	/// <returns>The number of fields.</returns>
+	int GetFieldCount(CsvDataReader reader)
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
+	{
+		return reader.RowFieldCount;
+	}
+#else
+		; // abstract
+#endif
 }

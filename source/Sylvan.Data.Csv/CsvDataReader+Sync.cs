@@ -84,17 +84,15 @@ partial class CsvDataReader
 			{
 				if (recordStart == 0 && this.bufferEnd == this.buffer.Length)
 				{
-					throw new CsvRecordTooLargeException(this.RowNumber, 0, null, null);
+					if (!GrowBuffer())
+					{
+						throw new CsvRecordTooLargeException(this.RowNumber, 0, null, null);
+					}
 				}
-				else
-				{
-					FillBuffer();
-				}
+				FillBuffer();
 			}
 			goto start;
 		}
-
-
 
 		int fieldIdx = 0;
 		while (true)
@@ -125,9 +123,13 @@ partial class CsvDataReader
 			// we were unable to read an entire record out of the buffer synchronously
 			if (recordStart == 0 && bufferEnd == buffer.Length)
 			{
-				// if we consumed the entire buffer reading this record, then this is an exceptional situation
-				// we expect a record to be able to fit entirely within the buffer.
-				throw new CsvRecordTooLargeException(this.RowNumber, fieldIdx, null, null);
+				if (!GrowBuffer())
+				{
+					// if we consumed the entire buffer reading this record, then this is an exceptional situation
+					// we expect a record to be able to fit entirely within the buffer.
+					throw new CsvRecordTooLargeException(this.RowNumber, fieldIdx, null, null);
+
+				}
 			}
 			else
 			{

@@ -11,7 +11,7 @@ Sylvan.Data.Csv is currently the [fastest library for reading CSV data](https://
 - Auto detect delimiters.
 - Supports asynchronous IO.
 - Strongly-typed accessors that avoid allocations.
-	- Supported types includes all standard .NET primitive types,  `DateOnly` and `TimeOnly` on .NET 6, 
+	- Supported types includes all standard .NET primitive types, `DateOnly` and `TimeOnly` on .NET 6, 
 	- Binary data encoded with either base64 or hexadecimal.
 - Schema information to support database bulk-load operations.
 
@@ -62,8 +62,8 @@ class Record {
 ### Convert Excel data to CSV using Sylvan.Data and Sylvan.Data.Excel
 
 ```C#
-using Sylvan.Data.Csv;
 using Sylvan.Data;
+using Sylvan.Data.Csv;
 using Sylvan.Data.Excel;
 using System.Data.Common;
 

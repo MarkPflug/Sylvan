@@ -14,6 +14,11 @@ sealed class NullableCsvSchema : ICsvSchemaProvider
 		return Column;
 	}
 
+	public int GetFieldCount(CsvDataReader reader)
+	{
+		return reader.RowFieldCount;
+	}
+
 	class NullableStringColumn : DbColumn
 	{
 		public NullableStringColumn()
@@ -100,5 +105,11 @@ public class CsvSchema : ICsvSchemaProvider
 			return schema[ordinal];
 
 		return null;
+	}
+
+	/// <inheritdoc/>
+	public int GetFieldCount(CsvDataReader reader)
+	{
+		return reader.RowFieldCount;
 	}
 }
