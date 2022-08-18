@@ -7,7 +7,7 @@ namespace Sylvan.Data.Csv;
 /// <summary>
 /// An implementation of ICsvSchemaProvider that allows specifying a data type for columns.
 /// </summary>
-public class TypedCsvSchema : ICsvSchemaProvider
+sealed class TypedCsvSchema : CsvSchemaProvider
 {
 	class TypedCsvColumn : DbColumn
 	{
@@ -52,7 +52,7 @@ public class TypedCsvSchema : ICsvSchemaProvider
 		return this;
 	}
 
-	DbColumn ICsvSchemaProvider.GetColumn(string name, int ordinal)
+	public override DbColumn GetColumn(string name, int ordinal)
 	{
 		Type type;
 		if ((name != null && nameMap.TryGetValue(name, out type)) || ordinalMap.TryGetValue(ordinal, out type))
@@ -70,10 +70,5 @@ public class TypedCsvSchema : ICsvSchemaProvider
 			return new TypedCsvColumn(type, allowNull);
 		}
 		return null;
-	}
-
-	public int GetFieldCount(CsvDataReader reader)
-	{
-		return reader.RowFieldCount;
 	}
 }

@@ -5,18 +5,13 @@ using System.Linq;
 
 namespace Sylvan.Data.Csv;
 
-sealed class NullableCsvSchema : ICsvSchemaProvider
+sealed class NullableCsvSchema : CsvSchemaProvider
 {
 	static NullableStringColumn Column = new NullableStringColumn();
 
-	public DbColumn? GetColumn(string? name, int ordinal)
+	public override DbColumn? GetColumn(string? name, int ordinal)
 	{
 		return Column;
-	}
-
-	public int GetFieldCount(CsvDataReader reader)
-	{
-		return reader.RowFieldCount;
 	}
 
 	class NullableStringColumn : DbColumn

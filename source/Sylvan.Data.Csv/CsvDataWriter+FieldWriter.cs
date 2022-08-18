@@ -540,7 +540,7 @@ partial class CsvDataWriter
 			var writer = context.writer;
 			var culture = writer.culture;
 			var value = reader.GetFieldValue<DateOnly>(ordinal);
-			var fmt = writer.dateFormat;
+			var fmt = writer.dateOnlyFormat;
 			var span = buffer.AsSpan(offset);
 			int len;
 			return
@@ -576,7 +576,7 @@ partial class CsvDataWriter
 			var writer = context.writer;
 			var culture = writer.culture;
 			var value = reader.GetFieldValue<DateOnly>(ordinal);
-			var fmt = writer.dateFormat;
+			var fmt = writer.dateOnlyFormat;
 			int len;
 			Span<char> str = stackalloc char[IsoDate.MaxDateLength];
 			if (!value.TryFormat(str, out len, fmt, culture))
@@ -619,7 +619,7 @@ partial class CsvDataWriter
 			var writer = context.writer;
 			var culture = writer.culture;
 			var value = reader.GetFieldValue<TimeOnly>(ordinal);
-			var fmt = writer.timeFormat;
+			var fmt = writer.timeOnlyFormat;
 			var span = buffer.AsSpan(offset);
 			if (!value.TryFormat(span, out int len, fmt, culture))
 			{
@@ -639,7 +639,7 @@ partial class CsvDataWriter
 			var writer = context.writer;
 			var culture = writer.culture;
 			var value = reader.GetDateTime(ordinal);
-			var fmt = writer.timeFormat;
+			var fmt = writer.timeOnlyFormat;
 			Span<char> span = stackalloc char[32];
 			if (!value.TryFormat(span, out int len, fmt, culture))
 			{

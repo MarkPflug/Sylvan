@@ -1,10 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-	<Sdk Name="Microsoft.DotNet.PackageValidation" Version="1.0.0-preview.5.21302.8" />
-
 	<PropertyGroup>
 		<TargetFrameworks>net6.0;netcoreapp3.0;netstandard2.1;netstandard2.0</TargetFrameworks>
-		<VersionPrefix>1.1.16</VersionPrefix>
+		<VersionPrefix>1.2.0</VersionPrefix>
 		<Description>A .NET library for reading and writing delimited CSV data.</Description>
 		<PackageTags>csv;delimited;data;datareader;datawriter;simd</PackageTags>
 		<Nullable>enable</Nullable>

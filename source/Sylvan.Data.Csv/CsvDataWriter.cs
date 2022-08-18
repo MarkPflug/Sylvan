@@ -167,14 +167,14 @@ public sealed partial class CsvDataWriter
 
 		if (type == typeof(DateOnly))
 		{
-			return IsFastDate
+			return IsFastDateOnly
 				? DateOnlyIsoFastFieldWriter.Instance
 				: DateOnlyIsoFieldWriter.Instance;
 		}
 
 		if (type == typeof(TimeOnly))
 		{
-			return IsFastTime
+			return IsFastTimeOnly
 				? TimeOnlyFastFieldWriter.Instance
 				: TimeOnlyFieldWriter.Instance;
 		}
@@ -297,15 +297,6 @@ public sealed partial class CsvDataWriter
 		}
 	}
 
-	bool IsFastDate
-	{
-		get
-		{
-			return IsInvariantCulture && IsFastConfig
-				&& this.dateFormat == CsvDataWriterOptions.Default.DateFormat;
-		}
-	}
-
 	bool IsFastTimeSpan
 	{
 		get
@@ -316,14 +307,25 @@ public sealed partial class CsvDataWriter
 	}
 
 #if NET6_0_OR_GREATER
-	bool IsFastTime
+
+	bool IsFastDateOnly
 	{
 		get
 		{
 			return IsInvariantCulture && IsFastConfig
-				&& this.timeFormat == CsvDataWriterOptions.Default.TimeFormat;
+				&& this.dateOnlyFormat == CsvDataWriterOptions.Default.DateFormat;
 		}
 	}
+
+	bool IsFastTimeOnly
+	{
+		get
+		{
+			return IsInvariantCulture && IsFastConfig
+				&& this.timeOnlyFormat == CsvDataWriterOptions.Default.TimeOnlyFormat;
+		}
+	}
+
 #endif
 
 #endif
@@ -349,7 +351,8 @@ public sealed partial class CsvDataWriter
 	readonly string? timeSpanFormat;
 	readonly string? dateFormat;
 #if NET6_0_OR_GREATER
-	readonly string? timeFormat;
+	readonly string? timeOnlyFormat;
+	readonly string? dateOnlyFormat;
 #endif
 
 	readonly CultureInfo culture;
@@ -411,7 +414,8 @@ public sealed partial class CsvDataWriter
 		this.timeSpanFormat = options.TimeSpanFormat;
 		this.dateFormat = options.DateFormat;
 #if NET6_0_OR_GREATER
-		this.timeFormat = options.TimeFormat;
+		this.timeOnlyFormat = options.TimeOnlyFormat;
+		this.dateOnlyFormat = options.DateOnlyFormat;
 #endif
 		this.writeHeaders = options.WriteHeaders;
 		this.delimiter = options.Delimiter;

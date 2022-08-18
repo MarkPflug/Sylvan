@@ -2,6 +2,22 @@
 
 namespace Sylvan.Data.Csv;
 
+
+/// <summary>
+/// A base implementation of ICsvSchemaProvider.
+/// </summary>
+public abstract class CsvSchemaProvider : ICsvSchemaProvider
+{
+	/// <inheritdoc/>
+	public abstract DbColumn? GetColumn(string? name, int ordinal);
+
+	/// <inheritdoc/>
+	public int GetFieldCount(CsvDataReader reader)
+	{
+		return reader.RowFieldCount;
+	}
+}
+
 /// <summary>
 /// Provides the ability to specify a schema for a CsvDataReader.
 /// </summary>
