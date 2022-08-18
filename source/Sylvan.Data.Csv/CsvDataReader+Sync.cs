@@ -17,8 +17,8 @@ partial class CsvDataReader
 		if (filename == null) throw new ArgumentNullException(nameof(filename));
 		// TextReader must be owned when we open it.
 		if (options?.OwnsReader == false) throw new CsvConfigurationException();
-
-		var stream = new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read, 1, FileOptions.SequentialScan);
+		var bufferSize = GetIOBufferSize(options);
+		var stream = new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize, FileOptions.SequentialScan);
 		var reader = new StreamReader(stream, Encoding.Default);
 		return CreateInternal(reader, null, options);
 	}

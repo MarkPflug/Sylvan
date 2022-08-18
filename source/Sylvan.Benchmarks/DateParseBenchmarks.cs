@@ -5,7 +5,6 @@ using System.Globalization;
 
 namespace Sylvan.Benchmarks;
 
-[SimpleJob(1, 4, 10, 100_000)]
 public class DateParseBenchmarks
 {
 	public IEnumerable<string> DateStrs

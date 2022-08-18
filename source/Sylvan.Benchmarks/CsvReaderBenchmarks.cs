@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 namespace Sylvan.Benchmarks;
 
 [MemoryDiagnoser]
-[SimpleJob(1, 4, 8, 1)]
 public class CsvReaderBenchmarks
 {
 	const int BufferSize = 0x4000;

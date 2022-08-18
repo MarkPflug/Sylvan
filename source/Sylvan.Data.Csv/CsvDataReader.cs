@@ -147,6 +147,11 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		return bufferLen;
 	}
 
+	static int GetIOBufferSize(CsvDataReaderOptions? options)
+	{
+		return (options?.BufferSize ?? CsvDataReaderOptions.Default.BufferSize);
+	}
+
 	private CsvDataReader(TextReader reader, char[]? buffer, CsvDataReaderOptions options)
 	{
 		options.Validate();
