@@ -297,8 +297,6 @@ public sealed partial class CsvDataWriter
 		}
 	}
 
-	
-
 	bool IsFastTimeSpan
 	{
 		get

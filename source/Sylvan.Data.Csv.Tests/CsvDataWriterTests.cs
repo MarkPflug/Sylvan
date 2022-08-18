@@ -25,7 +25,7 @@ public class CsvDataWriterTests
 	static string GetCsv(DbDataReader dr, CsvDataWriterOptions opts = null)
 	{
 		var sw = new StringWriter();
-		var csv = CsvDataWriter.Create(sw, opts?? TestOptions);
+		var csv = CsvDataWriter.Create(sw, opts ?? TestOptions);
 		csv.Write(dr);
 		return sw.ToString();
 	}
@@ -34,7 +34,7 @@ public class CsvDataWriterTests
 	public void VariableColumn()
 	{
 		var csvData = "a,b,c\n1,2,3\n1,2,3,4\n1,2\n1\n,,,,5\n";
-		var r = 
+		var r =
 			CsvDataReader.Create(new StringReader(csvData))
 			.AsVariableField(r => r.RowFieldCount);
 		var sw = new StringWriter();
@@ -98,8 +98,9 @@ public class CsvDataWriterTests
 				}
 			};
 
-		var opt = 
-			new CsvDataWriterOptions { 
+		var opt =
+			new CsvDataWriterOptions
+			{
 				BinaryEncoding = BinaryEncoding.Hexadecimal,
 				NewLine = "\n"
 			};
@@ -142,10 +143,11 @@ public class CsvDataWriterTests
 
 		var csv = GetCsv(data.AsDataReader(), opt);
 
-		var readerOpts = 
-			new CsvDataReaderOptions { 
-				BufferSize = 0x10000, 
-				BinaryEncoding = encoding 
+		var readerOpts =
+			new CsvDataReaderOptions
+			{
+				BufferSize = 0x10000,
+				BinaryEncoding = encoding
 			};
 
 		var csvr = CsvDataReader.Create(new StringReader(csv), readerOpts);
@@ -412,5 +414,34 @@ public class CsvDataWriterTests
 			var csvWriter = CsvDataWriter.Create(tw, new CsvDataWriterOptions { WriteHeaders = false });
 			csvWriter.Write(r);
 		}
+	}
+
+	[Theory]
+#if NET6_0_OR_GREATER
+	[InlineData(null, "2022-01-02\n2022-11-12\n2022-11-12T13:14:15\n")]
+#else
+	[InlineData(null, "2022-01-02T00:00:00.0000000\n2022-11-12T00:00:00.0000000\n2022-11-12T13:14:15.0000000\n")]
+#endif
+	[InlineData("yyyyMMdd", "20220102\n20221112\n20221112\n")]
+	public void WriteDateTimeFormat(string fmt, string expected)
+	{
+		var sw = new StringWriter();
+		var opts = new CsvDataWriterOptions
+		{
+			WriteHeaders = false,
+			NewLine = "\n",
+			DateTimeFormat = fmt
+		};
+
+		var cw = CsvDataWriter.Create(sw, opts);
+		var data = new[]
+		{
+			new { Date = new DateTime(2022, 1, 2) },
+			new { Date = new DateTime(2022, 11, 12) },
+			new { Date = new DateTime(2022, 11, 12, 13, 14, 15) },
+		};
+		cw.Write(data.AsDataReader());
+		var result = sw.ToString();
+		Assert.Equal(expected, result);
 	}
 }
