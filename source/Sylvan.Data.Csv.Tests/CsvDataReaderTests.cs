@@ -658,7 +658,7 @@ public class CsvDataReaderTests
 		using var tr = new StringReader("Date\n20200803\n20200804\n20200805\n");
 		var opts = new CsvDataReaderOptions()
 		{
-			DateFormat = "yyyyMMdd"
+			DateTimeFormat = "yyyyMMdd"
 		};
 		var csv = CsvDataReader.Create(tr, opts);
 		Assert.True(csv.Read());
@@ -1587,7 +1587,21 @@ public class CsvDataReaderTests
 	public void DateOnlyFormatsSchema()
 	{
 		var schema = Schema.Parse("a:int,b:date{ddMMyyyy}");
-		var opts = new CsvDataReaderOptions { Schema = new CsvSchema(schema) };
+		var opts = new CsvDataReaderOptions { 
+			Schema = new CsvSchema(schema) 
+		};
+		var data = "a,b\n1,30062022";
+		var csv = CsvDataReader.Create(new StringReader(data), opts);
+		Assert.True(csv.Read());
+		Assert.Equal(new DateOnly(2022, 06, 30), csv.GetDate(1));
+	}
+
+	[Fact]
+	public void DateOnlyFormatsGlobal()
+	{
+		var opts = new CsvDataReaderOptions { 
+			DateOnlyFormat = "ddMMyyyy" 
+		};
 		var data = "a,b\n1,30062022";
 		var csv = CsvDataReader.Create(new StringReader(data), opts);
 		Assert.True(csv.Read());

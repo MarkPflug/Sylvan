@@ -119,7 +119,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	char minSafe;
 	readonly bool ownsReader;
 	readonly CultureInfo culture;
-	readonly string? dateFormat;
+	readonly string? dateTimeFormat;
 	readonly string? trueString, falseString;
 	readonly BinaryEncoding binaryEncoding;
 	readonly bool hasHeaders;
@@ -169,7 +169,10 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		this.escape = options.Escape;
 		this.comment = options.Comment;
 
-		this.dateFormat = options.DateFormat;
+		this.dateTimeFormat = options.DateTimeFormat;
+#if NET6_0_OR_GREATER
+		this.dateOnlyFormat = options.DateOnlyFormat;
+#endif
 		this.trueString = options.TrueString;
 		this.falseString = options.FalseString;
 
@@ -1062,7 +1065,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// </summary>
 	public DateTimeOffset GetDateTimeOffset(int ordinal)
 	{
-		var format = columns[ordinal].Format ?? this.dateFormat;
+		var format = columns[ordinal].Format ?? this.dateTimeFormat;
 		var style = DateTimeStyles.RoundtripKind;
 		DateTimeOffset value;
 #if SPAN
@@ -1096,7 +1099,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		if (IsoDate.TryParse(span, out value))
 			return value;
 
-		var format = columns[ordinal].Format ?? this.dateFormat;
+		var format = columns[ordinal].Format ?? this.dateTimeFormat;
 		if (format != null && DateTime.TryParseExact(span, format, culture, style, out value))
 		{
 			return value;
@@ -1105,7 +1108,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 #else
 		var dateStr = this.GetString(ordinal);
 		
-		var format = columns[ordinal].Format ?? this.dateFormat ?? "O";
+		var format = columns[ordinal].Format ?? this.dateTimeFormat ?? "O";
 		if (format != null && DateTime.TryParseExact(dateStr, format, culture, style, out value))
 		{
 			return value;

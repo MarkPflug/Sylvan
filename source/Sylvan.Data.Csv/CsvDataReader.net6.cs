@@ -25,6 +25,8 @@ partial class CsvDataAccessor :
 
 partial class CsvDataReader
 {
+	readonly string? dateOnlyFormat;
+
 	/// <summary>
 	/// Gets the value of the field as a <see cref="DateOnly"/>.
 	/// </summary>
@@ -37,7 +39,7 @@ partial class CsvDataReader
 			return value;
 		}
 
-		var format = columns[ordinal].Format;
+		var format = columns[ordinal].Format ?? dateOnlyFormat;
 		var style = DateTimeStyles.None;
 		if (format != null && DateOnly.TryParseExact(span, format, culture, style, out value))
 		{
