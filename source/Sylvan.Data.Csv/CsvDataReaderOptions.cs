@@ -116,7 +116,6 @@ public sealed class CsvDataReaderOptions
 	public CsvDataReaderOptions()
 	{
 		this.HasHeaders = true;
-		this.delimiter = null;
 		this.CsvStyle = CsvStyle.Standard;
 		this.Quote = DefaultQuote;
 		this.Escape = DefaultEscape;
@@ -124,15 +123,8 @@ public sealed class CsvDataReaderOptions
 		this.BufferSize = DefaultBufferSize;
 		this.HeaderComparer = StringComparer.Ordinal;
 		this.Culture = CultureInfo.InvariantCulture;
-		this.Schema = null;
 		this.OwnsReader = true;
 
-		this.TrueString = null;
-		this.FalseString = null;
-		this.DateFormat = null;
-
-		this.StringFactory = null;
-		this.CommentHandler = null;
 		this.BinaryEncoding = BinaryEncoding.Base64;
 		this.ResultSetMode = ResultSetMode.SingleResult;
 	}
@@ -170,7 +162,25 @@ public sealed class CsvDataReaderOptions
 	/// <summary>
 	/// The format string to use to parse dates. Defaults to null, in which case standard date parsing rules apply.
 	/// </summary>
-	public string? DateFormat { get; set; }
+	[Obsolete("Use DateTimeFormat instead")]
+	public string? DateFormat {
+		get => this.DateTimeFormat;
+		set => this.DateTimeFormat = value; 
+	}
+
+	/// <summary>
+	/// The format string to use to parse DateTime values. Defaults to null, in which case standard date parsing rules apply.
+	/// </summary>
+	public string? DateTimeFormat { get; set; }
+
+#if NET6_0_OR_GREATER
+
+	/// <summary>
+	/// The format string to use to parse DateOnly values. Defaults to null, in which case standard date parsing rules apply.
+	/// </summary>
+	public string? DateOnlyFormat { get; set; }
+
+#endif
 
 	/// <summary>
 	/// Specifies if the CSV data contains a header row with column names. Defaults to true.
