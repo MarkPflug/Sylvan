@@ -9,6 +9,7 @@ _1.2.0_
   Previously, the field count of the current row would be used to determine the number of
   columns. This is an (unlikely) breaking change for users on .NET framework, who will need
   to provide an implementation.
+- Add CsvSchemaProvider base implementation of ICsvSchemaProvider. Implementers should prefer the abstract base to avoid potential future breaking changes.
 - Add `CsvDataReaderOptions.DateTimeFormat` to replace `DateFormat` which is now `Obsolete`.
 - Add `CsvDataReaderOptions.DateOnlyFormat` to allow globally specifying the format for parsing DateOnly values.
 - Improve the performance of CsvDataReader async operations in some scenarios.
