@@ -90,6 +90,7 @@ partial class CsvDataWriter
 
 			if (writer.dataBuffer.Length == 0)
 			{
+				// share a buffer with the base64 encoder.
 				writer.dataBuffer = new byte[Base64EncSize];
 			}
 			var dataBuffer = writer.dataBuffer;

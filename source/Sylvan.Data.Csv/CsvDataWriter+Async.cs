@@ -69,10 +69,9 @@ partial class CsvDataWriter
 		{
 			cancel.ThrowIfCancellationRequested();
 			row++;
-			int i = 0; // field
 			c = reader.FieldCount;
 
-			for (; i < c; i++)
+			for (var i = 0; i < c; i++)
 			{
 				if (i > 0)
 				{

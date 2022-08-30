@@ -124,19 +124,19 @@ public class CsvDataWriterTests
 	[Fact]
 	public void BinaryBase64BigGrow()
 	{
-		BinaryBig(BinaryEncoding.Base64, 0x4000, 0x8000, false);
+		BinaryBig(BinaryEncoding.Base64, 0x4000, 0x10000, true);
 	}
 
 	[Fact]
 	public void BinaryHexBigGrow()
 	{
-		BinaryBig(BinaryEncoding.Hexadecimal, 0x4000, 0x8000, false);
+		BinaryBig(BinaryEncoding.Hexadecimal, 0x4000, 0x10000, true);
 	}
 
 	void BinaryBig(BinaryEncoding encoding, int bufferSize, int? maxBufferSize, bool succeed)
 	{
 		// select a size that will overlap the default buffersize when two fields are written
-		var bytes = Enumerable.Range(0, bufferSize * 4 / 3).Select(i => (byte)i).ToArray();
+		var bytes = Enumerable.Range(0, bufferSize * 3 / 4).Select(i => (byte)i).ToArray();
 		var data =
 			new[] {
 				 new {
