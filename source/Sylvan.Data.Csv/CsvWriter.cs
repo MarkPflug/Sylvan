@@ -49,7 +49,12 @@ partial class CsvDataWriter
 		{
 			// for simplicity assume every character will need to be escaped
 			if (offset + value.Length * 2 >= buffer.Length)
-				return InsufficientSpace;
+			{
+				if (!context.writer.GrowBuffer())
+				{
+					return InsufficientSpace;
+				}
+			}
 
 			var p = offset;
 			var needsEscape = context.writer.needsEscape;

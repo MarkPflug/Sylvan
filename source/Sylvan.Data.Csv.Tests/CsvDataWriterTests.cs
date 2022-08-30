@@ -112,18 +112,31 @@ public class CsvDataWriterTests
 	[Fact]
 	public void BinaryBase64Big()
 	{
-		BinaryBig(BinaryEncoding.Base64);
+		BinaryBig(BinaryEncoding.Base64, 0x4000, null, false);
 	}
 
 	[Fact]
 	public void BinaryHexBig()
 	{
-		BinaryBig(BinaryEncoding.Hexadecimal);
+		BinaryBig(BinaryEncoding.Hexadecimal, 0x4000, null, false);
 	}
 
-	void BinaryBig(BinaryEncoding encoding)
+	[Fact]
+	public void BinaryBase64BigGrow()
 	{
-		var bytes = Enumerable.Range(0, 0x1800).Select(i => (byte)i).ToArray();
+		BinaryBig(BinaryEncoding.Base64, 0x4000, 0x8000, false);
+	}
+
+	[Fact]
+	public void BinaryHexBigGrow()
+	{
+		BinaryBig(BinaryEncoding.Hexadecimal, 0x4000, 0x8000, false);
+	}
+
+	void BinaryBig(BinaryEncoding encoding, int bufferSize, int? maxBufferSize, bool succeed)
+	{
+		// select a size that will overlap the default buffersize when two fields are written
+		var bytes = Enumerable.Range(0, bufferSize * 4 / 3).Select(i => (byte)i).ToArray();
 		var data =
 			new[] {
 				 new {
@@ -136,10 +149,24 @@ public class CsvDataWriterTests
 		var opt =
 			new CsvDataWriterOptions
 			{
+				BufferSize = bufferSize,
+				MaxBufferSize = maxBufferSize,
 				BinaryEncoding = encoding,
 				NewLine = "\n",
 				Delimiter = '\t',
 			};
+
+		var writeFunc = () => GetCsv(data.AsDataReader(), opt);
+
+		if (succeed)
+		{
+			writeFunc();
+		}
+		else
+		{
+			Assert.Throws<CsvRecordTooLargeException>(writeFunc);
+			return;
+		}
 
 		var csv = GetCsv(data.AsDataReader(), opt);
 
@@ -149,7 +176,6 @@ public class CsvDataWriterTests
 				BufferSize = 0x10000,
 				BinaryEncoding = encoding
 			};
-
 		var csvr = CsvDataReader.Create(new StringReader(csv), readerOpts);
 		Assert.True(csvr.Read());
 		Assert.Equal(bytes, csvr.GetBytes(1));

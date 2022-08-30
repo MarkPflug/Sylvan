@@ -17,14 +17,8 @@ partial class CsvDataWriter
 	{
 		var c = reader.FieldCount;
 		var fieldInfos = new FieldInfo[c];
-
 		var schema = (reader as IDbColumnSchemaGenerator)?.GetColumnSchema();
-
-		char[] buffer = this.buffer;
-		int bufferSize = this.buffer.Length;
-
 		int result;
-
 		if (schema != null)
 		{
 			for (int i = 0; i < schema.Count; i++)
@@ -44,43 +38,34 @@ partial class CsvDataWriter
 			{
 				if (i > 0)
 				{
-					if (pos + 1 >= bufferSize)
-					{
-						await FlushBufferAsync(cancel).ConfigureAwait(false);
-					}
-					buffer[pos++] = delimiter;
+					await WriteDelimiterAsync(0, i, cancel).ConfigureAwait(false);
 				}
+				var header = reader.GetName(i) ?? string.Empty;
 
-				var header = reader.GetName(i) ?? "";
-				result = csvWriter.Write(wc, header, buffer, pos);
-				if (result < 0)
+				while (true)
 				{
-					await FlushBufferAsync(cancel).ConfigureAwait(false);
-					result = csvWriter.Write(wc, header, buffer, pos);
+					result = csvWriter.Write(wc, header, this.buffer, pos);
 					if (result < 0)
 					{
-						throw new CsvRecordTooLargeException(0, i);
+						// writing headers will always be flush with start of buffer so we can only grow.
+						if (!await GrowBufferAsync(cancel).ConfigureAwait(false))
+						{
+							// unable to reclaim space
+							throw new CsvRecordTooLargeException(0, i);
+						}
 					}
 					else
 					{
-						pos += result;
+						break;
 					}
 				}
-				else
-				{
-					pos += result;
-				}
+				pos += result;
 			}
-
-			if (pos + 2 >= bufferSize)
-			{
-				await FlushBufferAsync(cancel).ConfigureAwait(false);
-			}
-			EndRecord();
+			await EndRecordAsync(0, cancel).ConfigureAwait(false);
 		}
 
 		int row = 0;
-		while (await reader.ReadAsync(cancel))
+		while (await reader.ReadAsync(cancel).ConfigureAwait(false))
 		{
 			cancel.ThrowIfCancellationRequested();
 			row++;
@@ -91,61 +76,111 @@ partial class CsvDataWriter
 			{
 				if (i > 0)
 				{
-					if (pos + 1 >= bufferSize)
+					if (pos + 1 < buffer.Length)
 					{
-						await FlushBufferAsync(cancel).ConfigureAwait(false);
+						// should almost always enter this branch
+						// which avoid the async overhead
+						buffer[pos++] = delimiter;
 					}
-					buffer[pos++] = delimiter;
+					else
+					{
+						await WriteDelimiterAsync(row, i, cancel).ConfigureAwait(false);
+					}
 				}
-				var field = i < fieldCount ? fieldInfos[i] : null;
-				field = field ?? FieldInfo.Generic;
+
+				var field = i < fieldCount ? fieldInfos[i] : FieldInfo.Generic;
 				if (field.allowNull && reader.IsDBNull(i))
 				{
 					continue;
 				}
 
-				for (int retry = 0; retry < 2; retry++)
+				while ((result = field.writer.Write(wc, i, buffer, pos)) < 0)
 				{
-					var r = field.writer.Write(wc, i, buffer, pos);
-
-					if (r >= 0)
+					if (!await FlushOrGrowBufferAsync(cancel).ConfigureAwait(false))
 					{
-						pos += r;
-						goto success;
-					}
-					else
-					{
-						await FlushBufferAsync(cancel).ConfigureAwait(false);
-						continue;
+						throw new CsvRecordTooLargeException(row, i);
 					}
 				}
-				// we arrive here only when there isn't enough room in the buffer
-				// to hold the field.				
-				throw new CsvRecordTooLargeException(row, i);
-			success:;
+				pos += result;
 			}
 
-			if (pos + 2 >= bufferSize)
-			{
-				await FlushBufferAsync(cancel).ConfigureAwait(false);
-			}
-			EndRecord();
+			await EndRecordAsync(row, cancel).ConfigureAwait(false);
 		}
 		// flush any pending data on the way out.
 		await FlushBufferAsync(cancel).ConfigureAwait(false);
 		return row;
 	}
 
-	async Task FlushBufferAsync(CancellationToken cancel)
+	async Task<bool> FlushOrGrowBufferAsync(CancellationToken cancel)
 	{
-		if (this.pos == 0) return;
-#if NETSTANDARD2_1_OR_GREATER || NET6_0_OR_GREATER
-		var m = buffer.AsMemory().Slice(0, pos);
-		await writer.WriteAsync(m, cancel).ConfigureAwait(false);
-#else
-		await writer.WriteAsync(buffer, 0, pos).ConfigureAwait(false);
-#endif
-		pos = 0;
+		return
+			await FlushBufferAsync(cancel).ConfigureAwait(false) ||
+			await GrowBufferAsync(cancel).ConfigureAwait(false);
+	}
+
+	async Task<bool> FlushBufferAsync(CancellationToken cancel)
+	{
+		if (this.recordStart == 0)
+		{
+			return false;
+		}
+		else
+		{
+			await writer.WriteAsync(buffer, 0, recordStart).ConfigureAwait(false);
+			Array.Copy(buffer, recordStart, buffer, 0, pos - recordStart);
+			this.pos -= recordStart;
+			this.recordStart = 0;
+			return true;
+		}
+	}
+
+	async Task<bool> GrowBufferAsync(CancellationToken cancel)
+	{
+		var len = buffer.Length;
+		if (maxBufferSize > len)
+		{
+			var newLen = Math.Min(len * 2, maxBufferSize);
+			var newBuffer = new char[newLen];
+			if (recordStart > 0)
+			{
+				await FlushBufferAsync(cancel).ConfigureAwait(false);
+			}
+			Array.Copy(buffer, recordStart, newBuffer, 0, pos - recordStart);
+			this.pos -= recordStart;
+			this.recordStart = 0;
+			this.buffer = newBuffer;
+			return true;
+		}
+		return false;
+	}
+
+	// this should only be called in scenarios where we know there is enough room.
+	async Task EndRecordAsync(int row, CancellationToken cancel)
+	{
+		var nl = this.newLine;
+
+		while (pos + nl.Length >= this.buffer.Length)
+		{
+			if (!await FlushOrGrowBufferAsync(cancel).ConfigureAwait(false))
+			{
+				throw new CsvRecordTooLargeException(row, -1);
+			}
+		}
+		for (int i = 0; i < nl.Length; i++)
+			buffer[pos++] = nl[i];
+		recordStart = pos;
+	}
+
+	async Task WriteDelimiterAsync(int row, int col, CancellationToken cancel)
+	{
+		while (pos + 1 >= this.buffer.Length)
+		{
+			if (!await FlushOrGrowBufferAsync(cancel).ConfigureAwait(false))
+			{
+				throw new CsvRecordTooLargeException(row, col);
+			}
+		}
+		buffer[pos++] = delimiter;
 	}
 
 #if ASYNC_DISPOSE

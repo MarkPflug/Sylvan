@@ -17,24 +17,24 @@ public sealed partial class CsvDataWriter
 	, IAsyncDisposable
 #endif
 {
-	const int InsufficientSpace = -1;
+	const int InsufficientSpace = int.MinValue;
 	const int NeedsQuoting = -2;
 
 	class FieldInfo
 	{
 		internal static readonly FieldInfo Generic = new FieldInfo(true, ObjectFieldWriter.Instance);
 
-		public FieldInfo(bool allowNull, IFieldWriter writer)
+		public FieldInfo(bool allowNull, FieldWriter writer)
 		{
 			this.allowNull = allowNull;
 			this.writer = writer;
 		}
 
 		public bool allowNull;
-		public IFieldWriter writer;
+		public FieldWriter writer;
 	}
 
-	IFieldWriter GetWriter(DbDataReader reader, int ordinal)
+	FieldWriter GetWriter(DbDataReader reader, int ordinal)
 	{
 		var type = reader.GetFieldType(ordinal);
 
@@ -184,14 +184,14 @@ public sealed partial class CsvDataWriter
 #if SPAN
 		if (type.IsEnum)
 		{
-			IFieldWriter? writer;
+			FieldWriter? writer;
 			if (!enumMap.TryGetValue(type, out writer))
 			{
 				if (IsCandidateEnum(type))
 				{
 					// multiple calls to MakeGenericType return the same instance.
 					var prop = typeof(EnumFastFieldWriter<>).MakeGenericType(type).GetField("Instance", BindingFlags.Static | BindingFlags.Public)!;
-					writer = (IFieldWriter)prop.GetValue(null)!;
+					writer = (FieldWriter)prop.GetValue(null)!;
 				}
 				else
 				{
@@ -211,7 +211,7 @@ public sealed partial class CsvDataWriter
 
 #if SPAN
 
-	static ConcurrentDictionary<Type, IFieldWriter> enumMap = new ConcurrentDictionary<Type, IFieldWriter>();
+	static ConcurrentDictionary<Type, FieldWriter> enumMap = new ConcurrentDictionary<Type, FieldWriter>();
 
 	// determines if the type is an enum type that can be
 	// efficiently optimized.
@@ -349,7 +349,6 @@ public sealed partial class CsvDataWriter
 	readonly string? dateTimeFormat;
 	readonly string? dateTimeOffsetFormat;
 	readonly string? timeSpanFormat;
-	readonly string? dateFormat;
 #if NET6_0_OR_GREATER
 	readonly string? timeOnlyFormat;
 	readonly string? dateOnlyFormat;
@@ -357,9 +356,11 @@ public sealed partial class CsvDataWriter
 
 	readonly CultureInfo culture;
 
+	int maxBufferSize;
 	byte[] dataBuffer = Array.Empty<byte>();
-	readonly char[] buffer;
+	char[] buffer;
 	int pos;
+	int recordStart = 0;
 
 	bool disposedValue;
 
@@ -412,7 +413,7 @@ public sealed partial class CsvDataWriter
 		this.dateTimeFormat = options.DateTimeFormat;
 		this.dateTimeOffsetFormat = options.DateTimeOffsetFormat;
 		this.timeSpanFormat = options.TimeSpanFormat;
-		this.dateFormat = options.DateFormat;
+		
 #if NET6_0_OR_GREATER
 		this.timeOnlyFormat = options.TimeOnlyFormat;
 		this.dateOnlyFormat = options.DateOnlyFormat;
@@ -427,6 +428,7 @@ public sealed partial class CsvDataWriter
 #pragma warning disable CS0618 // Type or member is obsolete
 		this.buffer = buffer ?? options.Buffer ?? new char[options.BufferSize];
 #pragma warning restore CS0618 // Type or member is obsolete
+		this.maxBufferSize = options.MaxBufferSize ?? -1;
 		this.pos = 0;
 
 		// create a lookup of all the characters that need to be escaped.
@@ -448,13 +450,7 @@ public sealed partial class CsvDataWriter
 		needsEscape[c] = true;
 	}
 
-	// this should only be called in scenarios where we know there is enough room.
-	void EndRecord()
-	{
-		var nl = this.newLine;
-		for (int i = 0; i < nl.Length; i++)
-			buffer[pos++] = nl[i];
-	}
+
 
 	static bool IsBase64Symbol(char c)
 	{
