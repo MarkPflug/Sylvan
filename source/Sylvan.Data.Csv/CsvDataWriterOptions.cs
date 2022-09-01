@@ -142,6 +142,11 @@ public sealed class CsvDataWriterOptions
 	public int BufferSize { get; set; }
 
 	/// <summary>
+	/// The maximum size the internal buffer can grow to.
+	/// </summary>
+	public int? MaxBufferSize { get; set; }
+
+	/// <summary>
 	/// The buffer to use when writing records.
 	/// The default is null, in which case the writer will allocate a buffer of BufferSize.
 	/// </summary>

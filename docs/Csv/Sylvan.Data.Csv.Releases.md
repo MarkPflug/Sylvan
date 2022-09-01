@@ -1,8 +1,13 @@
 # Sylvan.Data.Csv Release Notes
 
+_1.2.1_
+
+- Adds MaxBufferSize option to CsvDataWriter, which allows internal buffer to grow when necessary.
+- Change buffering behavior of CsvDataWriter to have symmetry with CsvDataReader. It was previously possible to write CSV files that could not be read back with the same configuration. This was because the internal buffer for the writer only required that the current field fit in the buffer, while the reader requires the entire record (all fields). The CsvDataWriter now buffers an entire record instead.
+
 _1.2.0_
 
-- Adds MaxBufferSize option, which allows the internal buffer to grow when necessary. 
+- Adds MaxBufferSize option to CsvDataReader, which allows the internal buffer to grow when necessary. 
   Defaults to `null`, which disallows growth, and is consistent with the previous behavior.
 - Adds `ICsvSchemaProvider.GetFieldCount()` which gives the provider the ability to explicitly
   control the number of columns. 

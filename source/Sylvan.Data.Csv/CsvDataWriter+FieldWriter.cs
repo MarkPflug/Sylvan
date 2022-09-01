@@ -7,12 +7,7 @@ namespace Sylvan.Data.Csv;
 
 partial class CsvDataWriter
 {
-	interface IFieldWriter
-	{
-		int Write(WriterContext context, int ordinal, char[] buffer, int offset);
-	}
-
-	abstract class FieldWriter : IFieldWriter
+	abstract class FieldWriter
 	{
 		public abstract int Write(WriterContext context, int ordinal, char[] buffer, int offset);
 	}
@@ -95,6 +90,7 @@ partial class CsvDataWriter
 
 			if (writer.dataBuffer.Length == 0)
 			{
+				// share a buffer with the base64 encoder.
 				writer.dataBuffer = new byte[Base64EncSize];
 			}
 			var dataBuffer = writer.dataBuffer;
@@ -140,7 +136,7 @@ partial class CsvDataWriter
 
 	sealed class BooleanFieldWriter : FieldWriter
 	{
-		public static IFieldWriter Instance = new BooleanFieldWriter();
+		public static FieldWriter Instance = new BooleanFieldWriter();
 
 		public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
 		{
@@ -776,8 +772,6 @@ partial class CsvDataWriter
 		public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
 		{
 			var reader = context.reader;
-			var writer = context.writer;
-			var culture = writer.culture;
 			var value = reader.GetGuid(ordinal);
 			var span = buffer.AsSpan(offset);
 			if (!value.TryFormat(span, out int len, default))

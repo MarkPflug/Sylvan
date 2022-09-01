@@ -426,7 +426,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	bool GrowBuffer()
 	{
 		var len = buffer.Length;
-		if (maxBufferSize > 0 && len < maxBufferSize)
+		if (maxBufferSize > len)
 		{
 			var newLen = Math.Min(len * 2, maxBufferSize);
 			var newBuffer = new char[newLen];

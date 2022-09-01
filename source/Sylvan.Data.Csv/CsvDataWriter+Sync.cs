@@ -14,12 +14,7 @@ partial class CsvDataWriter
 	{
 		var c = reader.FieldCount;
 		var fieldInfos = new FieldInfo[c];
-
 		var schema = (reader as IDbColumnSchemaGenerator)?.GetColumnSchema();
-
-		char[] buffer = this.buffer;
-		int bufferSize = this.buffer.Length;
-
 		int result;
 		if (schema != null)
 		{
@@ -41,101 +36,135 @@ partial class CsvDataWriter
 			{
 				if (i > 0)
 				{
-					if (pos + 1 >= bufferSize)
-					{
-						FlushBuffer();
-					}
-					buffer[pos++] = delimiter;
+					WriteDelimiter(0, i);
 				}
-
 				var header = reader.GetName(i) ?? "";
-				result = csvWriter.Write(wc, header, buffer, pos);
-				if (result < 0)
+
+				while ((result = csvWriter.Write(wc, header, this.buffer, pos)) < 0)
 				{
-					FlushBuffer();
-					result = csvWriter.Write(wc, header, buffer, pos);
-					if (result < 0)
+					// writing headers will always be flush with start of buffer so we can only grow.
+					if (!GrowBuffer())
 					{
+						// unable to reclaim space
 						throw new CsvRecordTooLargeException(0, i);
 					}
-					else
-					{
-						pos += result;
-					}
 				}
-				else
-				{
-					pos += result;
-				}
+				pos += result;
 			}
-
-			if (pos + 2 >= bufferSize)
-			{
-				FlushBuffer();
-			}
-			EndRecord();
+			EndRecord(0);
 		}
 
 		int row = 0;
 		while (reader.Read())
 		{
 			row++;
-			int i = 0; // field
 			c = reader.FieldCount;
-			for (; i < c; i++)
+			for (var i = 0; i < c; i++)
 			{
 				if (i > 0)
 				{
-					if (pos + 1 >= bufferSize)
+					if (pos + 1 < buffer.Length)
 					{
-						FlushBuffer();
+						// should almost always enter this branch
+						// which avoid the async overhead
+						buffer[pos++] = delimiter;
 					}
-					buffer[pos++] = delimiter;
+					else
+					{
+						WriteDelimiter(row, i);
+					}
 				}
-				var field = i < fieldCount ? fieldInfos[i] : null;
-				field = field ?? FieldInfo.Generic;
+				var field = i < fieldCount ? fieldInfos[i] : FieldInfo.Generic;
 				if (field.allowNull && reader.IsDBNull(i))
 				{
 					continue;
 				}
 
-				for (int retry = 0; retry < 2; retry++)
+				while ((result = field.writer.Write(wc, i, buffer, pos)) < 0)
 				{
-					var r = field.writer.Write(wc, i, buffer, pos);
-
-					if (r >= 0)
+					if (!FlushOrGrowBuffer())
 					{
-						pos += r;
-						goto success;
-					}
-					else
-					{
-						FlushBuffer();
-						continue;
+						throw new CsvRecordTooLargeException(row, i);
 					}
 				}
-				// we arrive here only when there isn't enough room in the buffer
-				// to hold the field.				
-				throw new CsvRecordTooLargeException(row, i);
-			success:;
+				pos += result;
 			}
 
-			if (pos + 2 >= bufferSize)
-			{
-				FlushBuffer();
-			}
-			EndRecord();
+			EndRecord(row);
 		}
 		// flush any pending data on the way out.
 		FlushBuffer();
 		return row;
 	}
 
-	void FlushBuffer()
+	bool FlushOrGrowBuffer()
 	{
-		if (this.pos == 0) return;
-		writer.Write(buffer, 0, pos);
-		pos = 0;
+		return FlushBuffer() || GrowBuffer();
+	}
+
+	bool FlushBuffer()
+	{
+		if (this.recordStart == 0)
+		{
+			return false;
+		}
+		else
+		{
+			writer.Write(buffer, 0, recordStart);
+			Array.Copy(buffer, recordStart, buffer, 0, pos - recordStart);
+			this.pos -= recordStart;
+			this.recordStart = 0;
+			return true;
+		}
+	}
+
+	bool GrowBuffer()
+	{
+		var len = buffer.Length;
+		if (maxBufferSize > len)
+		{
+			var newLen = Math.Min(len * 2, maxBufferSize);
+			var newBuffer = new char[newLen];
+			if (recordStart > 0)
+			{
+				FlushBuffer();
+			}
+			Array.Copy(buffer, recordStart, newBuffer, 0, pos - recordStart);
+			this.pos -= recordStart;
+			this.recordStart = 0;
+			this.buffer = newBuffer;
+			return true;
+		}
+		return false;
+	}
+
+	// this should only be called in scenarios where we know there is enough room.
+	void EndRecord(int row)
+	{
+		var nl = this.newLine;
+
+		while (pos + nl.Length >= this.buffer.Length)
+		{
+			if (!FlushOrGrowBuffer())
+			{
+				throw new CsvRecordTooLargeException(row, -1);
+			}
+		}
+		for (int i = 0; i < nl.Length; i++)
+			buffer[pos++] = nl[i];
+		recordStart = pos;
+	}
+
+	void WriteDelimiter(int row, int col)
+	{
+		while (pos + 1 >= this.buffer.Length)
+		{
+			if (!FlushOrGrowBuffer())
+			{
+				throw new CsvRecordTooLargeException(row, col);
+			}
+		}
+		buffer[pos++] = delimiter;
 	}
 
 	void IDisposable.Dispose()
