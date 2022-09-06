@@ -1634,6 +1634,22 @@ public class CsvDataReaderTests
 	}
 
 	[Fact]
+	public void GetValueDateOnly()
+	{
+		var schema = 
+			new Schema.Builder()
+			.Add<String>("a")
+			.Add<DateOnly>("b")
+			.Build();
+
+		var opts = new CsvDataReaderOptions { Schema = new CsvSchema(schema) };
+		var data = "a,b\n1,2022-08-03";
+		var csv = CsvDataReader.Create(new StringReader(data), opts);
+		Assert.True(csv.Read());
+		Assert.Equal(new DateOnly(2022, 8, 3), csv.GetValue(1));
+	}
+
+	[Fact]
 	public void GetFieldValueTimeOnly()
 	{
 		var data = "a,b\n1,14:12:11.555";

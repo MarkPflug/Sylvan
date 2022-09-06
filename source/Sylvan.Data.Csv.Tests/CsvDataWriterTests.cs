@@ -492,11 +492,17 @@ public class CsvDataWriterTests
 
 		var sw = new StringWriter();
 
-		var opts = new CsvDataWriterOptions { DateFormat = "dd/MM/yyy" };
-		var csvw = CsvDataWriter.Create(sw);
-		csvw.Write(data.AsDataReader());
+		var opts = new CsvDataWriterOptions
+		{
+			DateOnlyFormat = "dd/MM/yyyy",
+			NewLine = "\n"
+		};
+		var csvw = CsvDataWriter.Create(sw, opts);
+		var reader = data.AsDataReader();
+		csvw.Write(reader);
 
 		var str = sw.ToString();
+		Assert.Equal("Name,Value\na,03/08/2022\nb,13/12/2011\n", str);
 	}
 
 #endif

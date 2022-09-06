@@ -74,7 +74,12 @@ public sealed class CsvDataWriterOptions
 	/// <summary>
 	/// The format string used when writing DateTime values, or DateOnly values on supported frameworks, that have a time component. The default is \"O\".
 	/// </summary>
-	public string? DateFormat { get; set; }
+	[Obsolete("Use DateTimeFormat instead")]
+	public string? DateFormat
+	{
+		get => this.DateTimeFormat;
+		set => this.DateTimeFormat = value;
+	}
 
 	/// <summary>
 	/// The format string used when writing TimeSpan values that have to time component. The default is \"c\".

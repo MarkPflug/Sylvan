@@ -292,8 +292,8 @@ sealed partial class CsvDataAccessor :
 			{typeof(byte[]), BytesAccessor.Instance },
 			{typeof(char[]), CharsAccessor.Instance },
 #if NET6_0_OR_GREATER
-			//{typeof(DateOnly), DateOnlyAccessor.Instance },
-			//{typeof(TimeOnly), TimeOnlyAccessor.Instance },
+			{typeof(DateOnly), DateOnlyAccessor.Instance },
+			{typeof(TimeOnly), TimeOnlyAccessor.Instance },
 #endif
 		};
 	}
