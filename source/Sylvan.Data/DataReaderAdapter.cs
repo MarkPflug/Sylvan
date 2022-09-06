@@ -173,45 +173,48 @@ public abstract partial class DataReaderAdapter : DbDataReader, IDbColumnSchemaG
 	/// <inheritdoc/>
 	public override object GetValue(int ordinal)
 	{
-		return dr.GetValue(ordinal);
-		//if (this.IsDBNull(ordinal))
-		//{
-		//	return DBNull.Value;
-		//}
-		//var type = this.GetFieldType(ordinal);
+		return this.GetValueInternal(ordinal);		
+	}
 
-		//switch (Type.GetTypeCode(type))
-		//{
-		//	case TypeCode.Boolean:
-		//		return this.GetBoolean(ordinal);
-		//	case TypeCode.Byte:
-		//		return this.GetByte(ordinal);
-		//	case TypeCode.Char:
-		//		return this.GetChar(ordinal);
-		//	case TypeCode.Int16:
-		//		return this.GetInt16(ordinal);
-		//	case TypeCode.Int32:
-		//		return this.GetInt32(ordinal);
-		//	case TypeCode.Int64:
-		//		return this.GetInt64(ordinal);
-		//	case TypeCode.Single:
-		//		return this.GetFloat(ordinal);
-		//	case TypeCode.Double:
-		//		return this.GetDouble(ordinal);
-		//	case TypeCode.Decimal:
-		//		return this.GetDecimal(ordinal);
-		//	case TypeCode.DateTime:
-		//		return this.GetDateTime(ordinal);
-		//	case TypeCode.String:
-		//		return this.GetString(ordinal);
-		//	default:
-		//		if (type == typeof(Guid))
-		//		{
-		//			return this.GetGuid(ordinal);
-		//		}
-		//		// otherwise resort to strings?
-		//		return this.GetString(ordinal);
-		//}
+	object GetValueInternal(int ordinal)
+	{
+		if (this.IsDBNull(ordinal))
+		{
+			return DBNull.Value;
+		}
+		var type = this.GetFieldType(ordinal);
+
+		switch (Type.GetTypeCode(type))
+		{
+			case TypeCode.Boolean:
+				return this.GetBoolean(ordinal);
+			case TypeCode.Byte:
+				return this.GetByte(ordinal);
+			case TypeCode.Char:
+				return this.GetChar(ordinal);
+			case TypeCode.Int16:
+				return this.GetInt16(ordinal);
+			case TypeCode.Int32:
+				return this.GetInt32(ordinal);
+			case TypeCode.Int64:
+				return this.GetInt64(ordinal);
+			case TypeCode.Single:
+				return this.GetFloat(ordinal);
+			case TypeCode.Double:
+				return this.GetDouble(ordinal);
+			case TypeCode.Decimal:
+				return this.GetDecimal(ordinal);
+			case TypeCode.DateTime:
+				return this.GetDateTime(ordinal);
+			case TypeCode.String:
+				return this.GetString(ordinal);
+			default:
+				if (type == typeof(Guid))
+				{
+					return this.GetGuid(ordinal);
+				}
+				return dr.GetValue(ordinal);
+		}
 	}
 
 	/// <inheritdoc/>

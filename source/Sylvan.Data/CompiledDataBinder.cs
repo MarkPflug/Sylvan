@@ -446,7 +446,7 @@ sealed class CompiledDataBinder<T>
 				null
 			);
 
-		var catchExpr = Expression.Catch(exParam, Expression.Throw(Expression.New(exCtor, idxVar, exParam)));
+		var catchExpr = Expression.Catch(exParam, Expression.Throw(Expression.New(exCtor!, idxVar, exParam)));
 		body = Expression.TryCatch(body, catchExpr);
 		body = Expression.Block(locals, body);
 
@@ -526,7 +526,7 @@ sealed class CompiledDataBinder<T>
 
 		Type seriesType = property.PropertyType;
 
-		var seriesCtor = seriesType.GetConstructor(new Type[] { seriesAccType, typeof(IDataRecord) });
+		var seriesCtor = seriesType.GetConstructor(new Type[] { seriesAccType, typeof(DbDataReader) });
 
 		if (seriesCtor == null)
 		{

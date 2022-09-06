@@ -1624,6 +1624,24 @@ public class CsvDataReaderTests
 		Assert.Equal(new DateOnly(2022, 06, 30), csv.GetDate(1));
 	}
 
+	[Fact]
+	public void GetFieldValueDateOnly()
+	{
+		var data = "a,b\n1,2022-08-03";
+		var csv = CsvDataReader.Create(new StringReader(data));
+		Assert.True(csv.Read());
+		Assert.Equal(new DateOnly(2022, 8, 3), csv.GetFieldValue<DateOnly>(1));
+	}
+
+	[Fact]
+	public void GetFieldValueTimeOnly()
+	{
+		var data = "a,b\n1,14:12:11.555";
+		var csv = CsvDataReader.Create(new StringReader(data));
+		Assert.True(csv.Read());
+		Assert.Equal(new TimeOnly(14, 12, 11, 555), csv.GetFieldValue<TimeOnly>(1));
+	}
+
 #endif
 
 }

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Data;
+using System.Data.Common;
 
 namespace Sylvan.Data;
 
@@ -58,9 +58,8 @@ public sealed class Series<TK, TV> : ISeries<TK, TV>
 	/// <summary>
 	/// Creates a new Series instance.
 	/// </summary>
-	public Series(DataSeriesAccessor<TK, TV> seriesData, IDataRecord data)
+	public Series(DataSeriesAccessor<TK, TV> seriesData, DbDataReader data)
 	{
-		
 		this.keys = seriesData.Keys;
 		var values = new TV[keys.Count];
 		int i = 0;

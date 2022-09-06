@@ -154,16 +154,21 @@ sealed class DateTimeOffsetAccessor : FieldAccessor<DateTimeOffset>
 }
 
 #if NET6_0_OR_GREATER
-sealed class DateAccessor : FieldAccessor<DateOnly>
+
+sealed class DateOnlyAccessor : FieldAccessor<DateOnly>
 {
+	internal static readonly DateOnlyAccessor Instance = new DateOnlyAccessor();
+
 	public override DateOnly GetValue(CsvDataReader reader, int ordinal)
 	{
 		return reader.GetDate(ordinal);
 	}
 }
 
-sealed class TimeAccessor : FieldAccessor<TimeOnly>
+sealed class TimeOnlyAccessor : FieldAccessor<TimeOnly>
 {
+	internal static readonly TimeOnlyAccessor Instance = new TimeOnlyAccessor();
+
 	public override TimeOnly GetValue(CsvDataReader reader, int ordinal)
 	{
 		return reader.GetTime(ordinal);
@@ -264,8 +269,6 @@ sealed partial class CsvDataAccessor :
 
 	internal static readonly Dictionary<Type, IFieldAccessor> Accessors;
 
-
-
 	static CsvDataAccessor()
 	{
 		Accessors = new Dictionary<Type, IFieldAccessor>
@@ -288,7 +291,10 @@ sealed partial class CsvDataAccessor :
 			{typeof(TextReader), TextReaderAccessor.Instance },
 			{typeof(byte[]), BytesAccessor.Instance },
 			{typeof(char[]), CharsAccessor.Instance },
-
+#if NET6_0_OR_GREATER
+			//{typeof(DateOnly), DateOnlyAccessor.Instance },
+			//{typeof(TimeOnly), TimeOnlyAccessor.Instance },
+#endif
 		};
 	}
 

@@ -1746,6 +1746,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	static class Accessor<T>
 	{
 		public static IFieldAccessor<T> Instance;
+
 		static Accessor()
 		{
 			Instance = GetAccessor();

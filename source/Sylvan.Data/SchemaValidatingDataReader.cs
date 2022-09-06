@@ -95,6 +95,8 @@ class SchemaValidatingDataReader : DataReaderAdapter
 		public static ValueAccessor DateTime = new GenericValueAccessor<DateTime>((r, o) => r.GetDateTime(o));
 
 		public static ValueAccessor Guid = new GenericValueAccessor<Guid>((r, o) => r.GetGuid(o));
+
+		public static ValueAccessor Object = new GenericValueAccessor<object>((r, o) => r.GetValue(o));
 	}
 
 	sealed class BytesValueAccessor : ValueAccessor<byte[]>
@@ -189,8 +191,10 @@ class SchemaValidatingDataReader : DataReaderAdapter
 		}
 	}
 
-	static ValueAccessor GetAccessor(Type type)
+	static ValueAccessor GetAccessor(Type? type)
 	{
+		if (type == null) return Accessors.Object;
+
 		var code = Type.GetTypeCode(type);
 		switch (code)
 		{

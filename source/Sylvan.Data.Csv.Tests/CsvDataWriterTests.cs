@@ -470,4 +470,34 @@ public class CsvDataWriterTests
 		var result = sw.ToString();
 		Assert.Equal(expected, result);
 	}
+
+#if NET6_0_OR_GREATER
+
+	[Fact]
+	public void WriteDateOnly()
+	{
+		var data = new[]
+			{
+				new
+				{
+					Name = "a",
+					Value = new DateOnly(2022, 8, 3),
+				},
+				new
+				{
+					Name = "b",
+					Value = new DateOnly(2011, 12, 13),
+				},
+			};
+
+		var sw = new StringWriter();
+
+		var opts = new CsvDataWriterOptions { DateFormat = "dd/MM/yyy" };
+		var csvw = CsvDataWriter.Create(sw);
+		csvw.Write(data.AsDataReader());
+
+		var str = sw.ToString();
+	}
+
+#endif
 }

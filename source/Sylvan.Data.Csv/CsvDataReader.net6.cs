@@ -10,7 +10,6 @@ namespace Sylvan.Data.Csv;
 partial class CsvDataAccessor :
 	IFieldAccessor<DateOnly>,
 	IFieldAccessor<TimeOnly>
-
 {
 	DateOnly IFieldAccessor<DateOnly>.GetValue(CsvDataReader reader, int ordinal)
 	{

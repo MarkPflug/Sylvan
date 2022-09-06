@@ -27,8 +27,9 @@ sealed class SchemaKey : IEquatable<SchemaKey>
 		return hash;
 	}
 
-	public bool Equals(SchemaKey other)
+	public bool Equals(SchemaKey? other)
 	{
+		if (other == null) return false;
 		if (!(this.hash == other.hash &&
 			this.columns.Length == other.columns.Length))
 		{
@@ -51,7 +52,7 @@ sealed class SchemaKey : IEquatable<SchemaKey>
 		public ColumnInfo(DbColumn col)
 		{
 			this.name = col.ColumnName;
-			this.type = col.DataType;
+			this.type = col.DataType!;
 			this.allowDbNull = col.AllowDBNull ?? true;
 		}
 
@@ -63,7 +64,7 @@ sealed class SchemaKey : IEquatable<SchemaKey>
 				allowDbNull.GetHashCode();
 		}
 
-		public override bool Equals(object obj)
+		public override bool Equals(object? obj)
 		{
 			return obj is ColumnInfo ci && this.Equals(ci);
 		}

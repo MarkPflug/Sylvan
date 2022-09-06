@@ -20,7 +20,7 @@ partial class CsvDataWriter
 		{
 			var reader = context.reader;
 			var writer = context.writer;
-			var value = reader.GetValue(ordinal).ToString() ?? "";
+			var value = reader.GetValue(ordinal).ToString() ?? string.Empty;
 			if (ordinal == 0 && value.Length > 0 && value[0] == context.writer.comment)
 				return writer.csvWriter.WriteEscaped(context, value, buffer, offset);
 
