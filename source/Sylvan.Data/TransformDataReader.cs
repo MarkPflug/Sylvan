@@ -3,12 +3,13 @@ using System.Collections;
 using System.Collections.ObjectModel;
 using System.Data;
 using System.Data.Common;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Sylvan.Data;
 
-class TransformDataReader : DbDataReader, IDbColumnSchemaGenerator
+sealed class TransformDataReader : DbDataReader, IDbColumnSchemaGenerator
 {
 	static readonly Func<DbDataReader, bool> TruePredicate = DbDataReader => true;
 
@@ -57,6 +58,8 @@ class TransformDataReader : DbDataReader, IDbColumnSchemaGenerator
 	public override int Depth => 0;
 
 	public override int FieldCount => columnMap.Length;
+
+	public override int VisibleFieldCount => FieldCount;
 
 	public override bool HasRows => reader.HasRows;
 
@@ -174,6 +177,49 @@ class TransformDataReader : DbDataReader, IDbColumnSchemaGenerator
 		return reader.GetString(Map(ordinal));
 	}
 
+	public override T GetFieldValue<T>(int ordinal)
+	{
+		return reader.GetFieldValue<T>(Map(ordinal));
+	}
+
+	public override Task<T> GetFieldValueAsync<T>(int ordinal, CancellationToken cancel)
+	{
+		return reader.GetFieldValueAsync<T>(Map(ordinal), cancel);
+	}
+
+	public override Type GetProviderSpecificFieldType(int ordinal)
+	{
+		return reader.GetProviderSpecificFieldType(Map(ordinal));
+	}
+
+	public override object GetProviderSpecificValue(int ordinal)
+	{
+		return reader.GetProviderSpecificValue(Map(ordinal));
+	}
+
+	public override int GetProviderSpecificValues(object[] values)
+	{
+		if (values is null)
+			throw new ArgumentNullException(nameof(values));
+
+		var c = Math.Min(values.Length, this.columnMap.Length);
+		for (int i = 0; i < c; i++)
+		{
+			values[i] = GetProviderSpecificValue(i);
+		}
+		return c;
+	}
+
+	public override Stream GetStream(int ordinal)
+	{
+		return reader.GetStream(Map(ordinal));
+	}
+
+	public override TextReader GetTextReader(int ordinal)
+	{
+		return reader.GetTextReader(Map(ordinal));
+	}
+
 	public override object GetValue(int ordinal)
 	{
 		return reader.GetValue(Map(ordinal));
@@ -181,6 +227,9 @@ class TransformDataReader : DbDataReader, IDbColumnSchemaGenerator
 
 	public override int GetValues(object[] values)
 	{
+		if (values is null)
+			throw new ArgumentNullException(nameof(values));
+
 		var c = Math.Min(values.Length, this.columnMap.Length);
 		for (int i = 0; i < c; i++)
 		{
@@ -194,6 +243,19 @@ class TransformDataReader : DbDataReader, IDbColumnSchemaGenerator
 		return reader.IsDBNull(Map(ordinal));
 	}
 
+	public override Task<bool> IsDBNullAsync(int ordinal, CancellationToken cancel)
+	{
+		return reader.IsDBNullAsync(Map(ordinal), cancel);
+	}
+
+	protected override void Dispose(bool disposing)
+	{
+		if (disposing)
+		{
+			reader.Dispose();
+		}
+	}
+
 	public override bool NextResult()
 	{
 		// I don't think this makes sense to call the
@@ -204,9 +266,14 @@ class TransformDataReader : DbDataReader, IDbColumnSchemaGenerator
 		return false;
 	}
 
-	public override async Task<bool> ReadAsync(CancellationToken cancellationToken)
+	public override Task<bool> NextResultAsync(CancellationToken cancel)
 	{
-		while (await this.reader.ReadAsync(cancellationToken))
+		return Task.FromResult(false);
+	}
+
+	public override async Task<bool> ReadAsync(CancellationToken cancel)
+	{
+		while (await this.reader.ReadAsync(cancel))
 		{
 			underlyingRow++;
 			if (this.predicate(this))
@@ -255,6 +322,6 @@ class TransformDataReader : DbDataReader, IDbColumnSchemaGenerator
 
 	public override void Close()
 	{
-		base.Close();
+		reader.Close();
 	}
 }
