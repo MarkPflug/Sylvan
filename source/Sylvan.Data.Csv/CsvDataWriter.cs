@@ -351,6 +351,7 @@ public sealed partial class CsvDataWriter
 	readonly CsvWriter csvWriter;
 
 	readonly bool writeHeaders;
+	readonly bool quoteEmptyStrings;
 	readonly char delimiter;
 	readonly char quote;
 	readonly char escape;
@@ -433,6 +434,7 @@ public sealed partial class CsvDataWriter
 		this.dateOnlyFormat = options.DateOnlyFormat;
 #endif
 		this.writeHeaders = options.WriteHeaders;
+		this.quoteEmptyStrings = options.QuoteEmptyStrings;
 		this.delimiter = options.Delimiter;
 		this.quote = options.Quote;
 		this.escape = options.Escape;
@@ -463,8 +465,6 @@ public sealed partial class CsvDataWriter
 		// these characters are already validated to be in 0-127
 		needsEscape[c] = true;
 	}
-
-
 
 	static bool IsBase64Symbol(char c)
 	{

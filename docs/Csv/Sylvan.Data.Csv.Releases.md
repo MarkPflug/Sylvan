@@ -8,6 +8,7 @@ _1.2.1_
 - Fix DateOnly and TimeOnly custom formatting in CsvDataWriter.
 - CsvDataReader.GetValue will return DateOnly/TimeOnly when specified by schema.
 - CsvDataWriterOptions.DateFormat is marked obsolete, replace with DateTimeFormat.
+- Add CsvDataWriter.QuoteEmptyStrings to indicate that empty strings should be written as empty quotes.
 
 _1.2.0_
 

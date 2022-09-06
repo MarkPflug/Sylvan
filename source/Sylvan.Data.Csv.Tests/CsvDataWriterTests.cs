@@ -443,6 +443,31 @@ public class CsvDataWriterTests
 	}
 
 	[Theory]
+	[InlineData(true, "Name\n\"\"\n\n")]
+	[InlineData(false, "Name\n\n\n")]
+	public void QuoteEmptyStrings(bool mode, string result)
+	{
+		var data = new[]
+			{
+				new
+				{
+					Name = ""
+				},
+				new
+				{
+					Name = (string)null,
+				},
+			};
+		var reader = data.AsDataReader();
+		var opts = new CsvDataWriterOptions { QuoteEmptyStrings = mode, NewLine = "\n" };
+		var sw = new StringWriter();
+		var writer = CsvDataWriter.Create(sw, opts);
+		writer.Write(reader);
+		var str = sw.ToString();
+		Assert.Equal(result, str);
+	}
+
+	[Theory]
 #if NET6_0_OR_GREATER
 	[InlineData(null, "2022-01-02\n2022-11-12\n2022-11-12T13:14:15\n")]
 #else

@@ -121,6 +121,12 @@ public sealed class CsvDataWriterOptions
 	public char Delimiter { get; set; }
 
 	/// <summary>
+	/// Empty strings will be written as empty quotes in the CSV. 
+	/// This allows distinguishing empty strings from null.
+	/// </summary>
+	public bool QuoteEmptyStrings { get; set; }
+
+	/// <summary>
 	/// The character to use for quoting fields. The default is '"'.
 	/// </summary>
 	public char Quote { get; set; }
@@ -177,7 +183,9 @@ public sealed class CsvDataWriterOptions
 			Delimiter >= 128 ||
 			Quote >= 128 ||
 			Escape >= 128 ||
-			Comment >= 128;
+			Comment >= 128 ||
+			(QuoteEmptyStrings && Style == CsvStyle.Escaped)
+			;
 		if (invalid)
 			throw new CsvConfigurationException();
 	}
