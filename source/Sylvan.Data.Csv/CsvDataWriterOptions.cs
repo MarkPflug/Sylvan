@@ -74,7 +74,12 @@ public sealed class CsvDataWriterOptions
 	/// <summary>
 	/// The format string used when writing DateTime values, or DateOnly values on supported frameworks, that have a time component. The default is \"O\".
 	/// </summary>
-	public string? DateFormat { get; set; }
+	[Obsolete("Use DateTimeFormat instead")]
+	public string? DateFormat
+	{
+		get => this.DateTimeFormat;
+		set => this.DateTimeFormat = value;
+	}
 
 	/// <summary>
 	/// The format string used when writing TimeSpan values that have to time component. The default is \"c\".
@@ -114,6 +119,12 @@ public sealed class CsvDataWriterOptions
 	/// The delimiter to use between fields. The default is ','.
 	/// </summary>
 	public char Delimiter { get; set; }
+
+	/// <summary>
+	/// Empty strings will be written as empty quotes in the CSV. 
+	/// This allows distinguishing empty strings from null.
+	/// </summary>
+	public bool QuoteEmptyStrings { get; set; }
 
 	/// <summary>
 	/// The character to use for quoting fields. The default is '"'.
@@ -172,7 +183,9 @@ public sealed class CsvDataWriterOptions
 			Delimiter >= 128 ||
 			Quote >= 128 ||
 			Escape >= 128 ||
-			Comment >= 128;
+			Comment >= 128 ||
+			(QuoteEmptyStrings && Style == CsvStyle.Escaped)
+			;
 		if (invalid)
 			throw new CsvConfigurationException();
 	}

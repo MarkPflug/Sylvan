@@ -1584,7 +1584,23 @@ public class CsvDataReaderTests
 		var reader = CsvDataReader.Create(data, opts);
 		Assert.True(reader.Read());
 		Assert.Equal(0xc1, reader.RowFieldCount);
+	}
 
+	[Fact]
+	public void QuotedEmptyString()
+	{
+		var data = new StringReader("a,b\n\"\",\n");
+		var o = new CsvDataReaderOptions
+		{
+			Schema = CsvSchema.Nullable
+		};
+
+		var reader = CsvDataReader.Create(data, o);
+		Assert.True(reader.Read());
+		Assert.False(reader.IsDBNull(0), "a");
+		Assert.True(reader.IsDBNull(1), "b");
+		Assert.Equal("", reader.GetString(0));
+		Assert.Equal("", reader.GetString(1));
 	}
 
 #if NET6_0_OR_GREATER
@@ -1622,6 +1638,40 @@ public class CsvDataReaderTests
 		var csv = CsvDataReader.Create(new StringReader(data), opts);
 		Assert.True(csv.Read());
 		Assert.Equal(new DateOnly(2022, 06, 30), csv.GetDate(1));
+	}
+
+	[Fact]
+	public void GetFieldValueDateOnly()
+	{
+		var data = "a,b\n1,2022-08-03";
+		var csv = CsvDataReader.Create(new StringReader(data));
+		Assert.True(csv.Read());
+		Assert.Equal(new DateOnly(2022, 8, 3), csv.GetFieldValue<DateOnly>(1));
+	}
+
+	[Fact]
+	public void GetValueDateOnly()
+	{
+		var schema = 
+			new Schema.Builder()
+			.Add<String>("a")
+			.Add<DateOnly>("b")
+			.Build();
+
+		var opts = new CsvDataReaderOptions { Schema = new CsvSchema(schema) };
+		var data = "a,b\n1,2022-08-03";
+		var csv = CsvDataReader.Create(new StringReader(data), opts);
+		Assert.True(csv.Read());
+		Assert.Equal(new DateOnly(2022, 8, 3), csv.GetValue(1));
+	}
+
+	[Fact]
+	public void GetFieldValueTimeOnly()
+	{
+		var data = "a,b\n1,14:12:11.555";
+		var csv = CsvDataReader.Create(new StringReader(data));
+		Assert.True(csv.Read());
+		Assert.Equal(new TimeOnly(14, 12, 11, 555), csv.GetFieldValue<TimeOnly>(1));
 	}
 
 #endif

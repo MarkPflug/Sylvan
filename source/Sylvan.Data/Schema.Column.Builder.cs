@@ -124,6 +124,17 @@ partial class Schema
 							this.ColumnSize = 16;
 							break;
 						}
+#if NET6_0_OR_GREATER
+						if (type == typeof(DateOnly))
+						{
+							break;
+						}
+
+						if (type == typeof(TimeOnly))
+						{
+							break;
+						}
+#endif
 						goto default;
 					default:
 						throw new NotSupportedException();

@@ -2,13 +2,14 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.Common;
 using System.Linq;
 
 namespace Sylvan.Data;
 
 interface IDataAccessor<out T>
 {
-	T Get(IDataRecord r, int ordinal);
+	T Get(DbDataReader r, int ordinal);
 }
 
 static class DataAccessor
@@ -29,7 +30,7 @@ static class DataAccessor
 
 	sealed class Int32DataAccessor : IDataAccessor<int>
 	{
-		public int Get(IDataRecord r, int ordinal)
+		public int Get(DbDataReader r, int ordinal)
 		{
 			return r.GetInt32(ordinal);
 		}
@@ -37,7 +38,7 @@ static class DataAccessor
 
 	sealed class Int64DataAccessor : IDataAccessor<long>
 	{
-		public long Get(IDataRecord r, int ordinal)
+		public long Get(DbDataReader r, int ordinal)
 		{
 			return r.GetInt64(ordinal);
 		}
@@ -45,7 +46,7 @@ static class DataAccessor
 
 	sealed class DoubleDataAccessor : IDataAccessor<double>
 	{
-		public double Get(IDataRecord r, int ordinal)
+		public double Get(DbDataReader r, int ordinal)
 		{
 			return r.GetDouble(ordinal);
 		}
@@ -53,7 +54,7 @@ static class DataAccessor
 
 	sealed class FloatDataAccessor : IDataAccessor<float>
 	{
-		public float Get(IDataRecord r, int ordinal)
+		public float Get(DbDataReader r, int ordinal)
 		{
 			return r.GetFloat(ordinal);
 		}
@@ -61,7 +62,7 @@ static class DataAccessor
 
 	sealed class DecimalDataAccessor : IDataAccessor<decimal>
 	{
-		public decimal Get(IDataRecord r, int ordinal)
+		public decimal Get(DbDataReader r, int ordinal)
 		{
 			return r.GetDecimal(ordinal);
 		}
@@ -69,7 +70,7 @@ static class DataAccessor
 
 	sealed class StringDataAccessor : IDataAccessor<string>
 	{
-		public string Get(IDataRecord r, int ordinal)
+		public string Get(DbDataReader r, int ordinal)
 		{
 			return r.GetString(ordinal);
 		}
@@ -77,7 +78,7 @@ static class DataAccessor
 
 	sealed class NullableInt32DataAccessor : IDataAccessor<int?>
 	{
-		public int? Get(IDataRecord r, int ordinal)
+		public int? Get(DbDataReader r, int ordinal)
 		{
 			if (r.IsDBNull(ordinal)) return null;
 			return r.GetInt32(ordinal);
@@ -86,7 +87,7 @@ static class DataAccessor
 
 	sealed class NullableInt64DataAccessor : IDataAccessor<long?>
 	{
-		public long? Get(IDataRecord r, int ordinal)
+		public long? Get(DbDataReader r, int ordinal)
 		{
 			if (r.IsDBNull(ordinal)) return null;
 			return r.GetInt64(ordinal);
@@ -95,7 +96,7 @@ static class DataAccessor
 
 	sealed class NullableFloatDataAccessor : IDataAccessor<float?>
 	{
-		public float? Get(IDataRecord r, int ordinal)
+		public float? Get(DbDataReader r, int ordinal)
 		{
 			if (r.IsDBNull(ordinal)) return null;
 			return r.GetFloat(ordinal);
@@ -104,7 +105,7 @@ static class DataAccessor
 
 	sealed class NullableDoubleDataAccessor : IDataAccessor<double?>
 	{
-		public double? Get(IDataRecord r, int ordinal)
+		public double? Get(DbDataReader r, int ordinal)
 		{
 			if (r.IsDBNull(ordinal)) return null;
 			return r.GetDouble(ordinal);
@@ -113,7 +114,7 @@ static class DataAccessor
 
 	sealed class NullableDecimalDataAccessor : IDataAccessor<decimal?>
 	{
-		public decimal? Get(IDataRecord r, int ordinal)
+		public decimal? Get(DbDataReader r, int ordinal)
 		{
 			if (r.IsDBNull(ordinal)) return null;
 			return r.GetDecimal(ordinal);
@@ -122,7 +123,7 @@ static class DataAccessor
 
 	sealed class NullableStringDataAccessor : IDataAccessor<string?>
 	{
-		public string? Get(IDataRecord r, int ordinal)
+		public string? Get(DbDataReader r, int ordinal)
 		{
 			if (r.IsDBNull(ordinal)) return null;
 			return r.GetString(ordinal);
@@ -277,7 +278,7 @@ public sealed class DataSeriesAccessor<TK, TV>
 	/// </summary>
 	/// <param name="record">The record to read the values from.</param>
 	/// <returns>The sequence of values ordered by corresponding series column key.</returns>
-	public IEnumerable<TV> ReadValues(IDataRecord record)
+	public IEnumerable<TV> ReadValues(DbDataReader record)
 	{
 		for (int i = 0; i < cols.Length; i++)
 		{

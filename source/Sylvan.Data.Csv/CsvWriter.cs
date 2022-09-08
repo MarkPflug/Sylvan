@@ -114,6 +114,10 @@ partial class CsvDataWriter
 		{
 			var pos = offset;
 			var needsEscape = context.writer.needsEscape;
+			if (value.Length == 0 && context.writer.quoteEmptyStrings)
+			{
+				return NeedsQuoting;
+			}
 
 			if (pos + value.Length >= buffer.Length)
 				return InsufficientSpace;

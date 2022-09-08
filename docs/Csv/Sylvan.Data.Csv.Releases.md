@@ -4,6 +4,11 @@ _1.2.1_
 
 - Adds MaxBufferSize option to CsvDataWriter, which allows internal buffer to grow when necessary.
 - Change buffering behavior of CsvDataWriter to have symmetry with CsvDataReader. It was previously possible to write CSV files that could not be read back with the same configuration. This was because the internal buffer for the writer only required that the current field fit in the buffer, while the reader requires the entire record (all fields). The CsvDataWriter now buffers an entire record instead.
+- Allow accessing extra columns via CsvDataReaderGetValue().
+- Fix DateOnly and TimeOnly custom formatting in CsvDataWriter.
+- CsvDataReader.GetValue will return DateOnly/TimeOnly when specified by schema.
+- CsvDataWriterOptions.DateFormat is marked obsolete, replace with DateTimeFormat.
+- Add CsvDataWriter.QuoteEmptyStrings to indicate that empty strings should be written as empty quotes instead of an empty field.
 
 _1.2.0_
 

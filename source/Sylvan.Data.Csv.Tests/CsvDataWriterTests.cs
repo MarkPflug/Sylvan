@@ -443,6 +443,31 @@ public class CsvDataWriterTests
 	}
 
 	[Theory]
+	[InlineData(true, "Name\n\"\"\n\n")]
+	[InlineData(false, "Name\n\n\n")]
+	public void QuoteEmptyStrings(bool mode, string result)
+	{
+		var data = new[]
+			{
+				new
+				{
+					Name = ""
+				},
+				new
+				{
+					Name = (string)null,
+				},
+			};
+		var reader = data.AsDataReader();
+		var opts = new CsvDataWriterOptions { QuoteEmptyStrings = mode, NewLine = "\n" };
+		var sw = new StringWriter();
+		var writer = CsvDataWriter.Create(sw, opts);
+		writer.Write(reader);
+		var str = sw.ToString();
+		Assert.Equal(result, str);
+	}
+
+	[Theory]
 #if NET6_0_OR_GREATER
 	[InlineData(null, "2022-01-02\n2022-11-12\n2022-11-12T13:14:15\n")]
 #else
@@ -470,4 +495,40 @@ public class CsvDataWriterTests
 		var result = sw.ToString();
 		Assert.Equal(expected, result);
 	}
+
+#if NET6_0_OR_GREATER
+
+	[Fact]
+	public void WriteDateOnly()
+	{
+		var data = new[]
+			{
+				new
+				{
+					Name = "a",
+					Value = new DateOnly(2022, 8, 3),
+				},
+				new
+				{
+					Name = "b",
+					Value = new DateOnly(2011, 12, 13),
+				},
+			};
+
+		var sw = new StringWriter();
+
+		var opts = new CsvDataWriterOptions
+		{
+			DateOnlyFormat = "dd/MM/yyyy",
+			NewLine = "\n"
+		};
+		var csvw = CsvDataWriter.Create(sw, opts);
+		var reader = data.AsDataReader();
+		csvw.Write(reader);
+
+		var str = sw.ToString();
+		Assert.Equal("Name,Value\na,03/08/2022\nb,13/12/2011\n", str);
+	}
+
+#endif
 }

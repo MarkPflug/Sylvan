@@ -1268,14 +1268,6 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		throw new IndexOutOfRangeException();
 	}
 
-	void ThrowIfOutOfRange(int ordinal)
-	{
-		if ((uint)ordinal >= (uint)fieldCount)
-		{
-			throw new ArgumentOutOfRangeException(nameof(ordinal));
-		}
-	}
-
 	/// <inheritdoc/>
 	public override string GetString(int ordinal)
 	{
@@ -1286,7 +1278,10 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 			if (l == 0) return string.Empty;
 			return stringFactory.Invoke(s.buffer, s.offset, l);
 		}
-		ThrowIfOutOfRange(ordinal);
+		if ((uint)ordinal >= (uint)fieldCount)
+		{
+			throw new ArgumentOutOfRangeException(nameof(ordinal));
+		}
 		return string.Empty;
 	}
 
@@ -1443,20 +1438,21 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override object GetValue(int ordinal)
 	{
-		ThrowIfOutOfRange(ordinal);
+		var max = Math.Max(this.fieldCount, this.curFieldCount);
 
-		if (columns[ordinal].AllowDBNull != false && this.IsDBNull(ordinal))
+		if (ordinal > max)
+		{
+			throw new ArgumentOutOfRangeException(nameof(ordinal));
+		}
+
+		var col = ordinal < columns.Length ? columns[ordinal] : null;
+
+		if (col?.AllowDBNull != false && this.IsDBNull(ordinal))
 		{
 			return DBNull.Value;
 		}
 
-		IFieldAccessor acc = StringAccessor.Instance;
-
-		if (ordinal < this.columns.Length)
-		{
-			acc = this.columns[ordinal].Accessor;
-		}
-
+		IFieldAccessor acc = col?.Accessor ?? StringAccessor.Instance;
 		return acc.GetValueAsObject(this, ordinal);
 	}
 
@@ -1746,6 +1742,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	static class Accessor<T>
 	{
 		public static IFieldAccessor<T> Instance;
+
 		static Accessor()
 		{
 			Instance = GetAccessor();
