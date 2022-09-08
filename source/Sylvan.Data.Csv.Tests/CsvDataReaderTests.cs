@@ -1584,7 +1584,23 @@ public class CsvDataReaderTests
 		var reader = CsvDataReader.Create(data, opts);
 		Assert.True(reader.Read());
 		Assert.Equal(0xc1, reader.RowFieldCount);
+	}
 
+	[Fact]
+	public void QuotedEmptyString()
+	{
+		var data = new StringReader("a,b\n\"\",\n");
+		var o = new CsvDataReaderOptions
+		{
+			Schema = CsvSchema.Nullable
+		};
+
+		var reader = CsvDataReader.Create(data, o);
+		Assert.True(reader.Read());
+		Assert.False(reader.IsDBNull(0), "a");
+		Assert.True(reader.IsDBNull(1), "b");
+		Assert.Equal("", reader.GetString(0));
+		Assert.Equal("", reader.GetString(1));
 	}
 
 #if NET6_0_OR_GREATER

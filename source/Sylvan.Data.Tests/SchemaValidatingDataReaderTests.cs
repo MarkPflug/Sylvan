@@ -1,6 +1,5 @@
 ﻿using Sylvan.Data.Csv;
 using System;
-using System.Data.Common;
 using System.IO;
 using Xunit;
 
@@ -8,18 +7,22 @@ namespace Sylvan.Data;
 
 public class SchemaValidatingDataReaderTests
 {
+	// uses preview features, which are marked obsolete.
+#pragma warning disable CS0618
 
 	static object[] defaults = new object[] { -1, Guid.Empty, null };
 
-	static bool Validate(DbDataReader data, int ordinal, out object value)
+	static bool Validate(SchemaValidationContext context)
 	{
-		value = defaults[ordinal];
+		foreach(var error in context.GetErrors())
+		{
+			context.SetValue(error, defaults[error]);
+		}
 		return true;
 	}
 
-	static bool Fail(DbDataReader data, int ordinal, out object value)
+	static bool Fail(SchemaValidationContext context)
 	{
-		value = null;
 		return false;
 	}
 
@@ -31,6 +34,7 @@ public class SchemaValidatingDataReaderTests
 		var opts = new CsvDataReaderOptions { Schema = new CsvSchema(schema) };
 		var data = "A,B,C\n1,Test,2022-01-01\n";
 		var csv = CsvDataReader.Create(new StringReader(data), opts);
+
 
 		var r = csv.ValidateSchema(Fail);
 		Assert.True(r.Read());

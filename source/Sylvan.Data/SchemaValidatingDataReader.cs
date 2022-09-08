@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Data.Common;
 
 namespace Sylvan.Data;
@@ -7,10 +8,111 @@ namespace Sylvan.Data;
 /// <summary>
 /// Defines a method for handling schema violations.
 /// </summary>
-public delegate bool SchemaViolationErrorHandler(DbDataReader data, int ordinal, out object? value);
+public delegate bool SchemaViolationErrorHandler(SchemaValidationContext context);
+
+/// <summary>
+/// Provides contextual information about records that violate schema requirements.
+/// </summary>
+public sealed class SchemaValidationContext
+{
+	SchemaValidatingDataReader.Friend accessor;
+	internal SchemaValidationContext(SchemaValidatingDataReader.Friend accessor)
+	{
+		this.accessor = accessor;
+	}
+
+	/// <summary>
+	/// The data reader being validated.
+	/// </summary>
+	public DbDataReader DataReader => accessor.Reader;
+
+	/// <summary>
+	/// Gets the ordinals that contained errors.
+	/// </summary>
+	public IEnumerable<int> GetErrors()
+	{
+		return accessor.GetErrors();
+	}
+
+	/// <summary>
+	/// Gets the exception that was thrown when processing the column.
+	/// </summary>
+	/// <param name="ordinal">The column ordinal.</param>
+	/// <returns>An exception or null.</returns>
+	public Exception? GetException(int ordinal)
+	{
+		return accessor.GetException(ordinal);
+	}
+
+	/// <summary>
+	/// Sets the value for a field.
+	/// </summary>
+	public void SetValue<T>(int ordinal, T value)
+	{
+		this.accessor.SetValue(ordinal, value);
+	}
+
+	/// <summary>
+	/// Sets the value for a field.
+	/// </summary>
+	public void SetValue(int ordinal, object value)
+	{
+		this.accessor.SetValue(ordinal, value);
+	}
+}
 
 class SchemaValidatingDataReader : DataReaderAdapter
 {
+	// TODO: name this. Just meant to limit visibility to internals
+	internal struct Friend
+	{
+		SchemaValidatingDataReader reader;
+
+		public Friend(SchemaValidatingDataReader reader)
+		{
+			this.reader = reader;
+		}
+
+		public DbDataReader Reader => reader.inner;
+
+		public IEnumerable<int> GetErrors()
+		{
+			var markers = reader.errorMarker;
+			for (int i = 0; i < markers.Length; i++)
+			{
+				if (markers[i] == reader.counter)
+					yield return i;
+			}
+		}
+
+		public Exception? GetException(int ordinal)
+		{
+			return 
+				reader.errorMarker[ordinal] == reader.counter
+				? reader.exceptions[ordinal]
+				: null;
+		}
+
+		public void SetValue<T>(int ordinal, T? value)
+		{
+			var r = this.reader.cache[ordinal];
+			if (r is ValueRef<T> vr)
+			{
+				vr.Value = value;
+			}
+			else
+			{
+				r.SetUserValue(value);
+			}
+		}
+
+		public void SetValue(int ordinal, object? value)
+		{
+			var r = this.reader.cache[ordinal];
+			r.SetUserValue(value);
+		}
+	}
+
 	abstract class Ref
 	{
 		public bool IsNull { get; set; }
@@ -150,15 +252,17 @@ class SchemaValidatingDataReader : DataReaderAdapter
 
 	// the cache of values for the current row populated during calls to Read()
 	Ref[] cache;
-
 	ValueAccessor[] accessors;
+	int[] errorMarker;
+	Exception[] exceptions;
+	int counter;
 
 	DbDataReader inner;
+	SchemaValidationContext validationContext;
 	SchemaViolationErrorHandler errorHandler;
 
-	static bool Fail(DbDataReader data, int ordinal, out object? value)
+	static bool Fail(SchemaValidationContext context)
 	{
-		value = null;
 		return false;
 	}
 
@@ -169,16 +273,22 @@ class SchemaValidatingDataReader : DataReaderAdapter
 		this.errorHandler = errorHandler ?? Fail;
 		this.cache = Array.Empty<Ref>();
 		this.accessors = Array.Empty<ValueAccessor>();
+		this.errorMarker = Array.Empty<int>();
+		this.exceptions = Array.Empty<Exception>();
+		this.validationContext = new SchemaValidationContext(new Friend(this));
+		this.counter = -1;
 		InitializeSchema();
 	}
 
 	void InitializeSchema()
 	{
-		var count = inner.FieldCount; ;
+		var count = inner.FieldCount;
 		if (cache.Length < count)
 		{
 			this.cache = new Ref[count];
 			this.accessors = new ValueAccessor[count];
+			this.errorMarker = new int[count];
+			this.exceptions = new Exception[count];
 		}
 
 		var schema = inner.GetColumnSchema();
@@ -188,6 +298,7 @@ class SchemaValidatingDataReader : DataReaderAdapter
 			var acc = GetAccessor(t);
 			this.accessors[i] = acc;
 			this.cache[i] = acc.CreateRef();
+			this.errorMarker[i] = -1;
 		}
 	}
 
@@ -244,6 +355,8 @@ class SchemaValidatingDataReader : DataReaderAdapter
 
 	bool ProcessRow()
 	{
+		counter++;
+		var errorCount = 0;
 		for (int i = 0; i < inner.FieldCount; i++)
 		{
 			var r = cache[i];
@@ -252,18 +365,25 @@ class SchemaValidatingDataReader : DataReaderAdapter
 			{
 				this.accessors[i].Process(this.inner, i, r);
 			}
-			catch
+			catch (Exception ex)
 			{
-				if (errorHandler(inner, i, out var obj))
-				{
-					r.SetUserValue(obj);
-				}
-				else
-				{
-					return false;
-				}
+				errorCount++;
+				this.exceptions[i] = ex;
+				this.errorMarker[i] = counter;
 			}
 		}
+		if (errorCount > 0)
+		{
+			if (errorHandler(this.validationContext))
+			{
+				// TODO: re-validate ?
+			}
+			else
+			{
+				return false;
+			}
+		}
+
 		return true;
 	}
 

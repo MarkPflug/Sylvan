@@ -201,7 +201,8 @@ public static class DataExtensions
 	/// </summary>
 	/// <param name="reader">The DbDataReader</param>
 	/// <param name="errorHandler">The errorHandler callback.</param>
-	/// <returns></returns>
+	/// <returns>A DbDataReader.</returns>
+	[Obsolete("This feature is preview and might change in future release.")]
 	public static DbDataReader ValidateSchema<T>(this T reader, SchemaViolationErrorHandler errorHandler)
 		where T : DbDataReader
 	{
