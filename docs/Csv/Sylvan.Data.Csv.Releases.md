@@ -1,6 +1,7 @@
 # Sylvan.Data.Csv Release Notes
 _1.2.2_
-- CsvSchema allows remapping columns when BaseColumnName is set.
+
+- CsvSchema allows renaming columns when BaseColumnName is set.
 
 _1.2.1_
 

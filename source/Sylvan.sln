@@ -42,7 +42,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Csv", "Csv", "{AEE4C9CD-23E
 		..\docs\Csv\Examples.md = ..\docs\Csv\Examples.md
 		..\docs\Csv\Options.md = ..\docs\Csv\Options.md
 		..\docs\Csv\Schema.md = ..\docs\Csv\Schema.md
-		..\docs\Csv\Sylvan.Data.Csv.Design.md = ..\docs\Csv\Sylvan.Data.Csv.Design.md
 		..\docs\Csv\Sylvan.Data.Csv.md = ..\docs\Csv\Sylvan.Data.Csv.md
 		..\docs\Csv\Sylvan.Data.Csv.Releases.md = ..\docs\Csv\Sylvan.Data.Csv.Releases.md
 	EndProjectSection
