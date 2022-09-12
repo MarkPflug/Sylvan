@@ -26,7 +26,7 @@ sealed class NullableCsvSchema : CsvSchemaProvider
 /// <summary>
 /// An ICsvSchemaProvider implementation based on an existing schema.
 /// </summary>
-public class CsvSchema : ICsvSchemaProvider
+public class CsvSchema : CsvSchemaProvider
 {
 	/// <summary>
 	/// Gets a ICsvSchemaProvider that treats empty strings as null.
@@ -84,9 +84,10 @@ public class CsvSchema : ICsvSchemaProvider
 	}
 
 	/// <inheritdoc />
-	public virtual DbColumn? GetColumn(string? name, int ordinal)
+	public override DbColumn? GetColumn(string? name, int ordinal)
 	{
-		if (name != null && nameMap.TryGetValue(name, out var col))
+		DbColumn? col;
+		if (name != null && nameMap.TryGetValue(name, out col))
 		{
 			return col;
 		}
@@ -97,14 +98,12 @@ public class CsvSchema : ICsvSchemaProvider
 		}
 
 		if (ordinal >= 0 && ordinal < schema.Length)
-			return schema[ordinal];
+		{
+			col = schema[ordinal];
+			if (col.BaseColumnName == null)
+				return col;
+		}
 
 		return null;
-	}
-
-	/// <inheritdoc/>
-	public int GetFieldCount(CsvDataReader reader)
-	{
-		return reader.RowFieldCount;
 	}
 }

@@ -12,7 +12,7 @@ public abstract class CsvSchemaProvider : ICsvSchemaProvider
 	public abstract DbColumn? GetColumn(string? name, int ordinal);
 
 	/// <inheritdoc/>
-	public int GetFieldCount(CsvDataReader reader)
+	public virtual int GetFieldCount(CsvDataReader reader)
 	{
 		return reader.RowFieldCount;
 	}

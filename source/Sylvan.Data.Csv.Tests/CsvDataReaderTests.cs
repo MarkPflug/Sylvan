@@ -1603,6 +1603,20 @@ public class CsvDataReaderTests
 		Assert.Equal("", reader.GetString(1));
 	}
 
+	[Fact]
+	public void SchemaColumnRename()
+	{
+		var data = new StringReader("a,b,c,d,e,f\n1,2,3,4,5,6");
+		var s = Schema.Parse("b>Name,d>Date,f>Value");
+		var schema = new CsvSchema(s);
+		var opts = new CsvDataReaderOptions { Schema = schema };
+		var edr = CsvDataReader.Create(data, opts);
+		Assert.Equal(0, edr.GetOrdinal("a"));
+		Assert.Equal(1, edr.GetOrdinal("Name"));
+		Assert.Equal(3, edr.GetOrdinal("Date"));
+		Assert.Equal(5, edr.GetOrdinal("Value"));
+	}
+
 #if NET6_0_OR_GREATER
 
 	[Fact]

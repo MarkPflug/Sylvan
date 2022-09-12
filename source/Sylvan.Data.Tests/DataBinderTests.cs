@@ -80,11 +80,11 @@ namespace Sylvan.Data
 			var tr = new StringReader(csvData);
 			var data = CsvDataReader.Create(tr);
 
-			foreach(var record in data.GetRecords<MyRecordClass>())
+			foreach (var record in data.GetRecords<MyRecordClass>())
 			{
 				Assert.Equal(1, record.Id);
 				Assert.Equal("Test", record.Name);
-				Assert.Equal(new DateTime(2020,8,12), record.Date);
+				Assert.Equal(new DateTime(2020, 8, 12), record.Date);
 			}
 		}
 
@@ -474,6 +474,22 @@ namespace Sylvan.Data
 			var ex = Assert.Throws<DataBinderException>(() => binder.Bind(data, record));
 			Assert.Equal(2, ex.Ordinal);
 		}
+
+#if NET6_0_OR_GREATER
+
+		[Fact]
+		public void BindDateOnlyTimeOnly()
+		{
+			var s = "Date,Time\n2020-01-01,13:14:15\n";
+			var r = new StringReader(s);
+			var data = CsvDataReader.Create(r);
+			foreach (var d in data.GetRecords<DateTimeRecord>())
+			{
+				Assert.Equal(new DateOnly(2020, 1, 1), d.Date);
+				Assert.Equal(new TimeOnly(13, 14, 15), d.Time);
+			}
+		}
+#endif
 	}
 
 	class Simple
@@ -557,4 +573,15 @@ namespace Sylvan.Data
 		public string Name { get; set; }
 		public DateTime Date { get; set; }
 	}
+
+#if NET6_0_OR_GREATER
+
+	class DateTimeRecord
+	{
+		public DateOnly Date { get; set; }
+
+		public TimeOnly Time { get; set; }
+	}
+
+#endif
 }

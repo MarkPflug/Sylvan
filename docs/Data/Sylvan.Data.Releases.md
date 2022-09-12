@@ -1,5 +1,12 @@
 # Sylvan.Data.Csv Release Notes
 
+_0.2.5_
+- Expose GetRecordsAsync to net6.0.
+
+_0.2.4_
+- Add experimental DbDataReader.ValidateSchema.
+- Add support for binding to DateOnly and TimeOnly.
+
 _0.2.3_
 - Fix an issue binding to `record class` types.
 - Add `class` constraint to binder methods, as structs are not currently supported.

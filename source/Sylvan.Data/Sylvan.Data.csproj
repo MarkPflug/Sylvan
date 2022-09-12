@@ -2,12 +2,12 @@
 
 	<PropertyGroup>
 		<TargetFrameworks>netstandard2.0;netstandard2.1;net6.0</TargetFrameworks>
-		<VersionPrefix>0.2.4</VersionPrefix>
+		<VersionPrefix>0.2.5</VersionPrefix>
 		<Description>A .NET library of types for working with data objects.</Description>
 		<PackageTags>data;datareader;ADO.NET</PackageTags>
 		<Nullable>enable</Nullable>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<DefineConstants Condition="$(TargetFramework) == 'netstandard2.1'">IAsyncEnumerable</DefineConstants>
+		<DefineConstants Condition="$(TargetFramework) != 'netstandard2.0'">$(DefineConstants);IAsyncEnumerable</DefineConstants>
 	</PropertyGroup>
 
 	<ItemGroup>
