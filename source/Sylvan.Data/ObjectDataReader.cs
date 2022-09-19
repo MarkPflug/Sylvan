@@ -159,7 +159,8 @@ sealed class ObjectDataReader<T> : DbDataReader, IDbColumnSchemaGenerator
 		internal Builder AddDefaultColumns()
 		{
 			var t = typeof(T);
-			foreach (var prop in t.GetProperties())
+			var props = t.GetProperties();
+			foreach (var prop in props)
 			{
 				var getter = prop.GetGetMethod();
 				if (getter == null || !IsSupported(prop)) continue;
@@ -183,6 +184,7 @@ sealed class ObjectDataReader<T> : DbDataReader, IDbColumnSchemaGenerator
 			typeof(DateTime),
 			typeof(DateTimeOffset),
 			typeof(TimeSpan),
+			typeof(decimal),
 
 #if NET6_0_OR_GREATER
 			typeof(DateOnly),

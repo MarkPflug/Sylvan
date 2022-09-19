@@ -1,5 +1,8 @@
 # Sylvan.Data.Csv Release Notes
 
+_0.2.6_
+- Adds support for reading `decimal` properties with ObjectDataReader.
+
 _0.2.5_
 - Expose GetRecordsAsync to net6.0.
 
