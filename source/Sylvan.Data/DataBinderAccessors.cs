@@ -27,7 +27,7 @@ partial class DataBinder
 		return name;
 	}
 
-	internal static readonly Type IDataRecordType = typeof(IDataRecord);
+	//internal static readonly Type IDataRecordType = typeof(IDataRecord);
 	internal static readonly Type DbDataRecordType = typeof(DbDataRecord);
 
 	internal static readonly MethodInfo IsDbNullMethod;
@@ -45,26 +45,34 @@ partial class DataBinder
 	internal static readonly MethodInfo GetDateTimeMethod;
 	internal static readonly MethodInfo GetDateTimeOffsetMethod;
 	internal static readonly MethodInfo GetValueMethod;
-
+#if NET6_0_OR_GREATER
+	internal static readonly MethodInfo GetDateOnlyMethod;
+	internal static readonly MethodInfo GetTimeOnlyMethod;
+#endif
 	static DataBinder()
 	{
-		IDataRecordType = typeof(IDataRecord);
+		//IDataRecordType = typeof(IDataRecord);
 		DbDataRecordType = typeof(DbDataReader);
-		IsDbNullMethod = IDataRecordType.GetMethod("IsDBNull")!;
-		GetBooleanMethod = IDataRecordType.GetMethod("GetBoolean")!;
-		GetCharMethod = IDataRecordType.GetMethod("GetChar")!;
-		GetByteMethod = IDataRecordType.GetMethod("GetByte")!;
-		GetInt16Method = IDataRecordType.GetMethod("GetInt16")!;
-		GetInt32Method = IDataRecordType.GetMethod("GetInt32")!;
-		GetInt64Method = IDataRecordType.GetMethod("GetInt64")!;
-		GetFloatMethod = IDataRecordType.GetMethod("GetFloat")!;
-		GetDoubleMethod = IDataRecordType.GetMethod("GetDouble")!;
-		GetDecimalMethod = IDataRecordType.GetMethod("GetDecimal")!;
-		GetStringMethod = IDataRecordType.GetMethod("GetString")!;
-		GetGuidMethod = IDataRecordType.GetMethod("GetGuid")!;
-		GetDateTimeMethod = IDataRecordType.GetMethod("GetDateTime")!;
-		GetValueMethod = IDataRecordType.GetMethod("GetValue")!;
-		GetDateTimeOffsetMethod = DbDataRecordType.GetMethods().Single(m => m.Name == "GetFieldValue").MakeGenericMethod(typeof(DateTimeOffset));
+		IsDbNullMethod = DbDataRecordType.GetMethod("IsDBNull")!;
+		GetBooleanMethod = DbDataRecordType.GetMethod("GetBoolean")!;
+		GetCharMethod = DbDataRecordType.GetMethod("GetChar")!;
+		GetByteMethod = DbDataRecordType.GetMethod("GetByte")!;
+		GetInt16Method = DbDataRecordType.GetMethod("GetInt16")!;
+		GetInt32Method = DbDataRecordType.GetMethod("GetInt32")!;
+		GetInt64Method = DbDataRecordType.GetMethod("GetInt64")!;
+		GetFloatMethod = DbDataRecordType.GetMethod("GetFloat")!;
+		GetDoubleMethod = DbDataRecordType.GetMethod("GetDouble")!;
+		GetDecimalMethod = DbDataRecordType.GetMethod("GetDecimal")!;
+		GetStringMethod = DbDataRecordType.GetMethod("GetString")!;
+		GetGuidMethod = DbDataRecordType.GetMethod("GetGuid")!;
+		GetDateTimeMethod = DbDataRecordType.GetMethod("GetDateTime")!;
+		GetValueMethod = DbDataRecordType.GetMethod("GetValue")!;
+		var getFieldValueMethod = DbDataRecordType.GetMethods().Single(m => m.Name == "GetFieldValue");
+		GetDateTimeOffsetMethod = getFieldValueMethod.MakeGenericMethod(typeof(DateTimeOffset));
+#if NET6_0_OR_GREATER
+		GetDateOnlyMethod = getFieldValueMethod.MakeGenericMethod(typeof(DateOnly));
+		GetTimeOnlyMethod = getFieldValueMethod.MakeGenericMethod(typeof(TimeOnly));
+#endif
 	}
 
 	internal static MethodInfo? GetAccessorMethod(Type type)
@@ -112,6 +120,20 @@ partial class DataBinder
 				{
 					return GetDateTimeOffsetMethod;
 				}
+
+#if NET6_0_OR_GREATER
+
+				if (type == typeof(DateOnly))
+				{
+					return GetDateOnlyMethod;
+				}
+
+				if (type == typeof(TimeOnly))
+				{
+					return GetTimeOnlyMethod;
+				}
+
+#endif
 
 				break;
 		}
@@ -325,6 +347,29 @@ partial class DataBinder
 		{
 			return DbType.Guid;
 		}
+
+		if (type == typeof(char[]))
+		{
+			return DbType.String;
+		}
+
+		if (type == typeof(DateTimeOffset))
+		{
+			return DbType.DateTimeOffset;
+		}
+
+#if NET6_0_OR_GREATER
+		if (type == typeof(DateOnly))
+		{
+			return DbType.Date;
+		}
+
+		if (type == typeof(TimeOnly))
+		{
+			return DbType.Time;
+		}
+#endif
+
 		return null;
 	}
 

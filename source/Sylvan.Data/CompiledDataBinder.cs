@@ -390,8 +390,8 @@ sealed class CompiledDataBinder<T>
 			physicalColumns.Remove(col);
 			properties.Remove(key);
 		}
-
-		foreach (var kvp in properties.ToArray())
+		var props = properties.ToArray();
+		foreach (var kvp in props)
 		{
 			var key = kvp.Key;
 			var property = kvp.Value;
@@ -738,8 +738,15 @@ sealed class CompiledDataBinder<T>
 		recordBinderFunction(record, this.context, item);
 	}
 
-	public void Bind(DbDataReader record, object item)
+	void IDataBinder.Bind(DbDataReader record, object item)
 	{
-		throw new NotImplementedException();
+		if (item is T t)
+		{
+			((IDataBinder<T>)this).Bind(record, t);
+		}
+		else
+		{
+			throw new ArgumentException();
+		}
 	}
 }
