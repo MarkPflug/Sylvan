@@ -8,7 +8,7 @@ namespace Sylvan.Data;
 /// <summary>
 /// Extension methods for DbDataReader.
 /// </summary>
-public static class DataExtensions
+public static partial class DataExtensions
 {
 	/// <summary>
 	/// Converts an IDataReader to a DbDataReader.
