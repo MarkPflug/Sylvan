@@ -1,5 +1,9 @@
 # Sylvan.Data.Csv Release Notes
 
+_0.2.7_
+- Adds `IAsyncEnumerable<T>.AsDataReader()` extension.
+- Adds `DbDataReader.WriteJson(Stream)` extension.
+
 _0.2.6_
 - Adds support for reading `decimal` properties with ObjectDataReader.
 - Adds support for binding DateOnly and TimeOnly values.
