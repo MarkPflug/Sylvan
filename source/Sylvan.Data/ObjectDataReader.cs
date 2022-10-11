@@ -6,6 +6,8 @@ using System.Data.Common;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Sylvan.Data;
 
@@ -20,8 +22,20 @@ public static class ObjectDataReader
 	/// </summary>
 	public static DbDataReader Create<T>(IEnumerable<T> data)
 	{
-		return new ObjectDataReader<T>(data);
+		return new SyncObjectDataReader<T>(data);
 	}
+
+#if IAsyncEnumerable
+
+	/// <summary>
+	/// Creates a DbDataReader over a sequence of objects.
+	/// </summary>
+	public static DbDataReader Create<T>(IAsyncEnumerable<T> data, CancellationToken cancel = default)
+	{
+		return new AsyncObjectDataReader<T>(data, cancel);
+	}
+
+#endif
 
 	/// <summary>
 	/// Creates an ObjectDataReader.Builder for the provided data.
@@ -95,7 +109,67 @@ public static class ObjectDataReader
 	}
 }
 
-sealed class ObjectDataReader<T> : DbDataReader, IDbColumnSchemaGenerator
+sealed class SyncObjectDataReader<T> : ObjectDataReader<T>
+{
+	readonly IEnumerator<T> enumerator;
+
+	public SyncObjectDataReader(IEnumerable<T> seq)
+	{
+		this.enumerator = seq.GetEnumerator();
+	}
+
+	public SyncObjectDataReader(IEnumerable<T> seq, ColumnInfo[] cols)
+		: base(cols)
+	{
+		this.enumerator = seq.GetEnumerator();
+	}
+
+	public override bool Read()
+	{
+		return this.enumerator.MoveNext();
+	}
+
+	public override Task<bool> ReadAsync(CancellationToken cancellationToken)
+	{
+		throw new NotSupportedException();
+	}
+
+	public override T Current => this.enumerator.Current;
+}
+
+#if IAsyncEnumerable
+sealed class AsyncObjectDataReader<T> : ObjectDataReader<T>
+{
+	readonly IAsyncEnumerator<T> enumerator;
+
+	public AsyncObjectDataReader(IAsyncEnumerable<T> seq, CancellationToken cancel)
+	{
+		this.enumerator = seq.GetAsyncEnumerator(cancel);
+	}
+
+	public AsyncObjectDataReader(IAsyncEnumerable<T> seq, ColumnInfo[] cols, CancellationToken cancel)
+		: base(cols)
+	{
+		this.enumerator = seq.GetAsyncEnumerator(cancel);
+	}
+
+	public override bool Read()
+	{
+		throw new NotSupportedException();
+	}
+
+	public override Task<bool> ReadAsync(CancellationToken cancellationToken)
+	{
+		cancellationToken.ThrowIfCancellationRequested();
+		return this.enumerator.MoveNextAsync().AsTask();
+	}
+
+	public override T Current => this.enumerator.Current;
+}
+
+#endif
+
+abstract class ObjectDataReader<T> : DbDataReader, IDbColumnSchemaGenerator
 {
 	internal static Lazy<Builder> DefaultBuilder =
 		new Lazy<Builder>(() => new Builder().AddDefaultColumns());
@@ -235,7 +309,7 @@ sealed class ObjectDataReader<T> : DbDataReader, IDbColumnSchemaGenerator
 
 		internal DbDataReader Build(IEnumerable<T> data)
 		{
-			return new ObjectDataReader<T>(data.GetEnumerator(), this.columns.ToArray());
+			return new SyncObjectDataReader<T>(data, this.columns.ToArray());
 		}
 	}
 
@@ -269,19 +343,16 @@ sealed class ObjectDataReader<T> : DbDataReader, IDbColumnSchemaGenerator
 		}
 	}
 
-	readonly IEnumerator<T> enumerator;
+
 	readonly ColumnInfo[] columns;
 	bool isClosed;
 
-	public ObjectDataReader(IEnumerable<T> data)
+	protected ObjectDataReader() : this(DefaultBuilder.Value.columns.ToArray())
 	{
-		this.enumerator = data.GetEnumerator();
-		this.columns = DefaultBuilder.Value.columns.ToArray();
 	}
 
-	ObjectDataReader(IEnumerator<T> enumerator, ColumnInfo[] columns)
+	protected ObjectDataReader(ColumnInfo[] columns)
 	{
-		this.enumerator = enumerator;
 		this.columns = columns;
 		this.isClosed = false;
 	}
@@ -293,7 +364,6 @@ sealed class ObjectDataReader<T> : DbDataReader, IDbColumnSchemaGenerator
 
 	public override void Close()
 	{
-		this.enumerator.Dispose();
 		this.isClosed = true;
 	}
 
@@ -302,11 +372,16 @@ sealed class ObjectDataReader<T> : DbDataReader, IDbColumnSchemaGenerator
 		return false;
 	}
 
-	public override bool Read()
+	public override Task<bool> NextResultAsync(CancellationToken cancellationToken)
 	{
-		var result = this.enumerator.MoveNext();
-		return result;
+		return Task.FromResult(false);
 	}
+
+	public abstract override bool Read();
+
+	public abstract override Task<bool> ReadAsync(CancellationToken cancellationToken);
+
+	public abstract T Current { get; }
 
 	public override string GetName(int ordinal)
 	{
@@ -341,7 +416,7 @@ sealed class ObjectDataReader<T> : DbDataReader, IDbColumnSchemaGenerator
 		var col = columns[ordinal];
 		if (col.selector is Func<T, TValue> b)
 		{
-			return b(enumerator.Current);
+			return b(Current);
 		}
 		throw new InvalidCastException();
 	}
@@ -436,7 +511,7 @@ sealed class ObjectDataReader<T> : DbDataReader, IDbColumnSchemaGenerator
 	public override string GetString(int ordinal)
 	{
 		var col = columns[ordinal];
-		var cur = enumerator.Current;
+		var cur = Current;
 		if (col.selector is Func<T, string> s)
 		{
 			return s(cur);
@@ -446,7 +521,7 @@ sealed class ObjectDataReader<T> : DbDataReader, IDbColumnSchemaGenerator
 
 	public override object GetValue(int ordinal)
 	{
-		var value = this.columns[ordinal].valueSelector(enumerator.Current);
+		var value = this.columns[ordinal].valueSelector(Current);
 		return value;
 	}
 
@@ -464,7 +539,7 @@ sealed class ObjectDataReader<T> : DbDataReader, IDbColumnSchemaGenerator
 	{
 		var col = this.columns[ordinal];
 		if (col.AllowDBNull == false) return false;
-		return col.isNullSelector(enumerator.Current);
+		return col.isNullSelector(Current);
 	}
 
 	public ReadOnlyCollection<DbColumn> GetColumnSchema()
