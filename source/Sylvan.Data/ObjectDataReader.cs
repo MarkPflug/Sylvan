@@ -129,15 +129,17 @@ sealed class SyncObjectDataReader<T> : ObjectDataReader<T>
 		return this.enumerator.MoveNext();
 	}
 
-	public override Task<bool> ReadAsync(CancellationToken cancellationToken)
+	public override Task<bool> ReadAsync(CancellationToken cancel)
 	{
-		throw new NotSupportedException();
+		cancel.ThrowIfCancellationRequested();
+		return Task.FromResult(Read());
 	}
 
 	public override T Current => this.enumerator.Current;
 }
 
 #if IAsyncEnumerable
+
 sealed class AsyncObjectDataReader<T> : ObjectDataReader<T>
 {
 	readonly IAsyncEnumerator<T> enumerator;
