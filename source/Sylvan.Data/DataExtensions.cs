@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Threading;
 
 namespace Sylvan.Data;
 
@@ -37,7 +38,7 @@ public static class DataExtensions
 	/// </summary>
 	/// <typeparam name="T">The type of record to bind to.</typeparam>
 	/// <param name="reader">The data reader.</param>
-	public static IEnumerable<T> GetRecords<T>(this DbDataReader reader) 
+	public static IEnumerable<T> GetRecords<T>(this DbDataReader reader)
 		where T : class, new()
 	{
 		var binder = DataBinder.Create<T>(reader);
@@ -68,7 +69,7 @@ public static class DataExtensions
 	/// </summary>
 	/// <typeparam name="T">The type of record to bind to.</typeparam>
 	/// <param name="reader">The data reader.</param>
-	public static async IAsyncEnumerable<T> GetRecordsAsync<T>(this DbDataReader reader) 
+	public static async IAsyncEnumerable<T> GetRecordsAsync<T>(this DbDataReader reader)
 		where T : class, new()
 	{
 		var binder = DataBinder.Create<T>(reader);
@@ -79,16 +80,30 @@ public static class DataExtensions
 			yield return item;
 		}
 	}
+
 #endif
 
 	/// <example>
 	/// var reader = seq.AsDataReader()
 	/// </example>
-	public static DbDataReader AsDataReader<T>(this IEnumerable<T> seq) where T : class
+	public static DbDataReader AsDataReader<T>(this IEnumerable<T> seq)
+		where T : class
 	{
-		return new ObjectDataReader<T>(seq);
+		return new SyncObjectDataReader<T>(seq);
 	}
 
+#if IAsyncEnumerable
+
+	/// <example>
+	/// var reader = seq.AsDataReader()
+	/// </example>
+	public static DbDataReader AsDataReader<T>(this IAsyncEnumerable<T> seq, CancellationToken cancel = default)
+		where T : class
+	{
+		return new AsyncObjectDataReader<T>(seq, cancel);
+	}
+
+#endif
 	/// <summary>
 	/// Selects a subset of columns for a DbDataReader.
 	/// </summary>
