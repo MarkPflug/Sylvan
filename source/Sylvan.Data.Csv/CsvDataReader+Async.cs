@@ -257,7 +257,7 @@ partial class CsvDataReader
 		this.rowNumber++;
 		if (this.state == State.Open)
 		{
-			var success = await this.NextRecordAsync(cancellationToken);
+			var success = await this.NextRecordAsync(cancellationToken).ConfigureAwait(false);
 			if (this.resultSetMode == ResultSetMode.MultiResult && this.curFieldCount != this.fieldCount)
 			{
 				this.curFieldCount = 0;
@@ -288,8 +288,8 @@ partial class CsvDataReader
 	/// <inheritdoc/>
 	public override async Task<bool> NextResultAsync(CancellationToken cancellationToken)
 	{
-		while (await ReadAsync(cancellationToken)) ;
-		return await InitializeAsync(cancellationToken);
+		while (await ReadAsync(cancellationToken).ConfigureAwait(false)) ;
+		return await InitializeAsync(cancellationToken).ConfigureAwait(false);
 	}
 
 #if NETSTANDARD2_1

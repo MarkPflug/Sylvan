@@ -149,7 +149,7 @@ public sealed partial class SchemaAnalyzer
 
 		var sw = Stopwatch.StartNew();
 		int c = 0;
-		while (await dataReader.ReadAsync() && c++ < rowCount)
+		while (await dataReader.ReadAsync().ConfigureAwait(false) && c++ < rowCount)
 		{
 			for (int i = 0; i < dataReader.FieldCount; i++)
 			{
