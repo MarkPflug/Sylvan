@@ -13,6 +13,8 @@ dotnet_style_require_accessibility_modifiers = never
 # CA1028: If possible, make the underlying type of PrimitiveType System.Int32 instead of byte.
 dotnet_diagnostic.CA1028.severity = none
 
+# CA1849: Call async methods when in an async method
+dotnet_diagnostic.CA1849.severity = warning
 
 # xUnit2013: Do not use equality check to check for collection size.
 dotnet_diagnostic.xUnit2013.severity = suggestion

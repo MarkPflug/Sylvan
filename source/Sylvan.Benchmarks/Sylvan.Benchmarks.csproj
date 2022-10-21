@@ -3,6 +3,7 @@
   <PropertyGroup>
    <TargetFrameworks>net6.0</TargetFrameworks>
     <OutputType>exe</OutputType>
+    <NoWarn>$(NoWarn);CA1849</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

@@ -88,7 +88,7 @@ partial class CsvDataWriter
 				}
 
 				var field = i < fieldCount ? fieldInfos[i] : FieldInfo.Generic;
-				if (field.allowNull && reader.IsDBNull(i))
+				if (field.allowNull && await reader.IsDBNullAsync(i, cancel).ConfigureAwait(false))
 				{
 					continue;
 				}
