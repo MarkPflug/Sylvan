@@ -1,4 +1,9 @@
 # Sylvan.Data.Csv Release Notes
+
+_1.2.3_
+
+- Fixes accessing enum values via the `GetValue` accessor. Thanks to [0xced](https://github.com/0xced).
+
 _1.2.2_
 
 - CsvSchema allows renaming columns when BaseColumnName is set.
