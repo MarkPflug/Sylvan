@@ -91,7 +91,7 @@ sealed class EnumAccessor : IFieldAccessor
 
 	public object GetValueAsObject(CsvDataReader reader, int ordinal)
 	{
-#if SPAN
+#if ENUM_SPAN_PARSE
 		var span = reader.GetFieldSpan(ordinal);
 #else
 		var span = reader.GetString(ordinal);
