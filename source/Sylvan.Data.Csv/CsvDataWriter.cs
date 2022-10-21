@@ -20,9 +20,21 @@ public sealed partial class CsvDataWriter
 	const int InsufficientSpace = int.MinValue;
 	const int NeedsQuoting = -2;
 
+	static readonly bool[] DefaultEscapeFlags;
+
+	static CsvDataWriter()
+	{
+		DefaultEscapeFlags = new bool[128];
+		DefaultEscapeFlags[CsvDataWriterOptions.DefaultDelimiter] = true;
+		DefaultEscapeFlags[CsvDataWriterOptions.DefaultQuote] = true;
+		DefaultEscapeFlags[CsvDataWriterOptions.DefaultEscape] = true;
+		DefaultEscapeFlags['\n'] = true;
+		DefaultEscapeFlags['\r'] = true;
+	}
+
 	class FieldInfo
 	{
-		internal static readonly FieldInfo Generic = new FieldInfo(true, ObjectFieldWriter.Instance);
+		internal static readonly FieldInfo Generic = new (true, ObjectFieldWriter.Instance);
 
 		public FieldInfo(bool allowNull, FieldWriter writer)
 		{
@@ -198,8 +210,7 @@ public sealed partial class CsvDataWriter
 #if SPAN
 		if (type.IsEnum)
 		{
-			FieldWriter? writer;
-			if (!enumMap.TryGetValue(type, out writer))
+			if (!EnumMap.TryGetValue(type, out FieldWriter? writer))
 			{
 				if (IsCandidateEnum(type))
 				{
@@ -211,7 +222,7 @@ public sealed partial class CsvDataWriter
 				{
 					writer = ObjectFieldWriter.Instance;
 				}
-				enumMap.TryAdd(type, writer);
+				EnumMap.TryAdd(type, writer);
 			}
 
 			return writer;
@@ -225,7 +236,7 @@ public sealed partial class CsvDataWriter
 
 #if SPAN
 
-	static ConcurrentDictionary<Type, FieldWriter> enumMap = new ConcurrentDictionary<Type, FieldWriter>();
+	static readonly ConcurrentDictionary<Type, FieldWriter> EnumMap = new ();
 
 	// determines if the type is an enum type that can be
 	// efficiently optimized.
@@ -371,7 +382,7 @@ public sealed partial class CsvDataWriter
 
 	readonly CultureInfo culture;
 
-	int maxBufferSize;
+	readonly int maxBufferSize;
 	byte[] dataBuffer = Array.Empty<byte>();
 	char[] buffer;
 	int pos;
@@ -388,7 +399,7 @@ public sealed partial class CsvDataWriter
 	/// <param name="options">The options used to configure the writer, or null to use the defaults.</param>
 	public static CsvDataWriter Create(string fileName, CsvDataWriterOptions? options = null)
 	{
-		options = options ?? CsvDataWriterOptions.Default;
+		options ??= CsvDataWriterOptions.Default;
 		var writer = new StreamWriter(fileName, false, Encoding.UTF8);
 		return new CsvDataWriter(writer, null, options);
 	}
@@ -400,7 +411,7 @@ public sealed partial class CsvDataWriter
 	/// <param name="options">The options used to configure the writer, or null to use the defaults.</param>
 	public static CsvDataWriter Create(TextWriter writer, CsvDataWriterOptions? options = null)
 	{
-		options = options ?? CsvDataWriterOptions.Default;
+		options ??=  CsvDataWriterOptions.Default;
 		return new CsvDataWriter(writer, null, options);
 	}
 
@@ -412,13 +423,13 @@ public sealed partial class CsvDataWriter
 	/// <param name="options">The options used to configure the writer, or null to use the defaults.</param>
 	public static CsvDataWriter Create(TextWriter writer, char[] buffer, CsvDataWriterOptions? options = null)
 	{
-		options = options ?? CsvDataWriterOptions.Default;
+		options ??= CsvDataWriterOptions.Default;
 		return new CsvDataWriter(writer, buffer, options);
 	}
 
 	CsvDataWriter(TextWriter writer, char[]? buffer, CsvDataWriterOptions? options = null)
 	{
-		options = options ?? CsvDataWriterOptions.Default;
+		options ??= CsvDataWriterOptions.Default;
 		options.Validate();
 		this.binaryEncoding = options.BinaryEncoding;
 		this.writer = writer ?? throw new ArgumentNullException(nameof(writer));
@@ -448,22 +459,33 @@ public sealed partial class CsvDataWriter
 		this.pos = 0;
 
 		// create a lookup of all the characters that need to be escaped.
-		this.needsEscape = new bool[128];
-		Flag(delimiter);
-		Flag(quote);
-		Flag(escape);
-		if (options.Style == CsvStyle.Escaped)
-		{
-			Flag(comment);
-		}
-		Flag('\r');
-		Flag('\n');
+		this.needsEscape = GetEscapeFlags(options.Style);
 	}
 
-	void Flag(char c)
+	bool[] GetEscapeFlags(CsvStyle style)
 	{
-		// these characters are already validated to be in 0-127
-		needsEscape[c] = true;
+		// avoid allocating flags for the default configuration
+		var isDefault =
+			delimiter == CsvDataWriterOptions.DefaultDelimiter && 
+			quote == CsvDataWriterOptions.DefaultQuote && 
+			escape == CsvDataWriterOptions.DefaultEscape && 
+			style == CsvStyle.Standard;
+		if (isDefault)
+		{
+			return DefaultEscapeFlags;
+		}
+		var flags = new bool[128];
+		flags[delimiter] = true;
+		flags[quote] = true;
+		flags[escape] = true;
+		flags['\r'] = true;
+		flags['\n'] = true;
+
+		if (style == CsvStyle.Escaped)
+		{
+			flags[comment] = true;
+		}
+		return flags;
 	}
 
 	static bool IsBase64Symbol(char c)
