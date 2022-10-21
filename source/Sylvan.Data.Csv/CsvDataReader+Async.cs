@@ -289,7 +289,7 @@ partial class CsvDataReader
 	public override async Task<bool> NextResultAsync(CancellationToken cancellationToken)
 	{
 		while (await ReadAsync(cancellationToken)) ;
-		return await InitializeAsync();
+		return await InitializeAsync(cancellationToken);
 	}
 
 #if NETSTANDARD2_1
