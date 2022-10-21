@@ -15,6 +15,9 @@ dotnet_diagnostic.CA1028.severity = none
 
 # CA1849: Call async methods when in an async method
 dotnet_diagnostic.CA1849.severity = warning
+# CA2007: Do not directly await a Task
+dotnet_diagnostic.CA2007.severity = warning
+# CA2016: Forward the CancellationToken parameter to methods that take one
 
 # xUnit2013: Do not use equality check to check for collection size.
 dotnet_diagnostic.xUnit2013.severity = suggestion

@@ -46,15 +46,15 @@ static partial class DataExtensions {
 
 		var names = GetNames(data);
 
-		while (await data.ReadAsync())
+		while (await data.ReadAsync().ConfigureAwait(false))
 		{
 			count++;
 			WriteRecord(data, names, writer);
-			await writer.FlushAsync();
+			await writer.FlushAsync().ConfigureAwait(false);
 		}
 
 		writer.WriteEndArray();
-		await writer.FlushAsync();
+		await writer.FlushAsync().ConfigureAwait(false);
 		return count;
 	}
 
