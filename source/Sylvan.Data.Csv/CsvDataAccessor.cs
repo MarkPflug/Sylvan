@@ -300,7 +300,7 @@ sealed partial class CsvDataAccessor :
 
 	internal static IFieldAccessor? GetAccessor(Type type)
 	{
-		return Accessors.TryGetValue(type, out var acc) ? acc : null;
+		return Accessors.TryGetValue(type, out var acc) ? acc : type.IsEnum ? new EnumAccessor(type) : null;
 	}
 
 	string IFieldAccessor<string>.GetValue(CsvDataReader reader, int ordinal)

@@ -1225,13 +1225,18 @@ public class CsvDataReaderTests
 	public void Enum()
 	{
 		var text = new StringReader("a,b\nRead,write\nReadWrite,");
-		var csv = CsvDataReader.Create(text);
+		var schema = new TypedCsvSchema().Add(0, typeof(FileAccess)).Add(1, typeof(FileAccess));
+		var csv = CsvDataReader.Create(text, new CsvDataReaderOptions { Schema = schema });
 		Assert.True(csv.Read());
 		Assert.Equal(FileAccess.Read, csv.GetFieldValue<FileAccess>(0));
+		Assert.Equal(FileAccess.Read, csv.GetValue(0));
 		Assert.Equal(FileAccess.Write, csv.GetFieldValue<FileAccess>(1));
+		Assert.Equal(FileAccess.Write, csv.GetValue(1));
 		Assert.True(csv.Read());
 		Assert.Equal(FileAccess.ReadWrite, csv.GetFieldValue<FileAccess>(0));
+		Assert.Equal(FileAccess.ReadWrite, csv.GetValue(0));
 		Assert.Equal((FileAccess)0, csv.GetFieldValue<FileAccess>(1));
+		Assert.Equal((FileAccess)0, csv.GetValue(1));
 	}
 
 	[Fact]

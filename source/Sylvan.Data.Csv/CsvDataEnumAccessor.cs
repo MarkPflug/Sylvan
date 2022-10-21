@@ -79,3 +79,23 @@ sealed class EnumAccessor<T> : IFieldAccessor<T>
 			: throw new FormatException();
 	}
 }
+
+sealed class EnumAccessor : IFieldAccessor
+{
+	readonly Type enumType;
+
+	public EnumAccessor(Type enumType)
+	{
+		this.enumType = enumType;
+	}
+
+	public object GetValueAsObject(CsvDataReader reader, int ordinal)
+	{
+#if ENUM_SPAN_PARSE
+		var span = reader.GetFieldSpan(ordinal);
+#else
+		var span = reader.GetString(ordinal);
+#endif
+		return span.Length == 0 ? Enum.ToObject(this.enumType, 0L) : Enum.Parse(this.enumType, span, ignoreCase: true);
+	}
+}
