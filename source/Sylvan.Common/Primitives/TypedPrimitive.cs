@@ -21,21 +21,30 @@ namespace Sylvan.Primitives;
 public struct TypedPrimitive : IEquatable<TypedPrimitive>
 {
 	[FieldOffset(0)]
-	Primitive value;
+	readonly Primitive value;
 	[FieldOffset(16)]
-	PrimitiveType type;
+	readonly PrimitiveType type;
 
+	/// <summary>
+	/// Gets the type of value stored in this TypedPrimitive.
+	/// </summary>
 	public PrimitiveType Type
 	{
 		get { return this.type; }
 	}
 
+	/// <summary>
+	/// Gets the Primitive values stored in this TypedPrimitive.
+	/// </summary>
 	public Primitive Value
 	{
 		get { return this.value; }
 	}
 
 	#region value accessors
+
+
+#pragma warning disable CS1591 // Code docs have their place.
 
 	public bool BoolValue
 	{
@@ -201,11 +210,13 @@ public struct TypedPrimitive : IEquatable<TypedPrimitive>
 
 	#region equality and hashing
 
+	/// <inheritdoc/>
 	public override int GetHashCode()
 	{
 		return this.type.GetHashCode() ^ this.value.GetHashCode();
 	}
 
+	/// <inheritdoc/>
 	public override bool Equals(object? obj)
 	{
 		return obj is TypedPrimitive p && Equals(p);
@@ -216,6 +227,7 @@ public struct TypedPrimitive : IEquatable<TypedPrimitive>
 		return this.type == obj.type && this.value.Equals(obj.value);
 	}
 
+	/// <inheritdoc/>
 	public override string ToString()
 	{
 		return this.ToString(CultureInfo.CurrentCulture);

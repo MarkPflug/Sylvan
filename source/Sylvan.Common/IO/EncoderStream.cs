@@ -6,6 +6,9 @@ using System.Threading.Tasks;
 
 namespace Sylvan.IO;
 
+/// <summary>
+/// A stream that encodes data written to it.
+/// </summary>
 public sealed class EncoderStream : Stream
 {
 	readonly bool ownsStream;
@@ -15,6 +18,11 @@ public sealed class EncoderStream : Stream
 	bool isClosed;
 	int bufferIdx;
 
+	/// <summary>
+	/// Creates a new EncoderStream.
+	/// </summary>
+	/// <param name="stream">The underlying stream to write to.</param>
+	/// <param name="encoder">The encoder to use to write to the stream.</param>
 	public EncoderStream(Stream stream, Encoder encoder)
 	{
 		this.stream = stream;
@@ -24,26 +32,33 @@ public sealed class EncoderStream : Stream
 		this.ownsStream = false;
 	}
 
+	/// <inheritdoc/>
 	public override bool CanRead => false;
 
+	/// <inheritdoc/>
 	public override bool CanSeek => false;
 
+	/// <inheritdoc/>
 	public override bool CanWrite => true;
 
+	/// <inheritdoc/>
 	public override long Length => throw new NotSupportedException();
 
+	/// <inheritdoc/>
 	public override long Position
 	{
 		get => throw new NotSupportedException();
 		set => throw new NotSupportedException();
 	}
 
+	/// <inheritdoc/>
 	public override void Flush()
 	{
 		this.stream.Write(this.buffer, 0, bufferIdx);
 		bufferIdx = 0;
 	}
 
+	/// <inheritdoc/>
 	public override async Task FlushAsync(CancellationToken cancel)
 	{
 #if NETSTANDARD2_1 || NETCOREAPP3_0_OR_GREATER
@@ -54,16 +69,19 @@ public sealed class EncoderStream : Stream
 		bufferIdx = 0;
 	}
 
+	/// <inheritdoc/>
 	public override int Read(byte[] buffer, int offset, int count)
 	{
 		throw new NotSupportedException();
 	}
 
+	/// <inheritdoc/>
 	public override long Seek(long offset, SeekOrigin origin)
 	{
 		throw new NotSupportedException();
 	}
 
+	/// <inheritdoc/>
 	public override void SetLength(long value)
 	{
 		throw new NotSupportedException();
@@ -83,6 +101,7 @@ public sealed class EncoderStream : Stream
 		return result;
 	}
 
+	/// <inheritdoc/>
 	public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
 	{
 		while (count > 0)
@@ -95,6 +114,7 @@ public sealed class EncoderStream : Stream
 		}
 	}
 
+	/// <inheritdoc/>
 	public override void Write(byte[] buffer, int offset, int count)
 	{
 		while (count > 0)
@@ -107,19 +127,20 @@ public sealed class EncoderStream : Stream
 		}
 	}
 
+	/// <inheritdoc/>
 	public override void Close()
 	{
 		if (isClosed == false)
 		{
 			var dst = this.buffer.AsSpan().Slice(bufferIdx);
-			int srcCount, dstCount;
-			var result = this.encoder.Encode(ReadOnlySpan<byte>.Empty, dst, out srcCount, out dstCount);
+			int dstCount;
+			var result = this.encoder.Encode(ReadOnlySpan<byte>.Empty, dst, out _, out dstCount);
 			this.bufferIdx += dstCount;
 			if (result == EncoderResult.RequiresOutputSpace)
 			{
 				Flush();
 				dst = this.buffer.AsSpan().Slice(bufferIdx);
-				result = this.encoder.Encode(ReadOnlySpan<byte>.Empty, dst, out srcCount, out dstCount);
+				result = this.encoder.Encode(ReadOnlySpan<byte>.Empty, dst, out _, out dstCount);
 				this.bufferIdx += dstCount;
 				Debug.Assert(result == EncoderResult.Complete, "" + result);
 			}
@@ -128,6 +149,7 @@ public sealed class EncoderStream : Stream
 		}
 	}
 
+	/// <inheritdoc/>
 	protected override void Dispose(bool disposing)
 	{
 		base.Dispose(disposing);

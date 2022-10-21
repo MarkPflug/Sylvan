@@ -4,6 +4,9 @@ using System.Text;
 
 namespace Sylvan.IO;
 
+/// <summary>
+/// An Encoder implementation for Base64.
+/// </summary>
 public sealed class Base64Encoder : Encoder
 {
 	static readonly byte[] DefaultEncodeMap =
@@ -31,6 +34,9 @@ public sealed class Base64Encoder : Encoder
 		return l + 2;
 	}
 
+	/// <summary>
+	/// Creates a new Base64Encoder.
+	/// </summary>
 	public Base64Encoder() : this(DefaultLineLength)
 	{
 	}
@@ -41,6 +47,7 @@ public sealed class Base64Encoder : Encoder
 		this.maxLineLength = lineLength;
 	}
 
+	/// <inheritdoc/>
 	public override unsafe EncoderResult Encode(ReadOnlySpan<byte> src, Span<byte> dst, out int bytesConsumed, out int bytesWritten)
 	{
 		bool final = src.Length == 0;

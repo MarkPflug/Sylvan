@@ -11,12 +11,14 @@ public sealed class PerformanceTimer
 {
 	// this default value is an overestimate.
 	// on my dev machine BDN measures it at about 3.1e-8
-	static double Overhead = 5e-8;
+	const double Overhead = 5e-8;
+
+#if false
 
 	// Calculates the cost of start/stop on the timer.
 	// this seems useful because other platforms might be
 	// radically different than the one I used to benchmark.
-	public static double CalculateOverhead()
+	static double CalculateOverhead()
 	{
 		var timer = new PerformanceTimer("");
 		// call once to JIT
@@ -35,6 +37,9 @@ public sealed class PerformanceTimer
 		var overhead = sw.Elapsed.TotalSeconds / Ops;
 		return overhead;
 	}
+
+#endif
+
 
 	/// <summary>
 	/// Constructs a new PerformanceTimer.
@@ -107,6 +112,9 @@ public sealed class PerformanceTimer
 		}
 	}
 
+	/// <summary>
+	/// Gets the estimated overhead that this timer introduces.
+	/// </summary>
 	public double EstimatedOverhead
 	{
 		get

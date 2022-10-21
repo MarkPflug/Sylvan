@@ -16,13 +16,7 @@ namespace Sylvan.IO;
 /// </remarks>
 public sealed class PooledMemoryStream : Stream
 {
-	static ArrayPool<byte> DefaultPool = ArrayPool<byte>.Shared;
-
-	public static void SetDefaultPool(ArrayPool<byte> pool)
-	{
-		if (pool == null) throw new ArgumentNullException(nameof(pool));
-		DefaultPool = pool;
-	}
+	static readonly ArrayPool<byte> DefaultPool = ArrayPool<byte>.Shared;
 
 	const int DefaultBlockShift = 16; // default to 64k blocks
 	const int InitialBlockCount = 8;
@@ -255,6 +249,7 @@ public sealed class PooledMemoryStream : Stream
 	}
 
 #if NETSTANDARD2_1 || NETCOREAPP3_0_OR_GREATER
+	/// <inheritdoc/>
 	public override void CopyTo(Stream destination, int bufferSize)
 	{
 		if (destination == null) throw new ArgumentNullException(nameof(destination));

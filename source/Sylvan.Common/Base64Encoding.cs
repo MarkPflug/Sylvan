@@ -73,6 +73,9 @@ public sealed class Base64Encoding
 		this.lineLength = lineLength;
 	}
 
+	/// <summary>
+	/// Encodes bytes as Base64 encoded characters.
+	/// </summary>
 	public int Encode(byte[] src, int srcOffset, char[] dst, int dstOffset, int count)
 	{
 		if (src == null) throw new ArgumentNullException(nameof(src));

@@ -73,6 +73,7 @@ public sealed class RandomStream : Stream
 
 #endif
 
+	/// <inheritdoc/>
 	public override int Read(byte[] buffer, int offset, int count)
 	{
 		var c = 0;

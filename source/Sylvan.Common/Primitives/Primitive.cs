@@ -3,6 +3,8 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.InteropServices;
 
+#pragma warning disable CS1591 // Code docs have their place.
+
 namespace Sylvan.Primitives;
 
 /// <summary>
@@ -20,64 +22,64 @@ namespace Sylvan.Primitives;
 /// </remarks>
 [SuppressMessage("Usage", "CA2225:Operator overloads have named alternates", Justification = "<Pending>")]
 [StructLayout(LayoutKind.Explicit)]
-public struct Primitive : IEquatable<Primitive>
+public readonly struct Primitive : IEquatable<Primitive>
 {
 	[FieldOffset(0)]
-	ulong lo;
+	readonly ulong lo;
 
 	[FieldOffset(8)]
-	ulong hi;
+	readonly ulong hi;
 
 	[FieldOffset(0)]
-	bool boolValue;
+	readonly bool boolValue;
 
 	[FieldOffset(0)]
-	char charValue;
+	readonly char charValue;
 
 	[FieldOffset(0)]
-	sbyte sbyteValue;
+	readonly sbyte sbyteValue;
 
 	[FieldOffset(0)]
-	byte byteValue;
+	readonly byte byteValue;
 
 	[FieldOffset(0)]
-	short int16Value;
+	readonly short int16Value;
 
 	[FieldOffset(0)]
-	ushort uint16Value;
+	readonly ushort uint16Value;
 
 	[FieldOffset(0)]
-	int int32Value;
+	readonly int int32Value;
 
 	[FieldOffset(0)]
-	uint uint32Value;
+	readonly uint uint32Value;
 
 	[FieldOffset(0)]
-	long int64Value;
+	readonly long int64Value;
 
 	[FieldOffset(0)]
-	ulong uint64Value;
+	readonly ulong uint64Value;
 
 	[FieldOffset(0)]
-	float floatValue;
+	readonly float floatValue;
 
 	[FieldOffset(0)]
-	double doubleValue;
+	readonly double doubleValue;
 
 	[FieldOffset(0)]
-	DateTime dateTimeValue;
+	readonly DateTime dateTimeValue;
 
 	[FieldOffset(0)]
-	DateTimeOffset dateTimeOffsetValue;
+	readonly DateTimeOffset dateTimeOffsetValue;
 
 	[FieldOffset(0)]
-	TimeSpan timeSpanValue;
+	readonly TimeSpan timeSpanValue;
 
 	[FieldOffset(0)]
-	decimal decimalValue;
+	readonly decimal decimalValue;
 
 	[FieldOffset(0)]
-	Guid guidValue;
+	readonly Guid guidValue;
 
 	#region value accessors
 

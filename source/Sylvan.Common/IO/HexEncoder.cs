@@ -2,6 +2,9 @@
 
 namespace Sylvan.IO;
 
+/// <summary>
+/// An Encoder implementation that writes hexadecimal encoded bytes.
+/// </summary>
 public sealed class HexEncoder : Encoder
 {
 	static readonly byte[] UC =
@@ -12,11 +15,16 @@ public sealed class HexEncoder : Encoder
 
 	readonly byte[] map;
 
+	/// <summary>
+	/// Creates a new HexEncoder.
+	/// </summary>
+	/// <param name="upperCase">Indicates if uppercase or lowercase characters should be written.</param>
 	public HexEncoder(bool upperCase = true)
 	{
 		this.map = upperCase ? UC : LC;
 	}
 
+	/// <inheritdoc/>
 	public override unsafe EncoderResult Encode(ReadOnlySpan<byte> src, Span<byte> dst, out int bytesConsumed, out int bytesWritten)
 	{
 		var len = Math.Min(src.Length, dst.Length / 2);

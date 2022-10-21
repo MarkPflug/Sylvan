@@ -116,7 +116,7 @@ sealed class StringBuffer : TextWriter
 			Span<char> curSpan = curBlock;
 			buffer.Slice(offset, c).CopyTo(curSpan.Slice(blockOffset));
 			count -= c;
-			pos = pos + c;
+			pos += c;
 			offset += c;
 		}
 		this.position = (int)pos;
@@ -169,7 +169,7 @@ sealed class StringBuffer : TextWriter
 		var str = new string('\0', this.length);
 		fixed (char* p = str)
 		{
-			Span<char> span = new Span<char>(p, this.length);
+			var span = new Span<char>(p, this.length);
 
 			var c = length >> blockShift;
 			for (int i = 0; i < c; i++)

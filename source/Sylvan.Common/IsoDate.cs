@@ -8,7 +8,7 @@ using System.Runtime.CompilerServices;
 namespace Sylvan;
 
 /// <summary>
-/// Provides ISO 8601 date parsing.
+/// Provides ISO 8601 date parsing and formatting.
 /// </summary>
 static partial class IsoDate
 {
@@ -611,6 +611,9 @@ static partial class IsoDate
 	// "yyyy-MM-ddTHH:mm:ss.fffffff+HH:mm"
 	internal const int MaxDateLength = 35;
 
+	/// <summary>
+	/// Gets a DateTime value as an ISO 8601 formatted string.
+	/// </summary>
 	public static string ToStringIso(DateTime value)
 	{
 		Span<char> buffer = stackalloc char[MaxDateLength];
@@ -631,6 +634,9 @@ static partial class IsoDate
 		return GetString(buffer.Slice(0, len));
 	}
 
+	/// <summary>
+	/// Tries to write the Datetime value as an ISO 8601 formatted string.
+	/// </summary>
 	public static bool TryFormatIso(DateTime value, Span<char> buffer, out int charsWritten)
 	{
 
@@ -656,6 +662,9 @@ static partial class IsoDate
 		return true;
 	}
 
+	/// <summary>
+	/// Gets the DateTimeOffset as an ISO 8601 string.
+	/// </summary>
 	public static string ToStringIso(DateTimeOffset value)
 	{
 		Span<char> buffer = stackalloc char[MaxDateLength];
@@ -668,6 +677,9 @@ static partial class IsoDate
 
 	internal const int MaxDateOnlyLength = 10;
 
+	/// <summary>
+	/// Gets a DateOnly as an ISO 8601 formatted string.
+	/// </summary>	
 	public static string ToStringIso(DateOnly value)
 	{
 		Span<char> buffer = stackalloc char[MaxDateOnlyLength];
@@ -676,6 +688,9 @@ static partial class IsoDate
 		return GetString(buffer.Slice(0, length));
 	}
 
+	/// <summary>
+	/// Tries to write a DateOnly as an ISO 8601 formatted string.
+	/// </summary>
 	public static bool TryFormatIso(DateOnly value, Span<char> buffer, out int charsWritten)
 	{
 		if (buffer.Length < MaxDateOnlyLength)
@@ -688,6 +703,9 @@ static partial class IsoDate
 	}
 
 #endif
+	/// <summary>
+	/// Tries to write a DateTimeOffSet as an ISO 8601 formatted string.
+	/// </summary>
 	public static bool TryFormatIso(DateTimeOffset value, Span<char> buffer, out int charsWritten)
 	{
 		if (buffer.Length < MaxDateLength)
