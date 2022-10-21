@@ -512,7 +512,7 @@ public class CsvDataReaderTests
 		Assert.False(await csv.ReadAsync());
 	}
 
-	CsvDataReader GetTypedReader()
+	static CsvDataReader GetTypedReader()
 	{
 		var tr = File.OpenText("Data/Types.csv");
 		var schema = new TypedCsvSchema();

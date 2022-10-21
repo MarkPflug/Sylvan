@@ -11,10 +11,10 @@ namespace Sylvan.Data.Csv;
 public class CsvDataWriterTests
 {
 	// use \n for newlines to make assertions easier
-	static CsvDataWriterOptions TestOptions = new CsvDataWriterOptions { NewLine = "\n" };
+	static readonly CsvDataWriterOptions TestOptions = new CsvDataWriterOptions { NewLine = "\n" };
 
 	// a culture that uses ',' for numeric decimal separator
-	static CultureInfo ItalianCulture = CultureInfo.GetCultureInfoByIetfLanguageTag("it-IT");
+	static readonly CultureInfo ItalianCulture = CultureInfo.GetCultureInfoByIetfLanguageTag("it-IT");
 
 	static string GetCsv<T>(IEnumerable<T> data) where T : class
 	{
@@ -133,7 +133,7 @@ public class CsvDataWriterTests
 		BinaryBig(BinaryEncoding.Hexadecimal, 0x4000, 0x10000, true);
 	}
 
-	void BinaryBig(BinaryEncoding encoding, int bufferSize, int? maxBufferSize, bool succeed)
+	static void BinaryBig(BinaryEncoding encoding, int bufferSize, int? maxBufferSize, bool succeed)
 	{
 		// select a size that will overlap the default buffersize when two fields are written
 		var bytes = Enumerable.Range(0, bufferSize * 3 / 4).Select(i => (byte)i).ToArray();
@@ -392,7 +392,7 @@ public class CsvDataWriterTests
 		BufferSpanBug(i => Guid.NewGuid(), dr => dr.GetGuid(1));
 	}
 
-	void BufferSpanBug<T>(Func<int, T> allocator, Func<DbDataReader, T> selector)
+	static void BufferSpanBug<T>(Func<int, T> allocator, Func<DbDataReader, T> selector)
 	{
 		// There was a bug where values that spanned buffers wouldn't be written at all
 		const int RecordCount = 10000;

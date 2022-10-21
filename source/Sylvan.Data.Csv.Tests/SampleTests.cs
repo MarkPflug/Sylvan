@@ -17,7 +17,7 @@ public class SampleTests
 	const string ZipFileName = "GnisData.zip";
 	const string DataFileName = "GnisData.csv";
 
-	public TextReader GetData()
+	public static TextReader GetData()
 	{
 		// download and unzip the dataset if it doesn't already exist.
 		if (!File.Exists(DataFileName))
