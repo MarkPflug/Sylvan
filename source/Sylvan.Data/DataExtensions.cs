@@ -73,7 +73,7 @@ public static partial class DataExtensions
 		where T : class, new()
 	{
 		var binder = DataBinder.Create<T>(reader);
-		while (await reader.ReadAsync())
+		while (await reader.ReadAsync().ConfigureAwait(false))
 		{
 			var item = new T();
 			binder.Bind(reader, item);

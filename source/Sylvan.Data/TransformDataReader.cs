@@ -273,7 +273,7 @@ sealed class TransformDataReader : DbDataReader, IDbColumnSchemaGenerator
 
 	public override async Task<bool> ReadAsync(CancellationToken cancel)
 	{
-		while (await this.reader.ReadAsync(cancel))
+		while (await this.reader.ReadAsync(cancel).ConfigureAwait(false))
 		{
 			underlyingRow++;
 			if (this.predicate(this))
