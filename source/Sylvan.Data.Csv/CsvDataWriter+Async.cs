@@ -125,7 +125,11 @@ partial class CsvDataWriter
 		}
 		else
 		{
+#if SPAN
+			await writer.WriteAsync(buffer.AsMemory(0, recordStart), cancel).ConfigureAwait(false);
+#else
 			await writer.WriteAsync(buffer, 0, recordStart).ConfigureAwait(false);
+#endif
 			Array.Copy(buffer, recordStart, buffer, 0, pos - recordStart);
 			this.pos -= recordStart;
 			this.recordStart = 0;
