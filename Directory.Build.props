@@ -15,10 +15,9 @@
     <DisableImplicitNamespaceImports>true</DisableImplicitNamespaceImports>
     <PackageProjectUrl>https://github.com/MarkPflug/Sylvan</PackageProjectUrl>
 
-    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+    <ContinuousIntegrationBuild Condition="$(Configuration) == 'Release'">true</ContinuousIntegrationBuild>
     <EmbedAllSources>true</EmbedAllSources>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
-    <DeterministicSourcePaths>true</DeterministicSourcePaths>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
