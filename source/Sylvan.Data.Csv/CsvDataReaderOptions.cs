@@ -49,7 +49,8 @@ public abstract class CommentHandler
 
 	sealed class StringCommentHandler : CommentHandler
 	{
-		Action<CsvDataReader, string> cb;
+		readonly Action<CsvDataReader, string> cb;
+
 		public StringCommentHandler(Action<CsvDataReader, string> cb)
 		{
 			this.cb = cb;
@@ -100,7 +101,7 @@ public enum ResultSetMode
 /// </summary>
 public sealed class CsvDataReaderOptions
 {
-	internal static CsvDataReaderOptions Default = new CsvDataReaderOptions();
+	internal static CsvDataReaderOptions Default = new();
 
 	const char DefaultQuote = '"';
 	const char DefaultEscape = '"';

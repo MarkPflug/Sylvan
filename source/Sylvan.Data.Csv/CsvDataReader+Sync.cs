@@ -48,7 +48,7 @@ partial class CsvDataReader
 
 	static CsvDataReader CreateInternal(TextReader reader, char[]? buffer, CsvDataReaderOptions? options)
 	{
-		options = options ?? CsvDataReaderOptions.Default;
+		options ??= CsvDataReaderOptions.Default;
 		if (reader == null) throw new ArgumentNullException(nameof(reader));
 		var csv = new CsvDataReader(reader, buffer, options);
 		if (!csv.Initialize() && options.HasHeaders)

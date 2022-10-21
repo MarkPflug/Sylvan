@@ -2,7 +2,6 @@
 
 namespace Sylvan.Data.Csv;
 
-
 /// <summary>
 /// A base implementation of ICsvSchemaProvider.
 /// </summary>

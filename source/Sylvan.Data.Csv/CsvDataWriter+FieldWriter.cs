@@ -14,7 +14,7 @@ partial class CsvDataWriter
 
 	sealed class ObjectFieldWriter : FieldWriter
 	{
-		public static ObjectFieldWriter Instance = new ObjectFieldWriter();
+		public static ObjectFieldWriter Instance = new();
 
 		public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
 		{
@@ -30,7 +30,7 @@ partial class CsvDataWriter
 
 	sealed class StringFieldWriter : FieldWriter
 	{
-		public static StringFieldWriter Instance = new StringFieldWriter();
+		public static StringFieldWriter Instance = new();
 
 		public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
 		{
@@ -46,7 +46,7 @@ partial class CsvDataWriter
 
 	sealed class BinaryBase64FieldWriter : FieldWriter
 	{
-		public static BinaryBase64FieldWriter Instance = new BinaryBase64FieldWriter();
+		public static BinaryBase64FieldWriter Instance = new();
 
 		public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
 		{
@@ -79,9 +79,9 @@ partial class CsvDataWriter
 
 	sealed class BinaryHexFieldWriter : FieldWriter
 	{
-		static char[] HexMap = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
+		readonly static char[] HexMap = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
 
-		public static BinaryHexFieldWriter Instance = new BinaryHexFieldWriter();
+		public static BinaryHexFieldWriter Instance = new();
 
 		public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
 		{
@@ -136,13 +136,12 @@ partial class CsvDataWriter
 
 	sealed class BooleanFieldWriter : FieldWriter
 	{
-		public static FieldWriter Instance = new BooleanFieldWriter();
+		public static BooleanFieldWriter Instance = new();
 
 		public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
 		{
 			var reader = context.reader;
 			var w = context.writer;
-			var culture = w.culture;
 
 			var value = reader.GetBoolean(ordinal);
 			var str = value ? w.trueString : w.falseString;
@@ -152,7 +151,7 @@ partial class CsvDataWriter
 
 	sealed class Int32FieldWriter : FieldWriter
 	{
-		public static Int32FieldWriter Instance = new Int32FieldWriter();
+		public static Int32FieldWriter Instance = new();
 
 		public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
 		{
@@ -168,7 +167,7 @@ partial class CsvDataWriter
 				throw new FormatException(); // this shouldn't happen
 			}
 
-			str = str.Slice(0, len);
+			str = str[..len];
 
 #else
 			var str = value.ToString(culture);
@@ -179,7 +178,7 @@ partial class CsvDataWriter
 
 	sealed class Int64FieldWriter : FieldWriter
 	{
-		public static Int64FieldWriter Instance = new Int64FieldWriter();
+		public static Int64FieldWriter Instance = new();
 
 		public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
 		{
@@ -195,7 +194,7 @@ partial class CsvDataWriter
 				throw new FormatException(); // this shouldn't happen
 			}
 
-			str = str.Slice(0, len);
+			str = str[..len];
 
 #else
 			var str = value.ToString(culture);
@@ -206,7 +205,7 @@ partial class CsvDataWriter
 
 	sealed class SingleFieldWriter : FieldWriter
 	{
-		public static SingleFieldWriter Instance = new SingleFieldWriter();
+		public static SingleFieldWriter Instance = new();
 
 		public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
 		{
@@ -222,7 +221,7 @@ partial class CsvDataWriter
 				throw new FormatException(); // this shouldn't happen
 			}
 
-			str = str.Slice(0, len);
+			str = str[..len];
 
 #else
 			var str = value.ToString(culture);
@@ -233,7 +232,7 @@ partial class CsvDataWriter
 
 	sealed class DoubleFieldWriter : FieldWriter
 	{
-		public static DoubleFieldWriter Instance = new DoubleFieldWriter();
+		public static DoubleFieldWriter Instance = new();
 
 		public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
 		{
@@ -249,7 +248,7 @@ partial class CsvDataWriter
 				throw new FormatException(); // this shouldn't happen
 			}
 
-			str = str.Slice(0, len);
+			str = str[..len];
 
 #else
 			var str = value.ToString(culture);
@@ -260,7 +259,7 @@ partial class CsvDataWriter
 
 	sealed class DecimalFieldWriter : FieldWriter
 	{
-		public static DecimalFieldWriter Instance = new DecimalFieldWriter();
+		public static DecimalFieldWriter Instance = new();
 
 		public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
 		{
@@ -276,7 +275,7 @@ partial class CsvDataWriter
 				throw new FormatException(); // this shouldn't happen
 			}
 
-			str = str.Slice(0, len);
+			str = str[..len];
 
 #else
 			var str = value.ToString(culture);
@@ -287,7 +286,7 @@ partial class CsvDataWriter
 
 	sealed class GuidFieldWriter : FieldWriter
 	{
-		public static GuidFieldWriter Instance = new GuidFieldWriter();
+		public static GuidFieldWriter Instance = new();
 
 		public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
 		{
@@ -303,7 +302,7 @@ partial class CsvDataWriter
 				throw new FormatException(); // this shouldn't happen
 			}
 
-			str = str.Slice(0, len);
+			str = str[..len];
 
 #else
 			var str = value.ToString();
@@ -315,7 +314,7 @@ partial class CsvDataWriter
 #if SPAN
 	sealed class DateTimeIsoFieldWriter : FieldWriter
 	{
-		public static DateTimeIsoFieldWriter Instance = new DateTimeIsoFieldWriter();
+		public static DateTimeIsoFieldWriter Instance = new();
 
 		public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
 		{
@@ -325,12 +324,11 @@ partial class CsvDataWriter
 			var value = reader.GetDateTime(ordinal);
 
 			Span<char> str = stackalloc char[IsoDate.MaxDateLength];
-			int len;
-			if (!IsoDate.TryFormatIso(value, str, out len))
+			if (!IsoDate.TryFormatIso(value, str, out int len))
 			{
 				return InsufficientSpace;
 			}
-			str = str.Slice(0, len);
+			str = str[..len];
 			return writer.csvWriter.Write(context, str, buffer, offset);
 		}
 	}
@@ -338,7 +336,7 @@ partial class CsvDataWriter
 
 	sealed class DateTimeFormatFieldWriter : FieldWriter
 	{
-		public static DateTimeFormatFieldWriter Instance = new DateTimeFormatFieldWriter();
+		public static DateTimeFormatFieldWriter Instance = new();
 
 		public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
 		{
@@ -349,14 +347,13 @@ partial class CsvDataWriter
 			var fmt = writer.dateTimeFormat ?? "O";
 #if SPAN
 			Span<char> str = stackalloc char[IsoDate.MaxDateLength];
-			int len;
 
-			if (!value.TryFormat(str, out len, fmt, culture))
+			if (!value.TryFormat(str, out int len, fmt, culture))
 			{
 				return InsufficientSpace;
 			}
 
-			str = str.Slice(0, len);
+			str = str[..len];
 
 #else
 			var str = value.ToString(fmt, culture);
@@ -367,7 +364,7 @@ partial class CsvDataWriter
 
 	sealed class TimeSpanFieldWriter : FieldWriter
 	{
-		public static TimeSpanFieldWriter Instance = new TimeSpanFieldWriter();
+		public static TimeSpanFieldWriter Instance = new();
 
 		public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
 		{
@@ -384,7 +381,7 @@ partial class CsvDataWriter
 				throw new FormatException(); // this shouldn't happen
 			}
 
-			str = str.Slice(0, len);
+			str = str[..len];
 
 #else
 			var str = value.ToString(fmt, culture);
@@ -398,7 +395,7 @@ partial class CsvDataWriter
 
 	sealed class Int32FastFieldWriter : FieldWriter
 	{
-		public static Int32FastFieldWriter Instance = new Int32FastFieldWriter();
+		public static Int32FastFieldWriter Instance = new();
 
 		public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
 		{
@@ -417,7 +414,7 @@ partial class CsvDataWriter
 
 	sealed class Int64FastFieldWriter : FieldWriter
 	{
-		public static Int64FastFieldWriter Instance = new Int64FastFieldWriter();
+		public static Int64FastFieldWriter Instance = new();
 
 		public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
 		{
@@ -436,7 +433,7 @@ partial class CsvDataWriter
 
 	sealed class DateTimeFormatFastFieldWriter : FieldWriter
 	{
-		public static DateTimeFormatFastFieldWriter Instance = new DateTimeFormatFastFieldWriter();
+		public static DateTimeFormatFastFieldWriter Instance = new();
 
 		public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
 		{
@@ -455,7 +452,7 @@ partial class CsvDataWriter
 
 	sealed class DateTimeIsoFastFieldWriter : FieldWriter
 	{
-		public static DateTimeIsoFastFieldWriter Instance = new DateTimeIsoFastFieldWriter();
+		public static DateTimeIsoFastFieldWriter Instance = new();
 
 		public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
 		{
@@ -471,7 +468,7 @@ partial class CsvDataWriter
 
 	sealed class DateTimeOffsetFormatFastFieldWriter : FieldWriter
 	{
-		public static DateTimeOffsetFormatFastFieldWriter Instance = new DateTimeOffsetFormatFastFieldWriter();
+		public static DateTimeOffsetFormatFastFieldWriter Instance = new();
 
 		public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
 		{
@@ -490,7 +487,7 @@ partial class CsvDataWriter
 
 	sealed class DateTimeOffsetIsoFastFieldWriter : FieldWriter
 	{
-		public static DateTimeOffsetIsoFastFieldWriter Instance = new DateTimeOffsetIsoFastFieldWriter();
+		public static DateTimeOffsetIsoFastFieldWriter Instance = new();
 
 		public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
 		{
@@ -506,7 +503,7 @@ partial class CsvDataWriter
 
 	sealed class TimeSpanFastFieldWriter : FieldWriter
 	{
-		public static TimeSpanFastFieldWriter Instance = new TimeSpanFastFieldWriter();
+		public static TimeSpanFastFieldWriter Instance = new();
 
 		public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
 		{
@@ -528,7 +525,7 @@ partial class CsvDataWriter
 
 	sealed class DateOnlyFormatFastFieldWriter : FieldWriter
 	{
-		public static DateOnlyFormatFastFieldWriter Instance = new DateOnlyFormatFastFieldWriter();
+		public static DateOnlyFormatFastFieldWriter Instance = new();
 
 		public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
 		{
@@ -538,9 +535,8 @@ partial class CsvDataWriter
 			var value = reader.GetFieldValue<DateOnly>(ordinal);
 			var fmt = writer.dateOnlyFormat;
 			var span = buffer.AsSpan(offset);
-			int len;
 			return
-				value.TryFormat(span, out len, fmt, culture)
+				value.TryFormat(span, out int len, fmt, culture)
 				? len
 				: InsufficientSpace;
 		}
@@ -548,15 +544,14 @@ partial class CsvDataWriter
 
 	sealed class DateOnlyIsoFastFieldWriter : FieldWriter
 	{
-		public static DateOnlyIsoFastFieldWriter Instance = new DateOnlyIsoFastFieldWriter();
+		public static DateOnlyIsoFastFieldWriter Instance = new();
 
 		public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
 		{
 			var reader = context.reader;
 			var value = reader.GetFieldValue<DateOnly>(ordinal);
 			var span = buffer.AsSpan(offset);
-			int len;
-			return IsoDate.TryFormatIso(value, span, out len)
+			return IsoDate.TryFormatIso(value, span, out int len)
 				? len
 				: InsufficientSpace;
 		}
@@ -564,7 +559,7 @@ partial class CsvDataWriter
 
 	sealed class DateOnlyFormatFieldWriter : FieldWriter
 	{
-		public static DateOnlyFormatFieldWriter Instance = new DateOnlyFormatFieldWriter();
+		public static DateOnlyFormatFieldWriter Instance = new();
 
 		public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
 		{
@@ -573,20 +568,19 @@ partial class CsvDataWriter
 			var culture = writer.culture;
 			var value = reader.GetFieldValue<DateOnly>(ordinal);
 			var fmt = writer.dateOnlyFormat;
-			int len;
 			Span<char> str = stackalloc char[IsoDate.MaxDateLength];
-			if (!value.TryFormat(str, out len, fmt, culture))
+			if (!value.TryFormat(str, out int len, fmt, culture))
 			{
 				return InsufficientSpace;
 			}
-			str = str.Slice(0, len);
+			str = str[..len];
 			return writer.csvWriter.Write(context, str, buffer, offset);
 		}
 	}
 
 	sealed class DateOnlyIsoFieldWriter : FieldWriter
 	{
-		public static DateOnlyIsoFieldWriter Instance = new DateOnlyIsoFieldWriter();
+		public static DateOnlyIsoFieldWriter Instance = new();
 
 		public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
 		{
@@ -594,20 +588,19 @@ partial class CsvDataWriter
 			var writer = context.writer;
 			var culture = writer.culture;
 			var value = reader.GetFieldValue<DateOnly>(ordinal);
-			int len;
 			Span<char> str = stackalloc char[IsoDate.MaxDateOnlyLength];
-			if (!IsoDate.TryFormatIso(value, str, out len))
+			if (!IsoDate.TryFormatIso(value, str, out int len))
 			{
 				return InsufficientSpace;
 			}
-			str = str.Slice(0, len);
+			str = str[..len];
 			return writer.csvWriter.Write(context, str, buffer, offset);
 		}
 	}
 
 	sealed class TimeOnlyFastFieldWriter : FieldWriter
 	{
-		public static TimeOnlyFastFieldWriter Instance = new TimeOnlyFastFieldWriter();
+		public static TimeOnlyFastFieldWriter Instance = new();
 
 		public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
 		{
@@ -627,7 +620,7 @@ partial class CsvDataWriter
 
 	sealed class TimeOnlyFieldWriter : FieldWriter
 	{
-		public static TimeOnlyFieldWriter Instance = new TimeOnlyFieldWriter();
+		public static TimeOnlyFieldWriter Instance = new();
 
 		public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
 		{
@@ -642,7 +635,7 @@ partial class CsvDataWriter
 				throw new FormatException(); // this shouldn't happen
 			}
 
-			span = span.Slice(0, len);
+			span = span[..len];
 			return writer.csvWriter.Write(context, span, buffer, offset);
 		}
 	}
@@ -651,7 +644,7 @@ partial class CsvDataWriter
 
 	sealed class EnumFastFieldWriter<T> : FieldWriter where T : Enum
 	{
-		public static EnumFastFieldWriter<T> Instance = new EnumFastFieldWriter<T>();
+		public static EnumFastFieldWriter<T> Instance = new();
 
 		readonly string[] values;
 
@@ -710,7 +703,7 @@ partial class CsvDataWriter
 
 	sealed class SingleFastFieldWriter : FieldWriter
 	{
-		public static SingleFastFieldWriter Instance = new SingleFastFieldWriter();
+		public static SingleFastFieldWriter Instance = new();
 
 		public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
 		{
@@ -729,7 +722,7 @@ partial class CsvDataWriter
 
 	sealed class DoubleFastFieldWriter : FieldWriter
 	{
-		public static DoubleFastFieldWriter Instance = new DoubleFastFieldWriter();
+		public static DoubleFastFieldWriter Instance = new();
 
 		public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
 		{
@@ -748,7 +741,7 @@ partial class CsvDataWriter
 
 	sealed class DecimalFastFieldWriter : FieldWriter
 	{
-		public static DecimalFastFieldWriter Instance = new DecimalFastFieldWriter();
+		public static DecimalFastFieldWriter Instance = new();
 
 		public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
 		{
@@ -767,7 +760,7 @@ partial class CsvDataWriter
 
 	sealed class GuidFastFieldWriter : FieldWriter
 	{
-		public static GuidFastFieldWriter Instance = new GuidFastFieldWriter();
+		public static GuidFastFieldWriter Instance = new();
 
 		public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
 		{

@@ -50,7 +50,7 @@ partial class CsvDataReader
 
 	static async Task<CsvDataReader> CreateAsyncInternal(TextReader reader, char[]? buffer, CsvDataReaderOptions? options)
 	{
-		options = options ?? CsvDataReaderOptions.Default;
+		options ??= CsvDataReaderOptions.Default;
 		if (reader == null) throw new ArgumentNullException(nameof(reader));
 		var csv = new CsvDataReader(reader, buffer, options);
 		if (!await csv.InitializeAsync().ConfigureAwait(false) && options.HasHeaders)

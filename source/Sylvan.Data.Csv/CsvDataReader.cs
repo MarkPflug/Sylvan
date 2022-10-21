@@ -91,7 +91,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	bool hasRows;
 	char[] buffer;
 
-	int maxBufferSize;
+	readonly int maxBufferSize;
 	int idx;
 	int bufferEnd;
 	int recordStart;
@@ -870,22 +870,17 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		var col = this.columns[ordinal];
 		var encoding = col.ColumnBinaryEncoding ?? this.binaryEncoding;
 
-		switch (encoding)
+		return encoding switch
 		{
-			case BinaryEncoding.Base64:
-				return GetBytesBase64(ordinal, (int)dataOffset, buffer, bufferOffset, length);
-			case BinaryEncoding.Hexadecimal:
-				return GetBytesHex(ordinal, (int)dataOffset, buffer, bufferOffset, length);
-		}
-		throw new NotSupportedException();// TODO: improve error message.
+			BinaryEncoding.Base64 => GetBytesBase64(ordinal, (int)dataOffset, buffer, bufferOffset, length),
+			BinaryEncoding.Hexadecimal => (long)GetBytesHex(ordinal, (int)dataOffset, buffer, bufferOffset, length),
+			_ => throw new NotSupportedException(),// TODO: improve error message.
+		};
 	}
 
 	int GetBytesBase64(int ordinal, int dataOffset, byte[] buffer, int bufferOffset, int length)
 	{
-		if (scratch == null)
-		{
-			scratch = new byte[3];
-		}
+		scratch ??= new byte[3];
 
 		var offset = (int)dataOffset;
 
@@ -908,7 +903,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		// align to the next base64 quad
 		if (rem != 0)
 		{
-			FromBase64Chars(iBuf, o + iOff, 4, scratch, 0, out int c);
+			CsvDataReader.FromBase64Chars(iBuf, o + iOff, 4, scratch, 0, out int c);
 			if (c == rem)
 			{
 				// we already decoded everything available in the previous pass
@@ -939,7 +934,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 			if (quadCount > 0)
 			{
 				var charCount = quadCount * 4;
-				FromBase64Chars(iBuf, o + iOff, charCount, oBuf, oOff, out int c);
+				CsvDataReader.FromBase64Chars(iBuf, o + iOff, charCount, oBuf, oOff, out int c);
 				length -= c;
 				iOff += charCount;
 				oOff += c;
@@ -953,7 +948,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 
 		if (length > 0)
 		{
-			FromBase64Chars(iBuf, o + iOff, 4, scratch, 0, out int c);
+			CsvDataReader.FromBase64Chars(iBuf, o + iOff, 4, scratch, 0, out int c);
 			c = length < c ? length : c;
 			for (int i = 0; i < c; i++)
 			{
@@ -1015,10 +1010,10 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		return HexMap[c];
 	}
 
-	void FromBase64Chars(char[] chars, int charsOffset, int charsLen, byte[] bytes, int bytesOffset, out int bytesWritten)
+	static void FromBase64Chars(char[] chars, int charsOffset, int charsLen, byte[] bytes, int bytesOffset, out int bytesWritten)
 	{
 #if SPAN
-		if (!Convert.TryFromBase64Chars(chars.AsSpan().Slice(charsOffset, charsLen), bytes.AsSpan().Slice(bytesOffset), out bytesWritten))
+		if (!Convert.TryFromBase64Chars(chars.AsSpan().Slice(charsOffset, charsLen), bytes.AsSpan(bytesOffset), out bytesWritten))
 		{
 			throw new FormatException();
 		}
@@ -1287,7 +1282,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 
 	internal readonly struct CharSpan
 	{
-		internal readonly static CharSpan Empty = new CharSpan(Array.Empty<char>(), 0, 0);
+		internal readonly static CharSpan Empty = new(Array.Empty<char>(), 0, 0);
 
 		public readonly char[] buffer;
 		public readonly int offset;
@@ -1462,14 +1457,12 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		var col = this.columns[ordinal];
 
 		var enc = col.ColumnBinaryEncoding ?? this.binaryEncoding;
-		switch (enc)
+		return enc switch
 		{
-			case BinaryEncoding.Base64:
-				return GetBase64Length(span);
-			case BinaryEncoding.Hexadecimal:
-				return GetHexLength(span, out _);
-		}
-		throw new NotSupportedException(); // TODO: improve error message.
+			BinaryEncoding.Base64 => GetBase64Length(span),
+			BinaryEncoding.Hexadecimal => GetHexLength(span, out _),
+			_ => throw new NotSupportedException(),// TODO: improve error message.
+		};
 	}
 
 	static int GetBase64Length(CharSpan span)
@@ -1643,7 +1636,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 			this.Format = schema?[nameof(Format)] as string;
 			if (this.DataType == typeof(byte[]))
 			{
-				this.ColumnBinaryEncoding = GetBinaryEncoding(this.Format);
+				this.ColumnBinaryEncoding = CsvColumn.GetBinaryEncoding(this.Format);
 			}
 			if (this.DataType == typeof(bool) && this.Format != null)
 			{
@@ -1662,7 +1655,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 			}
 		}
 
-		BinaryEncoding? GetBinaryEncoding(string? format)
+		static BinaryEncoding? GetBinaryEncoding(string? format)
 		{
 			if (format == null)
 				return null;
@@ -1681,13 +1674,11 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		{
 			get
 			{
-				switch (property)
+				return property switch
 				{
-					case nameof(Format):
-						return Format;
-					default:
-						return base[property];
-				}
+					nameof(Format) => Format,
+					_ => base[property],
+				};
 			}
 		}
 	}
@@ -1750,8 +1741,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 
 		static IFieldAccessor<T> GetAccessor()
 		{
-			var acc = CsvDataAccessor.Instance as IFieldAccessor<T>;
-			if (acc == null)
+			if (CsvDataAccessor.Instance is not IFieldAccessor<T> acc)
 			{
 				if (typeof(T).IsEnum)
 				{

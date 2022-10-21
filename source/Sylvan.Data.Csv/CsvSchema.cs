@@ -7,7 +7,7 @@ namespace Sylvan.Data.Csv;
 
 sealed class NullableCsvSchema : CsvSchemaProvider
 {
-	static NullableStringColumn Column = new NullableStringColumn();
+	static NullableStringColumn Column = new();
 
 	public override DbColumn? GetColumn(string? name, int ordinal)
 	{
@@ -31,7 +31,8 @@ public class CsvSchema : CsvSchemaProvider
 	/// <summary>
 	/// Gets a ICsvSchemaProvider that treats empty strings as null.
 	/// </summary>
-	public static ICsvSchemaProvider Nullable = new NullableCsvSchema();
+	// TODO: this probably should have been a readonly property.
+	public static readonly ICsvSchemaProvider Nullable = new NullableCsvSchema();
 
 	readonly DbColumn[] schema;
 	readonly Dictionary<string, DbColumn> nameMap;
@@ -86,8 +87,7 @@ public class CsvSchema : CsvSchemaProvider
 	/// <inheritdoc />
 	public override DbColumn? GetColumn(string? name, int ordinal)
 	{
-		DbColumn? col;
-		if (name != null && nameMap.TryGetValue(name, out col))
+		if (name != null && nameMap.TryGetValue(name, out DbColumn? col))
 		{
 			return col;
 		}

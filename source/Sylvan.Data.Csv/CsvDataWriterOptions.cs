@@ -13,7 +13,7 @@ public sealed class CsvDataWriterOptions
 		return (CsvDataWriterOptions)MemberwiseClone();
 	}
 
-	internal static CsvDataWriterOptions Default = new CsvDataWriterOptions();
+	internal static readonly CsvDataWriterOptions Default = new();
 
 	const char DefaultDelimiter = ',';
 	const char DefaultQuote = '"';

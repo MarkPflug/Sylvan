@@ -22,7 +22,7 @@ public sealed partial class CsvDataWriter
 
 	class FieldInfo
 	{
-		internal static readonly FieldInfo Generic = new FieldInfo(true, ObjectFieldWriter.Instance);
+		internal static readonly FieldInfo Generic = new(true, ObjectFieldWriter.Instance);
 
 		public FieldInfo(bool allowNull, FieldWriter writer)
 		{
@@ -198,8 +198,7 @@ public sealed partial class CsvDataWriter
 #if SPAN
 		if (type.IsEnum)
 		{
-			FieldWriter? writer;
-			if (!enumMap.TryGetValue(type, out writer))
+			if (!enumMap.TryGetValue(type, out FieldWriter? writer))
 			{
 				if (IsCandidateEnum(type))
 				{
@@ -225,7 +224,7 @@ public sealed partial class CsvDataWriter
 
 #if SPAN
 
-	static ConcurrentDictionary<Type, FieldWriter> enumMap = new ConcurrentDictionary<Type, FieldWriter>();
+	static ConcurrentDictionary<Type, FieldWriter> enumMap = new();
 
 	// determines if the type is an enum type that can be
 	// efficiently optimized.
@@ -371,7 +370,7 @@ public sealed partial class CsvDataWriter
 
 	readonly CultureInfo culture;
 
-	int maxBufferSize;
+	readonly int maxBufferSize;
 	byte[] dataBuffer = Array.Empty<byte>();
 	char[] buffer;
 	int pos;
@@ -388,7 +387,7 @@ public sealed partial class CsvDataWriter
 	/// <param name="options">The options used to configure the writer, or null to use the defaults.</param>
 	public static CsvDataWriter Create(string fileName, CsvDataWriterOptions? options = null)
 	{
-		options = options ?? CsvDataWriterOptions.Default;
+		options ??= CsvDataWriterOptions.Default;
 		var writer = new StreamWriter(fileName, false, Encoding.UTF8);
 		return new CsvDataWriter(writer, null, options);
 	}
@@ -412,13 +411,13 @@ public sealed partial class CsvDataWriter
 	/// <param name="options">The options used to configure the writer, or null to use the defaults.</param>
 	public static CsvDataWriter Create(TextWriter writer, char[] buffer, CsvDataWriterOptions? options = null)
 	{
-		options = options ?? CsvDataWriterOptions.Default;
+		options ??= CsvDataWriterOptions.Default;
 		return new CsvDataWriter(writer, buffer, options);
 	}
 
 	CsvDataWriter(TextWriter writer, char[]? buffer, CsvDataWriterOptions? options = null)
 	{
-		options = options ?? CsvDataWriterOptions.Default;
+		options ??= CsvDataWriterOptions.Default;
 		options.Validate();
 		this.binaryEncoding = options.BinaryEncoding;
 		this.writer = writer ?? throw new ArgumentNullException(nameof(writer));

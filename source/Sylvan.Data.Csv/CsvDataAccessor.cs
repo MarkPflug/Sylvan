@@ -34,7 +34,7 @@ abstract class FieldAccessor<T> : IFieldAccessor<T>, IFieldAccessor
 
 sealed class StringAccessor : FieldAccessor<string>
 {
-	internal static readonly StringAccessor Instance = new StringAccessor();
+	internal static readonly StringAccessor Instance = new();
 
 	public override string GetValue(CsvDataReader reader, int ordinal)
 	{
@@ -45,7 +45,7 @@ sealed class StringAccessor : FieldAccessor<string>
 sealed class BooleanAccessor : FieldAccessor<bool>
 {
 
-	internal static readonly BooleanAccessor Instance = new BooleanAccessor();
+	internal static readonly BooleanAccessor Instance = new();
 
 	public override bool GetValue(CsvDataReader reader, int ordinal)
 	{
@@ -55,7 +55,7 @@ sealed class BooleanAccessor : FieldAccessor<bool>
 
 sealed class CharAccessor : FieldAccessor<char>
 {
-	internal static readonly CharAccessor Instance = new CharAccessor();
+	internal static readonly CharAccessor Instance = new();
 
 	public override char GetValue(CsvDataReader reader, int ordinal)
 	{
@@ -65,7 +65,7 @@ sealed class CharAccessor : FieldAccessor<char>
 
 sealed class ByteAccessor : FieldAccessor<byte>
 {
-	internal static readonly ByteAccessor Instance = new ByteAccessor();
+	internal static readonly ByteAccessor Instance = new();
 
 	public override byte GetValue(CsvDataReader reader, int ordinal)
 	{
@@ -75,7 +75,7 @@ sealed class ByteAccessor : FieldAccessor<byte>
 
 sealed class Int16Accessor : FieldAccessor<short>
 {
-	internal static readonly Int16Accessor Instance = new Int16Accessor();
+	internal static readonly Int16Accessor Instance = new();
 
 	public override short GetValue(CsvDataReader reader, int ordinal)
 	{
@@ -85,7 +85,7 @@ sealed class Int16Accessor : FieldAccessor<short>
 
 sealed class Int32Accessor : FieldAccessor<int>
 {
-	internal static readonly Int32Accessor Instance = new Int32Accessor();
+	internal static readonly Int32Accessor Instance = new();
 
 	public override int GetValue(CsvDataReader reader, int ordinal)
 	{
@@ -95,7 +95,7 @@ sealed class Int32Accessor : FieldAccessor<int>
 
 sealed class Int64Accessor : FieldAccessor<long>
 {
-	internal static readonly Int64Accessor Instance = new Int64Accessor();
+	internal static readonly Int64Accessor Instance = new();
 
 	public override long GetValue(CsvDataReader reader, int ordinal)
 	{
@@ -105,7 +105,7 @@ sealed class Int64Accessor : FieldAccessor<long>
 
 sealed class SingleAccessor : FieldAccessor<float>
 {
-	internal static readonly SingleAccessor Instance = new SingleAccessor();
+	internal static readonly SingleAccessor Instance = new();
 
 	public override float GetValue(CsvDataReader reader, int ordinal)
 	{
@@ -115,7 +115,7 @@ sealed class SingleAccessor : FieldAccessor<float>
 
 sealed class DoubleAccessor : FieldAccessor<double>
 {
-	internal static readonly DoubleAccessor Instance = new DoubleAccessor();
+	internal static readonly DoubleAccessor Instance = new();
 
 	public override double GetValue(CsvDataReader reader, int ordinal)
 	{
@@ -125,7 +125,7 @@ sealed class DoubleAccessor : FieldAccessor<double>
 
 sealed class DecimalAccessor : FieldAccessor<decimal>
 {
-	internal static readonly DecimalAccessor Instance = new DecimalAccessor();
+	internal static readonly DecimalAccessor Instance = new();
 
 	public override decimal GetValue(CsvDataReader reader, int ordinal)
 	{
@@ -135,7 +135,7 @@ sealed class DecimalAccessor : FieldAccessor<decimal>
 
 sealed class DateTimeAccessor : FieldAccessor<DateTime>
 {
-	internal static readonly DateTimeAccessor Instance = new DateTimeAccessor();
+	internal static readonly DateTimeAccessor Instance = new();
 
 	public override DateTime GetValue(CsvDataReader reader, int ordinal)
 	{
@@ -145,7 +145,7 @@ sealed class DateTimeAccessor : FieldAccessor<DateTime>
 
 sealed class DateTimeOffsetAccessor : FieldAccessor<DateTimeOffset>
 {
-	internal static readonly DateTimeOffsetAccessor Instance = new DateTimeOffsetAccessor();
+	internal static readonly DateTimeOffsetAccessor Instance = new();
 
 	public override DateTimeOffset GetValue(CsvDataReader reader, int ordinal)
 	{
@@ -157,7 +157,7 @@ sealed class DateTimeOffsetAccessor : FieldAccessor<DateTimeOffset>
 
 sealed class DateOnlyAccessor : FieldAccessor<DateOnly>
 {
-	internal static readonly DateOnlyAccessor Instance = new DateOnlyAccessor();
+	internal static readonly DateOnlyAccessor Instance = new();
 
 	public override DateOnly GetValue(CsvDataReader reader, int ordinal)
 	{
@@ -167,7 +167,7 @@ sealed class DateOnlyAccessor : FieldAccessor<DateOnly>
 
 sealed class TimeOnlyAccessor : FieldAccessor<TimeOnly>
 {
-	internal static readonly TimeOnlyAccessor Instance = new TimeOnlyAccessor();
+	internal static readonly TimeOnlyAccessor Instance = new();
 
 	public override TimeOnly GetValue(CsvDataReader reader, int ordinal)
 	{
@@ -179,7 +179,7 @@ sealed class TimeOnlyAccessor : FieldAccessor<TimeOnly>
 
 sealed class TimeSpanAccessor : FieldAccessor<TimeSpan>
 {
-	internal static readonly TimeSpanAccessor Instance = new TimeSpanAccessor();
+	internal static readonly TimeSpanAccessor Instance = new();
 
 	public override TimeSpan GetValue(CsvDataReader reader, int ordinal)
 	{
@@ -189,7 +189,7 @@ sealed class TimeSpanAccessor : FieldAccessor<TimeSpan>
 
 sealed class GuidAccessor : FieldAccessor<Guid>
 {
-	internal static readonly GuidAccessor Instance = new GuidAccessor();
+	internal static readonly GuidAccessor Instance = new();
 
 	public override Guid GetValue(CsvDataReader reader, int ordinal)
 	{
@@ -199,7 +199,7 @@ sealed class GuidAccessor : FieldAccessor<Guid>
 
 sealed class StreamAccessor : FieldAccessor<Stream>
 {
-	internal static readonly StreamAccessor Instance = new StreamAccessor();
+	internal static readonly StreamAccessor Instance = new();
 
 	public override Stream GetValue(CsvDataReader reader, int ordinal)
 	{
@@ -209,7 +209,7 @@ sealed class StreamAccessor : FieldAccessor<Stream>
 
 sealed class TextReaderAccessor : FieldAccessor<TextReader>
 {
-	internal static readonly TextReaderAccessor Instance = new TextReaderAccessor();
+	internal static readonly TextReaderAccessor Instance = new();
 
 	public override TextReader GetValue(CsvDataReader reader, int ordinal)
 	{
@@ -219,7 +219,7 @@ sealed class TextReaderAccessor : FieldAccessor<TextReader>
 
 sealed class BytesAccessor : FieldAccessor<byte[]>
 {
-	internal static readonly BytesAccessor Instance = new BytesAccessor();
+	internal static readonly BytesAccessor Instance = new();
 
 	public override byte[] GetValue(CsvDataReader reader, int ordinal)
 	{
@@ -232,7 +232,7 @@ sealed class BytesAccessor : FieldAccessor<byte[]>
 
 sealed class CharsAccessor : FieldAccessor<char[]>
 {
-	internal static readonly CharsAccessor Instance = new CharsAccessor();
+	internal static readonly CharsAccessor Instance = new();
 
 	public override char[] GetValue(CsvDataReader reader, int ordinal)
 	{
@@ -265,7 +265,7 @@ sealed partial class CsvDataAccessor :
 	IFieldRangeAccessor<byte>,
 	IFieldRangeAccessor<char>
 {
-	internal static readonly CsvDataAccessor Instance = new CsvDataAccessor();
+	internal static readonly CsvDataAccessor Instance = new();
 
 	internal static readonly Dictionary<Type, IFieldAccessor> Accessors;
 

@@ -31,7 +31,7 @@ static class EnumParse
 				if (m.Name != "TryParse")
 					return false;
 				var p = m.GetParameters();
-				return p.Count() == 3 && p[0].ParameterType == ParamType;
+				return p.Length == 3 && p[0].ParameterType == ParamType;
 			}
 			)
 			.SingleOrDefault();
@@ -45,12 +45,14 @@ static class EnumParse
 
 sealed class EnumAccessor<T> : IFieldAccessor<T>
 {
-	internal static EnumAccessor<T> Instance = new EnumAccessor<T>();
+	internal static EnumAccessor<T> Instance = new();
 
 	internal static TryParse<T>? Parser;
 
 	static EnumAccessor()
 	{
+		// NOTE: all of this reflection complexity is to avoid boxing in the GetValue method.
+
 		Parser = null;
 		var method = EnumParse.GenericSpanParseMethod;
 		if (method != null)
@@ -96,6 +98,8 @@ sealed class EnumAccessor : IFieldAccessor
 #else
 		var span = reader.GetString(ordinal);
 #endif
-		return span.Length == 0 ? Enum.ToObject(this.enumType, 0L) : Enum.Parse(this.enumType, span, ignoreCase: true);
+		return span.Length == 0 
+			? Enum.ToObject(this.enumType, 0L) 
+			: Enum.Parse(this.enumType, span, ignoreCase: true);
 	}
 }

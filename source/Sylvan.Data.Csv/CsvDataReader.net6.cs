@@ -31,9 +31,8 @@ partial class CsvDataReader
 	/// </summary>
 	public DateOnly GetDate(int ordinal)
 	{
-		DateOnly value;
 		var span = this.GetFieldSpan(ordinal);
-		if (IsoDate.TryParse(span, out value))
+		if (IsoDate.TryParse(span, out DateOnly value))
 		{
 			return value;
 		}
