@@ -166,7 +166,7 @@ partial class DataBinder
 		}
 	}
 
-	internal static readonly Regex SeriesKeyRegex = new Regex(@"\{(.+)\}");
+	internal static readonly Regex SeriesKeyRegex = new(@"\{(.+)\}");
 
 	interface IOption<out T>
 	{

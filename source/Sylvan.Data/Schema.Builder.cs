@@ -12,7 +12,7 @@ partial class Schema
 	/// </summary>
 	public class Builder : IEnumerable<Column.Builder>
 	{
-		List<Column.Builder> columns;
+		readonly List<Column.Builder> columns;
 
 		/// <summary>
 		/// Creates a new Builder.
@@ -59,7 +59,7 @@ partial class Schema
 		{
 			var ordinal = this.columns.Count;
 
-			columnBuilder.BaseColumnOrdinal = columnBuilder.BaseColumnOrdinal ?? columnBuilder.ColumnOrdinal;
+			columnBuilder.BaseColumnOrdinal ??= columnBuilder.ColumnOrdinal;
 			columnBuilder.ColumnOrdinal = ordinal;
 
 			this.columns.Add(columnBuilder);

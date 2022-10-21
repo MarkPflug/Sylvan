@@ -5,7 +5,7 @@ namespace Sylvan.Data;
 
 class ProgressDataReader : DataReaderAdapter
 {
-	Action<int> progressCallback;
+	readonly Action<int> progressCallback;
 
 	int row = 0;
 

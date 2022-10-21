@@ -67,7 +67,7 @@ public class CustomDataColumn<T> : IDataColumn
 	public bool IsDbNull(DbDataReader reader)
 	{
 		return
-			AllowNull
+			this.AllowNull
 			? false
 			: GetValue(reader) == DBNull.Value;
 	}
@@ -111,7 +111,7 @@ public class CustomDataColumn<T> : IDataColumn
 		throw new InvalidCastException();
 	}
 
-	Func<DbDataReader, T> valueSource;
+	readonly Func<DbDataReader, T> valueSource;
 
 	/// <summary>
 	/// Creates a new CustomDataColumn instance.
@@ -127,11 +127,11 @@ public class CustomDataColumn<T> : IDataColumn
 	}
 }
 
-class DataReaderColumn : IDataColumn
+sealed class DataReaderColumn : IDataColumn
 {
-	DbDataReader reader;
-	int ordinal;
-	bool allowNull;
+	readonly DbDataReader reader;
+	readonly int ordinal;
+	readonly bool allowNull;
 
 	public DataReaderColumn(DbDataReader reader, int ordinal, bool allowNull)
 	{
@@ -171,7 +171,7 @@ sealed class ExtendedDataReader : DbDataReader, IDbColumnSchemaGenerator
 {
 	readonly DbDataReader dr;
 	readonly IDataColumn[] columns;
-	ReadOnlyCollection<DbColumn> schema;
+	readonly ReadOnlyCollection<DbColumn> schema;
 
 	public ExtendedDataReader(DbDataReader dr, IDataColumn[] customColumns)
 	{

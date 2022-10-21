@@ -146,30 +146,32 @@ partial class Schema
 			/// </summary>
 			public Builder(DbColumn col)
 			{
-				column = new Column();
-				column.AllowDBNull = col.AllowDBNull;
-				column.BaseCatalogName = col.BaseCatalogName;
-				column.BaseColumnName = col.BaseColumnName;
-				column.BaseSchemaName = col.BaseSchemaName;
-				column.BaseServerName = col.BaseServerName;
-				column.BaseTableName = col.BaseTableName;
-				column.ColumnName = col.ColumnName;
-				column.ColumnOrdinal = col.ColumnOrdinal;
-				column.ColumnSize = col.ColumnSize;
-				column.DataType = col.DataType;
-				column.DataTypeName = col.DataTypeName;
-				column.IsAliased = col.IsAliased;
-				column.IsAutoIncrement = col.IsAutoIncrement;
-				column.IsExpression = col.IsExpression;
-				column.IsHidden = col.IsHidden;
-				column.IsIdentity = col.IsIdentity;
-				column.IsKey = col.IsKey;
-				column.IsLong = col.IsLong;
-				column.IsReadOnly = col.IsReadOnly;
-				column.IsUnique = col.IsUnique;
-				column.NumericPrecision = col.NumericPrecision;
-				column.NumericScale = col.NumericScale;
-				column.UdtAssemblyQualifiedName = col.UdtAssemblyQualifiedName;
+				column = new Column
+				{
+					AllowDBNull = col.AllowDBNull,
+					BaseCatalogName = col.BaseCatalogName,
+					BaseColumnName = col.BaseColumnName,
+					BaseSchemaName = col.BaseSchemaName,
+					BaseServerName = col.BaseServerName,
+					BaseTableName = col.BaseTableName,
+					ColumnName = col.ColumnName,
+					ColumnOrdinal = col.ColumnOrdinal,
+					ColumnSize = col.ColumnSize,
+					DataType = col.DataType,
+					DataTypeName = col.DataTypeName,
+					IsAliased = col.IsAliased,
+					IsAutoIncrement = col.IsAutoIncrement,
+					IsExpression = col.IsExpression,
+					IsHidden = col.IsHidden,
+					IsIdentity = col.IsIdentity,
+					IsKey = col.IsKey,
+					IsLong = col.IsLong,
+					IsReadOnly = col.IsReadOnly,
+					IsUnique = col.IsUnique,
+					NumericPrecision = col.NumericPrecision,
+					NumericScale = col.NumericScale,
+					UdtAssemblyQualifiedName = col.UdtAssemblyQualifiedName
+				};
 
 				if (col is Column sc)
 				{

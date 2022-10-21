@@ -125,10 +125,12 @@ sealed class CompiledDataBinder<T>
 		var bodyExpressions = new List<Expression>();
 		var cultureInfoExpr = Expression.Variable(typeof(CultureInfo));
 
-		var locals = new List<ParameterExpression>();
-		locals.Add(cultureInfoExpr);
-		locals.Add(idxVar);
-		locals.Add(stateVar);
+		var locals = new List<ParameterExpression>
+		{
+			cultureInfoExpr,
+			idxVar,
+			stateVar
+		};
 
 		// To provide special handling empty string as a null for a nullable primitive type
 		// we want to construct the following:
@@ -460,7 +462,6 @@ sealed class CompiledDataBinder<T>
 		var ut = Nullable.GetUnderlyingType(propertyType);
 		propertyType = ut ?? propertyType;
 
-		var code = Type.GetTypeCode(propertyType);
 		if (propertyType.IsEnum || propertyType == typeof(DateTimeOffset))
 			return propertyType;
 
@@ -489,8 +490,7 @@ sealed class CompiledDataBinder<T>
 
 		object seriesAccessor = GetDataSeriesAccessor(column, physicalSchema, out var bound);
 		var seriesName = column.SeriesName;
-		if (this.seriesAccessors == null)
-			this.seriesAccessors = new Dictionary<string, object>();
+		this.seriesAccessors ??= new Dictionary<string, object>();
 		this.seriesAccessors.Add(seriesName ?? string.Empty, seriesAccessor);
 
 		foreach (var item in bound)

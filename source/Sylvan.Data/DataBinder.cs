@@ -77,7 +77,7 @@ public static partial class DataBinder
 	public static IDataBinder<T> Create<T>(ReadOnlyCollection<DbColumn> schema, DataBinderOptions? opts = null)
 		where T : class
 	{
-		opts = opts ?? new DataBinderOptions();
+		opts ??= new DataBinderOptions();
 		return new CompiledDataBinder<T>(opts, schema);
 	}
 
@@ -92,7 +92,7 @@ public static partial class DataBinder
 		where T : class
 	{
 		var dr = reader.AsDbDataReader();
-		opts = opts ?? new DataBinderOptions();
+		opts ??= new DataBinderOptions();
 		return CompiledBinderCache<T>.GetBinder(dr, opts);
 	}
 
@@ -108,7 +108,7 @@ public static partial class DataBinder
 		where T : class
 	{
 		var dr = reader.AsDbDataReader();
-		opts = opts ?? new DataBinderOptions();
+		opts ??= new DataBinderOptions();
 		return new CompiledDataBinder<T>(opts, GetSchema(dr), schema);
 	}
 

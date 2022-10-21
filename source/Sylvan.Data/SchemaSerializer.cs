@@ -8,28 +8,28 @@ namespace Sylvan.Data;
 
 sealed class SimpleSchemaSerializer
 {
-	internal static readonly SimpleSchemaSerializer SingleLine = new SimpleSchemaSerializer(false);
-	internal static readonly SimpleSchemaSerializer MultiLine = new SimpleSchemaSerializer(true);
+	internal static readonly SimpleSchemaSerializer SingleLine = new(false);
+	internal static readonly SimpleSchemaSerializer MultiLine = new(true);
 
 	const string SeriesSymbol = "*";
 
 	static readonly Regex ColSpecRegex =
-		new Regex(
+		new(
 			@"^((?<BaseName>[^\>]+)\>)?(?<Name>[^\:]+)?(?::(?<Type>[a-z0-9]+)(\[(?<Size>\d+)\])?(?<AllowNull>\?)?(\{(?<Format>[^\}]+)\})?)?$",
 			RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant
 		);
 
 	static readonly Regex SeriesFormatRegex =
-		new Regex("^(?<prefix>.*){{(Date|Integer)}}(?<suffix>.*)$");
+		new("^(?<prefix>.*){{(Date|Integer)}}(?<suffix>.*)$");
 
 	static readonly Regex NewLineRegex =
-		new Regex(
+		new(
 			"\r\n|\n",
 			RegexOptions.Multiline | RegexOptions.Compiled
 		);
 
 
-	static readonly Lazy<Dictionary<string, DbType>> ColumnTypeMap = new Lazy<Dictionary<string, DbType>>(InitializeTypeMap);
+	static readonly Lazy<Dictionary<string, DbType>> ColumnTypeMap = new(InitializeTypeMap);
 
 	static Dictionary<string, DbType> InitializeTypeMap()
 	{
@@ -48,7 +48,7 @@ sealed class SimpleSchemaSerializer
 		return map;
 	}
 
-	bool multiLine;
+	readonly bool multiLine;
 
 	internal SimpleSchemaSerializer(bool multiLine)
 	{
@@ -60,7 +60,7 @@ sealed class SimpleSchemaSerializer
 	/// </summary>
 	/// <param name="spec">The schema specification string.</param>
 	/// <returns>A Schema, or null if it failed to parse.</returns>
-	public Schema Parse(string spec)
+	public static Schema Parse(string spec)
 	{
 		var builder = new Schema.Builder();
 

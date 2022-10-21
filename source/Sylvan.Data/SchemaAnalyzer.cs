@@ -12,7 +12,7 @@ namespace Sylvan.Data;
 /// </summary>
 public sealed class SchemaAnalyzerOptions
 {
-	internal static readonly SchemaAnalyzerOptions Default = new SchemaAnalyzerOptions();
+	internal static readonly SchemaAnalyzerOptions Default = new();
 
 	/// <summary>
 	/// Creates a new SchemaAnalyzerOptions with the default values.
@@ -113,9 +113,9 @@ public sealed class SchemaAnalyzerOptions
 /// </summary>
 public sealed partial class SchemaAnalyzer
 {
-	int rowCount;
+	readonly int rowCount;
 	//IColumnSizeStrategy sizer;
-	bool detectSeries;
+	readonly bool detectSeries;
 
 	/// <summary>
 	/// Creates a new SchemaAnalyzer.
@@ -246,12 +246,14 @@ public sealed class ColumnInfo
 	/// Gets the column name.
 	/// </summary>
 	public string? Name => this.name;
-	Type type;
+	readonly Type type;
 
 	bool isAscii;
-	int ordinal;
-	string? name;
-	bool isBoolean, isInt, isFloat, isDecimal, isDate, isDateTime, isGuid;
+	readonly int ordinal;
+	readonly string? name;
+	bool isBoolean, isInt, isFloat, isDate, isDateTime, isGuid;
+
+	bool isDecimal;
 	bool dateHasFractionalSeconds;
 #pragma warning disable CS0414
 	bool floatHasFractionalPart;
@@ -272,7 +274,7 @@ public sealed class ColumnInfo
 	long stringLenTotal;
 	int errorCount = 0;
 
-	Dictionary<string, int> valueCount;
+	readonly Dictionary<string, int> valueCount;
 
 	internal void Analyze(DbDataReader dr, int ordinal)
 	{
@@ -285,13 +287,13 @@ public sealed class ColumnInfo
 			return;
 		}
 
-		bool? boolValue = null;
+		bool? boolValue;
 		long? intValue = null;
 		double? floatValue = null;
 		decimal? decimalValue = null;
 		DateTime? dateValue = null;
 		string? stringValue = null;
-		Guid? guidValue = null;
+		Guid? guidValue;
 
 		var typeCode = Type.GetTypeCode(type);
 
@@ -365,7 +367,7 @@ public sealed class ColumnInfo
 								}
 								else
 								{
-									isFloat = false;
+									isDecimal = false;
 								}
 							}
 							if (isInt)
@@ -521,15 +523,13 @@ public sealed class ColumnInfo
 		}
 
 		[FieldOffset(0)]
-		decimal d;
+		readonly decimal d;
 
 		[FieldOffset(0)]
-		int flags;
+		readonly int flags;
 
 		public int Scale => (flags >> 16) & 0xff;
 	}
-
-	const int DefaultStringSize = 128;
 
 	[Flags]
 	internal enum ColType
@@ -541,11 +541,11 @@ public sealed class ColumnInfo
 		Long = 8,
 		//Float = 16,
 		Double = 32,
-		Decimal = 32,
+		Decimal = 64,
 		String = 128,
 	}
 
-	static Type[] ColTypes = new[]
+	static readonly Type[] ColTypes = new[]
 	{
 			typeof(bool),
 			typeof(DateTime),
@@ -703,8 +703,8 @@ public sealed class ColumnInfo
 	}
 
 	// TODO: consider localization?
-	static string[] TrueStrings = new[] { "y", "yes", "t", "true" };
-	static string[] FalseStrings = new[] { "n", "no", "f", "false" };
+	static readonly string[] TrueStrings = new[] { "y", "yes", "t", "true" };
+	static readonly string[] FalseStrings = new[] { "n", "no", "f", "false" };
 
 	//static bool IsDecimalHeader(string? name)
 	//{

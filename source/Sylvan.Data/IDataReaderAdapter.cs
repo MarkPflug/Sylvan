@@ -13,8 +13,7 @@ sealed class IDataReaderAdapter : DbDataReader, IDbColumnSchemaGenerator
 
 	public IDataReaderAdapter(IDataReader dr)
 	{
-		if (dr == null) throw new ArgumentNullException(nameof(dr));
-		this.dr = dr;
+		this.dr = dr ?? throw new ArgumentNullException(nameof(dr));
 	}
 
 	public override object this[int ordinal] => this.dr[ordinal];

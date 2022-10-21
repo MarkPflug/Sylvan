@@ -15,7 +15,8 @@ public delegate bool SchemaViolationErrorHandler(SchemaValidationContext context
 /// </summary>
 public sealed class SchemaValidationContext
 {
-	SchemaValidatingDataReader.Friend accessor;
+	readonly SchemaValidatingDataReader.Friend accessor;
+
 	internal SchemaValidationContext(SchemaValidatingDataReader.Friend accessor)
 	{
 		this.accessor = accessor;
@@ -66,7 +67,7 @@ class SchemaValidatingDataReader : DataReaderAdapter
 	// TODO: name this. Just meant to limit visibility to internals
 	internal struct Friend
 	{
-		SchemaValidatingDataReader reader;
+		readonly SchemaValidatingDataReader reader;
 
 		public Friend(SchemaValidatingDataReader reader)
 		{
@@ -203,7 +204,7 @@ class SchemaValidatingDataReader : DataReaderAdapter
 
 	sealed class BytesValueAccessor : ValueAccessor<byte[]>
 	{
-		byte[] buffer;
+		readonly byte[] buffer;
 
 		public BytesValueAccessor()
 		{
@@ -220,7 +221,7 @@ class SchemaValidatingDataReader : DataReaderAdapter
 
 	sealed class CharsValueAccessor : ValueAccessor<char[]>
 	{
-		char[] buffer;
+		readonly char[] buffer;
 
 		public CharsValueAccessor()
 		{
@@ -237,7 +238,7 @@ class SchemaValidatingDataReader : DataReaderAdapter
 
 	sealed class GenericValueAccessor<T> : ValueAccessor<T>
 	{
-		Func<DbDataReader, int, T> accessor;
+		readonly Func<DbDataReader, int, T> accessor;
 
 		public GenericValueAccessor(Func<DbDataReader, int, T> accessor)
 		{
@@ -257,9 +258,9 @@ class SchemaValidatingDataReader : DataReaderAdapter
 	Exception[] exceptions;
 	int counter;
 
-	DbDataReader inner;
-	SchemaValidationContext validationContext;
-	SchemaViolationErrorHandler errorHandler;
+	readonly DbDataReader inner;
+	readonly SchemaValidationContext validationContext;
+	readonly SchemaViolationErrorHandler errorHandler;
 
 	static bool Fail(SchemaValidationContext context)
 	{

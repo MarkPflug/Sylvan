@@ -7,7 +7,7 @@ namespace Sylvan.Data;
 /// </summary>
 public sealed class DataBinderOptions
 {
-	internal static readonly DataBinderOptions Default = new DataBinderOptions();
+	internal static readonly DataBinderOptions Default = new();
 
 	/// <summary>
 	/// The culture to use when converting string values during binding.

@@ -18,9 +18,9 @@ public sealed partial class Schema : IReadOnlyList<Schema.Column>, IDbColumnSche
 		if (row.Table.Columns.Contains(name))
 		{
 			object obj = row[name];
-			if (obj is T)
+			if (obj is T item)
 			{
-				return (T)obj;
+				return item;
 			}
 		}
 		return default;
@@ -40,11 +40,13 @@ public sealed partial class Schema : IReadOnlyList<Schema.Column>, IDbColumnSche
 		{
 			if (row == null) continue;
 
-			var cb = new Column.Builder();
-			cb.AllowDBNull = GetValue<bool?>(row, SchemaTableColumn.AllowDBNull);
-			cb.ColumnName = GetValue<string>(row, SchemaTableColumn.ColumnName) ?? string.Empty;
-			cb.ColumnOrdinal = GetValue<int?>(row, SchemaTableColumn.ColumnOrdinal);
-			cb.DataType = GetValue<Type>(row, SchemaTableColumn.DataType);
+			var cb = new Column.Builder
+			{
+				AllowDBNull = GetValue<bool?>(row, SchemaTableColumn.AllowDBNull),
+				ColumnName = GetValue<string>(row, SchemaTableColumn.ColumnName) ?? string.Empty,
+				ColumnOrdinal = GetValue<int?>(row, SchemaTableColumn.ColumnOrdinal),
+				DataType = GetValue<Type>(row, SchemaTableColumn.DataType)
+			};
 			builder.Add(cb);
 		}
 
@@ -60,12 +62,14 @@ public sealed partial class Schema : IReadOnlyList<Schema.Column>, IDbColumnSche
 			var name = dr.GetName(i);
 			var type = dr.GetFieldType(i);
 
-			var cb = new Column.Builder();
-			// without a schema, have to assume can be null.
-			cb.AllowDBNull = true;
-			cb.ColumnName = name ?? string.Empty;
-			cb.ColumnOrdinal = i;
-			cb.DataType = type ?? typeof(object);
+			var cb = new Column.Builder
+			{
+				// without a schema, have to assume can be null.
+				AllowDBNull = true,
+				ColumnName = name ?? string.Empty,
+				ColumnOrdinal = i,
+				DataType = type ?? typeof(object)
+			};
 			builder.Add(cb);
 		}
 
@@ -77,7 +81,7 @@ public sealed partial class Schema : IReadOnlyList<Schema.Column>, IDbColumnSche
 	// FirstName:string[32]?;
 	// LastName:string[32]?;
 	// *:double?;
-	Column[] columns;
+	readonly Column[] columns;
 
 	/// <summary>
 	/// Gets the number of columns in the schema.
@@ -132,7 +136,7 @@ public sealed partial class Schema : IReadOnlyList<Schema.Column>, IDbColumnSche
 	/// </summary>
 	public static Schema Parse(string spec)
 	{
-		return SimpleSchemaSerializer.SingleLine.Parse(spec);
+		return SimpleSchemaSerializer.Parse(spec);
 	}
 
 	/// <summary>

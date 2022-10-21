@@ -62,7 +62,7 @@ public static class ObjectDataReader
 	/// <typeparam name="T"></typeparam>
 	public sealed class Builder<T>
 	{
-		ObjectDataReader<T>.Builder builder;
+		readonly ObjectDataReader<T>.Builder builder;
 
 		/// <summary>
 		/// Creates a new ObjectDataReader.Builder{T}.
@@ -174,7 +174,7 @@ sealed class AsyncObjectDataReader<T> : ObjectDataReader<T>
 abstract class ObjectDataReader<T> : DbDataReader, IDbColumnSchemaGenerator
 {
 	internal static Lazy<Builder> DefaultBuilder =
-		new Lazy<Builder>(() => new Builder().AddDefaultColumns());
+		new(() => new Builder().AddDefaultColumns());
 
 	internal sealed class Builder
 	{
@@ -207,8 +207,8 @@ abstract class ObjectDataReader<T> : DbDataReader, IDbColumnSchemaGenerator
 				addMethods.Single(m => m != AddNullableMethod);
 		}
 
-		static MethodInfo AddNullableMethod;
-		static MethodInfo AddMethod;
+		static readonly MethodInfo AddNullableMethod;
+		static readonly MethodInfo AddMethod;
 
 		// bool, short, int, long, single, double, decimal, dateTime, guid, string
 
@@ -251,7 +251,7 @@ abstract class ObjectDataReader<T> : DbDataReader, IDbColumnSchemaGenerator
 			return IsSupported(prop.PropertyType);
 		}
 
-		static readonly HashSet<Type> SupportedTypes = new HashSet<Type>
+		static readonly HashSet<Type> SupportedTypes = new()
 		{
 			typeof(string),
 			typeof(byte[]),
@@ -295,7 +295,6 @@ abstract class ObjectDataReader<T> : DbDataReader, IDbColumnSchemaGenerator
 			var parameters = new ParameterExpression[] { param };
 			var expr = Expression.Lambda(Expression.Call(param, getter), parameters);
 			var selector = expr.Compile();
-			var st = selector.GetType();
 
 			var baseType = Nullable.GetUnderlyingType(propType);
 			if (baseType == null)

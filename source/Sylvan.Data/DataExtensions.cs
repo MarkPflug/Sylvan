@@ -207,7 +207,7 @@ public static partial class DataExtensions
 	public static DbDataReader AsVariableField<T>(this T reader, Func<T, int> rowFieldCountAccessor, Type? fieldType = null)
 		where T : DbDataReader
 	{
-		fieldType = fieldType ?? typeof(object);
+		fieldType ??= typeof(object);
 		return new VariableDataReader<T>(reader, rowFieldCountAccessor, fieldType);
 	}
 
