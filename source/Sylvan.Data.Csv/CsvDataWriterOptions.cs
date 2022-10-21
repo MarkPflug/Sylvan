@@ -15,10 +15,10 @@ public sealed class CsvDataWriterOptions
 
 	internal static readonly CsvDataWriterOptions Default = new();
 
-	const char DefaultDelimiter = ',';
-	const char DefaultQuote = '"';
-	const char DefaultEscape = '"';
-	const char DefaultComment = '#';
+	internal const char DefaultDelimiter = ',';
+	internal const char DefaultQuote = '"';
+	internal const char DefaultEscape = '"';
+	internal const char DefaultComment = '#';
 	const int DefaultBufferSize = 0x4000;
 	const int MinBufferSize = 0x80;
 
