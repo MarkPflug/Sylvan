@@ -1,4 +1,8 @@
 # Sylvan.Data.Csv Release Notes
+_1.2.4_
+
+- CsvDataWriter avoids array allocation for default configuration.
+- Adds missing `ConfigureAwait` calls.
 
 _1.2.3_
 
