@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 
-namespace Sylvan;
+namespace Sylvan.CodeGeneration;
 
 /// <summary>
 /// The casing style used within segments.

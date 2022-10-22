@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using Xunit;
 
-namespace Sylvan;
+namespace Sylvan.CodeGeneration;
 
 public class IdentifierStyleTests
 {

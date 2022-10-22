@@ -5,7 +5,7 @@ using System.Data.Common;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
-
+using Sylvan.CodeGeneration;
 namespace Sylvan.Data;
 
 partial class DataBinder

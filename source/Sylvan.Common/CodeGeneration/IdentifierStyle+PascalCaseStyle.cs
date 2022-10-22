@@ -1,7 +1,7 @@
 ﻿using System.Globalization;
 using System.IO;
 
-namespace Sylvan;
+namespace Sylvan.CodeGeneration;
 
 partial class IdentifierStyle
 {

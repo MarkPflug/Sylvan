@@ -11,8 +11,8 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<Compile Include="..\Sylvan.Common\IdentifierStyle+PascalCaseStyle.cs" Link="IdentifierStyle+PascalCaseStyle.cs" />
-		<Compile Include="..\Sylvan.Common\IdentifierStyle.cs" Link="IdentifierStyle.cs" />
+		<Compile Include="..\Sylvan.Common\CodeGeneration\IdentifierStyle+PascalCaseStyle.cs" Link="IdentifierStyle+PascalCaseStyle.cs" />
+		<Compile Include="..\Sylvan.Common\CodeGeneration\IdentifierStyle.cs" Link="IdentifierStyle.cs" />
 	</ItemGroup>
 
 </Project>
