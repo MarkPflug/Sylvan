@@ -332,6 +332,27 @@ partial class CsvDataWriter
 			return writer.csvWriter.Write(context, str, buffer, offset);
 		}
 	}
+
+	sealed class DateTimeOffsetIsoFieldWriter : FieldWriter
+	{
+		public static DateTimeOffsetIsoFieldWriter Instance = new();
+
+		public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
+		{
+			var reader = context.reader;
+			var writer = context.writer;
+			var culture = writer.culture;
+			var value = reader.GetFieldValue<DateTimeOffset>(ordinal);
+
+			Span<char> str = stackalloc char[IsoDate.MaxDateLength];
+			if (!IsoDate.TryFormatIso(value, str, out int len))
+			{
+				return InsufficientSpace;
+			}
+			str = str[..len];
+			return writer.csvWriter.Write(context, str, buffer, offset);
+		}
+	}
 #endif
 
 	sealed class DateTimeFormatFieldWriter : FieldWriter
@@ -345,6 +366,34 @@ partial class CsvDataWriter
 			var culture = writer.culture;
 			var value = reader.GetDateTime(ordinal);
 			var fmt = writer.dateTimeFormat ?? "O";
+#if SPAN
+			Span<char> str = stackalloc char[IsoDate.MaxDateLength];
+
+			if (!value.TryFormat(str, out int len, fmt, culture))
+			{
+				return InsufficientSpace;
+			}
+
+			str = str[..len];
+
+#else
+			var str = value.ToString(fmt, culture);
+#endif
+			return writer.csvWriter.Write(context, str, buffer, offset);
+		}
+	}
+
+	sealed class DateTimeOffsetFormatFieldWriter : FieldWriter
+	{
+		public static DateTimeOffsetFormatFieldWriter Instance = new();
+
+		public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
+		{
+			var reader = context.reader;
+			var writer = context.writer;
+			var culture = writer.culture;
+			var value = reader.GetFieldValue<DateTimeOffset>(ordinal);
+			var fmt = writer.dateTimeOffsetFormat ?? "O";
 #if SPAN
 			Span<char> str = stackalloc char[IsoDate.MaxDateLength];
 
