@@ -57,7 +57,7 @@ public sealed partial class CsvDataWriter
 		if (type == typeof(int))
 		{
 #if SPAN
-			return IsFastInt
+			return IsFastNumeric
 				? Int32FastFieldWriter.Instance
 				: Int32FieldWriter.Instance;
 #else
@@ -68,7 +68,7 @@ public sealed partial class CsvDataWriter
 		if (type == typeof(long))
 		{
 #if SPAN
-			return IsFastInt
+			return IsFastNumeric
 				? Int64FastFieldWriter.Instance
 				: Int64FieldWriter.Instance;
 #else
@@ -78,7 +78,7 @@ public sealed partial class CsvDataWriter
 		if (type == typeof(float))
 		{
 #if SPAN
-			return IsFastDouble
+			return IsFastNumeric
 				? SingleFastFieldWriter.Instance
 				: SingleFieldWriter.Instance;
 #else
@@ -89,7 +89,7 @@ public sealed partial class CsvDataWriter
 		if (type == typeof(double))
 		{
 #if SPAN
-			return IsFastDouble
+			return IsFastNumeric
 				? DoubleFastFieldWriter.Instance
 				: DoubleFieldWriter.Instance;
 #else
@@ -99,7 +99,7 @@ public sealed partial class CsvDataWriter
 		if (type == typeof(decimal))
 		{
 #if SPAN
-			return IsFastDecimal
+			return IsFastNumeric
 				? DecimalFastFieldWriter.Instance
 				: DecimalFieldWriter.Instance;
 #else
@@ -114,17 +114,14 @@ public sealed partial class CsvDataWriter
 
 		if (type == typeof(DateTime))
 		{
-			var fmt = this.dateTimeFormat;
 #if SPAN
 			if (IsFastDateTime)
 			{
-				return fmt == null
-					? DateTimeIsoFastFieldWriter.Instance
-					: DateTimeFormatFastFieldWriter.Instance;
+				return DateTimeIsoFastFieldWriter.Instance;
 			}
 			else
 			{
-				return fmt == null
+				return this.dateTimeFormat == null
 					? DateTimeIsoFieldWriter.Instance
 					: DateTimeFormatFieldWriter.Instance;
 			}
@@ -135,17 +132,14 @@ public sealed partial class CsvDataWriter
 
 		if (type == typeof(DateTimeOffset))
 		{
-			var fmt = this.dateTimeOffsetFormat;
 #if SPAN
 			if (IsFastDateTimeOffset)
 			{
-				return fmt == null
-					? DateTimeOffsetIsoFastFieldWriter.Instance
-					: DateTimeOffsetFormatFastFieldWriter.Instance;
+				return DateTimeOffsetIsoFastFieldWriter.Instance;
 			}
 			else
 			{
-				return fmt == null
+				return this.dateTimeOffsetFormat == null
 					? DateTimeOffsetIsoFieldWriter.Instance
 					: DateTimeOffsetFormatFieldWriter.Instance;
 			}
@@ -157,7 +151,7 @@ public sealed partial class CsvDataWriter
 		if (type == typeof(Guid))
 		{
 #if SPAN
-			return IsFastNumeric
+			return IsFastConfig
 				? GuidFastFieldWriter.Instance
 				: GuidFieldWriter.Instance;
 #else
@@ -200,15 +194,15 @@ public sealed partial class CsvDataWriter
 
 		if (type == typeof(DateOnly))
 		{
-			if (this.dateOnlyFormat == null)
+			if (IsFastDateOnly)
 			{
-				return IsFastDateOnly
-					? DateOnlyIsoFastFieldWriter.Instance
-					: DateOnlyIsoFieldWriter.Instance;
+				return DateOnlyIsoFastFieldWriter.Instance;
 			}
 			else
 			{
-				return DateOnlyFormatFieldWriter.Instance;
+				return this.dateOnlyFormat == null
+					? DateOnlyIsoFieldWriter.Instance
+					: DateOnlyFormatFieldWriter.Instance;
 			}
 		}
 
@@ -218,11 +212,11 @@ public sealed partial class CsvDataWriter
 			{
 				return IsFastTimeOnly
 					? TimeOnlyFastFieldWriter.Instance
-					: TimeOnlyFieldWriter.Instance;
+					: TimeOnlyFormatFieldWriter.Instance;
 			}
 			else
 			{
-				return TimeOnlyFieldWriter.Instance;
+				return TimeOnlyFormatFieldWriter.Instance;
 			}
 		}
 
@@ -318,28 +312,25 @@ public sealed partial class CsvDataWriter
 				)
 				&&
 				(
-				this.escape == '\\' ||
 				this.escape == '\"' ||
+				this.escape == '\\' ||
 				this.escape == '\'' ||
 				this.escape < ' '
 				);
 		}
 	}
 
-	bool IsFastNumeric => IsInvariantCulture && IsFastConfig;
-
-	bool IsFastDecimal => IsFastNumeric;
-
-	bool IsFastDouble => IsFastNumeric;
-
-	bool IsFastInt => IsFastNumeric;
+	bool IsFastNumeric =>
+		IsInvariantCulture &&
+		IsFastConfig;
 
 	bool IsFastDateTime
 	{
 		get
 		{
-			return IsInvariantCulture && IsFastConfig
-				&& this.dateTimeFormat == CsvDataWriterOptions.Default.DateTimeFormat;
+			return
+				IsFastNumeric &&
+				this.dateTimeFormat == null;
 		}
 	}
 
@@ -356,8 +347,9 @@ public sealed partial class CsvDataWriter
 	{
 		get
 		{
-			return IsInvariantCulture && IsFastConfig
-				&& this.timeSpanFormat == CsvDataWriterOptions.Default.TimeSpanFormat;
+			return
+				IsFastNumeric &&
+				this.timeSpanFormat == null;
 		}
 	}
 
@@ -367,8 +359,9 @@ public sealed partial class CsvDataWriter
 	{
 		get
 		{
-			return IsInvariantCulture && IsFastConfig
-				&& this.dateOnlyFormat == CsvDataWriterOptions.Default.DateOnlyFormat;
+			return
+				IsFastNumeric &&
+				this.dateOnlyFormat == null;
 		}
 	}
 
@@ -376,8 +369,9 @@ public sealed partial class CsvDataWriter
 	{
 		get
 		{
-			return IsInvariantCulture && IsFastConfig
-				&& this.timeOnlyFormat == CsvDataWriterOptions.Default.TimeOnlyFormat;
+			return
+				IsFastNumeric &&
+				this.timeOnlyFormat == null;
 		}
 	}
 
