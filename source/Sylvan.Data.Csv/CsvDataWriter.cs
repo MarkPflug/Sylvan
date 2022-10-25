@@ -114,7 +114,6 @@ public sealed partial class CsvDataWriter
 
 		if (type == typeof(DateTime))
 		{
-			var fmt = this.dateTimeFormat;
 #if SPAN
 			if (IsFastDateTime)
 			{
@@ -122,7 +121,7 @@ public sealed partial class CsvDataWriter
 			}
 			else
 			{
-				return fmt == null
+				return this.dateTimeFormat == null
 					? DateTimeIsoFieldWriter.Instance
 					: DateTimeFormatFieldWriter.Instance;
 			}
@@ -133,17 +132,14 @@ public sealed partial class CsvDataWriter
 
 		if (type == typeof(DateTimeOffset))
 		{
-			var fmt = this.dateTimeOffsetFormat;
 #if SPAN
 			if (IsFastDateTimeOffset)
 			{
-				return fmt == null
-					? DateTimeOffsetIsoFastFieldWriter.Instance
-					: DateTimeOffsetFormatFastFieldWriter.Instance;
+				return DateTimeOffsetIsoFastFieldWriter.Instance;
 			}
 			else
 			{
-				return fmt == null
+				return this.dateTimeOffsetFormat == null
 					? DateTimeOffsetIsoFieldWriter.Instance
 					: DateTimeOffsetFormatFieldWriter.Instance;
 			}
@@ -204,7 +200,7 @@ public sealed partial class CsvDataWriter
 			}
 			else
 			{
-				return this.dateTimeFormat == null
+				return this.dateOnlyFormat == null
 					? DateOnlyIsoFieldWriter.Instance
 					: DateOnlyFormatFieldWriter.Instance;
 			}
@@ -216,11 +212,11 @@ public sealed partial class CsvDataWriter
 			{
 				return IsFastTimeOnly
 					? TimeOnlyFastFieldWriter.Instance
-					: TimeOnlyFieldWriter.Instance;
+					: TimeOnlyFormatFieldWriter.Instance;
 			}
 			else
 			{
-				return TimeOnlyFieldWriter.Instance;
+				return TimeOnlyFormatFieldWriter.Instance;
 			}
 		}
 

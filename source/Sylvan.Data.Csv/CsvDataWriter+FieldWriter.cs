@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 
@@ -7,6 +8,11 @@ namespace Sylvan.Data.Csv;
 
 partial class CsvDataWriter
 {
+	// "Fast" writers can be used in scenarios where we know it is safe to write directly
+	// to the output buffer. This is possible when the CSV config doesn't use any odd characters
+	// and the format is default, and the invariant culture is used. Otherwise, quoting/escaping
+	// and allocation might be necessary
+
 	abstract class FieldWriter
 	{
 		public abstract int Write(WriterContext context, int ordinal, char[] buffer, int offset);
@@ -312,6 +318,7 @@ partial class CsvDataWriter
 	}
 
 #if SPAN
+
 	sealed class DateTimeIsoFieldWriter : FieldWriter
 	{
 		public static DateTimeIsoFieldWriter Instance = new();
@@ -320,13 +327,14 @@ partial class CsvDataWriter
 		{
 			var reader = context.reader;
 			var writer = context.writer;
-			var culture = writer.culture;
+
 			var value = reader.GetDateTime(ordinal);
 
 			Span<char> str = stackalloc char[IsoDate.MaxDateLength];
 			if (!IsoDate.TryFormatIso(value, str, out int len))
 			{
-				return InsufficientSpace;
+				// this should never happen.
+				throw new FormatException();
 			}
 			str = str[..len];
 			return writer.csvWriter.Write(context, str, buffer, offset);
@@ -341,18 +349,19 @@ partial class CsvDataWriter
 		{
 			var reader = context.reader;
 			var writer = context.writer;
-			var culture = writer.culture;
 			var value = reader.GetFieldValue<DateTimeOffset>(ordinal);
 
 			Span<char> str = stackalloc char[IsoDate.MaxDateLength];
 			if (!IsoDate.TryFormatIso(value, str, out int len))
 			{
-				return InsufficientSpace;
+				// this should never happen.
+				throw new FormatException();
 			}
 			str = str[..len];
 			return writer.csvWriter.Write(context, str, buffer, offset);
 		}
 	}
+
 #endif
 
 	sealed class DateTimeFormatFieldWriter : FieldWriter
@@ -365,21 +374,27 @@ partial class CsvDataWriter
 			var writer = context.writer;
 			var culture = writer.culture;
 			var value = reader.GetDateTime(ordinal);
+			// dateTimeFormat can be null here on ns2.0 (net4.8)
 			var fmt = writer.dateTimeFormat ?? "O";
 #if SPAN
+			// this buffer might not be sufficiently large.
 			Span<char> str = stackalloc char[IsoDate.MaxDateLength];
-
-			if (!value.TryFormat(str, out int len, fmt, culture))
+			if (value.TryFormat(str, out int len, fmt, culture))
 			{
-				return InsufficientSpace;
+				// we were able to format to the stack buffer
+				str = str[..len];
+				return writer.csvWriter.Write(context, str, buffer, offset);
 			}
-
-			str = str[..len];
-
+			else
+			{
+				// the stack buffer wasn't large enough, so allocate via ToString
+				var roStr = value.ToString(fmt, culture).AsSpan();
+				return writer.csvWriter.Write(context, roStr, buffer, offset);
+			}
 #else
 			var str = value.ToString(fmt, culture);
-#endif
 			return writer.csvWriter.Write(context, str, buffer, offset);
+#endif
 		}
 	}
 
@@ -393,21 +408,28 @@ partial class CsvDataWriter
 			var writer = context.writer;
 			var culture = writer.culture;
 			var value = reader.GetFieldValue<DateTimeOffset>(ordinal);
+
+			// dateTimeFormat can be null here on ns2.0 (net4.8)
 			var fmt = writer.dateTimeOffsetFormat ?? "O";
 #if SPAN
+			// this buffer might not be sufficiently large.
 			Span<char> str = stackalloc char[IsoDate.MaxDateLength];
-
-			if (!value.TryFormat(str, out int len, fmt, culture))
+			if (value.TryFormat(str, out int len, fmt, culture))
 			{
-				return InsufficientSpace;
+				// we were able to format to the stack buffer
+				str = str[..len];
+				return writer.csvWriter.Write(context, str, buffer, offset);
 			}
-
-			str = str[..len];
-
+			else
+			{
+				// the stack buffer wasn't large enough, so allocate via ToString
+				var roStr = value.ToString(fmt, culture).AsSpan();
+				return writer.csvWriter.Write(context, roStr, buffer, offset);
+			}
 #else
 			var str = value.ToString(fmt, culture);
-#endif
 			return writer.csvWriter.Write(context, str, buffer, offset);
+#endif
 		}
 	}
 
@@ -421,21 +443,26 @@ partial class CsvDataWriter
 			var writer = context.writer;
 			var culture = writer.culture;
 			var value = reader.GetFieldValue<TimeSpan>(ordinal);
-			var fmt = writer.timeSpanFormat;
+			var fmt = writer.timeSpanFormat ?? "c";
 #if SPAN
-
-			Span<char> str = stackalloc char[32];
-			if (!value.TryFormat(str, out int len, fmt, culture))
+			// this buffer might not be sufficiently large.
+			Span<char> str = stackalloc char[IsoDate.MaxDateLength];
+			if (value.TryFormat(str, out int len, fmt, culture))
 			{
-				throw new FormatException(); // this shouldn't happen
+				// we were able to format to the stack buffer
+				str = str[..len];
+				return writer.csvWriter.Write(context, str, buffer, offset);
 			}
-
-			str = str[..len];
-
+			else
+			{
+				// the stack buffer wasn't large enough, so allocate via ToString
+				var roStr = value.ToString(fmt, culture).AsSpan();
+				return writer.csvWriter.Write(context, roStr, buffer, offset);
+			}
 #else
 			var str = value.ToString(fmt, culture);
-#endif
 			return writer.csvWriter.Write(context, str, buffer, offset);
+#endif
 		}
 	}
 
@@ -449,11 +476,9 @@ partial class CsvDataWriter
 		public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
 		{
 			var reader = context.reader;
-			var writer = context.writer;
-			var culture = writer.culture;
 			var value = reader.GetInt32(ordinal);
 			var span = buffer.AsSpan(offset);
-			if (!value.TryFormat(span, out int len, default, culture))
+			if (!value.TryFormat(span, out int len, default, CultureInfo.InvariantCulture))
 			{
 				return InsufficientSpace;
 			}
@@ -468,34 +493,13 @@ partial class CsvDataWriter
 		public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
 		{
 			var reader = context.reader;
-			var writer = context.writer;
-			var culture = writer.culture;
 			var value = reader.GetInt64(ordinal);
 			var span = buffer.AsSpan(offset);
-			if (!value.TryFormat(span, out int len, default, culture))
+			if (!value.TryFormat(span, out int len, default, CultureInfo.InvariantCulture))
 			{
 				return InsufficientSpace;
 			}
 			return len;
-		}
-	}
-
-	sealed class DateTimeFormatFastFieldWriter : FieldWriter
-	{
-		public static DateTimeFormatFastFieldWriter Instance = new();
-
-		public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
-		{
-			var reader = context.reader;
-			var writer = context.writer;
-			var culture = writer.culture;
-			var value = reader.GetDateTime(ordinal);
-			var fmt = writer.dateTimeFormat;
-			var span = buffer.AsSpan(offset);
-			return
-				value.TryFormat(span, out int len, fmt, culture)
-				? len
-				: InsufficientSpace;
 		}
 	}
 
@@ -510,25 +514,6 @@ partial class CsvDataWriter
 			var span = buffer.AsSpan(offset);
 			return
 				IsoDate.TryFormatIso(value, span, out int len)
-				? len
-				: InsufficientSpace;
-		}
-	}
-
-	sealed class DateTimeOffsetFormatFastFieldWriter : FieldWriter
-	{
-		public static DateTimeOffsetFormatFastFieldWriter Instance = new();
-
-		public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
-		{
-			var reader = context.reader;
-			var writer = context.writer;
-			var culture = writer.culture;
-			var value = reader.GetFieldValue<DateTimeOffset>(ordinal);
-			var fmt = writer.dateTimeOffsetFormat;
-			var span = buffer.AsSpan(offset);
-			return
-				value.TryFormat(span, out int len, fmt, culture)
 				? len
 				: InsufficientSpace;
 		}
@@ -557,12 +542,9 @@ partial class CsvDataWriter
 		public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
 		{
 			var reader = context.reader;
-			var writer = context.writer;
-			var culture = writer.culture;
 			var value = reader.GetFieldValue<TimeSpan>(ordinal);
-			var fmt = writer.timeSpanFormat;
 			var span = buffer.AsSpan(offset);
-			if (!value.TryFormat(span, out int len, fmt, culture))
+			if (!value.TryFormat(span, out int len, default, CultureInfo.InvariantCulture))
 			{
 				return InsufficientSpace;
 			}
@@ -571,25 +553,6 @@ partial class CsvDataWriter
 	}
 
 #if NET6_0_OR_GREATER
-
-	sealed class DateOnlyFormatFastFieldWriter : FieldWriter
-	{
-		public static DateOnlyFormatFastFieldWriter Instance = new();
-
-		public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
-		{
-			var reader = context.reader;
-			var writer = context.writer;
-			var culture = writer.culture;
-			var value = reader.GetFieldValue<DateOnly>(ordinal);
-			var fmt = writer.dateOnlyFormat;
-			var span = buffer.AsSpan(offset);
-			return
-				value.TryFormat(span, out int len, fmt, culture)
-				? len
-				: InsufficientSpace;
-		}
-	}
 
 	sealed class DateOnlyIsoFastFieldWriter : FieldWriter
 	{
@@ -606,6 +569,26 @@ partial class CsvDataWriter
 		}
 	}
 
+	sealed class DateOnlyIsoFieldWriter : FieldWriter
+	{
+		public static DateOnlyIsoFieldWriter Instance = new();
+
+		public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
+		{
+			var reader = context.reader;
+			var writer = context.writer;
+			var value = reader.GetFieldValue<DateOnly>(ordinal);
+			Span<char> str = stackalloc char[IsoDate.MaxDateOnlyLength];
+			if (!IsoDate.TryFormatIso(value, str, out int len))
+			{
+				// this should never happen.
+				throw new FormatException();
+			}
+			str = str[..len];
+			return writer.csvWriter.Write(context, str, buffer, offset);
+		}
+	}
+
 	sealed class DateOnlyFormatFieldWriter : FieldWriter
 	{
 		public static DateOnlyFormatFieldWriter Instance = new();
@@ -617,33 +600,20 @@ partial class CsvDataWriter
 			var culture = writer.culture;
 			var value = reader.GetFieldValue<DateOnly>(ordinal);
 			var fmt = writer.dateOnlyFormat;
+			// this buffer might not be sufficiently large.
 			Span<char> str = stackalloc char[IsoDate.MaxDateLength];
-			if (!value.TryFormat(str, out int len, fmt, culture))
+			if (value.TryFormat(str, out int len, fmt, culture))
 			{
-				return InsufficientSpace;
+				// we were able to format to the stack buffer
+				str = str[..len];
+				return writer.csvWriter.Write(context, str, buffer, offset);
 			}
-			str = str[..len];
-			return writer.csvWriter.Write(context, str, buffer, offset);
-		}
-	}
-
-	sealed class DateOnlyIsoFieldWriter : FieldWriter
-	{
-		public static DateOnlyIsoFieldWriter Instance = new();
-
-		public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
-		{
-			var reader = context.reader;
-			var writer = context.writer;
-			var culture = writer.culture;
-			var value = reader.GetFieldValue<DateOnly>(ordinal);
-			Span<char> str = stackalloc char[IsoDate.MaxDateOnlyLength];
-			if (!IsoDate.TryFormatIso(value, str, out int len))
+			else
 			{
-				return InsufficientSpace;
+				// the stack buffer wasn't large enough, so allocate via ToString
+				var roStr = value.ToString(fmt, culture).AsSpan();
+				return writer.csvWriter.Write(context, roStr, buffer, offset);
 			}
-			str = str[..len];
-			return writer.csvWriter.Write(context, str, buffer, offset);
 		}
 	}
 
@@ -654,12 +624,9 @@ partial class CsvDataWriter
 		public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
 		{
 			var reader = context.reader;
-			var writer = context.writer;
-			var culture = writer.culture;
 			var value = reader.GetFieldValue<TimeOnly>(ordinal);
-			var fmt = writer.timeOnlyFormat;
 			var span = buffer.AsSpan(offset);
-			if (!value.TryFormat(span, out int len, fmt, culture))
+			if (!value.TryFormat(span, out int len, default, CultureInfo.InvariantCulture))
 			{
 				return InsufficientSpace;
 			}
@@ -667,25 +634,30 @@ partial class CsvDataWriter
 		}
 	}
 
-	sealed class TimeOnlyFieldWriter : FieldWriter
+	sealed class TimeOnlyFormatFieldWriter : FieldWriter
 	{
-		public static TimeOnlyFieldWriter Instance = new();
+		public static TimeOnlyFormatFieldWriter Instance = new();
 
 		public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
 		{
 			var reader = context.reader;
 			var writer = context.writer;
 			var culture = writer.culture;
-			var value = reader.GetDateTime(ordinal);
+			var value = reader.GetFieldValue<TimeOnly>(ordinal);
 			var fmt = writer.timeOnlyFormat;
-			Span<char> span = stackalloc char[32];
-			if (!value.TryFormat(span, out int len, fmt, culture))
+			Span<char> str = stackalloc char[IsoDate.MaxDateLength];
+			if (value.TryFormat(str, out int len, fmt, culture))
 			{
-				throw new FormatException(); // this shouldn't happen
+				// we were able to format to the stack buffer
+				str = str[..len];
+				return writer.csvWriter.Write(context, str, buffer, offset);
 			}
-
-			span = span[..len];
-			return writer.csvWriter.Write(context, span, buffer, offset);
+			else
+			{
+				// the stack buffer wasn't large enough, so allocate via ToString
+				var roStr = value.ToString(fmt, culture).AsSpan();
+				return writer.csvWriter.Write(context, roStr, buffer, offset);
+			}
 		}
 	}
 
@@ -757,11 +729,9 @@ partial class CsvDataWriter
 		public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
 		{
 			var reader = context.reader;
-			var writer = context.writer;
-			var culture = writer.culture;
 			var value = reader.GetFloat(ordinal);
 			var span = buffer.AsSpan(offset);
-			if (!value.TryFormat(span, out int len, default, culture))
+			if (!value.TryFormat(span, out int len, default, CultureInfo.InvariantCulture))
 			{
 				return InsufficientSpace;
 			}
@@ -776,11 +746,9 @@ partial class CsvDataWriter
 		public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
 		{
 			var reader = context.reader;
-			var writer = context.writer;
-			var culture = writer.culture;
 			var value = reader.GetDouble(ordinal);
 			var span = buffer.AsSpan(offset);
-			if (!value.TryFormat(span, out int len, default, culture))
+			if (!value.TryFormat(span, out int len, default, CultureInfo.InvariantCulture))
 			{
 				return InsufficientSpace;
 			}
@@ -795,11 +763,9 @@ partial class CsvDataWriter
 		public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
 		{
 			var reader = context.reader;
-			var writer = context.writer;
-			var culture = writer.culture;
 			var value = reader.GetDecimal(ordinal);
 			var span = buffer.AsSpan(offset);
-			if (!value.TryFormat(span, out int len, default, culture))
+			if (!value.TryFormat(span, out int len, default, CultureInfo.InvariantCulture))
 			{
 				return InsufficientSpace;
 			}
