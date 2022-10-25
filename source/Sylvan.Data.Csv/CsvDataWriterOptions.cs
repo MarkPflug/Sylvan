@@ -67,7 +67,7 @@ public sealed class CsvDataWriterOptions
 	public string? DateTimeFormat { get; set; }
 
 	/// <summary>
-	/// The format string used when writing DateTime values. The default is \"O\".
+	/// The format string used when writing DateTimeOffset values. The default is \"O\".
 	/// </summary>
 	public string? DateTimeOffsetFormat { get; set; }
 
