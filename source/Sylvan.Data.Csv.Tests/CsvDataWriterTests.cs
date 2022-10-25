@@ -16,10 +16,10 @@ public class CsvDataWriterTests
 	// a culture that uses ',' for numeric decimal separator
 	static readonly CultureInfo ItalianCulture = CultureInfo.GetCultureInfoByIetfLanguageTag("it-IT");
 
-	static string GetCsv<T>(IEnumerable<T> data) where T : class
+	static string GetCsv<T>(IEnumerable<T> data, CsvDataWriterOptions opts = null) where T : class
 	{
 		var dr = data.AsDataReader();
-		return GetCsv(dr);
+		return GetCsv(dr, opts);
 	}
 
 	static string GetCsv(DbDataReader dr, CsvDataWriterOptions opts = null)
@@ -203,6 +203,34 @@ public class CsvDataWriterTests
 			var expected = data[idx];
 			var result = csv.GetDateTime(0);
 			Assert.Equal(expected.Date.ToUniversalTime(), result.ToUniversalTime());
+			idx++;
+		}
+	}
+
+	[Theory]
+	[InlineData("MM/dd/yyyy HH:mm:ss")]
+	// format that contains a comma
+	[InlineData("ddd',' MMM dd yyyy hh:mm:ss t")]
+	// a format string that produces a string that is longer than the IsoDate.MaxLength
+	[InlineData("'long prefix 'yyyy-MM-dd' 'HH:mm:ss.fffffffZ' long suffix'")]
+	public void WriteDateTimeCustomFormat(string fmt)
+	{
+		var data = new[]
+			{
+				new { Date = new DateTime(2021, 2, 6, 0, 0, 0) },
+				new { Date = new DateTime(2021, 2, 6, 1, 2, 3) },
+			};
+		var opts = new CsvDataWriterOptions { DateTimeFormat = fmt };
+		var csvStr = GetCsv(data, opts);
+
+		var ropts = new CsvDataReaderOptions { DateTimeFormat = fmt };
+		var csv = CsvDataReader.Create(new StringReader(csvStr), ropts);
+		var idx = 0;
+		while (csv.Read())
+		{
+			var expected = data[idx];
+			var result = csv.GetDateTime(0);
+			Assert.Equal(expected.Date, result);
 			idx++;
 		}
 	}
