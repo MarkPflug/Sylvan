@@ -8,8 +8,8 @@ using System.Threading.Tasks;
 
 namespace Sylvan.Data;
 
-static partial class DataExtensions {
-
+static partial class DataExtensions
+{
 	/// <summary>
 	/// Write a data set to a UTF-8 encoded JSON stream;
 	/// </summary>
@@ -39,23 +39,25 @@ static partial class DataExtensions {
 	/// <returns>The number of records written.</returns>
 	public static async Task<long> WriteJsonAsync(this DbDataReader data, Stream stream)
 	{
-		using var writer = new Utf8JsonWriter(stream);
-
-		writer.WriteStartArray();
-		long count = 0;
-
-		var names = GetNames(data);
-
-		while (await data.ReadAsync().ConfigureAwait(false))
+		var writer = new Utf8JsonWriter(stream);
+		await using (writer.ConfigureAwait(false))
 		{
-			count++;
-			WriteRecord(data, names, writer);
-			await writer.FlushAsync().ConfigureAwait(false);
-		}
+			writer.WriteStartArray();
+			long count = 0;
 
-		writer.WriteEndArray();
-		await writer.FlushAsync().ConfigureAwait(false);
-		return count;
+			var names = GetNames(data);
+
+			while (await data.ReadAsync().ConfigureAwait(false))
+			{
+				count++;
+				WriteRecord(data, names, writer);
+				await writer.FlushAsync().ConfigureAwait(false);
+			}
+
+			writer.WriteEndArray();
+			await writer.FlushAsync().ConfigureAwait(false);
+			return count;
+		}
 	}
 
 	static JsonEncodedText[] GetNames(DbDataReader data)

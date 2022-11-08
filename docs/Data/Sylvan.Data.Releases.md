@@ -1,5 +1,8 @@
 # Sylvan.Data.Csv Release Notes
 
+_0.2.8_
+- Fix DbDataWriter.WriteJsonAsync to properly async dispose the writer.
+
 _0.2.7_
 - Adds `IAsyncEnumerable<T>.AsDataReader()` extension.
 - Adds `DbDataReader.WriteJson(Stream)` extension.
