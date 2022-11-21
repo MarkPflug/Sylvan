@@ -58,7 +58,10 @@ partial class CsvDataReader
 		return csv;
 	}
 
-	bool Initialize()
+	/// <summary>
+	/// Initializes the CsvDataReader
+	/// </summary>
+	public bool Initialize()
 	{
 		return this.InitializeAsync().GetAwaiter().GetResult();
 	}
@@ -169,11 +172,12 @@ partial class CsvDataReader
 		if (this.state == State.Open)
 		{
 			var success = this.NextRecord();
-			if (this.resultSetMode == ResultSetMode.MultiResult && this.curFieldCount != this.fieldCount)
+			if (!success || (this.resultSetMode == ResultSetMode.MultiResult && this.curFieldCount != this.fieldCount))
 			{
 				this.curFieldCount = 0;
 				this.idx = recordStart;
 				this.state = State.End;
+				this.rowNumber = -1;
 				return false;
 			}
 			return success;

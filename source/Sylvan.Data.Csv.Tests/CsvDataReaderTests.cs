@@ -1622,6 +1622,52 @@ public class CsvDataReaderTests
 		Assert.Equal(5, edr.GetOrdinal("Value"));
 	}
 
+	[Fact]
+	public void Initialize()
+	{
+		var data = new StringReader("some text\nmore text\na,b,c\n1,2,3\n");
+		var s = Schema.Parse("a:int,b:int,c:int");
+		var opts = new CsvDataReaderOptions { Schema = new CsvSchema(s) };
+		var reader = CsvDataReader.Create(data, opts);
+		//Assert.Equal(3, reader.FieldCount);
+		Assert.True(reader.Read());
+		Assert.Equal(1, reader.RowFieldCount);
+		Assert.True(reader.Read());
+		reader.Initialize();
+
+		var schema = reader.GetColumnSchema();
+
+		Assert.Equal(3, schema.Count);
+		Assert.Equal(typeof(int), schema[0].DataType);
+		Assert.Equal(typeof(int), schema[1].DataType);
+		Assert.Equal(typeof(int), schema[2].DataType);
+
+		Assert.Equal(3, reader.FieldCount);
+		Assert.True(reader.Read());
+		Assert.Equal(1, reader.GetInt32(0));
+		Assert.Equal(2, reader.GetInt32(1));
+		Assert.Equal(3, reader.GetInt32(2));
+
+		Assert.False(reader.Read());
+	}
+
+	[Fact]
+	public void MultiResultRowNumber()
+	{
+		var data = new StringReader("a,b,c\n1,2,3\n\nx,y,z\n4,5,6\n");
+		var opts = new CsvDataReaderOptions { ResultSetMode = ResultSetMode.MultiResult };
+		var reader = CsvDataReader.Create(data, opts);
+		Assert.True(reader.Read());
+		Assert.Equal(1, reader.RowNumber);
+		Assert.False(reader.Read());
+		Assert.Equal(-1, reader.RowNumber);
+		Assert.True(reader.NextResult());
+		Assert.True(reader.Read());
+		Assert.Equal(1, reader.RowNumber);
+		Assert.False(reader.Read());
+		Assert.Equal(-1, reader.RowNumber);
+	}
+
 #if NET6_0_OR_GREATER
 
 	[Fact]

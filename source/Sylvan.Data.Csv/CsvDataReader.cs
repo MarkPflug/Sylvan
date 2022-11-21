@@ -72,11 +72,18 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 
 	enum State
 	{
+		// the initial state when the reader is created.
 		None = 0,
-		Initializing,
+		// the state when the reader is initialized
+		// meaning that the next record is already in the buffer
+		// so the next call to Read will be a no-op.
 		Initialized,
+		// the normal state when the next call to Read will process the next record.
 		Open,
+		// the state when the end of the record set is reached
+		// not necessarily the end of the file when in multi-result set mode.
 		End,
+		// the state when the reader has bee closed/disposed.
 		Closed,
 	}
 

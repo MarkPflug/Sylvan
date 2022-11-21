@@ -74,9 +74,8 @@ partial class CsvDataReader
 		return false;
 	}
 
-	async Task<bool> InitializeAsync(CancellationToken cancel = default)
+	public async Task<bool> InitializeAsync(CancellationToken cancel = default)
 	{
-		state = State.Initializing;
 		await FillBufferAsync(cancel).ConfigureAwait(false);
 
 		bool skip = resultSetMode == ResultSetMode.MultiResult;
@@ -116,7 +115,7 @@ partial class CsvDataReader
 		// read them, and use them to determine fieldCount.
 		if (hasHeaders)
 		{
-			if (carryRow || await NextRecordAsync(cancel).ConfigureAwait(false))
+			if (carryRow || state == State.Open || await NextRecordAsync(cancel).ConfigureAwait(false))
 			{
 				carryRow = false;
 				this.fieldCount = this.curFieldCount;
@@ -149,6 +148,7 @@ partial class CsvDataReader
 			InitializeSchema();
 			return fieldCount != 0;
 		}
+		this.rowNumber = 0;
 
 		return true;
 	}
@@ -258,11 +258,12 @@ partial class CsvDataReader
 		if (this.state == State.Open)
 		{
 			var success = await this.NextRecordAsync(cancellationToken).ConfigureAwait(false);
-			if (this.resultSetMode == ResultSetMode.MultiResult && this.curFieldCount != this.fieldCount)
+			if (!success || this.resultSetMode == ResultSetMode.MultiResult && this.curFieldCount != this.fieldCount)
 			{
 				this.curFieldCount = 0;
 				this.idx = recordStart;
 				this.state = State.End;
+				this.rowNumber = -1;
 				return false;
 			}
 			return success;
