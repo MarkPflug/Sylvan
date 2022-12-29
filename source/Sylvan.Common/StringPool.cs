@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace Sylvan;
 
@@ -17,10 +18,9 @@ public sealed partial class StringPool
 	// and accepts char[] instead of string.
 
 	// An extremely simple, and hopefully fast, hash algorithm.
-	static uint GetHashCode(char[] buffer, int offset, int length)
+	static uint GetHashCode(ReadOnlySpan<char> buffer, int offset, int length)
 	{
 		uint hash = 0;
-		var o = offset;
 		for (int i = 0; i < length; i++)
 		{
 			hash = hash * 31 + buffer[offset++];
@@ -89,16 +89,30 @@ public sealed partial class StringPool
 	/// </summary>
 	public string GetString(char[] buffer, int offset, int length)
 	{
+		return GetString(buffer.AsSpan().Slice(offset, length));
+	}
+
+	/// <summary>
+	/// Gets a string containing the characters in the input buffer.
+	/// </summary>
+	public string GetString(ReadOnlySpan<char> buffer)
+	{
+		var length = buffer.Length;
+
 		if (buffer == null) throw new ArgumentNullException(nameof(buffer));
 		if (length == 0) return string.Empty;
 		if (length > stringSizeLimit)
 		{
 			this.skipLen += length;
-			return new string(buffer, offset, length);
+#if !NETSTANDARD2_0
+			return new string(buffer);
+#else
+			return GetStringUnsafe(buffer);
+#endif
 		}
 
 		var entries = this.entries;
-		var hashCode = GetHashCode(buffer, offset, length);
+		var hashCode = GetHashCode(buffer, 0, length);
 
 		uint collisionCount = 0;
 		ref int bucket = ref GetBucket(hashCode);
@@ -107,7 +121,7 @@ public sealed partial class StringPool
 		while ((uint)i < (uint)entries.Length)
 		{
 			ref var e = ref entries[i];
-			if (e.hashCode == hashCode && MemoryExtensions.Equals(buffer.AsSpan().Slice(offset, length), e.str.AsSpan(), StringComparison.Ordinal))
+			if (e.hashCode == hashCode && MemoryExtensions.Equals(buffer, e.str.AsSpan(), StringComparison.Ordinal))
 			{
 				e.count++;
 				this.dupeLen += length;
@@ -121,7 +135,11 @@ public sealed partial class StringPool
 			{
 				// protects against malicious inputs
 				// too many collisions give up and let the caller create the string.					
-				return new string(buffer, offset, length);
+#if !NETSTANDARD2_0
+				return new string(buffer);
+#else
+				return GetStringUnsafe(buffer);
+#endif
 			}
 		}
 
@@ -134,7 +152,12 @@ public sealed partial class StringPool
 		int index = count;
 		this.count = count + 1;
 
-		var stringValue = new string(buffer, offset, length);
+		var stringValue =
+#if !NETSTANDARD2_0
+				 new string(buffer);
+#else
+				 GetStringUnsafe(buffer);
+#endif
 
 		ref Entry entry = ref entries![index];
 		this.uniqueLen += length;
@@ -178,6 +201,15 @@ public sealed partial class StringPool
 	{
 		int[] buckets = this.buckets;
 		return ref buckets[hashCode & ((uint)buckets.Length - 1)];
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	static unsafe string GetStringUnsafe(ReadOnlySpan<char> buffer)
+	{
+		fixed (char* pValue = &buffer.GetPinnableReference())
+		{
+			return new string(pValue, 0, buffer.Length);
+		}
 	}
 
 	struct Entry
