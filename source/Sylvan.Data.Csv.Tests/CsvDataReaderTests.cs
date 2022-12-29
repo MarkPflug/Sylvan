@@ -394,8 +394,7 @@ public class CsvDataReaderTests
 
 	sealed class FixHeaders : CsvSchemaProvider
 	{
-
-		HashSet<string> h;
+		readonly HashSet<string> h;
 
 		public FixHeaders()
 		{
@@ -1580,8 +1579,9 @@ public class CsvDataReaderTests
 	public void BufferGrow()
 	{
 		var data = new StringReader(new string(',', 0xc0));
-		var opts = new CsvDataReaderOptions {
-			BufferSize = 0x80, 
+		var opts = new CsvDataReaderOptions
+		{
+			BufferSize = 0x80,
 			MaxBufferSize = 0x100,
 			HasHeaders = false,
 		};
@@ -1638,8 +1638,9 @@ public class CsvDataReaderTests
 	public void DateOnlyFormatsSchema()
 	{
 		var schema = Schema.Parse("a:int,b:date{ddMMyyyy}");
-		var opts = new CsvDataReaderOptions { 
-			Schema = new CsvSchema(schema) 
+		var opts = new CsvDataReaderOptions
+		{
+			Schema = new CsvSchema(schema)
 		};
 		var data = "a,b\n1,30062022";
 		var csv = CsvDataReader.Create(new StringReader(data), opts);
@@ -1650,8 +1651,9 @@ public class CsvDataReaderTests
 	[Fact]
 	public void DateOnlyFormatsGlobal()
 	{
-		var opts = new CsvDataReaderOptions { 
-			DateOnlyFormat = "ddMMyyyy" 
+		var opts = new CsvDataReaderOptions
+		{
+			DateOnlyFormat = "ddMMyyyy"
 		};
 		var data = "a,b\n1,30062022";
 		var csv = CsvDataReader.Create(new StringReader(data), opts);
@@ -1671,7 +1673,7 @@ public class CsvDataReaderTests
 	[Fact]
 	public void GetValueDateOnly()
 	{
-		var schema = 
+		var schema =
 			new Schema.Builder()
 			.Add<String>("a")
 			.Add<DateOnly>("b")
@@ -1693,6 +1695,70 @@ public class CsvDataReaderTests
 		Assert.Equal(new TimeOnly(14, 12, 11, 555), csv.GetFieldValue<TimeOnly>(1));
 	}
 
-#endif
+	[Fact]
+	public void DateOnlyBind()
+	{
+		var data = "Name,Date\na,\"24/12/2022\"\nb,\"25/12/2022\"\n";
 
+		var schema =
+			new Schema.Builder()
+			.Add<string>("Name")
+			.Add<DateOnly>("Date")
+			// etc
+			.Build();
+
+		var opts = new CsvDataReaderOptions
+		{
+			DateOnlyFormat = "dd/MM/yyyy",
+			Schema = new CsvSchema(schema)
+		};
+
+		using var csv = CsvDataReader.Create(new StringReader(data), opts);
+		var records = csv.GetRecords<DateOnlyRecord>().ToList();
+		Assert.Equal(new DateOnly(2022, 12, 24), records[0].Date);
+		Assert.Equal(new DateOnly(2022, 12, 25), records[1].Date);
+	}
+
+	[Fact]
+	public void DateOnlyBindInfer()
+	{
+		var data = "Name,Date\na,\"24/12/2022\"\nb,\"25/12/2022\"\n";
+
+		var opts = new CsvDataReaderOptions
+		{
+			DateOnlyFormat = "dd/MM/yyyy",
+		};
+
+		using var csv = CsvDataReader.Create(new StringReader(data), opts);
+		var records = csv.GetRecordsInfer<DateOnlyRecord>().ToList();
+		Assert.Equal(new DateOnly(2022, 12, 24), records[0].Date);
+		Assert.Equal(new DateOnly(2022, 12, 25), records[1].Date);
+	}
+
+	public class DateOnlyRecord
+	{
+		public string Name { get; set; }
+		public DateOnly Date { get; set; }
+	}
+
+#endif
+}
+
+static class Extension
+{
+	public static IEnumerable<T> GetRecordsInfer<T>(this DbDataReader data)
+		where T : class, new()
+	{
+		var opts = new DataBinderOptions
+		{
+			InferColumnTypeFromMember = true
+		};
+		var binder = DataBinder.Create<T>(data, opts);
+		while (data.Read())
+		{
+			var record = new T();
+			binder.Bind(data, record);
+			yield return record;
+		}
+	}
 }

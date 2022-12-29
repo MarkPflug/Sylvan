@@ -465,6 +465,15 @@ sealed class CompiledDataBinder<T>
 		if (propertyType.IsEnum || propertyType == typeof(DateTimeOffset))
 			return propertyType;
 
+#if NET6_0_OR_GREATER
+
+		if (propertyType == typeof(DateOnly) || propertyType == typeof(TimeOnly))
+		{
+			return propertyType;
+		}
+
+#endif
+
 		if (Type.GetTypeCode(propertyType) == TypeCode.Object)
 		{
 			if (propertyType == typeof(Guid))
