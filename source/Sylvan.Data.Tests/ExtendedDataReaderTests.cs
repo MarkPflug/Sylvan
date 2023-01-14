@@ -44,8 +44,7 @@ namespace Sylvan.Data
 
 		static bool IsNullString(DbDataReader r, int idx)
 		{
-			var csv = (CsvDataReader)r;
-			var s = csv.GetString(idx);
+			var s = r.GetString(idx);
 			return StringComparer.OrdinalIgnoreCase.Equals("null", s);
 		}
 	}
