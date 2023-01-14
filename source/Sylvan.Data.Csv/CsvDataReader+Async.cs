@@ -53,7 +53,7 @@ partial class CsvDataReader
 		options ??= CsvDataReaderOptions.Default;
 		if (reader == null) throw new ArgumentNullException(nameof(reader));
 		var csv = new CsvDataReader(reader, buffer, options);
-		if (!await csv.InitializeAsync().ConfigureAwait(false) && options.HasHeaders)
+		if (!await csv.InitializeReaderAsync().ConfigureAwait(false) && options.HasHeaders)
 		{
 			throw new CsvMissingHeadersException();
 		}
@@ -74,7 +74,7 @@ partial class CsvDataReader
 		return false;
 	}
 
-	public async Task<bool> InitializeAsync(CancellationToken cancel = default)
+	async Task<bool> InitializeReaderAsync(CancellationToken cancel = default)
 	{
 		await FillBufferAsync(cancel).ConfigureAwait(false);
 
@@ -118,10 +118,9 @@ partial class CsvDataReader
 			if (carryRow || state == State.Open || await NextRecordAsync(cancel).ConfigureAwait(false))
 			{
 				carryRow = false;
-				this.fieldCount = this.curFieldCount;
-				InitializeSchema();
-				var hasNext = await NextRecordAsync(cancel).ConfigureAwait(false);
+				Initialize();
 				this.state = State.Initialized;
+				var hasNext = await NextRecordAsync(cancel).ConfigureAwait(false);
 				if (resultSetMode == ResultSetMode.SingleResult)
 				{
 					this.hasRows = hasNext;
@@ -144,8 +143,7 @@ partial class CsvDataReader
 			// and support calling HasRows before Read is first called.
 			this.hasRows = carryRow || await NextRecordAsync(cancel).ConfigureAwait(false);
 			this.carryRow = false;
-			this.fieldCount = this.curFieldCount;
-			InitializeSchema();
+			Initialize();
 			return fieldCount != 0;
 		}
 		this.rowNumber = 0;
@@ -290,7 +288,7 @@ partial class CsvDataReader
 	public override async Task<bool> NextResultAsync(CancellationToken cancellationToken)
 	{
 		while (await ReadAsync(cancellationToken).ConfigureAwait(false)) ;
-		return await InitializeAsync(cancellationToken).ConfigureAwait(false);
+		return await InitializeReaderAsync(cancellationToken).ConfigureAwait(false);
 	}
 
 #if NETSTANDARD2_1

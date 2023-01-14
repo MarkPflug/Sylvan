@@ -237,10 +237,14 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		return AutoDetectDelimiters[maxIdx];
 	}
 
-	void InitializeSchema()
+	/// <summary>
+	/// Initializes the schema starting with the current row.
+	/// </summary>
+	public void Initialize()
 	{
-		var count = schema?.GetFieldCount(this) ?? this.fieldCount;
+		var count = schema?.GetFieldCount(this) ?? this.curFieldCount;
 		columns = new CsvColumn[count];
+		this.fieldCount = count;
 		for (int i = 0; i < count; i++)
 		{
 			var name = hasHeaders ? GetString(i) : null;
@@ -263,7 +267,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 				}
 			}
 		}
-		this.state = State.Initialized;
+		this.state = hasHeaders ? State.Open : State.Initialized;
 	}
 
 #if INTRINSICS
