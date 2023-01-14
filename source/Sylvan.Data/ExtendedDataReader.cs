@@ -68,8 +68,8 @@ public class CustomDataColumn<T> : IDataColumn
 	{
 		return
 			this.AllowNull
-			? false
-			: GetValue(reader) == DBNull.Value;
+			? GetValue(reader) == DBNull.Value
+			: false;
 	}
 
 	/// <inheritdoc/>

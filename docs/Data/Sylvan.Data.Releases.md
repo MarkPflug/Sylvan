@@ -1,5 +1,11 @@
 # Sylvan.Data.Csv Release Notes
 
+_0.2.10_
+- Fixes a bug with `WithColumns` extension method handling of nullable columns.
+
+_0.2.9_
+- Fix DataBinder issue when binding DateOnly/TimeOnly properties.
+
 _0.2.8_
 - Fix DbDataWriter.WriteJsonAsync to properly async dispose the writer.
 

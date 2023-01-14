@@ -1075,7 +1075,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		return TimeSpan.Parse(span, culture);
 #else
 		var str = this.GetString(ordinal);
-		if(format != null && TimeSpan.TryParseExact(str, format, culture, style, out var value))
+		if (format != null && TimeSpan.TryParseExact(str, format, culture, style, out var value))
 		{
 			return value;
 		}
@@ -1104,7 +1104,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		return DateTimeOffset.Parse(span, culture, style);
 #else
 		var str = this.GetString(ordinal);
-		if(format != null && DateTimeOffset.TryParseExact(str, format, culture, style, out value))
+		if (format != null && DateTimeOffset.TryParseExact(str, format, culture, style, out value))
 		{
 			return value;
 		}
@@ -1130,7 +1130,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		return DateTime.Parse(span, culture, style);
 #else
 		var dateStr = this.GetString(ordinal);
-		
+
 		var format = columns[ordinal].Format ?? this.dateTimeFormat ?? "O";
 		if (format != null && DateTime.TryParseExact(dateStr, format, culture, style, out value))
 		{
@@ -1521,7 +1521,9 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override bool IsDBNull(int ordinal)
 	{
-		if (ordinal < this.fieldCount)
+		if (ordinal < 0) throw new ArgumentOutOfRangeException(nameof(ordinal));
+
+		if ((uint)ordinal < this.fieldCount)
 		{
 			var col = columns[ordinal];
 
@@ -1544,14 +1546,20 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		var infos = fieldInfos;
 		ref var fi = ref infos[ordinal];
 
-		if (fi.quoteState != QuoteState.Unquoted)
-		{
-			// never consider quoted fields as null
-			return false;
-		}
-
 		var startIdx = recordStart + (ordinal == 0 ? 0 : infos[ordinal - 1].endIdx + 1);
 		var endIdx = recordStart + fi.endIdx;
+
+		if (fi.quoteState == QuoteState.Quoted)
+		{
+			var col = ordinal < this.fieldCount ? columns[ordinal] : null;
+			if (col?.DataType != typeof(string))
+			{
+				var len = endIdx - startIdx;
+				// 2 characters, empty quotes.
+				return len == 2;
+			}
+		}
+
 		var buf = this.buffer;
 
 		// if the entire field is whitespace, consider it null.

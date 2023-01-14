@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<TargetFrameworks>netstandard2.0;netstandard2.1;net6.0</TargetFrameworks>
-		<VersionPrefix>0.2.8</VersionPrefix>
+		<VersionPrefix>0.2.9</VersionPrefix>
 		<Description>A .NET library of types for working with data objects.</Description>
 		<PackageTags>data;datareader;ADO.NET</PackageTags>
 		<Nullable>enable</Nullable>
