@@ -1559,6 +1559,28 @@ public class CsvDataReaderTests
 	}
 
 	[Fact]
+	public void DateFormat()
+	{
+		var data = "a,b\n01/02/03,01/02/03";
+
+		var schema = Schema.Parse("a>Start:DateTime{MM/dd/yy},b>End:DateTime{dd/MM/yy}");
+		var opts = new CsvDataReaderOptions { 
+			Schema = new CsvSchema(schema) };
+		var csv = CsvDataReader.Create(new StringReader(data), opts);
+
+		var records = csv.GetRecords<TestRecord>().ToList();
+
+		Assert.Equal(new DateTime(2003, 1, 2), records[0].Start);
+		Assert.Equal(new DateTime(2003, 2, 1), records[0].End);
+	}
+
+	class TestRecord
+	{
+		public DateTime Start { get; set; }
+		public DateTime End { get; set; }
+	}
+
+	[Fact]
 	public void NumbersAsBoolean()
 	{
 		var data = "a,b\n0,1\n1,2";
@@ -1620,6 +1642,57 @@ public class CsvDataReaderTests
 		Assert.Equal(1, edr.GetOrdinal("Name"));
 		Assert.Equal(3, edr.GetOrdinal("Date"));
 		Assert.Equal(5, edr.GetOrdinal("Value"));
+	}
+
+	[Fact]
+	public void QuotedFieldsNonNullable()
+	{
+		var data = new StringReader("a,b\n\"1\",\"\"\n");
+		// schema defaults to non-nullable strings.
+		var edr = CsvDataReader.Create(data);
+		Assert.True(edr.Read());
+
+		Assert.Equal(1, edr.GetInt32(0));
+		Assert.Equal("1", edr.GetString(0));
+		Assert.False(edr.IsDBNull(0));
+
+		Assert.Throws<FormatException>(() => edr.GetInt32(1));
+		Assert.Equal("", edr.GetString(1));
+		Assert.False(edr.IsDBNull(1));
+
+
+		Assert.False(edr.Read());
+	}
+
+	[Fact]
+	public void QuotedFieldsNullable()
+	{
+		var data = new StringReader("a,b\n\"1\",\"\"\n");
+		var opts = new CsvDataReaderOptions { Schema = CsvSchema.Nullable };
+		var edr = CsvDataReader.Create(data, opts);
+		Assert.True(edr.Read());
+		Assert.Equal(1, edr.GetInt32(0));
+		Assert.Equal("1", edr.GetString(0));
+		Assert.False(edr.IsDBNull(0));
+
+		Assert.Equal("", edr.GetString(1));
+		Assert.False(edr.IsDBNull(1));
+
+		Assert.False(edr.Read());
+	}
+
+	[Fact]
+	public void EmptyQuotedFieldAsNullInt()
+	{
+		var data = new StringReader("a,b\n\"1\",\"\"\n");
+		var s = Schema.Parse(":int?,:int?");
+		var schema = new CsvSchema(s);
+		var opts = new CsvDataReaderOptions { Schema = schema };
+		var edr = CsvDataReader.Create(data, opts);
+		Assert.True(edr.Read());
+		Assert.Equal(1, edr.GetInt32(0));
+		Assert.True(edr.IsDBNull(1));
+		Assert.Throws<FormatException>(() => edr.GetInt32(1));
 	}
 
 #if NET6_0_OR_GREATER

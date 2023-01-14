@@ -1,5 +1,10 @@
 # Sylvan.Data.Csv Release Notes
 
+_1.2.5_
+
+- CsvDataReader now identifies empty quoted fields (`""`) as null when a 
+   strongly-typed schema indicates the column is a nullable non-string type.
+
 _1.2.4_
 
 - CsvDataWriter avoids array allocation for default configuration.
