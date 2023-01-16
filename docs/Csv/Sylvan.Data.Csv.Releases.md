@@ -4,6 +4,8 @@ _1.2.5_
 
 - CsvDataReader now identifies empty quoted fields (`""`) as null when a 
    strongly-typed schema indicates the column is a nullable non-string type.
+- Adds CsvDataReader.Initialize method which allows re-initializing the schema.
+	Supports handling files that have extra rows at the start of the file.
 
 _1.2.4_
 

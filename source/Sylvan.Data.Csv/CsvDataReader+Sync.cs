@@ -51,16 +51,16 @@ partial class CsvDataReader
 		options ??= CsvDataReaderOptions.Default;
 		if (reader == null) throw new ArgumentNullException(nameof(reader));
 		var csv = new CsvDataReader(reader, buffer, options);
-		if (!csv.Initialize() && options.HasHeaders)
+		if (!csv.InitializeReader() && options.HasHeaders)
 		{
 			throw new CsvMissingHeadersException();
 		}
 		return csv;
 	}
-
-	bool Initialize()
+	
+	bool InitializeReader()
 	{
-		return this.InitializeAsync().GetAwaiter().GetResult();
+		return this.InitializeReaderAsync().GetAwaiter().GetResult();
 	}
 
 	bool NextRecord()
@@ -169,11 +169,12 @@ partial class CsvDataReader
 		if (this.state == State.Open)
 		{
 			var success = this.NextRecord();
-			if (this.resultSetMode == ResultSetMode.MultiResult && this.curFieldCount != this.fieldCount)
+			if (!success || (this.resultSetMode == ResultSetMode.MultiResult && this.curFieldCount != this.fieldCount))
 			{
 				this.curFieldCount = 0;
 				this.idx = recordStart;
 				this.state = State.End;
+				this.rowNumber = -1;
 				return false;
 			}
 			return success;
@@ -200,7 +201,7 @@ partial class CsvDataReader
 	public override bool NextResult()
 	{
 		while (Read()) ;
-		return Initialize();
+		return InitializeReader();
 	}
 
 	/// <inheritdoc/>

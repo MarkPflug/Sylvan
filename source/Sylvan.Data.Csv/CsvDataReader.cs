@@ -72,11 +72,18 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 
 	enum State
 	{
+		// the initial state when the reader is created.
 		None = 0,
-		Initializing,
+		// the state when the reader is initialized
+		// meaning that the next record is already in the buffer
+		// so the next call to Read will be a no-op.
 		Initialized,
+		// the normal state when the next call to Read will process the next record.
 		Open,
+		// the state when the end of the record set is reached
+		// not necessarily the end of the file when in multi-result set mode.
 		End,
+		// the state when the reader has bee closed/disposed.
 		Closed,
 	}
 
@@ -230,10 +237,14 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		return AutoDetectDelimiters[maxIdx];
 	}
 
-	void InitializeSchema()
+	/// <summary>
+	/// Initializes the schema starting with the current row.
+	/// </summary>
+	public void Initialize()
 	{
-		var count = schema?.GetFieldCount(this) ?? this.fieldCount;
+		var count = schema?.GetFieldCount(this) ?? this.curFieldCount;
 		columns = new CsvColumn[count];
+		this.fieldCount = count;
 		for (int i = 0; i < count; i++)
 		{
 			var name = hasHeaders ? GetString(i) : null;
@@ -256,7 +267,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 				}
 			}
 		}
-		this.state = State.Initialized;
+		this.state = hasHeaders ? State.Open : State.Initialized;
 	}
 
 #if INTRINSICS
