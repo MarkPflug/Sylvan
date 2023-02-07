@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.ObjectModel;
 using System.Data.Common;
 
 namespace Sylvan.Data.Csv;
@@ -14,7 +15,17 @@ partial class CsvDataWriter
 	{
 		var c = reader.FieldCount;
 		var fieldInfos = new FieldInfo[c];
-		var schema = reader.GetColumnSchema();
+		ReadOnlyCollection<DbColumn>? schema = null;
+		try
+		{
+			// on .NET 48, this will throw NSE
+			// on that runtime, we'll treat it as null.
+			schema = reader.GetColumnSchema();
+		}
+		catch (NotSupportedException)
+		{
+			schema = null;
+		}
 		int result;
 
 		for (int i = 0; i < c; i++)
