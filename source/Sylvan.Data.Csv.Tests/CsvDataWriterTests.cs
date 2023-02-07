@@ -495,6 +495,79 @@ public class CsvDataWriterTests
 		Assert.Equal(result, str);
 	}
 
+
+	static DbDataReader GetTestReader()
+	{
+		var data = new[]
+		{
+			new {
+				Id = 1,
+				Name = "A",
+				Value = 1.23
+			},
+			new {
+				Id = 2,
+				Name = "B",
+				Value = 3.45,
+			},
+		};
+		return data.AsDataReader();
+	}
+
+	const string TestResult = "Id,Name,Value\n1,A,1.23\n2,B,3.45\n";
+
+	[Fact]
+	public void WriteSchemaless()
+	{
+		var dr = GetTestReader();
+		// reader doesn't implement GetColumnSchema
+		// and returns null for GetSchemaTable
+		var tr = new SchemalessDataReader(dr);
+		var sw = new StringWriter();
+		
+		var csvw = CsvDataWriter.Create(sw, TestOptions);
+		csvw.Write(tr);
+		Assert.Equal(TestResult, sw.ToString());
+	}
+
+	[Fact]
+	public void WriteSchemaTable()
+	{
+		var dr = GetTestReader();
+		// reader only provides GetSchemaTable
+		var tr = new SchemaTableDataReader(dr);
+		var sw = new StringWriter();
+		var csvw = CsvDataWriter.Create(sw, TestOptions);
+		csvw.Write(tr);
+		Assert.Equal(TestResult, sw.ToString());
+	}
+
+	[Fact]
+	public void WriteNullFieldType()
+	{
+		var dr = GetTestReader();
+		// reader provides no schema
+		// and returns null for GetFieldType(int)
+		var tr = new NullFieldTypeDataReader(dr);
+		var sw = new StringWriter();
+		var csvw = CsvDataWriter.Create(sw, TestOptions);
+		csvw.Write(tr);
+		Assert.Equal(TestResult, sw.ToString());
+	}
+
+	[Fact]
+	public void WriteObjectFieldType()
+	{
+		var dr = GetTestReader();
+		// reader provides no schema
+		// and returns typeof(object) for GetFieldType(int)
+		var tr = new ObjectFieldTypeDataReader(dr);
+		var sw = new StringWriter();
+		var csvw = CsvDataWriter.Create(sw, TestOptions);
+		csvw.Write(tr);
+		Assert.Equal(TestResult, sw.ToString());
+	}
+
 	[Theory]
 #if NET6_0_OR_GREATER
 	[InlineData(null, "2022-01-02\n2022-11-12\n2022-11-12T13:14:15\n")]

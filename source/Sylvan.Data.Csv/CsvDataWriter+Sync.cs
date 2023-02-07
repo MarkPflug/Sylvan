@@ -14,16 +14,19 @@ partial class CsvDataWriter
 	{
 		var c = reader.FieldCount;
 		var fieldInfos = new FieldInfo[c];
-		var schema = (reader as IDbColumnSchemaGenerator)?.GetColumnSchema();
+		var schema = reader.GetColumnSchema();
 		int result;
-		if (schema != null)
+
+		for (int i = 0; i < c; i++)
 		{
-			for (int i = 0; i < schema.Count; i++)
+			var allowNull = true;
+			if (schema != null && i < schema.Count)
 			{
-				var allowNull = schema[i].AllowDBNull ?? true;
-				var writer = GetWriter(reader, i);
-				fieldInfos[i] = new FieldInfo(allowNull, writer);
+				allowNull = schema[i].AllowDBNull ?? true;
 			}
+
+			var writer = GetWriter(reader, i);
+			fieldInfos[i] = new FieldInfo(allowNull, writer);
 		}
 
 		var fieldCount = fieldInfos.Length;

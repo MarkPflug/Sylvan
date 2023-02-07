@@ -1,5 +1,8 @@
 # Sylvan.Data.Csv Release Notes
 
+_1.2.6_
+- CsvDataWriter handles `DbDataReader` implementations that don't fully expose schema information.
+
 _1.2.5_
 
 - CsvDataReader now identifies empty quoted fields (`""`) as null when a 
