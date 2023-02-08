@@ -14,22 +14,8 @@ partial class CsvDataWriter
 	public long Write(DbDataReader reader)
 	{
 		var c = reader.FieldCount;
-		var fieldInfos = new FieldInfo[c];
-		ReadOnlyCollection<DbColumn>? schema = reader.CanGetColumnSchema() ? reader.GetColumnSchema() : null;
+		var fieldInfos = GetFieldInfos(reader);
 		int result;
-
-		for (int i = 0; i < c; i++)
-		{
-			var allowNull = true;
-			if (schema != null && i < schema.Count)
-			{
-				allowNull = schema[i].AllowDBNull ?? true;
-			}
-
-			var writer = GetWriter(reader, i);
-			fieldInfos[i] = new FieldInfo(allowNull, writer);
-		}
-
 		var fieldCount = fieldInfos.Length;
 
 		var wc = new WriterContext(this, reader);
@@ -42,7 +28,7 @@ partial class CsvDataWriter
 				{
 					WriteDelimiter(0, i);
 				}
-				var header = reader.GetName(i) ?? "";
+				var header = reader.GetName(i) ?? string.Empty;
 
 				while ((result = csvWriter.Write(wc, header, this.buffer, pos)) < 0)
 				{
@@ -69,8 +55,6 @@ partial class CsvDataWriter
 				{
 					if (pos + 1 < buffer.Length)
 					{
-						// should almost always enter this branch
-						// which avoid the async overhead
 						buffer[pos++] = delimiter;
 					}
 					else

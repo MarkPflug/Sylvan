@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.ObjectModel;
 using System.Data.Common;
 using System.Globalization;
 using System.IO;
@@ -44,6 +45,25 @@ public sealed partial class CsvDataWriter
 
 		public bool allowNull;
 		public FieldWriter writer;
+	}
+
+	FieldInfo[] GetFieldInfos(DbDataReader reader)
+	{
+		var c = reader.FieldCount;
+		var fieldInfos = new FieldInfo[c];
+		ReadOnlyCollection<DbColumn>? schema = reader.CanGetColumnSchema() ? reader.GetColumnSchema() : null;
+		for (int i = 0; i < c; i++)
+		{
+			var allowNull = true;
+			if (schema != null && i < schema.Count)
+			{
+				allowNull = schema[i].AllowDBNull ?? true;
+			}
+
+			var writer = GetWriter(reader, i);
+			fieldInfos[i] = new FieldInfo(allowNull, writer);
+		}
+		return fieldInfos;
 	}
 
 	FieldWriter GetWriter(DbDataReader reader, int ordinal)
