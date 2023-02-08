@@ -49,6 +49,10 @@ public sealed partial class CsvDataWriter
 	FieldWriter GetWriter(DbDataReader reader, int ordinal)
 	{
 		var type = reader.GetFieldType(ordinal);
+		if (type == null)
+		{
+			return ObjectFieldWriter.Instance;
+		}
 
 		if (type == typeof(string))
 		{
