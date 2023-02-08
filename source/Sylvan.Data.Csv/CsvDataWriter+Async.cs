@@ -16,18 +16,8 @@ partial class CsvDataWriter
 	public async Task<long> WriteAsync(DbDataReader reader, CancellationToken cancel = default)
 	{
 		var c = reader.FieldCount;
-		var fieldInfos = new FieldInfo[c];
-		var schema = (reader as IDbColumnSchemaGenerator)?.GetColumnSchema();
+		var fieldInfos = GetFieldInfos(reader);
 		int result;
-		if (schema != null)
-		{
-			for (int i = 0; i < schema.Count; i++)
-			{
-				var allowNull = schema[i].AllowDBNull ?? true;
-				var writer = GetWriter(reader, i);
-				fieldInfos[i] = new FieldInfo(allowNull, writer);
-			}
-		}
 		var fieldCount = fieldInfos.Length;
 
 		var wc = new WriterContext(this, reader);
@@ -42,21 +32,13 @@ partial class CsvDataWriter
 				}
 				var header = reader.GetName(i) ?? string.Empty;
 
-				while (true)
+				while ((result = csvWriter.Write(wc, header, this.buffer, pos)) < 0)
 				{
-					result = csvWriter.Write(wc, header, this.buffer, pos);
-					if (result < 0)
+					// writing headers will always be flush with start of buffer so we can only grow.
+					if (!await GrowBufferAsync(cancel).ConfigureAwait(false))
 					{
-						// writing headers will always be flush with start of buffer so we can only grow.
-						if (!await GrowBufferAsync(cancel).ConfigureAwait(false))
-						{
-							// unable to reclaim space
-							throw new CsvRecordTooLargeException(0, i);
-						}
-					}
-					else
-					{
-						break;
+						// unable to reclaim space
+						throw new CsvRecordTooLargeException(0, i);
 					}
 				}
 				pos += result;
@@ -70,7 +52,6 @@ partial class CsvDataWriter
 			cancel.ThrowIfCancellationRequested();
 			row++;
 			c = reader.FieldCount;
-
 			for (var i = 0; i < c; i++)
 			{
 				if (i > 0)
@@ -86,7 +67,6 @@ partial class CsvDataWriter
 						await WriteDelimiterAsync(row, i, cancel).ConfigureAwait(false);
 					}
 				}
-
 				var field = i < fieldCount ? fieldInfos[i] : FieldInfo.Generic;
 				if (field.allowNull && await reader.IsDBNullAsync(i, cancel).ConfigureAwait(false))
 				{

@@ -4,6 +4,7 @@ using System.Data.Common;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace Sylvan.Data.Csv;
@@ -565,6 +566,58 @@ public class CsvDataWriterTests
 		var sw = new StringWriter();
 		var csvw = CsvDataWriter.Create(sw, TestOptions);
 		csvw.Write(tr);
+		Assert.Equal(TestResult, sw.ToString());
+	}
+
+	[Fact]
+	public async Task WriteSchemalessAsync()
+	{
+		var dr = GetTestReader();
+		// reader doesn't implement GetColumnSchema
+		// and returns null for GetSchemaTable
+		var tr = new SchemalessDataReader(dr);
+		var sw = new StringWriter();
+
+		var csvw = CsvDataWriter.Create(sw, TestOptions);
+		await csvw.WriteAsync(tr);
+		Assert.Equal(TestResult, sw.ToString());
+	}
+
+	[Fact]
+	public async Task WriteSchemaTableAsync()
+	{
+		var dr = GetTestReader();
+		// reader only provides GetSchemaTable
+		var tr = new SchemaTableDataReader(dr);
+		var sw = new StringWriter();
+		var csvw = CsvDataWriter.Create(sw, TestOptions);
+		await csvw.WriteAsync(tr);
+		Assert.Equal(TestResult, sw.ToString());
+	}
+
+	[Fact]
+	public async Task WriteNullFieldTypeAsync()
+	{
+		var dr = GetTestReader();
+		// reader provides no schema
+		// and returns null for GetFieldType(int)
+		var tr = new NullFieldTypeDataReader(dr);
+		var sw = new StringWriter();
+		var csvw = CsvDataWriter.Create(sw, TestOptions);
+		await csvw.WriteAsync(tr);
+		Assert.Equal(TestResult, sw.ToString());
+	}
+
+	[Fact]
+	public async Task WriteObjectFieldTypeAsync()
+	{
+		var dr = GetTestReader();
+		// reader provides no schema
+		// and returns typeof(object) for GetFieldType(int)
+		var tr = new ObjectFieldTypeDataReader(dr);
+		var sw = new StringWriter();
+		var csvw = CsvDataWriter.Create(sw, TestOptions);
+		await csvw.WriteAsync(tr);
 		Assert.Equal(TestResult, sw.ToString());
 	}
 
