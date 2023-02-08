@@ -15,17 +15,7 @@ partial class CsvDataWriter
 	{
 		var c = reader.FieldCount;
 		var fieldInfos = new FieldInfo[c];
-		ReadOnlyCollection<DbColumn>? schema = null;
-		try
-		{
-			// on .NET 48, this will throw NSE
-			// on that runtime, we'll treat it as null.
-			schema = reader.GetColumnSchema();
-		}
-		catch (NotSupportedException)
-		{
-			schema = null;
-		}
+		ReadOnlyCollection<DbColumn>? schema = reader.CanGetColumnSchema() ? reader.GetColumnSchema() : null;
 		int result;
 
 		for (int i = 0; i < c; i++)
