@@ -67,7 +67,7 @@ partial class CsvDataWriter
 						await WriteDelimiterAsync(row, i, cancel).ConfigureAwait(false);
 					}
 				}
-				var field = i < fieldCount ? fieldInfos[i] : FieldInfo.Generic;
+				var field = i < fieldCount ? fieldInfos[i] : Generic;
 				if (field.allowNull && await reader.IsDBNullAsync(i, cancel).ConfigureAwait(false))
 				{
 					continue;

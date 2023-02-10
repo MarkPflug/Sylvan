@@ -62,7 +62,7 @@ partial class CsvDataWriter
 						WriteDelimiter(row, i);
 					}
 				}
-				var field = i < fieldCount ? fieldInfos[i] : FieldInfo.Generic;
+				var field = i < fieldCount ? fieldInfos[i] : Generic;
 				if (field.allowNull && reader.IsDBNull(i))
 				{
 					continue;

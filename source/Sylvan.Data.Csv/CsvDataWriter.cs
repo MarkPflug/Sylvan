@@ -33,10 +33,20 @@ public sealed partial class CsvDataWriter
 		DefaultEscapeFlags['\r'] = true;
 	}
 
+	ObjectFieldWriter? objectWriter;
+	ObjectFieldWriter ObjectWriter
+	{
+		get { return objectWriter ??= new ObjectFieldWriter(this); }
+	}
+
+	FieldInfo? generic;
+	FieldInfo Generic
+	{
+		get { return generic ??= new FieldInfo(true, ObjectWriter); }
+	}
+
 	class FieldInfo
 	{
-		internal static readonly FieldInfo Generic = new(true, ObjectFieldWriter.Instance);
-
 		public FieldInfo(bool allowNull, FieldWriter writer)
 		{
 			this.allowNull = allowNull;
@@ -69,9 +79,14 @@ public sealed partial class CsvDataWriter
 	FieldWriter GetWriter(DbDataReader reader, int ordinal)
 	{
 		var type = reader.GetFieldType(ordinal);
+		return GetWriter(type);
+	}
+
+	FieldWriter GetWriter(Type type)
+	{
 		if (type == null)
 		{
-			return ObjectFieldWriter.Instance;
+			return new ObjectFieldWriter(this);
 		}
 
 		if (type == typeof(string))
@@ -259,7 +274,7 @@ public sealed partial class CsvDataWriter
 				}
 				else
 				{
-					writer = ObjectFieldWriter.Instance;
+					writer = this.ObjectWriter;
 				}
 				EnumMap.TryAdd(type, writer);
 			}
@@ -269,8 +284,8 @@ public sealed partial class CsvDataWriter
 
 #endif
 
-		// for everything else fallback to GetValue/ToString
-		return ObjectFieldWriter.Instance;
+		// for everything else fallback to generic object handler
+		return this.ObjectWriter;
 	}
 
 #if SPAN

@@ -2,6 +2,7 @@
 
 _1.2.6_
 - CsvDataWriter handles `DbDataReader` implementations that don't fully expose schema information.
+- CsvDataWriter uses appropriate formatting when processing data that is not uniformly typed.
 
 _1.2.5_
 
