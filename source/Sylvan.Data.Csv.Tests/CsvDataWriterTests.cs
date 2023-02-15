@@ -504,13 +504,15 @@ public class CsvDataWriterTests
 				Id = 1,
 				Name = "A",
 				Value = 1.23,
-				Date = new DateTime(2020, 12, 11, 0, 0, 0)
+				Date = new DateTime(2020, 12, 11, 0, 0, 0),
+				FileSize = long.MinValue
 			},
 			new {
 				Id = 2,
 				Name = "B",
 				Value = 3.45,
-				Date = new DateTime(2021, 7, 13, 3, 4, 5)
+				Date = new DateTime(2021, 7, 13, 3, 4, 5),
+				FileSize = long.MaxValue
 			},
 		};
 		return data.AsDataReader();
@@ -519,7 +521,7 @@ public class CsvDataWriterTests
 #if NET48
 	const string TestResult = "Id,Name,Value,Date\n1,A,1.23,2020-12-11T00:00:00.0000000\n2,B,3.45,2021-07-13T03:04:05.0000000\n";
 #else
-	const string TestResult = "Id,Name,Value,Date\n1,A,1.23,2020-12-11\n2,B,3.45,2021-07-13T03:04:05\n";
+	const string TestResult = "Id,Name,Value,Date,FileSize\n1,A,1.23,2020-12-11,-9223372036854775808\n2,B,3.45,2021-07-13T03:04:05,9223372036854775807\n";
 #endif
 
 	[Fact]
