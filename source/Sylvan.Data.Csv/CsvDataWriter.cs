@@ -93,6 +93,28 @@ public sealed partial class CsvDataWriter
 		{
 			return StringFieldWriter.Instance;
 		}
+		if (type == typeof(byte))
+		{
+#if SPAN
+			return IsFastNumeric
+				? ByteFastFieldWriter.Instance
+				: ByteFieldWriter.Instance;
+#else
+			return ByteFieldWriter.Instance;
+#endif
+		}
+
+		if (type == typeof(short))
+		{
+#if SPAN
+			return IsFastNumeric
+				? Int16FastFieldWriter.Instance
+				: Int16FieldWriter.Instance;
+#else
+			return Int16FieldWriter.Instance;
+#endif
+		}
+
 		if (type == typeof(int))
 		{
 #if SPAN

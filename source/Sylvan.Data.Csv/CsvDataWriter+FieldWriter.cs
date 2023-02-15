@@ -37,6 +37,8 @@ partial class CsvDataWriter
 		{
 			this.booleanWriter = (FieldWriter<bool>)writer.GetWriter(typeof(bool));
 			this.stringWriter = (FieldWriter<string>)writer.GetWriter(typeof(string));
+			this.byteWriter = (FieldWriter<byte>)writer.GetWriter(typeof(byte));
+			this.int16Writer = (FieldWriter<short>)writer.GetWriter(typeof(short));
 			this.int32Writer = (FieldWriter<int>)writer.GetWriter(typeof(int));
 			this.int64Writer = (FieldWriter<long>)writer.GetWriter(typeof(long));
 			this.dateTimeWriter = (FieldWriter<DateTime>)writer.GetWriter(typeof(DateTime));
@@ -55,6 +57,8 @@ partial class CsvDataWriter
 
 		readonly FieldWriter<bool> booleanWriter;
 		readonly FieldWriter<string> stringWriter;
+		readonly FieldWriter<byte> byteWriter;
+		readonly FieldWriter<short> int16Writer;
 		readonly FieldWriter<int> int32Writer;
 		readonly FieldWriter<long> int64Writer;
 		readonly FieldWriter<float> float32Writer;
@@ -86,13 +90,15 @@ partial class CsvDataWriter
 				case TypeCode.String:
 					return stringWriter.WriteValue(context, (string)value, buffer, offset);
 				case TypeCode.Byte:
-					return int32Writer.WriteValue(context, (byte)value, buffer, offset);
+					return byteWriter.WriteValue(context, (byte)value, buffer, offset);
 				case TypeCode.Int16:
-					return int32Writer.WriteValue(context, (short)value, buffer, offset);
+					return int16Writer.WriteValue(context, (short)value, buffer, offset);
 				case TypeCode.Int32:
 					return int32Writer.WriteValue(context, (int)value, buffer, offset);
 				case TypeCode.Int64:
-					return int64Writer.WriteValue(context, (int)value, buffer, offset);
+					return int64Writer.WriteValue(context, (long)value, buffer, offset);
+				case TypeCode.Decimal:
+					return decimalWriter.WriteValue(context, (decimal)value, buffer, offset);
 				case TypeCode.Single:
 					return float32Writer.WriteValue(context, (float)value, buffer, offset);
 				case TypeCode.Double:
@@ -277,6 +283,80 @@ partial class CsvDataWriter
 			var w = context.writer;
 			var str = value ? w.trueString : w.falseString;
 			return w.csvWriter.Write(context, str, buffer, offset);
+		}
+	}
+
+	sealed class ByteFieldWriter : FieldWriter<byte>
+	{
+		public static ByteFieldWriter Instance = new();
+
+		public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
+		{
+			var reader = context.reader;
+			var value = reader.GetByte(ordinal);
+			return WriteValue(context, value, buffer, offset);
+		}
+
+		public override byte GetValue(DbDataReader reader, int ordinal)
+		{
+			return reader.GetByte(ordinal);
+		}
+
+		public override int WriteValue(WriterContext context, byte value, char[] buffer, int offset)
+		{
+			var writer = context.writer;
+			var culture = writer.culture;
+#if SPAN
+
+			Span<char> str = stackalloc char[4];
+			if (!value.TryFormat(str, out int len, default, culture))
+			{
+				throw new FormatException(); // this shouldn't happen
+			}
+
+			str = str[..len];
+
+#else
+			var str = value.ToString(culture);
+#endif
+			return writer.csvWriter.Write(context, str, buffer, offset);
+		}
+	}
+
+	sealed class Int16FieldWriter : FieldWriter<short>
+	{
+		public static Int16FieldWriter Instance = new();
+
+		public override int Write(WriterContext context, int ordinal, char[] buffer, int offset)
+		{
+			var reader = context.reader;
+			var value = reader.GetInt16(ordinal);
+			return WriteValue(context, value, buffer, offset);
+		}
+
+		public override short GetValue(DbDataReader reader, int ordinal)
+		{
+			return reader.GetInt16(ordinal);
+		}
+
+		public override int WriteValue(WriterContext context, short value, char[] buffer, int offset)
+		{
+			var writer = context.writer;
+			var culture = writer.culture;
+#if SPAN
+
+			Span<char> str = stackalloc char[6];
+			if (!value.TryFormat(str, out int len, default, culture))
+			{
+				throw new FormatException(); // this shouldn't happen
+			}
+
+			str = str[..len];
+
+#else
+			var str = value.ToString(culture);
+#endif
+			return writer.csvWriter.Write(context, str, buffer, offset);
 		}
 	}
 
@@ -670,6 +750,46 @@ sealed class DateTimeIsoFieldWriter : FieldWriter<DateTime>
 				IsoDate.TryFormatIso(value, span, out int len)
 				? len
 				: InsufficientSpace;
+		}
+	}
+
+	sealed class ByteFastFieldWriter : FieldWriter<byte>
+	{
+		public static ByteFastFieldWriter Instance = new();
+
+		public override byte GetValue(DbDataReader reader, int ordinal)
+		{
+			return reader.GetByte(ordinal);
+		}
+
+		public override int WriteValue(WriterContext context, byte value, char[] buffer, int offset)
+		{
+			var span = buffer.AsSpan(offset);
+			if (!value.TryFormat(span, out int len, default, CultureInfo.InvariantCulture))
+			{
+				return InsufficientSpace;
+			}
+			return len;
+		}
+	}
+
+	sealed class Int16FastFieldWriter : FieldWriter<short>
+	{
+		public static Int16FastFieldWriter Instance = new();
+
+		public override short GetValue(DbDataReader reader, int ordinal)
+		{
+			return reader.GetInt16(ordinal);
+		}
+
+		public override int WriteValue(WriterContext context, short value, char[] buffer, int offset)
+		{
+			var span = buffer.AsSpan(offset);
+			if (!value.TryFormat(span, out int len, default, CultureInfo.InvariantCulture))
+			{
+				return InsufficientSpace;
+			}
+			return len;
 		}
 	}
 
