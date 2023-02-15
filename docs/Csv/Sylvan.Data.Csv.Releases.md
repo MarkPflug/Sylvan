@@ -1,5 +1,8 @@
 # Sylvan.Data.Csv Release Notes
 
+_1.2.7_
+- Fixes a bug in CsvDataWriter when writing `long` values from an untyped data source.
+
 _1.2.6_
 - CsvDataWriter handles `DbDataReader` implementations that don't fully expose schema information.
 - CsvDataWriter uses appropriate formatting when processing data that is not uniformly typed.

@@ -495,6 +495,52 @@ public class CsvDataWriterTests
 		Assert.Equal(result, str);
 	}
 
+#if !NET48
+	
+	// don't run this one on .NET 4.8, because the floating point formatting
+	// is slightly different, and the .NET 6.0 coverage is sufficient.
+	[Fact]
+	public void TypeCoverageTest()
+	{
+		var dt = new DateTime(2023, 12, 31, 23, 59, 59, 999);
+		var data = new[] {
+			new
+			{
+				Byte = byte.MaxValue,
+				Int16 = short.MaxValue,
+				Int32 = int.MaxValue,
+				Int64 = long.MaxValue,
+				Single = float.MaxValue,
+				Double = double.MaxValue,
+				Decimal = decimal.MaxValue,
+				DateTime = dt,
+				DateTimeOffset = new DateTimeOffset(dt, TimeSpan.FromHours(-8)),
+				Char = '\u2122'
+			},
+			new
+			{
+				Byte = byte.MinValue,
+				Int16 = short.MinValue,
+				Int32 = int.MinValue,
+				Int64 = long.MinValue,
+				Single = float.MinValue,
+				Double = double.MinValue,
+				Decimal = decimal.MinValue,
+				DateTime = dt,
+				DateTimeOffset = new DateTimeOffset(dt, TimeSpan.FromHours(-8)),
+				Char = ','
+			}
+		};
+		var sw = new StringWriter();
+		var w = CsvDataWriter.Create(sw, TestOptions);
+		w.Write(data.AsDataReader());
+		var str = sw.ToString();
+
+		var expected = "Byte,Int16,Int32,Int64,Single,Double,Decimal,DateTime,DateTimeOffset,Char\n255,32767,2147483647,9223372036854775807,3.4028235E+38,1.7976931348623157E+308,79228162514264337593543950335,2023-12-31T23:59:59.9990000,2023-12-31T23:59:59.9990000-08:00,\u2122\n0,-32768,-2147483648,-9223372036854775808,-3.4028235E+38,-1.7976931348623157E+308,-79228162514264337593543950335,2023-12-31T23:59:59.9990000,2023-12-31T23:59:59.9990000-08:00,\",\"\n";
+		Assert.Equal(expected, str);
+	}
+
+#endif
 
 	static DbDataReader GetTestReader()
 	{
@@ -519,7 +565,7 @@ public class CsvDataWriterTests
 	}
 
 #if NET48
-	const string TestResult = "Id,Name,Value,Date\n1,A,1.23,2020-12-11T00:00:00.0000000\n2,B,3.45,2021-07-13T03:04:05.0000000\n";
+	const string TestResult = "Id,Name,Value,Date,FileSize\n1,A,1.23,2020-12-11T00:00:00.0000000,-9223372036854775808\n2,B,3.45,2021-07-13T03:04:05.0000000,9223372036854775807\n";
 #else
 	const string TestResult = "Id,Name,Value,Date,FileSize\n1,A,1.23,2020-12-11,-9223372036854775808\n2,B,3.45,2021-07-13T03:04:05,9223372036854775807\n";
 #endif
