@@ -2,6 +2,7 @@
 
 _0.2.11_
 - Fixes DbDataReader.WriteJson/Async methods to correctly handle local DateTime values.
+- DbDataReader.WriteJson/Async methods now write binary values as base64 encoded strings.
 
 _0.2.10_
 - Fixes a bug with `WithColumns` extension method handling of nullable columns.
