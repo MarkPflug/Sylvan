@@ -11,9 +11,14 @@ abstract partial class IdentifierStyle
 	public static readonly IdentifierStyle CamelCase = new CamelCaseStyle();
 
 	/// <summary>
-	/// A "database_name" identifier style".
+	/// A "database_name" identifier style.
 	/// </summary>
 	public static readonly IdentifierStyle Database = new QuotedIdentifierStyle(CasingStyle.LowerCase, '_');
+
+	/// <summary>
+	/// A "human readable sentence" identifier style.
+	/// </summary>
+	public static readonly IdentifierStyle Sentence = new SentenceStyle(CasingStyle.TitleCase);
 }
 
 /// <summary>
@@ -125,7 +130,7 @@ sealed class SentenceStyle : IdentifierStyle
 	/// <inheritdoc/>
 	public override string Convert(string str)
 	{
-		return Separated(str, style, '-');
+		return Separated(str, style, ' ');
 	}
 }
 
