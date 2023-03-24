@@ -23,6 +23,14 @@ public static partial class DataExtensions
 	}
 
 	/// <summary>
+	/// Creates a DataTable that specifies the schema.
+	/// </summary>
+	public static DataTable ToSchemaTable(this System.Collections.ObjectModel.ReadOnlyCollection<DbColumn> schema)
+	{
+		return SchemaTable.GetSchemaTable(schema);
+	}
+
+	/// <summary>
 	/// Creates a DbDataReader by attaching additional columns to an existing DbDataReader.
 	/// </summary>
 	/// <param name="reader">The base data reader.</param>
