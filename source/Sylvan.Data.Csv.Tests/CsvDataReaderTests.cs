@@ -1224,7 +1224,11 @@ public class CsvDataReaderTests
 	public void Enum()
 	{
 		var text = new StringReader("a,b\nRead,write\nReadWrite,");
-		var schema = new TypedCsvSchema().Add(0, typeof(FileAccess)).Add(1, typeof(FileAccess));
+		var schema = 
+			new TypedCsvSchema()
+			.Add(0, typeof(FileAccess))
+			.Add(1, typeof(FileAccess?));
+
 		var csv = CsvDataReader.Create(text, new CsvDataReaderOptions { Schema = schema });
 		Assert.True(csv.Read());
 		Assert.Equal(FileAccess.Read, csv.GetFieldValue<FileAccess>(0));
@@ -1234,8 +1238,10 @@ public class CsvDataReaderTests
 		Assert.True(csv.Read());
 		Assert.Equal(FileAccess.ReadWrite, csv.GetFieldValue<FileAccess>(0));
 		Assert.Equal(FileAccess.ReadWrite, csv.GetValue(0));
-		Assert.Equal((FileAccess)0, csv.GetFieldValue<FileAccess>(1));
-		Assert.Equal((FileAccess)0, csv.GetValue(1));
+
+		Assert.True(csv.IsDBNull(1));
+		Assert.Throws<FormatException>(() => csv.GetFieldValue<FileAccess>(1));
+		Assert.Equal(DBNull.Value, csv.GetValue(1));
 	}
 
 	[Fact]

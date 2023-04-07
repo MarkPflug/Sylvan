@@ -74,7 +74,6 @@ sealed class EnumAccessor<T> : IFieldAccessor<T>
 #else
 		var span = reader.GetString(ordinal);
 #endif
-		if (span.Length == 0) return default!;
 		return
 			parser(span, true, out T value)
 			? value
