@@ -1,8 +1,11 @@
-# Sylvan.Data.Csv Release Notes
+# Sylvan.Data Release Notes
 
 _0.2.11_
 - Fixes DbDataReader.WriteJson/Async methods to correctly handle local DateTime values.
 - DbDataReader.WriteJson/Async methods now write binary values as base64 encoded strings.
+- `GetRecords<T>` and `GetRecordsAsync<T>` methods now accept optional `DataBinderOptions` parameter to configure binding behavior.
+- DataBinder better handles some scenarios with enum types.
+- Improvements to `DbDataReader.ValidateSchema` extension method (still experimental).
 
 _0.2.10_
 - Fixes a bug with `WithColumns` extension method handling of nullable columns.

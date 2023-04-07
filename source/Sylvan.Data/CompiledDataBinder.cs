@@ -274,8 +274,16 @@ sealed class CompiledDataBinder<T>
 						}
 						else
 						{
-							// not sure what else would be supportable here.
-							throw new NotSupportedException();
+							if (sourceType == targetType)
+							{
+								// nothing to do here.	
+							}
+							else
+							{
+								// not sure what else would be supportable here.
+								// perhaps call Convert methods?
+								throw new NotSupportedException();
+							}
 						}
 					}
 				}

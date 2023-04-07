@@ -41,6 +41,7 @@ public class DataBinderException : Exception
 	}
 
 	internal DataBinderException()
+		: base(DefaultMessage)
 	{
 		this.Ordinal = -1;
 	}
@@ -70,6 +71,8 @@ public class DataBinderException : Exception
 /// </summary>
 public sealed class UnboundMemberException : DataBinderException
 {
+	const string UnboundMemberMessage = "";
+
 	/// <summary>
 	/// The names of the unbound properties.
 	/// </summary>
@@ -81,6 +84,7 @@ public sealed class UnboundMemberException : DataBinderException
 	public IReadOnlyList<string> UnboundColumns { get; }
 
 	internal UnboundMemberException(string[]? unboundProperties, string[]? unboundColumns)
+		: base(-1, UnboundMemberMessage)
 	{
 		this.UnboundProperties = unboundProperties ?? Array.Empty<string>();
 		this.UnboundColumns = unboundColumns ?? Array.Empty<string>();

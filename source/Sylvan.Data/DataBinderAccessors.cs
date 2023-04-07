@@ -45,6 +45,7 @@ partial class DataBinder
 	internal static readonly MethodInfo GetDateTimeMethod;
 	internal static readonly MethodInfo GetDateTimeOffsetMethod;
 	internal static readonly MethodInfo GetValueMethod;
+	internal static readonly MethodInfo GetFieldValueMethod;
 #if NET6_0_OR_GREATER
 	internal static readonly MethodInfo GetDateOnlyMethod;
 	internal static readonly MethodInfo GetTimeOnlyMethod;
@@ -67,16 +68,21 @@ partial class DataBinder
 		GetGuidMethod = DbDataRecordType.GetMethod("GetGuid")!;
 		GetDateTimeMethod = DbDataRecordType.GetMethod("GetDateTime")!;
 		GetValueMethod = DbDataRecordType.GetMethod("GetValue")!;
-		var getFieldValueMethod = DbDataRecordType.GetMethods().Single(m => m.Name == "GetFieldValue");
-		GetDateTimeOffsetMethod = getFieldValueMethod.MakeGenericMethod(typeof(DateTimeOffset));
+		GetFieldValueMethod = DbDataRecordType.GetMethods().Single(m => m.Name == "GetFieldValue");
+		GetDateTimeOffsetMethod = GetFieldValueMethod.MakeGenericMethod(typeof(DateTimeOffset));
 #if NET6_0_OR_GREATER
-		GetDateOnlyMethod = getFieldValueMethod.MakeGenericMethod(typeof(DateOnly));
-		GetTimeOnlyMethod = getFieldValueMethod.MakeGenericMethod(typeof(TimeOnly));
+		GetDateOnlyMethod = GetFieldValueMethod.MakeGenericMethod(typeof(DateOnly));
+		GetTimeOnlyMethod = GetFieldValueMethod.MakeGenericMethod(typeof(TimeOnly));
 #endif
 	}
 
 	internal static MethodInfo? GetAccessorMethod(Type type)
 	{
+		if (type.IsEnum)
+		{
+			return GetFieldValueMethod.MakeGenericMethod(type);
+		}
+
 		switch (Type.GetTypeCode(type))
 		{
 			case TypeCode.Boolean:
@@ -132,13 +138,16 @@ partial class DataBinder
 				{
 					return GetTimeOnlyMethod;
 				}
-
 #endif
-
 				break;
 		}
 
-		return null;
+		if (type == typeof(object))
+		{
+			return GetValueMethod;
+		}
+
+		return GetFieldValueMethod.MakeGenericMethod(type);
 	}
 
 	static MethodInfo GetBinderMethod(string name)
