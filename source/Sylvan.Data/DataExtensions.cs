@@ -246,12 +246,25 @@ public static partial class DataExtensions
 	/// <summary>
 	/// Creates a DbDataReader that validates data against a schema as it reads.
 	/// </summary>
-	/// <param name="reader">The DbDataReader</param>
-	/// <param name="errorHandler">The errorHandler callback.</param>
+	/// <param name="reader">A DbDataReader</param>
+	/// <param name="validationHandler">A DataValidationHandler callback.</param>
 	/// <returns>A DbDataReader.</returns>
 	[Obsolete("This feature is preview and might change in future release.")]
-	public static DbDataReader ValidateSchema(this DbDataReader reader, SchemaViolationErrorHandler errorHandler)
+	public static DbDataReader ValidateSchema(this DbDataReader reader, DataValidationHandler validationHandler)
 	{
-		return new SchemaValidatingDataReader(reader, errorHandler);
+		return new ValidatingDataReader(reader, validationHandler);
+	}
+
+	/// <summary>
+	/// Creates a DbDataReader that validates data against a schema as it reads.
+	/// The validationHandler method will be called for every row.
+	/// </summary>
+	/// <param name="reader">A DbDataReader</param>
+	/// <param name="validationHandler">A DataValidationHandler callback.</param>
+	/// <returns>A DbDataReader.</returns>
+	[Obsolete("This feature is preview and might change in future release.")]
+	public static DbDataReader Validate(this DbDataReader reader, DataValidationHandler validationHandler)
+	{
+		return new ValidatingDataReader(reader, validationHandler, true);
 	}
 }
