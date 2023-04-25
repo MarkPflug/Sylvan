@@ -125,6 +125,7 @@ partial class Schema
 							break;
 						}
 #if NET6_0_OR_GREATER
+						// TODO: populate other metadata for these types?
 						if (type == typeof(DateOnly))
 						{
 							break;
@@ -135,9 +136,7 @@ partial class Schema
 							break;
 						}
 #endif
-						goto default;
-					default:
-						throw new NotSupportedException();
+						break;
 				}
 			}
 

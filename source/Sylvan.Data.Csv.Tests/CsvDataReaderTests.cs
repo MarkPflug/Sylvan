@@ -1224,7 +1224,11 @@ public class CsvDataReaderTests
 	public void Enum()
 	{
 		var text = new StringReader("a,b\nRead,write\nReadWrite,");
-		var schema = new TypedCsvSchema().Add(0, typeof(FileAccess)).Add(1, typeof(FileAccess));
+		var schema = 
+			new TypedCsvSchema()
+			.Add(0, typeof(FileAccess))
+			.Add(1, typeof(FileAccess?));
+
 		var csv = CsvDataReader.Create(text, new CsvDataReaderOptions { Schema = schema });
 		Assert.True(csv.Read());
 		Assert.Equal(FileAccess.Read, csv.GetFieldValue<FileAccess>(0));
@@ -1234,8 +1238,10 @@ public class CsvDataReaderTests
 		Assert.True(csv.Read());
 		Assert.Equal(FileAccess.ReadWrite, csv.GetFieldValue<FileAccess>(0));
 		Assert.Equal(FileAccess.ReadWrite, csv.GetValue(0));
-		Assert.Equal((FileAccess)0, csv.GetFieldValue<FileAccess>(1));
-		Assert.Equal((FileAccess)0, csv.GetValue(1));
+
+		Assert.True(csv.IsDBNull(1));
+		Assert.Throws<FormatException>(() => csv.GetFieldValue<FileAccess>(1));
+		Assert.Equal(DBNull.Value, csv.GetValue(1));
 	}
 
 	[Fact]
@@ -1564,8 +1570,11 @@ public class CsvDataReaderTests
 		var data = "a,b\n01/02/03,01/02/03";
 
 		var schema = Schema.Parse("a>Start:DateTime{MM/dd/yy},b>End:DateTime{dd/MM/yy}");
-		var opts = new CsvDataReaderOptions { 
-			Schema = new CsvSchema(schema) };
+		var opts = 
+			new CsvDataReaderOptions
+			{
+				Schema = new CsvSchema(schema)
+			};
 		var csv = CsvDataReader.Create(new StringReader(data), opts);
 
 		var records = csv.GetRecords<TestRecord>().ToList();
@@ -1739,6 +1748,34 @@ public class CsvDataReaderTests
 		Assert.Equal(1, reader.RowNumber);
 		Assert.False(reader.Read());
 		Assert.Equal(-1, reader.RowNumber);
+	}
+
+	[Fact]
+	public void DynamicReader()
+	{
+		var data = new StringReader("a,b,c\n1,2,3\n2022-11-12,12.4,1e5\n");
+		var schema = new Schema.Builder()
+			.Add<object>("a")
+			.Add<object>("b")
+			.Add<object>("c")
+			.Build();
+
+		var reader = CsvDataReader.Create(data, new CsvDataReaderOptions { Schema = new CsvSchema(schema) });
+		Assert.True(reader.Read());
+		Assert.Equal(1, reader.GetValue(0));
+		Assert.Equal(2, reader.GetValue(1));
+		Assert.Equal(3, reader.GetValue(2));
+		Assert.Equal(1, reader.GetFieldValue<object>(0));
+		Assert.Equal(2, reader.GetFieldValue<object>(1));
+		Assert.Equal(3, reader.GetFieldValue<object>(2));
+		Assert.True(reader.Read());
+		Assert.Equal(new DateTime(2022, 11, 12), reader.GetValue(0));
+		Assert.Equal(12.4m, reader.GetValue(1));
+		Assert.Equal(100000d, reader.GetValue(2));
+		Assert.Equal(new DateTime(2022, 11, 12), reader.GetFieldValue<object>(0));
+		Assert.Equal(12.4m, reader.GetFieldValue<object>(1));
+		Assert.Equal(100000d, reader.GetFieldValue<object>(2));
+		Assert.False(reader.Read());
 	}
 
 #if NET6_0_OR_GREATER

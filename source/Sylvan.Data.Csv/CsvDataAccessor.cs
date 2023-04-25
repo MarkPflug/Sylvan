@@ -32,6 +32,47 @@ abstract class FieldAccessor<T> : IFieldAccessor<T>, IFieldAccessor
 	public abstract T GetValue(CsvDataReader reader, int ordinal);
 }
 
+sealed class DynamicAccessor : FieldAccessor<object>
+{
+	internal static readonly DynamicAccessor Instance = new();
+
+	public override object GetValue(CsvDataReader reader, int ordinal)
+	{
+		//TODO: culture
+#if SPAN
+		var str = reader.GetFieldSpan(ordinal);
+#else
+		var str = reader.GetString(ordinal);
+#endif
+
+		if (int.TryParse(str, out int intVal))
+		{
+			return intVal;
+		}
+		if (decimal.TryParse(str, out decimal decVal))
+		{
+			return decVal;
+		}
+		if (double.TryParse(str, out double doubleVal))
+		{
+			return doubleVal;
+		}
+		if (DateTime.TryParse(str, out DateTime dateTimeVal))
+		{
+			return dateTimeVal;
+		}
+		if (TimeSpan.TryParse(str, out TimeSpan timeSpanVal))
+		{
+			return timeSpanVal;
+		}
+		if (Guid.TryParse(str, out Guid guidVal))
+		{
+			return guidVal;
+		}
+		return reader.GetString(ordinal);
+	}
+}
+
 sealed class StringAccessor : FieldAccessor<string>
 {
 	internal static readonly StringAccessor Instance = new();
@@ -44,7 +85,6 @@ sealed class StringAccessor : FieldAccessor<string>
 
 sealed class BooleanAccessor : FieldAccessor<bool>
 {
-
 	internal static readonly BooleanAccessor Instance = new();
 
 	public override bool GetValue(CsvDataReader reader, int ordinal)
@@ -243,6 +283,7 @@ sealed class CharsAccessor : FieldAccessor<char[]>
 	}
 }
 
+// this class provides typed column access for the GetValue method.
 sealed partial class CsvDataAccessor :
 	IFieldAccessor<string>,
 	IFieldAccessor<bool>,
@@ -261,7 +302,8 @@ sealed partial class CsvDataAccessor :
 	IFieldAccessor<Stream>,
 	IFieldAccessor<TextReader>,
 	IFieldAccessor<byte[]>,
-	IFieldAccessor<char[]>,
+	IFieldAccessor<char[]>,	
+	IFieldAccessor<object>,
 	IFieldRangeAccessor<byte>,
 	IFieldRangeAccessor<char>
 {
@@ -291,6 +333,7 @@ sealed partial class CsvDataAccessor :
 			{typeof(TextReader), TextReaderAccessor.Instance },
 			{typeof(byte[]), BytesAccessor.Instance },
 			{typeof(char[]), CharsAccessor.Instance },
+			{typeof(object), DynamicAccessor.Instance },
 #if NET6_0_OR_GREATER
 			{typeof(DateOnly), DateOnlyAccessor.Instance },
 			{typeof(TimeOnly), TimeOnlyAccessor.Instance },
@@ -381,6 +424,11 @@ sealed partial class CsvDataAccessor :
 	decimal IFieldAccessor<decimal>.GetValue(CsvDataReader reader, int ordinal)
 	{
 		return reader.GetDecimal(ordinal);
+	}
+
+	object IFieldAccessor<object>.GetValue(CsvDataReader reader, int ordinal)
+	{
+		return reader.GetValue(ordinal);
 	}
 
 	byte[] IFieldAccessor<byte[]>.GetValue(CsvDataReader reader, int ordinal)

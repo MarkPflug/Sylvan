@@ -5,6 +5,7 @@ using System.Data;
 using System.Data.Common;
 using System.IO;
 using System.Linq;
+using System.Runtime.Serialization;
 using Xunit;
 
 namespace Sylvan.Data
@@ -53,6 +54,21 @@ namespace Sylvan.Data
 			{
 				Assert.Equal(1, record.AccountNumber);
 				Assert.Equal(2, record.DayOfWeek);
+			}
+		}
+
+		[Fact]
+		public void IngoreDataMemberTest()
+		{
+			var csv = CsvDataReader.Create(new StringReader("AccountNumber,DayOfWeek,Name\n1,2,Test\n"));
+
+			foreach (var record in csv.GetRecords<NotMappedRecord>())
+			{
+				Assert.Equal(1, record.AccountNumber);
+				Assert.Equal(2, record.DayOfWeek);
+				// Even though the source data has this column,
+				// it doesn't get mapped, because it is marked with IgnoreDataMember
+				Assert.Null(record.Name);
 			}
 		}
 
@@ -389,8 +405,8 @@ namespace Sylvan.Data
 		sealed class ManualBinder : IDataBinder<SeriesDateRecord>
 		{
 			readonly DataSeriesAccessor<DateTime, int> series0;
-			int idIdx;
-			int nameIdx;
+			readonly int idIdx;
+			readonly int nameIdx;
 
 			public ManualBinder(ReadOnlyCollection<DbColumn> schema)
 			{
@@ -549,6 +565,14 @@ namespace Sylvan.Data
 	{
 		public int AccountNumber { get; set; }
 		public int DayOfWeek { get; set; }
+	}
+
+	class NotMappedRecord
+	{
+		public int AccountNumber { get; set; }
+		public int DayOfWeek { get; set; }
+		[IgnoreDataMember]
+		public string Name { get; set; }
 	}
 
 	enum Severity

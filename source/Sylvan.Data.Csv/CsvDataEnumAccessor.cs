@@ -74,7 +74,6 @@ sealed class EnumAccessor<T> : IFieldAccessor<T>
 #else
 		var span = reader.GetString(ordinal);
 #endif
-		if (span.Length == 0) return default!;
 		return
 			parser(span, true, out T value)
 			? value
@@ -99,7 +98,9 @@ sealed class EnumAccessor : IFieldAccessor
 		var span = reader.GetString(ordinal);
 #endif
 		return span.Length == 0 
-			? Enum.ToObject(this.enumType, 0L) 
+			// the only way we get here is if the schema indicates
+			// that this column is non-nullable.
+			? throw new FormatException()
 			: Enum.Parse(this.enumType, span, ignoreCase: true);
 	}
 }

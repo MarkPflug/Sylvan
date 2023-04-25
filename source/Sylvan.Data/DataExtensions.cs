@@ -23,6 +23,14 @@ public static partial class DataExtensions
 	}
 
 	/// <summary>
+	/// Creates a DataTable that specifies the schema.
+	/// </summary>
+	public static DataTable ToSchemaTable(this System.Collections.ObjectModel.ReadOnlyCollection<DbColumn> schema)
+	{
+		return SchemaTable.GetSchemaTable(schema);
+	}
+
+	/// <summary>
 	/// Creates a DbDataReader by attaching additional columns to an existing DbDataReader.
 	/// </summary>
 	/// <param name="reader">The base data reader.</param>
@@ -41,7 +49,19 @@ public static partial class DataExtensions
 	public static IEnumerable<T> GetRecords<T>(this DbDataReader reader)
 		where T : class, new()
 	{
-		var binder = DataBinder.Create<T>(reader);
+		return GetRecords<T>(reader, null);
+	}
+
+	/// <summary>
+	/// Binds the DbDataReader data to produce a sequence of T.
+	/// </summary>
+	/// <typeparam name="T">The type of record to bind to.</typeparam>
+	/// <param name="reader">The data reader.</param>
+	/// <param name="opts">The options to configure the data binder.</param>
+	public static IEnumerable<T> GetRecords<T>(this DbDataReader reader, DataBinderOptions? opts = null)
+		where T : class, new()
+	{
+		var binder = DataBinder.Create<T>(reader, opts);
 		while (reader.Read())
 		{
 			var item = new T();
@@ -69,10 +89,22 @@ public static partial class DataExtensions
 	/// </summary>
 	/// <typeparam name="T">The type of record to bind to.</typeparam>
 	/// <param name="reader">The data reader.</param>
-	public static async IAsyncEnumerable<T> GetRecordsAsync<T>(this DbDataReader reader)
+	public static IAsyncEnumerable<T> GetRecordsAsync<T>(this DbDataReader reader)
 		where T : class, new()
 	{
-		var binder = DataBinder.Create<T>(reader);
+		return GetRecordsAsync<T>(reader, null);
+	}
+
+	/// <summary>
+	/// Binds the DbDataReader data to produce a sequence of T.
+	/// </summary>
+	/// <typeparam name="T">The type of record to bind to.</typeparam>
+	/// <param name="reader">The data reader.</param>
+	/// <param name="opts">The options to configure the data binder.</param>
+	public static async IAsyncEnumerable<T> GetRecordsAsync<T>(this DbDataReader reader, DataBinderOptions? opts = null)
+		where T : class, new()
+	{
+		var binder = DataBinder.Create<T>(reader, opts);
 		while (await reader.ReadAsync().ConfigureAwait(false))
 		{
 			var item = new T();
@@ -214,13 +246,25 @@ public static partial class DataExtensions
 	/// <summary>
 	/// Creates a DbDataReader that validates data against a schema as it reads.
 	/// </summary>
-	/// <param name="reader">The DbDataReader</param>
-	/// <param name="errorHandler">The errorHandler callback.</param>
+	/// <param name="reader">A DbDataReader</param>
+	/// <param name="validationHandler">A DataValidationHandler callback.</param>
 	/// <returns>A DbDataReader.</returns>
 	[Obsolete("This feature is preview and might change in future release.")]
-	public static DbDataReader ValidateSchema<T>(this T reader, SchemaViolationErrorHandler errorHandler)
-		where T : DbDataReader
+	public static DbDataReader ValidateSchema(this DbDataReader reader, DataValidationHandler validationHandler)
 	{
-		return new SchemaValidatingDataReader(reader, errorHandler);
+		return new ValidatingDataReader(reader, validationHandler);
+	}
+
+	/// <summary>
+	/// Creates a DbDataReader that validates data against a schema as it reads.
+	/// The validationHandler method will be called for every row.
+	/// </summary>
+	/// <param name="reader">A DbDataReader</param>
+	/// <param name="validationHandler">A DataValidationHandler callback.</param>
+	/// <returns>A DbDataReader.</returns>
+	[Obsolete("This feature is preview and might change in future release.")]
+	public static DbDataReader Validate(this DbDataReader reader, DataValidationHandler validationHandler)
+	{
+		return new ValidatingDataReader(reader, validationHandler, true);
 	}
 }

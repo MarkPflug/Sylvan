@@ -248,7 +248,7 @@ abstract class ObjectDataReader<T> : DbDataReader, IDbColumnSchemaGenerator
 
 		static bool IsSupported(PropertyInfo prop)
 		{
-			return IsSupported(prop.PropertyType);
+			return prop.GetIndexParameters().Length == 0 && IsSupported(prop.PropertyType);
 		}
 
 		static readonly HashSet<Type> SupportedTypes = new()
@@ -261,6 +261,7 @@ abstract class ObjectDataReader<T> : DbDataReader, IDbColumnSchemaGenerator
 			typeof(DateTimeOffset),
 			typeof(TimeSpan),
 			typeof(decimal),
+			typeof(Type),
 
 #if NET6_0_OR_GREATER
 			typeof(DateOnly),
@@ -418,6 +419,14 @@ abstract class ObjectDataReader<T> : DbDataReader, IDbColumnSchemaGenerator
 		if (col.selector is Func<T, TValue> b)
 		{
 			return b(Current);
+		}
+		else
+		{
+			var obj = col.valueSelector(Current);
+			if (obj != DBNull.Value && obj is TValue val)
+			{
+				return val;
+			}
 		}
 		throw new InvalidCastException();
 	}

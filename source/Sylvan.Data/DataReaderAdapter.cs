@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Data;
 using System.Data.Common;
@@ -310,12 +311,29 @@ public abstract partial class DataReaderAdapter : DbDataReader, IDbColumnSchemaG
 	/// <inheritdoc/>
 	public override DataTable? GetSchemaTable()
 	{
-		return dr.GetSchemaTable();
+		return dr.GetColumnSchema().ToSchemaTable();
 	}
 
 	/// <inheritdoc/>
-	public ReadOnlyCollection<DbColumn> GetColumnSchema()
+	public virtual ReadOnlyCollection<DbColumn> GetColumnSchema()
 	{
-		return dr.GetColumnSchema();
+		var cols = new List<DbColumn>();
+		for (int i = 0; i < this.FieldCount; i++)
+		{
+			var col = new Col(i, this.GetName(i), this.GetFieldType(i));
+			cols.Add(col);
+		}
+		return new ReadOnlyCollection<DbColumn>(cols);
+	}
+
+	class Col : DbColumn
+	{
+		public Col(int ordinal, string name, Type type)
+		{
+			this.ColumnOrdinal = ordinal;
+			this.ColumnName = name;
+			this.DataType = type;
+			this.DataTypeName = type.Name;
+		}
 	}
 }
