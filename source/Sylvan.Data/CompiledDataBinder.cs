@@ -166,7 +166,7 @@ sealed class CompiledDataBinder<T>
 		var properties =
 			recordType
 			.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
-			.Where(p => p.SetMethod != null)
+			.Where(p => p.SetMethod != null && p.GetCustomAttribute<IgnoreDataMemberAttribute>() == null)
 			.ToDictionary(p => p.Name, p => p, StringComparer.OrdinalIgnoreCase);
 
 		foreach (var kvp in properties.ToArray())
@@ -274,8 +274,16 @@ sealed class CompiledDataBinder<T>
 						}
 						else
 						{
-							// not sure what else would be supportable here.
-							throw new NotSupportedException();
+							if (sourceType == targetType)
+							{
+								// nothing to do here.	
+							}
+							else
+							{
+								// not sure what else would be supportable here.
+								// perhaps call Convert methods?
+								throw new NotSupportedException();
+							}
 						}
 					}
 				}

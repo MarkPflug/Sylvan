@@ -78,7 +78,7 @@ var bcp = new SqlBulkCopy(conn);
 bcp.BulkCopyTimeout = 0;
 bcp.DestinationTableName = "MyDataSet";
 bcp.BatchSize = 10000;
-bcp.WriteToServer(dataReader);
+bcp.WriteToServer(csv);
 ```
 
 ### CSV Data Binder example

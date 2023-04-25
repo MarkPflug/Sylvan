@@ -1,5 +1,11 @@
 # Sylvan.Data.Csv Release Notes
 
+_1.3.0_
+- Drop support for netcoreapp3.0.
+- Fixes CsvDataReader reading of empty enum fields.
+- Add CsvDataReader support for reading "dynamic" object-typed data, where each row might contain
+    different typed values.
+
 _1.2.7_
 - Fixes a bug in CsvDataWriter when writing `long` values from an untyped data source.
 

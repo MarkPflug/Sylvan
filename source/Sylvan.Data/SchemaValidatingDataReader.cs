@@ -1,23 +1,25 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Data.Common;
+using System.Linq.Expressions;
 
 namespace Sylvan.Data;
 
 /// <summary>
 /// Defines a method for handling schema violations.
 /// </summary>
-public delegate bool SchemaViolationErrorHandler(SchemaValidationContext context);
+public delegate bool DataValidationHandler(DataValidationContext context);
 
 /// <summary>
 /// Provides contextual information about records that violate schema requirements.
 /// </summary>
-public sealed class SchemaValidationContext
+public sealed class DataValidationContext
 {
-	readonly SchemaValidatingDataReader.Friend accessor;
+	readonly ValidatingDataReader.Accessor accessor;
 
-	internal SchemaValidationContext(SchemaValidatingDataReader.Friend accessor)
+	internal DataValidationContext(ValidatingDataReader.Accessor accessor)
 	{
 		this.accessor = accessor;
 	}
@@ -60,16 +62,32 @@ public sealed class SchemaValidationContext
 	{
 		this.accessor.SetValue(ordinal, value);
 	}
+
+	/// <summary>
+	/// Gets the value of a field.
+	/// </summary>
+	public T? GetValue<T>(int ordinal)
+	{
+		return this.accessor.GetValue<T>(ordinal);
+	}
+
+	/// <summary>
+	/// Gets the value of a field.
+	/// </summary>
+	public object GetValue(int ordinal)
+	{
+		return this.accessor.GetValue(ordinal);
+	}
 }
 
-class SchemaValidatingDataReader : DataReaderAdapter
+class ValidatingDataReader : DataReaderAdapter
 {
-	// TODO: name this. Just meant to limit visibility to internals
-	internal struct Friend
+	// limited visibility to internals
+	internal struct Accessor
 	{
-		readonly SchemaValidatingDataReader reader;
+		readonly ValidatingDataReader reader;
 
-		public Friend(SchemaValidatingDataReader reader)
+		public Accessor(ValidatingDataReader reader)
 		{
 			this.reader = reader;
 		}
@@ -88,10 +106,26 @@ class SchemaValidatingDataReader : DataReaderAdapter
 
 		public Exception? GetException(int ordinal)
 		{
-			return 
+			return
 				reader.errorMarker[ordinal] == reader.counter
 				? reader.exceptions[ordinal]
 				: null;
+		}
+
+		public T? GetValue<T>(int ordinal)
+		{
+			var r = this.reader.cache[ordinal];
+			if (r is ValueRef<T> vr)
+			{
+				return vr.Value;
+			}
+			throw new InvalidCastException();
+		}
+
+		public object GetValue(int ordinal)
+		{
+			var r = this.reader.cache[ordinal];
+			return r.GetValue();
 		}
 
 		public void SetValue<T>(int ordinal, T? value)
@@ -103,14 +137,14 @@ class SchemaValidatingDataReader : DataReaderAdapter
 			}
 			else
 			{
-				r.SetUserValue(value);
+				r.SetValue(value);
 			}
 		}
 
 		public void SetValue(int ordinal, object? value)
 		{
 			var r = this.reader.cache[ordinal];
-			r.SetUserValue(value);
+			r.SetValue(value);
 		}
 	}
 
@@ -119,7 +153,7 @@ class SchemaValidatingDataReader : DataReaderAdapter
 		public bool IsNull { get; set; }
 
 		public abstract object GetValue();
-		public abstract void SetUserValue(object? value);
+		public abstract void SetValue(object? value);
 
 		public virtual void Reset()
 		{
@@ -127,18 +161,23 @@ class SchemaValidatingDataReader : DataReaderAdapter
 		}
 	}
 
-	class ValueRef<T> : Ref
+	// A reusable strongly-typed box to store row values.
+	// This is used to avoid boxing every single value.
+	sealed class ValueRef<T> : Ref
 	{
-		public T? Value { get; set; }
+		public T? Value
+		{
+			get; set;
+		}
 
 		public override object GetValue()
 		{
 			return ((object?)this.Value) ?? DBNull.Value;
 		}
 
-		public override void SetUserValue(object? value)
+		public override void SetValue(object? value)
 		{
-			var isNull = value == null;
+			var isNull = value == null || value == DBNull.Value;
 			this.IsNull = isNull;
 			if (isNull)
 			{
@@ -187,52 +226,105 @@ class SchemaValidatingDataReader : DataReaderAdapter
 		public static ValueAccessor Int16 = new GenericValueAccessor<short>((r, o) => r.GetInt16(o));
 		public static ValueAccessor Int32 = new GenericValueAccessor<int>((r, o) => r.GetInt32(o));
 		public static ValueAccessor Int64 = new GenericValueAccessor<long>((r, o) => r.GetInt64(o));
-
 		public static ValueAccessor Char = new GenericValueAccessor<char>((r, o) => r.GetChar(o));
 		public static ValueAccessor String = new GenericValueAccessor<string>((r, o) => r.GetString(o));
-
 		public static ValueAccessor Single = new GenericValueAccessor<float>((r, o) => r.GetFloat(o));
 		public static ValueAccessor Double = new GenericValueAccessor<double>((r, o) => r.GetDouble(o));
 		public static ValueAccessor Decimal = new GenericValueAccessor<decimal>((r, o) => r.GetDecimal(o));
-
 		public static ValueAccessor DateTime = new GenericValueAccessor<DateTime>((r, o) => r.GetDateTime(o));
-
 		public static ValueAccessor Guid = new GenericValueAccessor<Guid>((r, o) => r.GetGuid(o));
 
-		public static ValueAccessor Object = new GenericValueAccessor<object>((r, o) => r.GetValue(o));
+		public static ValueAccessor NullableBoolean = new GenericNullableValueAccessor<bool>((r, o) => r.GetBoolean(o));
+		public static ValueAccessor NullableByte = new GenericNullableValueAccessor<byte>((r, o) => r.GetByte(o));
+		public static ValueAccessor NullableInt16 = new GenericNullableValueAccessor<short>((r, o) => r.GetInt16(o));
+		public static ValueAccessor NullableInt32 = new GenericNullableValueAccessor<int>((r, o) => r.GetInt32(o));
+		public static ValueAccessor NullableInt64 = new GenericNullableValueAccessor<long>((r, o) => r.GetInt64(o));
+		public static ValueAccessor NullableChar = new GenericNullableValueAccessor<char>((r, o) => r.GetChar(o));
+		public static ValueAccessor NullableString = new GenericNullableValueAccessor<string>((r, o) => r.GetString(o));
+		public static ValueAccessor NullableSingle = new GenericNullableValueAccessor<float>((r, o) => r.GetFloat(o));
+		public static ValueAccessor NullableDouble = new GenericNullableValueAccessor<double>((r, o) => r.GetDouble(o));
+		public static ValueAccessor NullableDecimal = new GenericNullableValueAccessor<decimal>((r, o) => r.GetDecimal(o));
+		public static ValueAccessor NullableDateTime = new GenericNullableValueAccessor<DateTime>((r, o) => r.GetDateTime(o));
+		public static ValueAccessor NullableGuid = new GenericNullableValueAccessor<Guid>((r, o) => r.GetGuid(o));
+
+		public static ValueAccessor Object = new GenericNullableValueAccessor<object>((r, o) => r.GetValue(o));
+
+		public static ValueAccessor GetAccessor(Type type, bool allowNull)
+		{
+			var mi = typeof(DbDataReader).GetMethod("GetFieldValue");
+			
+			var gm = mi!.MakeGenericMethod(type);
+
+			var drp = Expression.Parameter(typeof(DbDataReader));
+			var op = Expression.Parameter(typeof(int));
+			var call = Expression.Call(drp, gm, op);
+			var func = Expression.Lambda(call, drp, op).Compile();
+			var t = allowNull 
+				? typeof(GenericNullableValueAccessor<>) 
+				: typeof(GenericValueAccessor<>);
+
+			var gt = t.MakeGenericType(type);
+
+			var ctor = gt.GetConstructors()[0];
+
+			var inst = ctor.Invoke(new object[] { func });
+
+			return (ValueAccessor) inst;
+		}
 	}
 
 	sealed class BytesValueAccessor : ValueAccessor<byte[]>
 	{
+		readonly bool nullable;
 		readonly byte[] buffer;
 
-		public BytesValueAccessor()
+		public BytesValueAccessor(bool nullable)
 		{
 			this.buffer = new byte[1];
+			this.nullable = nullable;
 		}
 
 		public override void ProcessValue(DbDataReader reader, int ordinal, ValueRef<byte[]> value)
 		{
-			value.Value = null;
-			reader.GetBytes(ordinal, 0, buffer, 0, 1);
-			value.Value = buffer;
+			var isNull = nullable && reader.IsDBNull(ordinal);
+
+			if (isNull)
+			{
+				value.Value = null;
+			}
+			else
+			{
+				reader.GetBytes(ordinal, 0, buffer, 0, 1);
+				value.Value = buffer;
+			}
+			value.IsNull = isNull;
 		}
 	}
 
 	sealed class CharsValueAccessor : ValueAccessor<char[]>
 	{
+		readonly bool nullable;
 		readonly char[] buffer;
 
-		public CharsValueAccessor()
+		public CharsValueAccessor(bool nullable)
 		{
 			this.buffer = new char[1];
+			this.nullable = nullable;
 		}
 
 		public override void ProcessValue(DbDataReader reader, int ordinal, ValueRef<char[]> value)
 		{
-			value.Value = null;
-			reader.GetChars(ordinal, 0, buffer, 0, 1);
-			value.Value = buffer;
+			var isNull = nullable && reader.IsDBNull(ordinal);
+			if (isNull)
+			{
+				value.Value = null;
+			}
+			else
+			{
+				reader.GetChars(ordinal, 0, buffer, 0, 1);
+				value.Value = buffer;
+			}
+			value.IsNull = isNull;
 		}
 	}
 
@@ -251,33 +343,54 @@ class SchemaValidatingDataReader : DataReaderAdapter
 		}
 	}
 
+	sealed class GenericNullableValueAccessor<T> : ValueAccessor<T>
+	{
+		readonly Func<DbDataReader, int, T> accessor;
+
+		public GenericNullableValueAccessor(Func<DbDataReader, int, T> accessor)
+		{
+			this.accessor = accessor;
+		}
+
+		public override void ProcessValue(DbDataReader reader, int ordinal, ValueRef<T> value)
+		{
+			var isNull = reader.IsDBNull(ordinal);
+
+			value.Value = isNull ? default : accessor(reader, ordinal);
+			value.IsNull = isNull;
+		}
+	}
+
 	// the cache of values for the current row populated during calls to Read()
 	Ref[] cache;
 	ValueAccessor[] accessors;
-	int[] errorMarker;
+	// stores the index of last row that encountered an error in that column.
+	int[] errorMarker; 
 	Exception[] exceptions;
 	int counter;
 
 	readonly DbDataReader inner;
-	readonly SchemaValidationContext validationContext;
-	readonly SchemaViolationErrorHandler errorHandler;
+	readonly DataValidationContext validationContext;
+	readonly DataValidationHandler validationHandler;
+	readonly bool validateAllRows;
 
-	static bool Fail(SchemaValidationContext context)
+	static bool Fail(DataValidationContext context)
 	{
 		return false;
 	}
 
-	internal SchemaValidatingDataReader(DbDataReader inner, SchemaViolationErrorHandler? errorHandler = null)
+	internal ValidatingDataReader(DbDataReader inner, DataValidationHandler? errorHandler, bool validateAllRows = false)
 		: base(inner)
 	{
 		this.inner = inner;
-		this.errorHandler = errorHandler ?? Fail;
+		this.validationHandler = errorHandler ?? Fail;
 		this.cache = Array.Empty<Ref>();
 		this.accessors = Array.Empty<ValueAccessor>();
 		this.errorMarker = Array.Empty<int>();
 		this.exceptions = Array.Empty<Exception>();
-		this.validationContext = new SchemaValidationContext(new Friend(this));
+		this.validationContext = new DataValidationContext(new Accessor(this));
 		this.counter = -1;
+		this.validateAllRows = validateAllRows;
 		InitializeSchema();
 	}
 
@@ -296,61 +409,73 @@ class SchemaValidatingDataReader : DataReaderAdapter
 		for (int i = 0; i < count; i++)
 		{
 			var t = schema[i].DataType;
-			var acc = GetAccessor(t);
+			var allowNull = schema[i].AllowDBNull ?? true;
+			var acc = GetAccessor(t, allowNull);
 			this.accessors[i] = acc;
 			this.cache[i] = acc.CreateRef();
 			this.errorMarker[i] = -1;
 		}
 	}
 
-	static ValueAccessor GetAccessor(Type? type)
+	static ValueAccessor GetAccessor(Type? type, bool allowNull)
 	{
 		if (type == null) return Accessors.Object;
+
+		if (type.IsEnum)
+		{
+			return Accessors.GetAccessor(type, allowNull);
+		}
 
 		var code = Type.GetTypeCode(type);
 		switch (code)
 		{
 			case TypeCode.Boolean:
-				return Accessors.Boolean;
+				return allowNull ? Accessors.NullableBoolean : Accessors.Boolean;
 			case TypeCode.Byte:
-				return Accessors.Byte;
+				return allowNull ? Accessors.NullableByte : Accessors.Byte;
 			case TypeCode.Int16:
-				return Accessors.Int16;
+				return allowNull ? Accessors.NullableInt16 : Accessors.Int16;
 			case TypeCode.Int32:
-				return Accessors.Int32;
+				return allowNull ? Accessors.NullableInt32 : Accessors.Int32;
 			case TypeCode.Int64:
-				return Accessors.Int64;
+				return allowNull ? Accessors.NullableInt64 : Accessors.Int64;
 
 			case TypeCode.Single:
-				return Accessors.Single;
+				return allowNull ? Accessors.NullableSingle : Accessors.Single;
 			case TypeCode.Double:
-				return Accessors.Double;
+				return allowNull ? Accessors.NullableDouble : Accessors.Double;
 			case TypeCode.Decimal:
-				return Accessors.Decimal;
+				return allowNull ? Accessors.NullableDecimal : Accessors.Decimal;
 
 			case TypeCode.Char:
-				return Accessors.Char;
+				return allowNull ? Accessors.NullableChar : Accessors.Char;
 			case TypeCode.String:
-				return Accessors.String;
+				return allowNull ? Accessors.NullableString : Accessors.String;
 			case TypeCode.Object:
 			default:
 				if (type == typeof(DateTime))
 				{
-					return Accessors.DateTime;
+					return allowNull ? Accessors.NullableDateTime : Accessors.DateTime;
 				}
 				if (type == typeof(Guid))
 				{
-					return Accessors.Guid;
+					return allowNull ? Accessors.NullableGuid : Accessors.Guid;
 				}
 				if (type == typeof(byte[]))
 				{
-					return new BytesValueAccessor();
+					return new BytesValueAccessor(allowNull);
 				}
 				if (type == typeof(char[]))
 				{
-					return new CharsValueAccessor();
+					return new CharsValueAccessor(allowNull);
 				}
-				throw new NotSupportedException();
+
+				if(type == typeof(object))
+				{
+					return Accessors.Object;
+				}
+
+				return Accessors.GetAccessor(type, allowNull);
 		}
 	}
 
@@ -373,13 +498,9 @@ class SchemaValidatingDataReader : DataReaderAdapter
 				this.errorMarker[i] = counter;
 			}
 		}
-		if (errorCount > 0)
+		if (validateAllRows || errorCount > 0)
 		{
-			if (errorHandler(this.validationContext))
-			{
-				// TODO: re-validate ?
-			}
-			else
+			if (!validationHandler(this.validationContext))
 			{
 				return false;
 			}
@@ -555,5 +676,10 @@ class SchemaValidatingDataReader : DataReaderAdapter
 			// otherwise move to the next row
 		}
 		return false;
+	}
+
+	public override ReadOnlyCollection<DbColumn> GetColumnSchema()
+	{
+		return Reader.GetColumnSchema();
 	}
 }

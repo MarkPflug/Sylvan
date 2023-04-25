@@ -303,6 +303,7 @@ sealed partial class CsvDataAccessor :
 	IFieldAccessor<TextReader>,
 	IFieldAccessor<byte[]>,
 	IFieldAccessor<char[]>,	
+	IFieldAccessor<object>,
 	IFieldRangeAccessor<byte>,
 	IFieldRangeAccessor<char>
 {
@@ -423,6 +424,11 @@ sealed partial class CsvDataAccessor :
 	decimal IFieldAccessor<decimal>.GetValue(CsvDataReader reader, int ordinal)
 	{
 		return reader.GetDecimal(ordinal);
+	}
+
+	object IFieldAccessor<object>.GetValue(CsvDataReader reader, int ordinal)
+	{
+		return reader.GetValue(ordinal);
 	}
 
 	byte[] IFieldAccessor<byte[]>.GetValue(CsvDataReader reader, int ordinal)
