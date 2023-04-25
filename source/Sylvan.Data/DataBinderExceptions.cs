@@ -71,7 +71,7 @@ public class DataBinderException : Exception
 /// </summary>
 public sealed class UnboundMemberException : DataBinderException
 {
-	const string UnboundMemberMessage = "";
+	const string UnboundMemberMessage = "The data could not be bound to the target type, it either contains too many or to few columns. Specify a different BindingMode to allow binding a subset of columns or properties.";
 
 	/// <summary>
 	/// The names of the unbound properties.

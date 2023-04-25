@@ -166,7 +166,7 @@ sealed class CompiledDataBinder<T>
 		var properties =
 			recordType
 			.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
-			.Where(p => p.SetMethod != null)
+			.Where(p => p.SetMethod != null && p.GetCustomAttribute<IgnoreDataMemberAttribute>() == null)
 			.ToDictionary(p => p.Name, p => p, StringComparer.OrdinalIgnoreCase);
 
 		foreach (var kvp in properties.ToArray())
