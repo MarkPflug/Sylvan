@@ -1,29 +1,29 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFrameworks>net6.0;netstandard2.0;netstandard2.1</TargetFrameworks>
-    <RootNamespace>Sylvan</RootNamespace>
-    <Description>A collection of common utility types.</Description>
-    <VersionPrefix>0.4.1</VersionPrefix>
-    <Nullable>enable</Nullable>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-	<DefineConstants>PublicCasingStyle;$(DefineConstants)</DefineConstants>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFrameworks>net6.0;netstandard2.1;netstandard2.0</TargetFrameworks>
+		<RootNamespace>Sylvan</RootNamespace>
+		<Description>A collection of common utility types.</Description>
+		<VersionPrefix>0.4.2</VersionPrefix>
+		<Nullable>enable</Nullable>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<DefineConstants>PublicCasingStyle;$(DefineConstants)</DefineConstants>
+	</PropertyGroup>
 
-  <PropertyGroup Condition="'$(TargetFramework)' != 'netstandard2.0'">
-    <DefineConstants>$(DefineConstants);StringSpan</DefineConstants>
-  </PropertyGroup>
+	<PropertyGroup Condition="'$(TargetFramework)' != 'netstandard2.0'">
+		<DefineConstants>$(DefineConstants);StringSpan</DefineConstants>
+	</PropertyGroup>
 
-  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
-    <PackageReference Include="System.Buffers" Version="4.4.0" />
-    <PackageReference Include="System.Memory" Version="4.5.0" />
-  </ItemGroup>
+	<ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+		<PackageReference Include="System.Buffers" Version="4.4.0" />
+		<PackageReference Include="System.Memory" Version="4.5.0" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Microsoft.CodeAnalysis.FxCopAnalyzers" Version="3.3.1">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Microsoft.CodeAnalysis.FxCopAnalyzers" Version="3.3.1">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+	</ItemGroup>
 </Project>
