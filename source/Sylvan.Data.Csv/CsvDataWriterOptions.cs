@@ -33,7 +33,7 @@ public sealed class CsvDataWriterOptions
 		this.Quote = DefaultQuote;
 		this.Escape = DefaultEscape;
 		this.Comment = DefaultComment;
-		this.NewLine = Environment.NewLine;
+		this.NewLine = "\n";
 		this.BufferSize = DefaultBufferSize;
 		this.Culture = CultureInfo.InvariantCulture;
 		this.TrueString = bool.TrueString;

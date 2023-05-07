@@ -1,5 +1,9 @@
 # Sylvan.Data.Csv Release Notes
 
+_1.3.1_
+- Add support for reading CSV files that use '\r' as line terminators.
+- CsvDataWriter now defaults to writing '\n', regardless of platform.
+
 _1.3.0_
 - Drop support for netcoreapp3.0.
 - Fixes CsvDataReader reading of empty enum fields.
