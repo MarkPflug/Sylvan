@@ -40,6 +40,30 @@ sealed class CompiledDataBinder<T>
 	{
 	}
 
+	static Dictionary<string, DbColumn?> BuildColumnMap(IEnumerable<DbColumn> cols, StringComparer comparer)
+	{
+		// builds a dictionary. When duplicate column names are encountered
+		// will replace the value with null indicating the dupe. This
+		// will be used to produce an error if the dupe
+		// column is used in the binding.
+		var map = new Dictionary<string, DbColumn?>(comparer);
+		foreach (var col in cols)
+		{
+			var key = col?.ColumnName;
+			if (key == null) continue;
+			if (map.ContainsKey(key))
+			{
+				map[key] = null;
+			}
+			else
+			{
+				map[key] = col;
+			}
+		}
+
+		return map;
+	}
+
 	internal CompiledDataBinder(
 		DataBinderOptions opts,
 		ReadOnlyCollection<DbColumn> physicalSchema,
@@ -54,7 +78,7 @@ sealed class CompiledDataBinder<T>
 
 		// stores contextual state used by the binder.
 		var state = new List<object>();
-
+		
 		var physicalColumns = new HashSet<DbColumn>();
 		foreach (var col in physicalSchema)
 		{
@@ -63,12 +87,8 @@ sealed class CompiledDataBinder<T>
 
 		this.cultureInfo = opts.Culture ?? CultureInfo.InvariantCulture;
 
-
 		var namedCols = physicalColumns.Where(c => !string.IsNullOrEmpty(c.ColumnName)).ToList();
-		var nameMap =
-			namedCols
-			.ToDictionary(p => p.ColumnName, p => p, StringComparer.OrdinalIgnoreCase);
-
+		var nameMap = BuildColumnMap(namedCols, StringComparer.OrdinalIgnoreCase);
 
 		foreach (var col in namedCols)
 		{
@@ -432,7 +452,7 @@ sealed class CompiledDataBinder<T>
 		{
 			unboundProperties = properties.Select(p => p.Value.Name).ToArray();
 		}
-
+		
 		if (opts.BindingMode.HasFlag(DataBindingMode.AllColumns) && physicalColumns.Any())
 		{
 			unboundColumns = physicalColumns.Select(p => p.ColumnName).ToArray();

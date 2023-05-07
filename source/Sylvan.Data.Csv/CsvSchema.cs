@@ -7,7 +7,7 @@ namespace Sylvan.Data.Csv;
 
 sealed class NullableCsvSchema : CsvSchemaProvider
 {
-	static NullableStringColumn Column = new();
+	readonly static NullableStringColumn Column = new();
 
 	public override DbColumn? GetColumn(string? name, int ordinal)
 	{
@@ -35,7 +35,7 @@ public class CsvSchema : CsvSchemaProvider
 	public static readonly ICsvSchemaProvider Nullable = new NullableCsvSchema();
 
 	readonly DbColumn[] schema;
-	readonly Dictionary<string, DbColumn> nameMap;
+	readonly Dictionary<string, DbColumn?> nameMap;
 
 	const string SeriesOrdinalProperty = "SeriesOrdinal";
 	readonly DbColumn? seriesColumn;
@@ -57,7 +57,7 @@ public class CsvSchema : CsvSchemaProvider
 	public CsvSchema(IEnumerable<DbColumn> schema, StringComparer headerComparer)
 	{
 		this.schema = schema.ToArray();
-		this.nameMap = new Dictionary<string, DbColumn>(headerComparer);
+		this.nameMap = new Dictionary<string, DbColumn?>(headerComparer);
 		foreach (var col in schema)
 		{
 			int? series = col[SeriesOrdinalProperty] is int i ? i : (int?)null;
@@ -74,12 +74,28 @@ public class CsvSchema : CsvSchemaProvider
 
 			if (string.IsNullOrEmpty(col.BaseColumnName) == false)
 			{
-				nameMap.Add(col.BaseColumnName, col);
+				var key = col.BaseColumnName;
+				if (nameMap.ContainsKey(key))
+				{
+					nameMap[key] = null;
+				}
+				else
+				{
+					nameMap.Add(key, col);
+				}
 			}
 			else
 			if (string.IsNullOrEmpty(col.ColumnName) == false)
 			{
-				nameMap.Add(col.ColumnName, col);
+				var key = col.ColumnName;
+				if (nameMap.ContainsKey(key))
+				{
+					nameMap[key] = null;
+				}
+				else
+				{
+					nameMap.Add(key, col);
+				}
 			}
 		}
 	}
@@ -89,6 +105,8 @@ public class CsvSchema : CsvSchemaProvider
 	{
 		if (name != null && nameMap.TryGetValue(name, out DbColumn? col))
 		{
+			// this can still return null when the column name was duplicated
+			// and thus ambiguous
 			return col;
 		}
 
