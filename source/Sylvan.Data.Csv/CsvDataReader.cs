@@ -125,6 +125,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	readonly char escape;
 	readonly char comment;
 	char minSafe;
+	NewLineMode newLineMode;
 	readonly bool ownsReader;
 	readonly CultureInfo culture;
 	readonly string? dateTimeFormat;
@@ -199,6 +200,14 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		this.commentHandler = options.CommentHandler;
 		this.schema = options.Schema;
 		this.resultSetMode = options.ResultSetMode;
+		this.newLineMode = NewLineMode.Unknown;
+	}
+
+	enum NewLineMode
+	{
+		Unknown,
+		Standard,
+		MacOS,
 	}
 
 	char DetectDelimiter()
@@ -209,6 +218,10 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 			var c = buffer[i];
 			if (c == '\n' || c == '\r')
 			{
+				if (c == '\r' && i + 1 < buffer.Length && buffer[i + 1] != '\n')
+				{
+					newLineMode = NewLineMode.MacOS;
+				}
 				var x = counts.Sum();
 				if (x == 0)
 				{
@@ -235,6 +248,48 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 			}
 		}
 		return AutoDetectDelimiters[maxIdx];
+	}
+
+	NewLineMode DetectNewLine()
+	{
+
+#if SPAN
+		var idx = this.buffer.AsSpan().IndexOfAny('\r', '\n');
+		if (idx < 0)
+		{
+			return NewLineMode.Standard;
+		}
+		var c = this.buffer[idx];
+		if (c == '\r')
+		{
+			if (c + 1 < this.buffer.Length && this.buffer[c + 1] != '\n')
+			{
+				return NewLineMode.MacOS;
+			}
+		}
+		return NewLineMode.Standard;
+#else
+		for (int i = recordStart; i < bufferEnd; i++)
+		{
+			var c = buffer[i];
+			if(c == '\n')
+			{
+				return NewLineMode.Standard;
+			}
+
+			if (c == '\r')
+			{
+				if (i + 1 < buffer.Length && buffer[i + 1] != '\n')
+				{
+					// if the first \r isn't followed by a \n, then
+					// parse the rest of the file expecting only \r
+					return NewLineMode.MacOS;
+					
+				}
+			}			
+		}
+		return NewLineMode.Standard;
+#endif
 	}
 
 	/// <summary>
@@ -279,7 +334,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	void InitIntrinsics()
 	{
 		delimiterMaskVector = Vector128.Create((ushort)this.delimiter);
-		lineEndMaskVector = Vector128.Create((ushort)'\n');
+		lineEndMaskVector = Vector128.Create((ushort)(newLineMode == NewLineMode.MacOS ? '\r' : '\n'));
 		quoteMaskVector = Vector128.Create((ushort)this.quote);
 	}
 
@@ -381,7 +436,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 							var endIdx = pos + (lineEndIdx / 2);
 							ref var field = ref SetFieldEnd(ref fieldIdx, endIdx);
 							// might need to also remove a preceding '\r'
-							if (p[endIdx - 1] == '\r')
+							if (newLineMode != NewLineMode.MacOS && p[endIdx - 1] == '\r')
 							{
 								field.endIdx--;
 							}
@@ -747,7 +802,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 				if (c != '\n')
 				{
 					idx--;
-					return ReadResult.False;
+					return ReadResult.True;
 				}
 				return ReadResult.True;
 			}
