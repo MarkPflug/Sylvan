@@ -491,6 +491,48 @@ namespace Sylvan.Data
 			Assert.Equal(2, ex.Ordinal);
 		}
 
+		[Fact]
+		public void DupeHeaderSuccess()
+		{
+			// the duplicate columns won't cause a problem, because it isn't part of the binding.
+			var dataStr = "Id,Blorp,Name,Date,Blorp\n1,X,a,2000-11-12,Y";
+			var schema =
+				new Schema.Builder()
+				.Add<int>("Id")
+				.Add<string>("Blorp")
+				.Add<string>("Name")
+				.Add<DateTime>("Date")
+				.Add<string>("Blorp")
+				.Build();
+
+			var data = CsvDataReader.Create(new StringReader(dataStr), new CsvDataReaderOptions { Schema = new CsvSchema(schema) });
+			var binder = DataBinder.Create<MyDataRecord>(data, new DataBinderOptions { BindingMode = DataBindingMode.AllProperties });
+			data.Read();
+			var record = new MyDataRecord();
+			binder.Bind(data, record);
+			Assert.Equal(1, record.Id);
+			Assert.Equal("a", record.Name);
+			Assert.Equal(2000, record.Date.Value.Year);
+		}
+
+		[Fact]
+		public void DupeHeaderFailure()
+		{
+			// the duplicate column causes a failure because we're trying to bind the name column.
+			var dataStr = "Id,Name,Date,Name\n1,a,2000-11-12,Y";
+			var schema =
+				new Schema.Builder()
+				.Add<int>("Id")
+				.Add<string>("Name")
+				.Add<DateTime>("Date")
+				.Add<string>("Name")
+				.Build();
+
+			var data = CsvDataReader.Create(new StringReader(dataStr), new CsvDataReaderOptions { Schema = new CsvSchema(schema) });
+			// cannot create a binder when the duplicate column is being mapped
+			Assert.Throws<UnboundMemberException>(() => DataBinder.Create<MyDataRecord>(data, new DataBinderOptions { BindingMode = DataBindingMode.AllProperties }));
+		}
+
 #if NET6_0_OR_GREATER
 
 		[Fact]
