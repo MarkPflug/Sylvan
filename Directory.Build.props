@@ -6,9 +6,9 @@
     <Authors>$(Owner)</Authors>
     <PackageIconUrl>https://markpflug.github.io/Sylvan.png</PackageIconUrl>
     <PackageIcon>Sylvan.png</PackageIcon>
-    <Copyright>© 2022 $(Owner)</Copyright>
+    <Copyright>© 2023 $(Owner)</Copyright>
     <PackageLicenseFile>license.txt</PackageLicenseFile>
-    <LangVersion>10.0</LangVersion>
+    <LangVersion>11.0</LangVersion>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <WarningsNotAsErrors>CS1030;CA1835;$(WarningsNotAsErrors)</WarningsNotAsErrors>
 
