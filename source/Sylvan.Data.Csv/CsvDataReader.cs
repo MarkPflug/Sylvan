@@ -326,16 +326,22 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	}
 
 #if INTRINSICS
-
-	Vector128<ushort> delimiterMaskVector;
-	Vector128<ushort> lineEndMaskVector;
-	Vector128<ushort> quoteMaskVector;
+	
+	Vector256<byte> delimiterMaskVector256;
+	Vector256<byte> lineEndMaskVector256;
+	Vector256<byte> quoteMaskVector256;
+	Vector128<byte> delimiterMaskVector;
+	Vector128<byte> lineEndMaskVector;
+	Vector128<byte> quoteMaskVector;
 
 	void InitIntrinsics()
 	{
-		delimiterMaskVector = Vector128.Create((ushort)this.delimiter);
-		lineEndMaskVector = Vector128.Create((ushort)(newLineMode == NewLineMode.MacOS ? '\r' : '\n'));
-		quoteMaskVector = Vector128.Create((ushort)this.quote);
+		delimiterMaskVector256 = Vector256.Create((byte)this.delimiter);
+		lineEndMaskVector256 = Vector256.Create((byte)(newLineMode == NewLineMode.MacOS ? '\r' : '\n'));
+		quoteMaskVector256 = Vector256.Create((byte)this.quote);
+		delimiterMaskVector = Vector128.Create((byte)this.delimiter);
+		lineEndMaskVector = Vector128.Create((byte)(newLineMode == NewLineMode.MacOS ? '\r' : '\n'));
+		quoteMaskVector = Vector128.Create((byte)this.quote);
 	}
 
 	// this method uses SIMD instructions to optimistically read records
@@ -343,22 +349,35 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	// when quotes are detected and falls back to the slower, more robust single-data
 	// path. Returns true when the end-of-record newline is found, and false when
 	// the record might contain more fields.
-	unsafe bool ReadRecordFast(ref int fieldIdx)
+	bool ReadRecordFast(ref int fieldIdx)
 	{
-		if (!Bmi1.IsSupported || !Sse2.IsSupported)
-		{
-			return false;
-		}
-
 		if (this.style != CsvStyle.Standard)
 		{
 			return false;
 		}
 
+		if (Bmi1.IsSupported)
+		{
+			if (Avx2.IsSupported)
+			{
+				return ReadRecordFast256(ref fieldIdx);
+			}
+			else
+			if (Sse2.IsSupported)
+			{
+				return ReadRecordFast128(ref fieldIdx);
+			}
+		}
+		return false;
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	unsafe bool ReadRecordFast256(ref int fieldIdx)
+	{
 		var pos = idx;
-		// processing 8-char chunks so terminate the
+		// processing 32-char chunks so terminate the
 		// fast loop before we run out of data.
-		var end = this.bufferEnd - 8;
+		var end = this.bufferEnd - 32;
 
 		var recordStart = this.recordStart;
 		var fieldInfos = this.fieldInfos;
@@ -366,43 +385,41 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		fixed (char* p = buffer)
 		{
 			// SIMD operators support ushort.
-			ushort* ip = (ushort*)p;
+			short* ip = (short*)p;
 			while (pos < end)
 			{
-				// a single 8-char block filled with delimiters can result in 8 new fields
+				// a single 16-byte block filled with delimiters can result in 16 new fields
 				// being required, so make sure we have room for that case ahead of time.
-				if (fieldIdx + 8 >= fieldInfos.Length)
+				if (fieldIdx + 32 >= fieldInfos.Length)
 				{
-					Array.Resize(ref fieldInfos, fieldInfos.Length + 8);
+					Array.Resize(ref fieldInfos, fieldInfos.Length + 32);
 					this.fieldInfos = fieldInfos;
 				}
 
-				// load the current 8-char block into a SIMD vector 
-				var dataVector = Sse2.LoadVector128(ip + pos);
+				var v1 = Avx2.LoadVector256(ip + pos);
+				var v2 = Avx2.LoadVector256(ip + pos + 16);
+
+				var dataVector = Avx2.PackUnsignedSaturate(v1, v2);
+				dataVector = Avx2.Permute4x64(dataVector.AsInt64(), 0b11_01_10_00).AsByte();
 
 				// produce vectors indicating where delimiters, line ends '\n' and quotes are.
-				// these vectors will contain 8 ushort elements that are either 0 or ushort.MaxValue
+				// these vectors will contain 16 byte elements that are either 0 or byte.MaxValue
 				// indicating where the characters are detected.
-				var delimiterVector = Sse2.CompareEqual(dataVector, delimiterMaskVector);
-				var lineEndVector = Sse2.CompareEqual(dataVector, lineEndMaskVector);
-				var quoteVector = Sse2.CompareEqual(dataVector, quoteMaskVector);
+				var delimiterVector = Avx2.CompareEqual(dataVector, delimiterMaskVector256);
+				var lineEndVector = Avx2.CompareEqual(dataVector, lineEndMaskVector256);
+				var quoteVector = Avx2.CompareEqual(dataVector, quoteMaskVector256);
 
-				// convert the vector into a uint bit field. This bit field will
-				// represent character positions by pairs of set bits (ushort => byte)
-				// "XXXX,XXX" => Vector(0,0,0,0,65535,0,0,0) => 0b00_00_00_00_11_00_00_00
-				var delimiterMask = (uint)Sse2.MoveMask(delimiterVector.AsByte());
+				var delimiterMask = (uint)Avx2.MoveMask(delimiterVector);
 
 				// combine the line end and quote vectors to
 				// check if we need to handle those with a single branch
-				var combined = Sse2.Or(lineEndVector, quoteVector);
-				if (Sse2.MoveMask(combined.AsByte()) != 0)
+				var combined = Avx2.Or(lineEndVector, quoteVector);
+				if (Avx2.MoveMask(combined.AsByte()) != 0)
 				{
-					var lineEndMask = (uint)Sse2.MoveMask(lineEndVector.AsByte());
-					var quoteMask = (uint)Sse2.MoveMask(quoteVector.AsByte());
+					var lineEndMask = (uint)Avx2.MoveMask(lineEndVector);
+					var quoteMask = (uint)Avx2.MoveMask(quoteVector);
 
 					// find the locations of the first line end and quotes
-					// these indices need to be divided by two since they are
-					// byte offsets and we want char offsets.
 					var lineEndIdx = (int)Bmi1.TrailingZeroCount(lineEndMask);
 					var quoteIdx = (int)Bmi1.TrailingZeroCount(quoteMask);
 
@@ -426,14 +443,14 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 								break;
 							}
 
-							var endIdx = pos + (delimiterIdx / 2);
+							var endIdx = pos + delimiterIdx;
 							SetFieldEnd(ref fieldIdx, endIdx);
-							delimiterMask = ClearCharMask(delimiterMask, delimiterIdx);
+							delimiterMask = Bmi1.ResetLowestSetBit(delimiterMask);
 						}
 
 						// then process the line ending
 						{
-							var endIdx = pos + (lineEndIdx / 2);
+							var endIdx = pos + lineEndIdx;
 							ref var field = ref SetFieldEnd(ref fieldIdx, endIdx);
 							// might need to also remove a preceding '\r'
 							if (newLineMode != NewLineMode.MacOS && p[endIdx - 1] == '\r')
@@ -450,12 +467,123 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 				while (delimiterMask != 0)
 				{
 					var delimiterIdx = (int)Bmi1.TrailingZeroCount(delimiterMask);
-					int endIdx = pos + (delimiterIdx / 2);
+					int endIdx = pos + delimiterIdx;
 					SetFieldEnd(ref fieldIdx, endIdx);
-					delimiterMask = ClearCharMask(delimiterMask, delimiterIdx);
+					delimiterMask = Bmi1.ResetLowestSetBit(delimiterMask);
 				}
 
-				pos += 8;
+				pos += 32;
+			}
+
+			this.curFieldCount = fieldIdx;
+			return false;
+		}
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	unsafe bool ReadRecordFast128(ref int fieldIdx)
+	{
+		var pos = idx;
+		// processing 16-char chunks so terminate the
+		// fast loop before we run out of data.
+		var end = this.bufferEnd - 16;
+
+		var recordStart = this.recordStart;
+		var fieldInfos = this.fieldInfos;
+
+		fixed (char* p = buffer)
+		{
+			// SIMD operators support ushort.
+			short* ip = (short*)p;
+			while (pos < end)
+			{
+				// a single 16-byte block filled with delimiters can result in 16 new fields
+				// being required, so make sure we have room for that case ahead of time.
+				if (fieldIdx + 16 >= fieldInfos.Length)
+				{
+					Array.Resize(ref fieldInfos, fieldInfos.Length + 16);
+					this.fieldInfos = fieldInfos;
+				}
+
+				// load a vector with 16 bytes where each byte represents
+				// a single character. Chars that are above 255 will "saturate"
+				// to 255.
+				var v1 = Sse2.LoadVector128(ip + pos);
+				var v2 = Sse2.LoadVector128(ip + pos + 8);
+
+				var dataVector = Sse2.PackUnsignedSaturate(v1, v2);
+
+				// produce vectors indicating where delimiters, line ends '\n' and quotes are.
+				// these vectors will contain 16 byte elements that are either 0 or byte.MaxValue
+				// indicating where the characters are detected.
+				var delimiterVector = Sse2.CompareEqual(dataVector, delimiterMaskVector);
+				var lineEndVector = Sse2.CompareEqual(dataVector, lineEndMaskVector);
+				var quoteVector = Sse2.CompareEqual(dataVector, quoteMaskVector);
+
+				var delimiterMask = (uint)Sse2.MoveMask(delimiterVector.AsByte());
+
+				// combine the line end and quote vectors to
+				// check if we need to handle those with a single branch
+				var combined = Sse2.Or(lineEndVector, quoteVector);
+				if (Sse2.MoveMask(combined.AsByte()) != 0)
+				{
+					var lineEndMask = (uint)Sse2.MoveMask(lineEndVector.AsByte());
+					var quoteMask = (uint)Sse2.MoveMask(quoteVector.AsByte());
+
+					// find the locations of the first line end and quotes
+					var lineEndIdx = (int)Bmi1.TrailingZeroCount(lineEndMask);
+					var quoteIdx = (int)Bmi1.TrailingZeroCount(quoteMask);
+
+					// if the first quote appears before the first EOL
+					// abort the SIMD path and let the single-data path process it
+					if (quoteIdx < lineEndIdx)
+					{
+						this.curFieldCount = fieldIdx;
+						return false;
+					}
+
+					// if a lineEnd is present in this block
+					if (lineEndIdx < 0x20)
+					{
+						// process any delimiters that appear before the line end
+						while (delimiterMask != 0)
+						{
+							var delimiterIdx = (int)Bmi1.TrailingZeroCount(delimiterMask);
+							if (delimiterIdx >= lineEndIdx)
+							{
+								break;
+							}
+
+							var endIdx = pos + delimiterIdx;
+							SetFieldEnd(ref fieldIdx, endIdx);
+							delimiterMask = Bmi1.ResetLowestSetBit(delimiterMask);
+						}
+
+						// then process the line ending
+						{
+							var endIdx = pos + lineEndIdx;
+							ref var field = ref SetFieldEnd(ref fieldIdx, endIdx);
+							// might need to also remove a preceding '\r'
+							if (newLineMode != NewLineMode.MacOS && p[endIdx - 1] == '\r')
+							{
+								field.endIdx--;
+							}
+						}
+						this.curFieldCount = fieldIdx;
+						return true;
+					}
+				}
+
+				// process any delimiters in this block.
+				while (delimiterMask != 0)
+				{
+					var delimiterIdx = (int)Bmi1.TrailingZeroCount(delimiterMask);
+					int endIdx = pos + delimiterIdx;
+					SetFieldEnd(ref fieldIdx, endIdx);
+					delimiterMask = Bmi1.ResetLowestSetBit(delimiterMask);
+				}
+
+				pos += 16;
 			}
 
 			this.curFieldCount = fieldIdx;
@@ -471,20 +599,6 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		field = default;
 		field.endIdx = endIdx - recordStart;
 		return ref field;
-	}
-
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	static uint ClearCharMask(uint value, int idx)
-	{
-		// clears the bits in value below idx + 2.
-		// this is used to clear the two bits that represent
-		// the current delimiter being processed
-		// Example: idx = 4
-		// 1 << (4+2)    == 0b1000000
-		// 0b1000000 - 1 == 0b111111
-		// ~0b111111     == 0b11111111000000
-		var mask = (uint)~((1 << (idx + 2)) - 1);
-		return value & mask;
 	}
 
 #endif
