@@ -374,11 +374,6 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	unsafe bool ReadRecordFast256(ref int fieldIdx)
 	{
-		if (this.style != CsvStyle.Standard)
-		{
-			return false;
-		}
-
 		var pos = idx;
 		// processing 32-char chunks so terminate the
 		// fast loop before we run out of data.
