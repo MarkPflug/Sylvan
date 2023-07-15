@@ -13,8 +13,9 @@ partial class CsvDataReader
 	/// </summary>
 	/// <param name="filename">The name of a file containing CSV data.</param>
 	/// <param name="options">The options to configure the reader, or null to use the default options.</param>
+	/// <param name="cancel">The optional cancellation token to be used for cancelling the initialization sequence.</param>
 	/// <returns>A task representing the asynchronous creation of a CsvDataReader instance.</returns>
-	public static Task<CsvDataReader> CreateAsync(string filename, CsvDataReaderOptions? options = null)
+	public static Task<CsvDataReader> CreateAsync(string filename, CsvDataReaderOptions? options = null, CancellationToken cancel = default)
 	{
 		if (filename == null) throw new ArgumentNullException(nameof(filename));
 		// TextReader must be owned when we open it.
@@ -22,7 +23,7 @@ partial class CsvDataReader
 		var bufferSize = GetIOBufferSize(options);
 		var stream = new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize, FileOptions.SequentialScan | FileOptions.Asynchronous);
 		var reader = new StreamReader(stream, Encoding.Default);
-		return CreateAsyncInternal(reader, null, options);
+		return CreateAsyncInternal(reader, null, options, cancel);
 	}
 
 	/// <summary>
@@ -30,10 +31,11 @@ partial class CsvDataReader
 	/// </summary>
 	/// <param name="reader">The TextReader for the delimited data.</param>
 	/// <param name="options">The options to configure the reader, or null to use the default options.</param>
+	/// <param name="cancel">The optional cancellation token to be used for cancelling the initialization sequence.</param>
 	/// <returns>A task representing the asynchronous creation of a CsvDataReader instance.</returns>
-	public static Task<CsvDataReader> CreateAsync(TextReader reader, CsvDataReaderOptions? options = null)
+	public static Task<CsvDataReader> CreateAsync(TextReader reader, CsvDataReaderOptions? options = null, CancellationToken cancel = default)
 	{
-		return CreateAsyncInternal(reader, null, options);
+		return CreateAsyncInternal(reader, null, options, cancel);
 	}
 
 	/// <summary>
@@ -42,18 +44,19 @@ partial class CsvDataReader
 	/// <param name="reader">The TextReader for the delimited data.</param>
 	/// <param name="buffer">A buffer to use for internal processing.</param>
 	/// <param name="options">The options to configure the reader, or null to use the default options.</param>
+	/// <param name="cancel">The optional cancellation token to be used for cancelling the initialization sequence.</param>
 	/// <returns>A task representing the asynchronous creation of a CsvDataReader instance.</returns>
-	public static Task<CsvDataReader> CreateAsync(TextReader reader, char[] buffer, CsvDataReaderOptions? options = null)
+	public static Task<CsvDataReader> CreateAsync(TextReader reader, char[] buffer, CsvDataReaderOptions? options = null, CancellationToken cancel = default)
 	{
-		return CreateAsyncInternal(reader, buffer, options);
+		return CreateAsyncInternal(reader, buffer, options, cancel);
 	}
 
-	static async Task<CsvDataReader> CreateAsyncInternal(TextReader reader, char[]? buffer, CsvDataReaderOptions? options)
+	static async Task<CsvDataReader> CreateAsyncInternal(TextReader reader, char[]? buffer, CsvDataReaderOptions? options, CancellationToken cancel)
 	{
 		options ??= CsvDataReaderOptions.Default;
 		if (reader == null) throw new ArgumentNullException(nameof(reader));
 		var csv = new CsvDataReader(reader, buffer, options);
-		if (!await csv.InitializeReaderAsync().ConfigureAwait(false) && options.HasHeaders)
+		if (!await csv.InitializeReaderAsync(cancel).ConfigureAwait(false) && options.HasHeaders)
 		{
 			throw new CsvMissingHeadersException();
 		}
