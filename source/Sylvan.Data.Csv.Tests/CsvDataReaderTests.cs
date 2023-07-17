@@ -1224,7 +1224,7 @@ public class CsvDataReaderTests
 	public void Enum()
 	{
 		var text = new StringReader("a,b\nRead,write\nReadWrite,");
-		var schema = 
+		var schema =
 			new TypedCsvSchema()
 			.Add(0, typeof(FileAccess))
 			.Add(1, typeof(FileAccess?));
@@ -1570,7 +1570,7 @@ public class CsvDataReaderTests
 		var data = "a,b\n01/02/03,01/02/03";
 
 		var schema = Schema.Parse("a>Start:DateTime{MM/dd/yy},b>End:DateTime{dd/MM/yy}");
-		var opts = 
+		var opts =
 			new CsvDataReaderOptions
 			{
 				Schema = new CsvSchema(schema)
@@ -1790,7 +1790,6 @@ public class CsvDataReaderTests
 		var q = csv.GetColumnSchema();
 		var a = csv.GetOrdinal("a");
 		var c = csv.GetOrdinal("c");
-		var qq = csv.GetOrdinal("q");
 		while (csv.Read())
 		{
 			var x = csv.GetInt32(a);
