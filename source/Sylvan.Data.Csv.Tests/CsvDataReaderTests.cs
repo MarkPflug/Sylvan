@@ -1778,6 +1778,46 @@ public class CsvDataReaderTests
 		Assert.False(reader.Read());
 	}
 
+	[Fact]
+	public void ColumnMapping()
+	{
+		var data = "a,b,c\n1,test,2022-1-1,test\n2,blah,2022-02-01\n";
+		var schema = Schema.Parse("a>a:int,c>c:date,q>q:int");
+
+		var r = new StringReader(data);
+		var csv = CsvDataReader.Create(r, new CsvDataReaderOptions { Schema = new CsvSchema(schema) });
+
+		var q = csv.GetColumnSchema();
+		var a = csv.GetOrdinal("a");
+		var c = csv.GetOrdinal("c");
+		var qq = csv.GetOrdinal("q");
+		while (csv.Read())
+		{
+			var x = csv.GetInt32(a);
+			var y = csv.GetDateTime(c);
+		}
+	}
+
+	[Fact]
+	public void QuotedHeader()
+	{
+		var data =
+			"""
+			"a","b","c"
+			1,2,3
+			""";
+		var csv = CsvDataReader.Create(new StringReader(data));
+
+		Assert.Equal("a", csv.GetName(0));
+		Assert.Equal("b", csv.GetName(1));
+		Assert.Equal("c", csv.GetName(2));
+		Assert.True(csv.Read());
+		Assert.Equal("1", csv.GetString(0));
+		Assert.Equal("2", csv.GetString(1));
+		Assert.Equal("3", csv.GetString(2));
+	}
+
+
 #if NET6_0_OR_GREATER
 
 	[Fact]
