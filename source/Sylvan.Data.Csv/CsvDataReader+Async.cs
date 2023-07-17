@@ -13,6 +13,17 @@ partial class CsvDataReader
 	/// </summary>
 	/// <param name="filename">The name of a file containing CSV data.</param>
 	/// <param name="options">The options to configure the reader, or null to use the default options.</param>
+	/// <returns>A task representing the asynchronous creation of a CsvDataReader instance.</returns>
+	public static Task<CsvDataReader> CreateAsync(string filename, CsvDataReaderOptions? options)
+	{
+		return CreateAsync(filename, options, default);
+	}
+
+	/// <summary>
+	/// Creates a new CsvDataReader asynchronously.                                                                                          
+	/// </summary>
+	/// <param name="filename">The name of a file containing CSV data.</param>
+	/// <param name="options">The options to configure the reader, or null to use the default options.</param>
 	/// <param name="cancel">The optional cancellation token to be used for cancelling the initialization sequence.</param>
 	/// <returns>A task representing the asynchronous creation of a CsvDataReader instance.</returns>
 	public static Task<CsvDataReader> CreateAsync(string filename, CsvDataReaderOptions? options = null, CancellationToken cancel = default)
@@ -31,11 +42,34 @@ partial class CsvDataReader
 	/// </summary>
 	/// <param name="reader">The TextReader for the delimited data.</param>
 	/// <param name="options">The options to configure the reader, or null to use the default options.</param>
+	/// <returns>A task representing the asynchronous creation of a CsvDataReader instance.</returns>
+	public static Task<CsvDataReader> CreateAsync(TextReader reader, CsvDataReaderOptions? options)
+	{
+		return CreateAsyncInternal(reader, null, options, default);
+	}
+
+	/// <summary>
+	/// Creates a new CsvDataReader asynchronously.
+	/// </summary>
+	/// <param name="reader">The TextReader for the delimited data.</param>
+	/// <param name="options">The options to configure the reader, or null to use the default options.</param>
 	/// <param name="cancel">The optional cancellation token to be used for cancelling the initialization sequence.</param>
 	/// <returns>A task representing the asynchronous creation of a CsvDataReader instance.</returns>
 	public static Task<CsvDataReader> CreateAsync(TextReader reader, CsvDataReaderOptions? options = null, CancellationToken cancel = default)
 	{
 		return CreateAsyncInternal(reader, null, options, cancel);
+	}
+
+	/// <summary>
+	/// Creates a new CsvDataReader asynchronously.
+	/// </summary>
+	/// <param name="reader">The TextReader for the delimited data.</param>
+	/// <param name="buffer">A buffer to use for internal processing.</param>
+	/// <param name="options">The options to configure the reader, or null to use the default options.</param>
+	/// <returns>A task representing the asynchronous creation of a CsvDataReader instance.</returns>
+	public static Task<CsvDataReader> CreateAsync(TextReader reader, char[] buffer, CsvDataReaderOptions? options)
+	{
+		return CreateAsyncInternal(reader, buffer, options, default);
 	}
 
 	/// <summary>
