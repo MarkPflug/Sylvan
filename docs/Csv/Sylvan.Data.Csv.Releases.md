@@ -1,5 +1,8 @@
 # Sylvan.Data.Csv Release Notes
 
+_1.3.3_
+- CsvDataReader.Create now accepts a CancellationToken to support async cancellation during construction.
+
 _1.3.2_
 - Improve SIMD code path for significant performance gains. Thanks to [nietras](https://github.com/nietras/sep)
   and their impressive sep library for inspiration and learning.
