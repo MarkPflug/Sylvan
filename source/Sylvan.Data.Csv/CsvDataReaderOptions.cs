@@ -97,6 +97,24 @@ public enum ResultSetMode
 }
 
 /// <summary>
+/// Specifies how the the reader reacts when a unescaped is encountered, that is not the terminating quote of the field.
+/// </summary>
+public enum UnescapedQuoteHandling
+{
+	/// <summary>
+	/// Throws a FormatException when invalid data is encountered.
+	/// </summary>
+	Throw = 1,
+
+	/// <summary>
+	/// Searches for the next terminating quote and continues reading.
+	/// If no terminating quote is found, an exception is throw anyway.
+	/// NOTE: This can lead to invalid data.
+	/// </summary>
+	AllowIfTerminatingQuoteIsFound = 2,
+}
+
+/// <summary>
 /// Options for configuring a CsvDataReader.
 /// </summary>
 public sealed class CsvDataReaderOptions
@@ -128,7 +146,14 @@ public sealed class CsvDataReaderOptions
 
 		this.BinaryEncoding = BinaryEncoding.Base64;
 		this.ResultSetMode = ResultSetMode.SingleResult;
+		this.FormatExceptionHandling = UnescapedQuoteHandling.Throw;
 	}
+
+	/// <summary>
+	/// Specifies the behavior of the reader when encountering invalid formatted data.
+	/// The default is <see cref="UnescapedQuoteHandling.Throw"/>.
+	/// </summary>
+	public UnescapedQuoteHandling FormatExceptionHandling { get; set; }
 
 	/// <summary>
 	/// Indicates the behavior of result transitions.

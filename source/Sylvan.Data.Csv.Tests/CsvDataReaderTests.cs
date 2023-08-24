@@ -186,7 +186,10 @@ public class CsvDataReaderTests
 	[Fact]
 	public void Quoted2()
 	{
-		var reader = new StringReader("a,b,c\n1,\"\"\"2\"\", (two)\",3");
+		var reader = new StringReader(""""
+			a,b,c
+			1,"""2"", (two)",3
+			"""");
 		var csv = CsvDataReader.Create(reader);
 		Assert.Equal(3, csv.FieldCount);
 		csv.Read();
@@ -887,6 +890,42 @@ public class CsvDataReaderTests
 	}
 
 	[Fact]
+	public void BadQuoteWithTerminatingQuoteAllowIfTerminatingQuoteIsFound()
+	{
+		using var tr = new StringReader(""""
+			"Name","Value"
+			"A","B"C"" "
+			"D","E"
+
+			"""");
+		var csv = CsvDataReader.Create(tr, new CsvDataReaderOptions 
+		{ 
+			FormatExceptionHandling = UnescapedQuoteHandling.AllowIfTerminatingQuoteIsFound,
+		});
+		Assert.True(csv.Read());
+		Assert.Equal("""B"C"" """, csv.GetFieldSpan(1).ToString());
+        Assert.True(csv.Read());
+        Assert.Equal("E", csv.GetFieldSpan(1).ToString());
+    }
+
+    [Fact]
+    public void BadQuoteWithTerminatingQuoteThrow()
+    {
+        using var tr = new StringReader("""
+			"Name","Value"
+			"0","1"
+			"A","B"C"
+
+			""");
+        var csv = CsvDataReader.Create(tr, new CsvDataReaderOptions
+        {
+            FormatExceptionHandling = UnescapedQuoteHandling.Throw
+        });
+        Assert.True(csv.Read());
+        Assert.Throws<CsvFormatException>(() => Assert.True(csv.Read()));
+    }
+
+    [Fact]
 	public void WhitespaceAsNull()
 	{
 		var schema = new TypedCsvSchema();

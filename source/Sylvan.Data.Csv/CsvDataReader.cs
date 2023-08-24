@@ -136,6 +136,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	readonly CommentHandler? commentHandler;
 	readonly ICsvSchemaProvider? schema;
 	readonly ResultSetMode resultSetMode;
+	readonly UnescapedQuoteHandling formatExceptionHandling;
 
 	static int GetBufferSize(TextReader reader, CsvDataReaderOptions options)
 	{
@@ -200,6 +201,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		this.commentHandler = options.CommentHandler;
 		this.schema = options.Schema;
 		this.resultSetMode = options.ResultSetMode;
+		this.formatExceptionHandling = options.FormatExceptionHandling;
 		this.newLineMode = NewLineMode.Unknown;
 	}
 
@@ -833,8 +835,15 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 					}
 					else
 					{
-						var rowNumber = this.rowNumber == 0 && this.state == State.Initialized ? 1 : this.rowNumber;
-						throw new CsvFormatException(rowNumber, fieldIdx);
+						if(formatExceptionHandling == UnescapedQuoteHandling.AllowIfTerminatingQuoteIsFound && buffer[recordStart + fieldEnd - 1] == quote)
+						{
+							fi.quoteState = QuoteState.Quoted;
+						}
+						else
+						{
+							var rowNumber = this.rowNumber == 0 && this.state == State.Initialized ? 1 : this.rowNumber;
+							throw new CsvFormatException(rowNumber, fieldIdx);
+						}
 					}
 				}
 			}
@@ -1580,7 +1589,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		int d = 0;
 		while (d < eLen)
 		{
-			var c = buffer[offset + i++];
+			 var c = buffer[offset + i++];
 			if (inQuote)
 			{
 				if (c == escape && i + 1 < len)
