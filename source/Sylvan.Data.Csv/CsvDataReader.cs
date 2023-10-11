@@ -1443,6 +1443,28 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		throw new IndexOutOfRangeException();
 	}
 
+	/// <summary>
+	/// Try to get the ordinal of the given column name
+	/// </summary>
+	/// <param name="name">Column name</param>
+	/// <param name="idx">Ordinal value, if the column exists</param>
+	/// <returns>True if the columns exists, else false</returns>
+	/// <remarks>The ordinal should not be used if the return value is false</remarks>
+	public bool TryGetOrdinal(string name, out int idx)
+	{
+		if (!this.headerMap.TryGetValue(name, out idx))
+		{
+			return false;
+		}
+
+		if (idx == -1)
+		{
+			return false;
+		}
+
+		return true;
+	}
+
 	/// <inheritdoc/>
 	public override string GetString(int ordinal)
 	{

@@ -212,6 +212,7 @@ public class CsvDataReaderTests
 			Assert.Equal(0, csv.RowNumber);
 			Assert.Equal("", csv.GetName(0));
 			Assert.Throws<IndexOutOfRangeException>(() => csv.GetOrdinal("Id"));
+			Assert.False(csv.TryGetOrdinal("Id", out _));
 			Assert.True(await csv.ReadAsync());
 			Assert.Equal(1, csv.RowNumber);
 			Assert.Equal("1", csv[0]);
@@ -249,6 +250,7 @@ public class CsvDataReaderTests
 			Assert.Equal(3, csv.GetOrdinal("D"));
 			Assert.Equal("A", csv.GetName(0));
 			Assert.Throws<IndexOutOfRangeException>(() => csv.GetOrdinal("Id"));
+			Assert.False(csv.TryGetOrdinal("Id", out _));
 			Assert.True(await csv.ReadAsync());
 			Assert.Equal(1, csv.RowNumber);
 			Assert.Equal("1", csv[0]);
@@ -372,7 +374,10 @@ public class CsvDataReaderTests
 
 		var csv = CsvDataReader.Create(new StringReader(data));
 		Assert.Equal(0, csv.GetOrdinal("a"));
+		Assert.True(csv.TryGetOrdinal("a", out int ordinal));
+		Assert.Equal(0, ordinal);
 		Assert.Throws<AmbiguousColumnException>(() => csv.GetOrdinal("b"));
+		Assert.False(csv.TryGetOrdinal("b", out _));
 		var schema = csv.GetColumnSchema();
 		Assert.Equal("a", schema[0].ColumnName);
 		Assert.Equal("b", schema[1].ColumnName);
