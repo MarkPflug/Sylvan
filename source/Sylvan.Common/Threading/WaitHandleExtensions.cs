@@ -36,6 +36,7 @@ static class WaitHandleExtensions
 			if (registeredHandle != null)
 				registeredHandle.Unregister(null);
 			tokenRegistration.Dispose();
+			//await tokenRegistration.DisposeAsync().ConfigureAwait(false);
 		}
 	}
 

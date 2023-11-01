@@ -1,13 +1,17 @@
+#if NET6_0_OR_GREATER
+
 using System;
-using System.Collections.Generic;
+using System.Data.Common;
 using System.Runtime.CompilerServices;
 
 namespace Sylvan;
 
 /// <summary>
-/// An StringFactory implementation that provides string de-duping capabilities..
+/// Provides support for de-duping strings to minimize allocation.
+/// CachingStringPool is optimized for scenarios where the same string might be requested repeatedly for
+/// the same data column.
 /// </summary>
-public sealed class StringPool
+public sealed class CachingStringPool
 {
 	const int DefaultCapacity = 64;
 	const int DefaultSizeLimit = 32;
@@ -17,47 +21,27 @@ public sealed class StringPool
 	// and accepts char[] instead of string.
 
 	// An extremely simple, and hopefully fast, hash algorithm.
-	static uint GetHashCode(ReadOnlySpan<char> buffer, int offset, int length)
+	static uint GetHashCode(ReadOnlySpan<char> buffer)
 	{
 		uint hash = 0;
-		for (int i = 0; i < length; i++)
+		for (int i = 0; i < buffer.Length; i++)
 		{
-			hash = hash * 31 + buffer[offset++];
+			hash = hash * 31 + buffer[i];
 		}
 		return hash;
-	}
-
-	IEnumerable<(string str, int count)> GetUsage()
-	{
-		for (int i = 0; i < this.buckets.Length; i++)
-		{
-			var b = buckets[i];
-			if (b != 0)
-			{
-				var idx = b - 1;
-				while ((uint)idx < entries.Length)
-				{
-					var e = this.entries[idx];
-					yield return (e.str, e.count);
-					idx = e.next;
-				}
-			}
-		}
 	}
 
 	readonly int stringSizeLimit;
 	int[] buckets; // contains index into entries offset by -1. So that 0 (default) means empty bucket.
 	Entry[] entries;
+	string[] lastStrings;
 
 	int count;
-	long uniqueLen;
-	long dupeLen;
-	long skipLen;
 
 	/// <summary>
 	/// Creates a new StringPool instance.
 	/// </summary>
-	public StringPool() : this(DefaultSizeLimit) { }
+	public CachingStringPool() : this(DefaultSizeLimit) { }
 
 	/// <summary>
 	/// Creates a new StringPool instance.
@@ -67,12 +51,17 @@ public sealed class StringPool
 	/// The <paramref name="stringSizeLimit"/> prevents pooling strings beyond a certain size. 
 	/// Longer strings are typically less likely to be duplicated, and and carry extra cost for identifying uniqueness.
 	/// </remarks>
-	public StringPool(int stringSizeLimit)
+	public CachingStringPool(int stringSizeLimit)
 	{
 		int size = GetSize(DefaultCapacity);
 		this.stringSizeLimit = stringSizeLimit;
 		this.buckets = new int[size];
 		this.entries = new Entry[size];
+		this.lastStrings = new string[8];
+		for (int i = 0; i < this.lastStrings.Length; i++)
+		{
+			this.lastStrings[i] = string.Empty;
+		}
 	}
 
 	static int GetSize(int capacity)
@@ -83,28 +72,44 @@ public sealed class StringPool
 		return size;
 	}
 
-	/// <summary>
-	/// Gets a string containing the characters in the input buffer.
-	/// </summary>
-	public string GetString(char[] buffer, int offset, int length)
-	{
-		return GetString(buffer.AsSpan(offset, length));
-	}
+	///// <summary>
+	///// Gets a string containing the characters in the input buffer.
+	///// </summary>
+	//public string GetString(char[] buffer, int offset, int length)
+	//{
+	//	return GetString(buffer.AsSpan(offset, length));
+	//}
 
 	/// <summary>
 	/// Gets a string containing the characters in the input buffer.
 	/// </summary>
 #pragma warning disable CA1801 // Review unused parameters
-	public string GetString(System.Data.Common.DbDataReader reader, int ordinal, char[] buffer, int offset, int length)
+	public string GetString(DbDataReader reader, int ordinal, char[] buffer, int offset, int length)
 #pragma warning restore CA1801 // Review unused parameters
 	{
-		return GetString(buffer.AsSpan(offset, length));
+		return GetString(ordinal, buffer.AsSpan(offset, length));
 	}
 
 	/// <summary>
 	/// Gets a string containing the characters in the input buffer.
 	/// </summary>
-	public string GetString(ReadOnlySpan<char> buffer)
+	public string GetString(int ordinal, char[] buffer, int offset, int length)
+	{
+		return GetString(ordinal, buffer.AsSpan(offset, length));
+	}
+
+	///// <summary>
+	///// Gets a string containing the characters in the input buffer.
+	///// </summary>
+	//public string GetString(ReadOnlySpan<char> buffer)
+	//{
+	//	return GetString(0, buffer);
+	//}
+
+	/// <summary>
+	/// Gets a string for the given column containing the input buffer.
+	/// </summary>
+	public string GetString(int ordinal, ReadOnlySpan<char> buffer)
 	{
 		var length = buffer.Length;
 
@@ -112,16 +117,32 @@ public sealed class StringPool
 		if (length == 0) return string.Empty;
 		if (length > stringSizeLimit)
 		{
-			this.skipLen += length;
-#if !NETSTANDARD2_0
 			return new string(buffer);
-#else
-			return GetStringUnsafe(buffer);
-#endif
+		}
+
+		var lastStrs = this.lastStrings;
+
+		if (ordinal >= lastStrs.Length)
+		{
+			Array.Resize(ref this.lastStrings, ordinal + 8);
+			lastStrs = this.lastStrings;
+			for (int x = 0; x < lastStrs.Length; x++)
+			{
+				if (lastStrs[x] == null)
+				{
+					lastStrs[x] = string.Empty;
+				}
+			}
+		}
+
+		var ls = lastStrs[ordinal];
+		if (MemoryExtensions.SequenceEqual(buffer, ls.AsSpan()))
+		{
+			return ls;
 		}
 
 		var entries = this.entries;
-		var hashCode = GetHashCode(buffer, 0, length);
+		var hashCode = GetHashCode(buffer);
 
 		uint collisionCount = 0;
 		ref int bucket = ref GetBucket(hashCode);
@@ -130,11 +151,11 @@ public sealed class StringPool
 		while ((uint)i < (uint)entries.Length)
 		{
 			ref var e = ref entries[i];
-			if (e.hashCode == hashCode && MemoryExtensions.SequenceEqual(buffer, e.str.AsSpan()))
+			var str = e.str;
+			if (e.hashCode == hashCode && MemoryExtensions.SequenceEqual(buffer, str.AsSpan()))
 			{
-				e.count++;
-				this.dupeLen += length;
-				return e.str;
+				lastStrings[ordinal] = str;
+				return str;
 			}
 
 			i = e.next;
@@ -144,11 +165,7 @@ public sealed class StringPool
 			{
 				// protects against malicious inputs
 				// too many collisions give up and let the caller create the string.					
-#if !NETSTANDARD2_0
 				return new string(buffer);
-#else
-				return GetStringUnsafe(buffer);
-#endif
 			}
 		}
 
@@ -163,15 +180,14 @@ public sealed class StringPool
 
 		var stringValue =
 #if !NETSTANDARD2_0
-				 new string(buffer);
+			new string(buffer);
 #else
-				 GetStringUnsafe(buffer);
+			GetStringUnsafe(buffer);
 #endif
+		lastStrs[ordinal] = stringValue;
 
 		ref Entry entry = ref entries![index];
-		this.uniqueLen += length;
 		entry.hashCode = hashCode;
-		entry.count = 1;
 		entry.next = bucket - 1;
 		entry.str = stringValue;
 
@@ -225,7 +241,8 @@ public sealed class StringPool
 	{
 		public uint hashCode;
 		public int next;
-		public int count;
 		public string str;
 	}
 }
+
+#endif
