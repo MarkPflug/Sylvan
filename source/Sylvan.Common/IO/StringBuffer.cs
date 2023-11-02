@@ -133,10 +133,11 @@ sealed class StringBuffer : TextWriter
 
 	string BuildString()
 	{
-		return String.Create(this.length, this, Writer);
+		return string.Create(this.length, this, Writer);
 	}
 
-	static SpanAction<char, StringBuffer> Writer = StringBufferWriter;
+	// caches the delegate referring to StringBufferWriter method.
+	static readonly SpanAction<char, StringBuffer> Writer = StringBufferWriter;
 
 	static void StringBufferWriter(Span<char> str, StringBuffer buffer)
 	{

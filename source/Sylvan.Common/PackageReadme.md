@@ -1,4 +1,4 @@
-# <img src="../../Sylvan.png" height="48" alt="Sylvan Logo"/> Sylvan.Common
+﻿# <img src="../../Sylvan.png" height="48" alt="Sylvan Logo"/> Sylvan.Common
 
 The `Sylvan.Common` library contains a collection of types and extensions that I've developed over time.
 Most of these will not be of much interest to most people, but you're free to use it if you do.
