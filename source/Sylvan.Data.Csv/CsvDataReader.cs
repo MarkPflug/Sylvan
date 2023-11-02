@@ -132,7 +132,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	readonly string? trueString, falseString;
 	readonly BinaryEncoding binaryEncoding;
 	readonly bool hasHeaders;
-	readonly StringFactory stringFactory;
+	readonly ColumnStringFactory stringFactory;
 	readonly CommentHandler? commentHandler;
 	readonly ICsvSchemaProvider? schema;
 	readonly ResultSetMode resultSetMode;
@@ -196,11 +196,39 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		this.culture = options.Culture;
 		this.ownsReader = options.OwnsReader;
 		this.binaryEncoding = options.BinaryEncoding;
-		this.stringFactory = options.StringFactory ?? new StringFactory((char[] b, int o, int l) => new string(b, o, l));
+		this.stringFactory = BuildStringFactory(options.ColumnStringFactory, options.StringFactory);
+
 		this.commentHandler = options.CommentHandler;
 		this.schema = options.Schema;
 		this.resultSetMode = options.ResultSetMode;
 		this.newLineMode = NewLineMode.Unknown;
+	}
+
+	static ColumnStringFactory BuildStringFactory(ColumnStringFactory? csf, StringFactory?sf)
+	{
+		if (csf != null)
+		{
+			if (sf != null)
+			{
+				return
+					new ColumnStringFactory(
+						(r, i, b, o, l) =>
+						{
+							return csf(r, i, b, o, l) ?? sf(b, o, l);
+						}
+					);
+			}
+			else
+			{
+				return (r, i, b, o, l) => csf(r, i, b, o, l);
+			}
+		}
+		else
+		if (sf != null)
+		{
+			return (r, i, b, o, l) => sf(b, o, l);
+		}
+		return (r, i, b, o, l) => null;
 	}
 
 	enum NewLineMode
@@ -1451,7 +1479,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 			var s = GetFieldUnsafe(ordinal);
 			var l = s.length;
 			if (l == 0) return string.Empty;
-			return stringFactory.Invoke(s.buffer, s.offset, l);
+			return stringFactory.Invoke(this, ordinal, s.buffer, s.offset, l) ?? new string(s.buffer, s.offset, l);
 		}
 		if ((uint)ordinal >= (uint)fieldCount)
 		{

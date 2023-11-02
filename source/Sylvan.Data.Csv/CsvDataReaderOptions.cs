@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Data.Common;
 using System.Globalization;
 
 namespace Sylvan.Data.Csv;
@@ -9,7 +10,15 @@ namespace Sylvan.Data.Csv;
 /// <remarks>
 /// The Sylvan.Common library can provide an implementation of this method via the Sylvan.StringPool type.
 /// </remarks>
-public delegate string StringFactory(char[] buffer, int offset, int length);
+public delegate string? StringFactory(char[] buffer, int offset, int length);
+
+/// <summary>
+/// A function that can be used to de-dupe strings during construction directly from internal buffers.
+/// </summary>
+/// <remarks>
+/// The Sylvan.Common library can provide an implementation of this method via the Sylvan.StringPool type.
+/// </remarks>
+public delegate string? ColumnStringFactory(DbDataReader reader, int ordinal, char[] buffer, int offset, int length);
 
 /// <summary>
 /// A callback handler to receive comments read from a CSV file.
@@ -144,6 +153,11 @@ public sealed class CsvDataReaderOptions
 	/// A string factory function which can de-dupe strings on construction. Defaults to null.
 	/// </summary>
 	public StringFactory? StringFactory { get; set; }
+
+	/// <summary>
+	/// A string factory function which can de-dupe strings on construction. Defaults to null.
+	/// </summary>
+	public ColumnStringFactory? ColumnStringFactory { get; set; }
 
 	/// <summary>
 	/// A callback method which will be called when a comment is found in the CSV.

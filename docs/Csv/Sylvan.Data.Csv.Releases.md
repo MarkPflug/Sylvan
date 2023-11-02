@@ -1,5 +1,8 @@
 # Sylvan.Data.Csv Release Notes
 
+_1.3.4_
+- Adds per-column string factory to `CsvDataReader` via `CsvDataReaderOptions.ColumnStringFactory`.
+
 _1.3.3_
 - CsvDataReader.Create now accepts a CancellationToken to support async cancellation during construction.
 
