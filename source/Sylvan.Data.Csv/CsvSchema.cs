@@ -7,19 +7,30 @@ namespace Sylvan.Data.Csv;
 
 sealed class NullableCsvSchema : CsvSchemaProvider
 {
-	readonly static NullableStringColumn Column = new();
+	readonly static SchemaColumn NullableStringColumn = new(typeof(string), true);
 
 	public override DbColumn? GetColumn(string? name, int ordinal)
 	{
-		return Column;
+		return NullableStringColumn;
 	}
+}
 
-	class NullableStringColumn : DbColumn
+sealed class DynamicCsvSchema : CsvSchemaProvider
+{
+	readonly static SchemaColumn DynamicColumn = new(typeof(object), true);
+
+	public override DbColumn? GetColumn(string? name, int ordinal)
 	{
-		public NullableStringColumn()
-		{
-			this.AllowDBNull = true;
-		}
+		return DynamicColumn;
+	}
+}
+
+sealed class SchemaColumn : DbColumn
+{
+	public SchemaColumn(Type type, bool allowNull)
+	{
+		this.DataType = type;
+		this.AllowDBNull = allowNull;
 	}
 }
 
@@ -33,6 +44,12 @@ public class CsvSchema : CsvSchemaProvider
 	/// </summary>
 	// TODO: this probably should have been a readonly property.
 	public static readonly ICsvSchemaProvider Nullable = new NullableCsvSchema();
+
+	/// <summary>
+	/// Gets a ICsvSchemaProvider that treats fields as "dynamic", where
+	/// the data type can change from row to row.
+	/// </summary>
+	public static readonly ICsvSchemaProvider Dynamic = new DynamicCsvSchema();
 
 	readonly DbColumn[] schema;
 	readonly Dictionary<string, DbColumn?> nameMap;
