@@ -1,12 +1,17 @@
 using System;
-using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
 namespace Sylvan;
 
 /// <summary>
-/// An StringFactory implementation that provides string de-duping capabilities..
+/// Implements a specialized hashtable to provide string de-duping capabilities.
 /// </summary>
+/// <remarks>
+/// This class is useful for serializers where the data being deserialized might
+/// contain highly repetetive string values and allows de-duping such strings while
+/// avoiding allocations. 
+/// This was directly intended to be used with Sylvan.Data.Csv.CsvDataReader.
+/// </remarks>
 public sealed class StringPool
 {
 	const int DefaultCapacity = 64;
@@ -27,32 +32,18 @@ public sealed class StringPool
 		return hash;
 	}
 
-	IEnumerable<(string str, int count)> GetUsage()
-	{
-		for (int i = 0; i < this.buckets.Length; i++)
-		{
-			var b = buckets[i];
-			if (b != 0)
-			{
-				var idx = b - 1;
-				while ((uint)idx < entries.Length)
-				{
-					var e = this.entries[idx];
-					yield return (e.str, e.count);
-					idx = e.next;
-				}
-			}
-		}
-	}
-
 	readonly int stringSizeLimit;
 	int[] buckets; // contains index into entries offset by -1. So that 0 (default) means empty bucket.
 	Entry[] entries;
 
+	// When accessed with "ordinal", we keep track of the last string that was produced and as
+	// a fast-path check if the same string is being returned again. This idea was taken from
+	// github.com/nietras/sep library. It is an optimization that is very specific to the
+	// benchmarks in github.com/joelverhagen/ncsvperf, but might be beneficial for real-world
+	// datasets as well.
+	string?[] lastStrings;
+
 	int count;
-	long uniqueLen;
-	long dupeLen;
-	long skipLen;
 
 	/// <summary>
 	/// Creates a new StringPool instance.
@@ -73,6 +64,7 @@ public sealed class StringPool
 		this.stringSizeLimit = stringSizeLimit;
 		this.buckets = new int[size];
 		this.entries = new Entry[size];
+		this.lastStrings = Array.Empty<string>();
 	}
 
 	static int GetSize(int capacity)
@@ -95,10 +87,11 @@ public sealed class StringPool
 	/// Gets a string containing the characters in the input buffer.
 	/// </summary>
 #pragma warning disable CA1801 // Review unused parameters
+	// reader argument is to satisfy the signature required by ColumnStringFactory in the Sylvan.Data.Csv library.
 	public string GetString(System.Data.Common.DbDataReader reader, int ordinal, char[] buffer, int offset, int length)
 #pragma warning restore CA1801 // Review unused parameters
 	{
-		return GetString(buffer.AsSpan(offset, length));
+		return GetString(ordinal, buffer.AsSpan(offset, length));
 	}
 
 	/// <summary>
@@ -106,18 +99,46 @@ public sealed class StringPool
 	/// </summary>
 	public string GetString(ReadOnlySpan<char> buffer)
 	{
-		var length = buffer.Length;
+		return GetString(-1, buffer);
+	}
 
+	static void FillEmpty(string?[] arr)
+	{
+		for (int i = 0; i < arr.Length; i++)
+		{
+			if (arr[i] == null)
+				arr[i] = string.Empty;
+		}
+	}
+
+	string GetString(int ordinal, ReadOnlySpan<char> buffer)
+	{
 		if (buffer == null) throw new ArgumentNullException(nameof(buffer));
-		if (length == 0) return string.Empty;
+
+		var length = buffer.Length;
+		var str = string.Empty;
+		if (length == 0) return str;
 		if (length > stringSizeLimit)
 		{
-			this.skipLen += length;
-#if !NETSTANDARD2_0
-			return new string(buffer);
-#else
-			return GetStringUnsafe(buffer);
-#endif
+			return CreateString(buffer);
+		}
+
+		var lastStrs = this.lastStrings;
+
+		if (ordinal >= 0)
+		{
+			if (ordinal >= lastStrs.Length)
+			{
+				Array.Resize(ref this.lastStrings, ordinal + 8);
+				lastStrs = this.lastStrings;
+				FillEmpty(lastStrs);
+			}
+
+			str = lastStrs[ordinal]!;
+			if (MemoryExtensions.SequenceEqual(buffer, str.AsSpan()))
+			{
+				return str;
+			}
 		}
 
 		var entries = this.entries;
@@ -130,11 +151,14 @@ public sealed class StringPool
 		while ((uint)i < (uint)entries.Length)
 		{
 			ref var e = ref entries[i];
-			if (e.hashCode == hashCode && MemoryExtensions.SequenceEqual(buffer, e.str.AsSpan()))
+			str = e.str;
+			if (e.hashCode == hashCode && MemoryExtensions.SequenceEqual(buffer, str.AsSpan()))
 			{
-				e.count++;
-				this.dupeLen += length;
-				return e.str;
+				if (ordinal >= 0)
+				{
+					lastStrs[ordinal] = str;
+				}
+				return str;
 			}
 
 			i = e.next;
@@ -144,11 +168,7 @@ public sealed class StringPool
 			{
 				// protects against malicious inputs
 				// too many collisions give up and let the caller create the string.					
-#if !NETSTANDARD2_0
-				return new string(buffer);
-#else
-				return GetStringUnsafe(buffer);
-#endif
+				return CreateString(buffer);
 			}
 		}
 
@@ -161,23 +181,21 @@ public sealed class StringPool
 		int index = count;
 		this.count = count + 1;
 
-		var stringValue =
-#if !NETSTANDARD2_0
-				 new string(buffer);
-#else
-				 GetStringUnsafe(buffer);
-#endif
+		str = CreateString(buffer);
+
+		if (ordinal >= 0)
+		{
+			lastStrs[ordinal] = str;
+		}
 
 		ref Entry entry = ref entries![index];
-		this.uniqueLen += length;
 		entry.hashCode = hashCode;
-		entry.count = 1;
 		entry.next = bucket - 1;
-		entry.str = stringValue;
+		entry.str = str;
 
 		bucket = index + 1; // bucket is an int ref
 
-		return stringValue;
+		return str;
 	}
 
 	Entry[] Resize()
@@ -213,19 +231,29 @@ public sealed class StringPool
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	static unsafe string GetStringUnsafe(ReadOnlySpan<char> buffer)
+	static string CreateString(ReadOnlySpan<char> chars)
 	{
-		fixed (char* pValue = &buffer.GetPinnableReference())
+#if !NETSTANDARD2_0
+		return new string(chars);
+#else
+		
+		return GetStringUnsafe(chars);
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		static unsafe string GetStringUnsafe(ReadOnlySpan<char> chars)
 		{
-			return new string(pValue, 0, buffer.Length);
+			fixed (char* pValue = &chars.GetPinnableReference())
+			{
+				return new string(pValue, 0, chars.Length);
+			}
 		}
+#endif
 	}
 
 	struct Entry
 	{
 		public uint hashCode;
 		public int next;
-		public int count;
 		public string str;
 	}
 }

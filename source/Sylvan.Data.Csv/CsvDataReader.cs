@@ -214,21 +214,21 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 					new ColumnStringFactory(
 						(r, i, b, o, l) =>
 						{
-							return csf(r, i, b, o, l) ?? sf(b, o, l) ?? new string(b, o, l);
+							return csf(r, i, b, o, l) ?? sf(b, o, l);
 						}
 					);
 			}
 			else
 			{
-				return (r, i, b, o, l) => csf(r, i, b, o, l) ?? new string(b, o, l);
+				return (r, i, b, o, l) => csf(r, i, b, o, l);
 			}
 		}
 		else
 		if (sf != null)
 		{
-			return (r, i, b, o, l) => sf(b, o, l) ?? new string(b, o, l);
+			return (r, i, b, o, l) => sf(b, o, l);
 		}
-		return (r, i, b, o, l) => new string(b, o, l);
+		return (r, i, b, o, l) => null;
 	}
 
 	enum NewLineMode
@@ -1479,7 +1479,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 			var s = GetFieldUnsafe(ordinal);
 			var l = s.length;
 			if (l == 0) return string.Empty;
-			return stringFactory.Invoke(this, ordinal, s.buffer, s.offset, l)!;
+			return stringFactory.Invoke(this, ordinal, s.buffer, s.offset, l) ?? new string(s.buffer, s.offset, l);
 		}
 		if ((uint)ordinal >= (uint)fieldCount)
 		{
