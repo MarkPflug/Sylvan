@@ -1,6 +1,8 @@
 # Sylvan.Data.Csv Release Notes
 
 _1.3.4_
+- Adds `CsvSchema.Dynamic` which treats CSV data as having "variant" type. This can be useful when processing
+    CSV data where the field type might change from row to row.
 - Adds per-column string factory to `CsvDataReader` via `CsvDataReaderOptions.ColumnStringFactory`.
 
 _1.3.3_

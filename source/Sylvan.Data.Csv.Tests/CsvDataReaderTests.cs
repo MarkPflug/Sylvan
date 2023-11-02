@@ -1779,6 +1779,46 @@ public class CsvDataReaderTests
 	}
 
 	[Fact]
+	public void DynamicSchema()
+	{
+		var data = new StringReader("a,b,c\n1,,3\n2022-11-12,12.4,1e5\n");
+		
+		var reader = CsvDataReader.Create(data, new CsvDataReaderOptions { Schema = CsvSchema.Dynamic });
+
+		Assert.Equal(typeof(object), reader.GetFieldType(0));
+		Assert.Equal(typeof(object), reader.GetFieldType(1));
+		Assert.Equal(typeof(object), reader.GetFieldType(2));
+
+		Assert.Equal("a", reader.GetName(0));
+		Assert.Equal("b", reader.GetName(1));
+		Assert.Equal("c", reader.GetName(2));
+
+		var cs = reader.GetColumnSchema();
+
+		Assert.Equal("a", cs[0].ColumnName);
+		Assert.Equal("b", cs[1].ColumnName);
+		Assert.Equal("c", cs[2].ColumnName);
+
+
+		Assert.True(reader.Read());
+		Assert.Equal(1, reader.GetValue(0));
+		Assert.True(reader.IsDBNull(1));
+		Assert.Equal(DBNull.Value, reader.GetValue(1));
+		Assert.Equal(3, reader.GetValue(2));
+		Assert.Equal(1, reader.GetFieldValue<object>(0));
+		Assert.Equal(DBNull.Value, reader.GetFieldValue<object>(1));
+		Assert.Equal(3, reader.GetFieldValue<object>(2));
+		Assert.True(reader.Read());
+		Assert.Equal(new DateTime(2022, 11, 12), reader.GetValue(0));
+		Assert.Equal(12.4m, reader.GetValue(1));
+		Assert.Equal(100000d, reader.GetValue(2));
+		Assert.Equal(new DateTime(2022, 11, 12), reader.GetFieldValue<object>(0));
+		Assert.Equal(12.4m, reader.GetFieldValue<object>(1));
+		Assert.Equal(100000d, reader.GetFieldValue<object>(2));
+		Assert.False(reader.Read());
+	}
+
+	[Fact]
 	public void ColumnMapping()
 	{
 		var data = "a,b,c\n1,test,2022-1-1,test\n2,blah,2022-02-01\n";
