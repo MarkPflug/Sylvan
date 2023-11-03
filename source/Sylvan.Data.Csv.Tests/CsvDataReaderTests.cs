@@ -1856,6 +1856,57 @@ public class CsvDataReaderTests
 		Assert.Equal("3", csv.GetString(2));
 	}
 
+	[Fact]
+	public void FinalCharInCellIsEscaped()
+	{
+		using var reader = new StringReader(@"a\, \,,b,\,");
+		using var csvReader = CsvDataReader.Create(reader, new CsvDataReaderOptions
+		{
+			CsvStyle = CsvStyle.Escaped,
+			HasHeaders = false,
+			Escape = '\\',
+		});
+
+		csvReader.Read();
+		var value0 = csvReader.GetString(0);
+		var value1 = csvReader.GetString(1);
+		var value2 = csvReader.GetString(2);
+		Assert.Equal("a, ,", value0); // This will fail; will be "a, \" instead of "a, ,"
+		Assert.Equal("b", value1);
+		Assert.Equal(",", value2);
+	}
+
+	[Fact]
+	public void EscapeEOF()
+	{
+		using var reader = new StringReader("\\");
+		Assert.Throws<InvalidDataException>(() =>
+		{
+			using var csvReader = CsvDataReader.Create(reader, new CsvDataReaderOptions
+			{
+				CsvStyle = CsvStyle.Escaped,
+				HasHeaders = false,
+				Escape = '\\',
+			});
+		});
+	}
+
+	[Fact]
+	public void FinalCharInCellIsEscapeError()
+	{
+		using var reader = new StringReader("\\\\\\\n");
+		using var csvReader = CsvDataReader.Create(reader, new CsvDataReaderOptions
+		{
+			CsvStyle = CsvStyle.Escaped,
+			HasHeaders = false,
+			Escape = '\\',
+		});
+
+		csvReader.Read();
+		var value0 = csvReader.GetString(0);
+		Assert.Equal("\\\n", value0);
+	}
+
 
 #if NET6_0_OR_GREATER
 

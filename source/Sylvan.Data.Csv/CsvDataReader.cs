@@ -679,6 +679,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 						c = buffer[idx++]; // the escaped char
 						if (IsEndOfLine(c))
 						{
+							idx--;// "unconsume" the newline character, so that ConsumeLineEnd can process it.
 							// if the escape precede an EOL, we might have to consume 2 chars
 							var r = ConsumeLineEnd(buffer, ref idx);
 							if (r == ReadResult.Incomplete)
@@ -693,9 +694,8 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 					{
 						if (atEndOfText)
 						{
-							// TODO: not sure what to do here.
-							escapeCount++;
-							break;
+							// there was nothing to escape
+							throw new InvalidDataException();
 						}
 						return ReadResult.Incomplete;
 					}
@@ -1591,7 +1591,6 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 
 	CharSpan PrepareField(int offset, int len, int escapeCount)
 	{
-
 		bool inQuote = true; // we start inside the quotes
 
 		var eLen = len - escapeCount;
@@ -1606,29 +1605,36 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 
 		int i = 0;
 		int d = 0;
-		while (d < eLen)
+		while (i < len)
 		{
 			var c = buffer[offset + i++];
 			if (inQuote)
 			{
-				if (c == escape && i + 1 < len)
+				if (c == escape)
 				{
-					c = buffer[offset + i++];
-					if (c != quote && c != escape)
+					if (i < len)
 					{
-						if (quote == escape)
+						c = buffer[offset + i++];
+						if (c != quote && c != escape)
 						{
-							// the escape we just saw was actually the closing quote
-							// the remainder of the field will be added verbatim
-							inQuote = false;
+							if (quote == escape)
+							{
+								// the escape we just saw was actually the closing quote
+								// the remainder of the field will be added verbatim
+								inQuote = false;
+							}
 						}
+					}
+					else
+					{
+						throw new InvalidDataException();
 					}
 				}
 				else
 				if (c == quote)
 				{
 					// we've found the broken closing quote
-					// skip it.
+					// skip it.					
 					inQuote = false;
 					continue;
 				}
