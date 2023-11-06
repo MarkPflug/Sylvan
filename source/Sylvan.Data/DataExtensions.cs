@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Runtime.CompilerServices;
 using System.Threading;
 
 namespace Sylvan.Data;
@@ -92,7 +93,7 @@ public static partial class DataExtensions
 	public static IAsyncEnumerable<T> GetRecordsAsync<T>(this DbDataReader reader)
 		where T : class, new()
 	{
-		return GetRecordsAsync<T>(reader, null);
+		return GetRecordsAsync<T>(reader, null, default);
 	}
 
 	/// <summary>
@@ -101,11 +102,24 @@ public static partial class DataExtensions
 	/// <typeparam name="T">The type of record to bind to.</typeparam>
 	/// <param name="reader">The data reader.</param>
 	/// <param name="opts">The options to configure the data binder.</param>
-	public static async IAsyncEnumerable<T> GetRecordsAsync<T>(this DbDataReader reader, DataBinderOptions? opts = null)
+	public static IAsyncEnumerable<T> GetRecordsAsync<T>(this DbDataReader reader, DataBinderOptions? opts)
+		where T : class, new()
+	{
+		return GetRecordsAsync<T>(reader, opts, default);
+	}
+
+	/// <summary>
+	/// Binds the DbDataReader data to produce a sequence of T.
+	/// </summary>
+	/// <typeparam name="T">The type of record to bind to.</typeparam>
+	/// <param name="reader">The data reader.</param>
+	/// <param name="opts">The options to configure the data binder.</param>
+	/// <param name="cancel">The cancellation token</param>
+	public static async IAsyncEnumerable<T> GetRecordsAsync<T>(this DbDataReader reader, DataBinderOptions? opts = null, [EnumeratorCancellation] CancellationToken cancel = default)
 		where T : class, new()
 	{
 		var binder = DataBinder.Create<T>(reader, opts);
-		while (await reader.ReadAsync().ConfigureAwait(false))
+		while (await reader.ReadAsync(cancel).ConfigureAwait(false))
 		{
 			var item = new T();
 			binder.Bind(reader, item);
