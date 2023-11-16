@@ -117,6 +117,10 @@ partial class CsvDataReader
 			}
 			if (result == ReadResult.False)
 			{
+				if (this.state == State.Open && pendingException != null)
+				{
+					throw pendingException;
+				}
 				return true;
 			}
 
@@ -181,6 +185,10 @@ partial class CsvDataReader
 		}
 		else if (this.state == State.Initialized)
 		{
+			if (pendingException != null)
+			{
+				throw pendingException;
+			}
 			// after initizialization, the first record would already be in the buffer
 			// if hasRows is true.
 			if (hasRows)

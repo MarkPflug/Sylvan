@@ -111,6 +111,9 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	FieldInfo[] fieldInfos;
 	CsvColumn[] columns;
 
+	// An exception that was created with initializing, and should be thrown on the next call to Read/ReadAsync
+	Exception? pendingException;
+
 	// in multi-result set mode carryRow indicates that a row is already parsed
 	// and needs to be carried into the next result set.
 	bool carryRow;
@@ -204,7 +207,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		this.newLineMode = NewLineMode.Unknown;
 	}
 
-	static ColumnStringFactory BuildStringFactory(ColumnStringFactory? csf, StringFactory?sf)
+	static ColumnStringFactory BuildStringFactory(ColumnStringFactory? csf, StringFactory? sf)
 	{
 		if (csf != null)
 		{
@@ -354,7 +357,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	}
 
 #if INTRINSICS
-	
+
 	Vector256<byte> delimiterMaskVector256;
 	Vector256<byte> lineEndMaskVector256;
 	Vector256<byte> quoteMaskVector256;
@@ -680,7 +683,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 						if (IsEndOfLine(c))
 						{
 							idx--;// "unconsume" the newline character, so that ConsumeLineEnd can process it.
-							// if the escape precede an EOL, we might have to consume 2 chars
+								  // if the escape precede an EOL, we might have to consume 2 chars
 							var r = ConsumeLineEnd(buffer, ref idx);
 							if (r == ReadResult.Incomplete)
 							{
@@ -695,7 +698,8 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 						if (atEndOfText)
 						{
 							// there was nothing to escape
-							throw new InvalidDataException();
+							pendingException = new CsvFormatException(rowNumber, fieldIdx);
+							return ReadResult.False;
 						}
 						return ReadResult.Incomplete;
 					}
@@ -807,6 +811,14 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 					complete = true;
 					break;
 				}
+				else
+				// this handles the case where we had a quoted field
+				if (c == quote && closeQuoteIdx >= 0)
+				{
+					this.pendingException = new CsvFormatException(rowNumber, fieldIdx);
+					return ReadResult.False;
+				}
+				else
 				if (IsEndOfLine(c))
 				{
 					idx--;
@@ -824,6 +836,16 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 					complete = true;
 					last = true;
 					break;
+				}
+			} 
+			else
+			{
+				if (closeQuoteIdx >= 0)
+				{
+					// if the field is quoted, we shouldn't be here.
+					// the only valid characters would be a delimiter, a new line, or EOF.
+					this.pendingException = new CsvFormatException(rowNumber, fieldIdx);
+					return ReadResult.False;
 				}
 			}
 		}
@@ -862,7 +884,8 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 					else
 					{
 						var rowNumber = this.rowNumber == 0 && this.state == State.Initialized ? 1 : this.rowNumber;
-						throw new CsvFormatException(rowNumber, fieldIdx);
+						this.pendingException = new CsvFormatException(rowNumber, fieldIdx);
+						return ReadResult.False;
 					}
 				}
 			}
@@ -1627,7 +1650,9 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 					}
 					else
 					{
-						throw new InvalidDataException();
+						// we should never get here. Bad fields should always be
+						// handled in "read"
+						throw new CsvFormatException(rowNumber, -1);
 					}
 				}
 				else
