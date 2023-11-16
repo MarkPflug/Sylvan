@@ -864,7 +864,11 @@ public class CsvDataReaderTests
 	public void BadQuoteFirstRow()
 	{
 		using var tr = new StringReader("Name,Value\nA,\"B\"C\n");
-		var ex = Assert.Throws<CsvFormatException>(() => CsvDataReader.Create(tr, new CsvDataReaderOptions { Schema = CsvSchema.Nullable }));
+
+		var csv = CsvDataReader.Create(tr, new CsvDataReaderOptions { Schema = CsvSchema.Nullable });
+
+		var ex = Assert.Throws<CsvFormatException>(() => csv.Read());
+
 		Assert.Equal(1, ex.RowNumber);
 	}
 
@@ -1782,7 +1786,7 @@ public class CsvDataReaderTests
 	public void DynamicSchema()
 	{
 		var data = new StringReader("a,b,c\n1,,3\n2022-11-12,12.4,1e5\n");
-		
+
 		var reader = CsvDataReader.Create(data, new CsvDataReaderOptions { Schema = CsvSchema.Dynamic });
 
 		Assert.Equal(typeof(object), reader.GetFieldType(0));
@@ -1880,15 +1884,14 @@ public class CsvDataReaderTests
 	public void EscapeEOF()
 	{
 		using var reader = new StringReader("\\");
-		Assert.Throws<InvalidDataException>(() =>
+		
+		using var csv = CsvDataReader.Create(reader, new CsvDataReaderOptions
 		{
-			using var csvReader = CsvDataReader.Create(reader, new CsvDataReaderOptions
-			{
-				CsvStyle = CsvStyle.Escaped,
-				HasHeaders = false,
-				Escape = '\\',
-			});
+			CsvStyle = CsvStyle.Escaped,
+			HasHeaders = false,
+			Escape = '\\',
 		});
+		Assert.Throws<CsvFormatException>(() => csv.Read());		
 	}
 
 	[Fact]
@@ -1905,6 +1908,43 @@ public class CsvDataReaderTests
 		csvReader.Read();
 		var value0 = csvReader.GetString(0);
 		Assert.Equal("\\\n", value0);
+	}
+
+	[Theory]
+	// These test cases were copied from the Sep parser library. Thanks, Nietras.
+	[InlineData("a", true, "a")]
+	[InlineData("\"\"", true, "")]
+	[InlineData("\"\"\"\"", true, "\"")]
+	[InlineData("\"\"\"\"\"\"", true, "\"\"")]
+	[InlineData("\"a\"", true, "a")]
+	[InlineData("\"a\"\"a\"", true, "a\"a")]
+	[InlineData("\"a\"\"a\"\"a\"", true, "a\"a\"a")]
+	[InlineData("a\"a\"a", true, "a\"a\"a")]
+	[InlineData("a\"\"\"a", true, "a\"\"\"a")]
+	
+	[InlineData("\"a\"\"\"a\"", false, null)]
+	[InlineData("\"a\"a", false, null)]
+	[InlineData("\"a\"a\"a\"", false, null)]
+	[InlineData("\"\"a", false, null)]
+	[InlineData("\"\"a\"", false, null)]
+	[InlineData("\"\"\"", false, null)]
+	[InlineData("\"\"\"\"\"", false, null)]
+
+	public void Quotes(string data, bool valid, string expected)
+	{
+		var r = new StringReader("a,b,c\n" + data);
+		var csv = CsvDataReader.Create(r);
+
+		if (valid) {
+			csv.Read();
+			var value = csv.GetString(0);
+			Assert.Equal(expected, value);
+		} 
+		else
+		{
+			var ex = Assert.Throws<CsvFormatException>(() => csv.Read());
+			Assert.Equal(1, ex.RowNumber);
+		}
 	}
 
 
