@@ -78,7 +78,7 @@ sealed class CompiledDataBinder<T>
 
 		// stores contextual state used by the binder.
 		var state = new List<object>();
-		
+
 		var physicalColumns = new HashSet<DbColumn>();
 		foreach (var col in physicalSchema)
 		{
@@ -188,7 +188,9 @@ sealed class CompiledDataBinder<T>
 			.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
 			.Where(p => p.SetMethod != null && p.GetCustomAttribute<IgnoreDataMemberAttribute>() == null)
 			.ToDictionary(p => p.Name, p => p, StringComparer.OrdinalIgnoreCase);
-
+		HashSet<string> requiredProperties = new();
+		// always require at least 1 property to be bound.
+		int boundPropertyCount = 0;
 		foreach (var kvp in properties.ToArray())
 		{
 			var key = kvp.Key;
@@ -197,6 +199,11 @@ sealed class CompiledDataBinder<T>
 			var memberAttribute = property.GetCustomAttribute<DataMemberAttribute>();
 			var columnOrdinal = memberAttribute?.Order;
 			var columnName = memberAttribute?.Name ?? property.Name;
+
+			if (memberAttribute?.IsRequired == true)
+			{
+				requiredProperties.Add(property.Name);
+			}
 
 			var col = GetCol(columnOrdinal, columnName);
 			Type colType = col?.DataType ?? typeof(object);
@@ -413,12 +420,13 @@ sealed class CompiledDataBinder<T>
 						expr
 					);
 			}
-
+			boundPropertyCount++;
 			var setExpr = Expression.Call(itemParam, setter, expr);
 			bodyExpressions.Add(Expression.Assign(idxVar, ordinalExpr));
 			bodyExpressions.Add(setExpr);
 			physicalColumns.Remove(col);
 			properties.Remove(key);
+			requiredProperties.Remove(key);
 		}
 		var props = properties.ToArray();
 		foreach (var kvp in props)
@@ -448,19 +456,26 @@ sealed class CompiledDataBinder<T>
 		string[]? unboundProperties = null;
 		string[]? unboundColumns = null;
 
-		if (opts.BindingMode.HasFlag(DataBindingMode.AllProperties) && properties.Any())
+		if (boundPropertyCount == 0 || opts.BindingMode.HasFlag(DataBindingMode.AllProperties) && properties.Any())
 		{
 			unboundProperties = properties.Select(p => p.Value.Name).ToArray();
 		}
-		
-		if (opts.BindingMode.HasFlag(DataBindingMode.AllColumns) && physicalColumns.Any())
+		else
+		{
+			if (requiredProperties.Any())
+			{
+				unboundProperties = requiredProperties.ToArray();
+			}
+		}
+
+		if (boundPropertyCount == 0 || opts.BindingMode.HasFlag(DataBindingMode.AllColumns) && physicalColumns.Any())
 		{
 			unboundColumns = physicalColumns.Select(p => p.ColumnName).ToArray();
 		}
 
 		if (unboundColumns != null || unboundProperties != null)
 		{
-			throw new UnboundMemberException(unboundProperties, unboundColumns);
+			throw new UnboundMemberException(unboundProperties ?? Array.Empty<string>(), unboundColumns ?? Array.Empty<string>());
 		}
 
 		this.state = state.ToArray();
