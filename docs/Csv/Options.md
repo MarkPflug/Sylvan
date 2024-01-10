@@ -26,11 +26,43 @@ These defaults to `null`, which attempt to parse the values as the default "true
 
 If either `TrueString` or `FalseString` are non-null, then that value is the singular, case-insensitive string that will be interpreted as the associated boolean value. If only one of the two is assigned it causes all other values to be interpreted as the negation. If both are assigned any value that is not one or the other will result in a `FormatException` being thrown.
 
-__DateFormat__
-
+__DateTimeFormat__
 The format string used to parse `DateTime` values. This defaults to null, which will result in values being parsed using the provide `CultureInfo`.
 
 Some CSV data sources use a compact date format like `"yyyyMMdd"` which cannot be parsed by default date parsing behavior, in which case this option allows parsing such values.
+
+__DateTimeOffsetFormat__
+The format string used when writing DateTimeOffset values
+This defaults to null, which will result in values being parsed using the provide `CultureInfo`.
+
+__TimeSpanFormat__
+The format string used when writing TimeSpan values that have to time component. This defaults to null, which will result in values being parsed using the provide `CultureInfo`.
+
+	/// <summary>
+	/// The format string used when writing DateTime values, or DateOnly values on supported frameworks, that have a time component. The default is \"O\".
+	/// </summary>
+	public string? DateOnlyFormat { get; set; }
+
+	/// <summary>
+	/// The format string used when writing TimeOnly values.
+	/// </summary>
+	public string? TimeOnlyFormat { get; set; }
+
+__TimeOnlyFormat__
+The format string used when writing TimeOnly values. This option is only available when using .NET 6 or greater.
+This defaults to null, which will result in values being parsed using the provide `CultureInfo`.
+
+__DateOnlyFormat__
+The format string used when writing DateOnly values. This option is only available when using .NET 6 or greater.
+This defaults to null, which will result in values being parsed using the provide `CultureInfo`.
+
+__DateFormat__
+
+**Obsolete**, Use DateTimeFormat instead.
+
+__TimeFormat__
+
+**Obsolete**, Use TimeOnlyFormat instead.
 
 __BinaryEncoding__
 
