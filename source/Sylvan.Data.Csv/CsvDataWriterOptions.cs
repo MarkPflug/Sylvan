@@ -142,7 +142,7 @@ public sealed class CsvDataWriterOptions
 	public char Comment { get; set; }
 
 	/// <summary>
-	/// The string to use for line breaks separating records. The default is Environment.NewLine.
+	/// The string to use for line breaks separating records. The default is "\n".
 	/// Must be one of "\r", "\n", or "\r\n".
 	/// </summary>
 	public string NewLine { get; set; }
