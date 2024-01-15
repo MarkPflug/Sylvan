@@ -33,28 +33,18 @@ Some CSV data sources use a compact date format like `"yyyyMMdd"` which cannot b
 
 __DateTimeOffsetFormat__
 The format string used when writing DateTimeOffset values
-This defaults to null, which will result in values being parsed using the provide `CultureInfo`.
+This defaults to null, which will result in values being parsed using the provided `CultureInfo`.
 
 __TimeSpanFormat__
-The format string used when writing TimeSpan values that have to time component. This defaults to null, which will result in values being parsed using the provide `CultureInfo`.
-
-	/// <summary>
-	/// The format string used when writing DateTime values, or DateOnly values on supported frameworks, that have a time component. The default is \"O\".
-	/// </summary>
-	public string? DateOnlyFormat { get; set; }
-
-	/// <summary>
-	/// The format string used when writing TimeOnly values.
-	/// </summary>
-	public string? TimeOnlyFormat { get; set; }
+The format string used when writing TimeSpan values that have to time component. This defaults to null, which will result in values being parsed using the provided `CultureInfo`.
 
 __TimeOnlyFormat__
 The format string used when writing TimeOnly values. This option is only available when using .NET 6 or greater.
-This defaults to null, which will result in values being parsed using the provide `CultureInfo`.
+This defaults to null, which will result in values being parsed using the provided `CultureInfo`.
 
 __DateOnlyFormat__
 The format string used when writing DateOnly values. This option is only available when using .NET 6 or greater.
-This defaults to null, which will result in values being parsed using the provide `CultureInfo`.
+This defaults to null, which will result in values being parsed using the provided `CultureInfo`.
 
 __DateFormat__
 
