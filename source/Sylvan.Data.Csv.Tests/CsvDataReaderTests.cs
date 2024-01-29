@@ -5,6 +5,7 @@ using System.Data.Common;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 using Xunit;
@@ -949,7 +950,7 @@ public class CsvDataReaderTests
 	[InlineData("N,V\na\\\nb,c\n", "a\nb", "c")]
 	[InlineData("N,V\na\\\r\nb\n", "a\r\nb", "")]
 	[InlineData("N,V\na\\\r\nb", "a\r\nb", "")]
-	public void ImpliedQuote(string input, string a, string b)
+	public void EscapedStyle(string input, string a, string b)
 	{
 		using var reader = new StringReader(input);
 		var options =
@@ -1884,14 +1885,14 @@ public class CsvDataReaderTests
 	public void EscapeEOF()
 	{
 		using var reader = new StringReader("\\");
-		
+
 		using var csv = CsvDataReader.Create(reader, new CsvDataReaderOptions
 		{
 			CsvStyle = CsvStyle.Escaped,
 			HasHeaders = false,
 			Escape = '\\',
 		});
-		Assert.Throws<CsvFormatException>(() => csv.Read());		
+		Assert.Throws<CsvFormatException>(() => csv.Read());
 	}
 
 	[Fact]
@@ -1921,7 +1922,7 @@ public class CsvDataReaderTests
 	[InlineData("\"a\"\"a\"\"a\"", true, "a\"a\"a")]
 	[InlineData("a\"a\"a", true, "a\"a\"a")]
 	[InlineData("a\"\"\"a", true, "a\"\"\"a")]
-	
+
 	[InlineData("\"a\"\"\"a\"", false, null)]
 	[InlineData("\"a\"a", false, null)]
 	[InlineData("\"a\"a\"a\"", false, null)]
@@ -1935,11 +1936,12 @@ public class CsvDataReaderTests
 		var r = new StringReader("a,b,c\n" + data);
 		var csv = CsvDataReader.Create(r);
 
-		if (valid) {
+		if (valid)
+		{
 			csv.Read();
 			var value = csv.GetString(0);
 			Assert.Equal(expected, value);
-		} 
+		}
 		else
 		{
 			var ex = Assert.Throws<CsvFormatException>(() => csv.Read());
@@ -1947,6 +1949,67 @@ public class CsvDataReaderTests
 		}
 	}
 
+	[Theory]
+	// these are valid, and parse the same as the non-lax test
+	//[InlineData("a", "a")]
+	//[InlineData("\"\"", "")]
+	//[InlineData("\"\"\"\"", "\"")]
+	//[InlineData("\"\"\"\"\"\"", "\"\"")]
+	//[InlineData("\"a\"", "a")]
+	//[InlineData("\"a\"\"a\"", "a\"a")]
+	//[InlineData("\"a\"\"a\"\"a\"", "a\"a\"a")]
+	//[InlineData("a\"a\"a", "a\"a\"a")]
+	//[InlineData("a\"\"\"a", "a\"\"\"a")]
+	// these are invalid, but will still produce a string in lax mode.
+	[InlineData("\"a\"\"\"a\"", "a\"a\"")]
+	[InlineData("\"a\"a", "aa")]
+	[InlineData("\"a\"a\"a\"", "aa\"a\"")]
+	[InlineData("\"\"a", "a")]
+	[InlineData("\"\"a\"", "a\"")]
+	//[InlineData("\"\"\"", "\"")]
+	[InlineData("\"\"\"\"\"", "\"\"")]
+
+	public void LaxQuotes(string data, string expected)
+	{
+		var r = new StringReader("a,b,c\n1,2,3\n" + data);
+		var opts = new CsvDataReaderOptions { CsvStyle = CsvStyle.Lax };
+		var csv = CsvDataReader.Create(r, opts);
+		csv.Read(); // skip the 1,2,3
+		csv.Read();
+		var value = csv.GetString(0);
+		Assert.Equal(expected, value);
+	}
+
+	[Theory]
+	// these are valid, and parse the same as the non-lax test
+	[InlineData("a", "a")]
+	[InlineData("\"\"", "")]
+	[InlineData("\"\"\"\"", "\"")]
+	[InlineData("\"\"\"\"\"\"", "\"\"")]
+	[InlineData("\"a\"", "a")]
+	[InlineData("\"a\"\"a\"", "a\"a")]
+	[InlineData("\"a\"\"a\"\"a\"", "a\"a\"a")]
+	[InlineData("a\"a\"a", "a\"a\"a")]
+	[InlineData("a\"\"\"a", "a\"\"\"a")]
+	// these are invalid, but will still produce a string in lax mode.
+	[InlineData("\"a\"\"\"a\"", "a\"a\"")]
+	[InlineData("\"a\"a", "aa")]
+	[InlineData("\"a\"a\"a\"", "aa\"a\"")]
+	[InlineData("\"\"a", "a")]
+	[InlineData("\"\"a\"", "a\"")]
+	[InlineData("\"\"\"", "\"\n4,5,6\n")]
+	[InlineData("\"\"\"\"\"", "\"\"\n4,5,6\n")]
+
+	public void LaxQuotes2(string data, string expected)
+	{
+		var r = new StringReader("a,b,c\n1,2,3\n" + data + "\n4,5,6\n");
+		var opts = new CsvDataReaderOptions { CsvStyle = CsvStyle.Lax };
+		var csv = CsvDataReader.Create(r, opts);
+		csv.Read(); // skip the 1,2,3
+		csv.Read();
+		var value = csv.GetString(0);
+		Assert.Equal(expected, value);
+	}
 
 #if NET6_0_OR_GREATER
 

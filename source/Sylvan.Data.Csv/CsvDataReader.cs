@@ -54,6 +54,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		Unquoted = 0,
 		Quoted = 1,
 		ImplicitQuotes = 3,
+		InvalidQuotes = 4,
 	}
 
 	struct FieldInfo
@@ -669,6 +670,14 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		int fieldEnd = 0;
 		bool last = false;
 		bool complete = false;
+
+		if (fieldIdx >= fieldInfos.Length)
+		{
+			// this resize is constrained by the fact that the record has to fit in one row
+			Array.Resize(ref fieldInfos, fieldInfos.Length * 2);
+		}
+		ref var fi = ref fieldInfos[fieldIdx];
+
 		if (style == CsvStyle.Escaped)
 		{
 			// consume quoted field.
@@ -716,85 +725,78 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		{
 			if (idx < bufferEnd)
 			{
-				c = buffer[idx++];
+				c = buffer[idx];
 
-				if (c <= minSafe)
+				if (c == quote)
 				{
-					if (c == quote)
-					{
-						closeQuoteIdx = idx;
+					idx++; // consume the quote we just read
+					closeQuoteIdx = idx;
 
-						// consume quoted field.
-						while (idx < bufferEnd)
+					// consume quoted field.
+					while (idx < bufferEnd)
+					{
+						c = buffer[idx++];
+						if (c == escape)
 						{
-							c = buffer[idx++];
-							if (c == escape)
+							if (idx < bufferEnd)
 							{
-								if (idx < bufferEnd)
+								c = buffer[idx++]; // the escaped char
+								if (c == escape || c == quote)
 								{
-									c = buffer[idx++]; // the escaped char
-									if (c == escape || c == quote)
-									{
-										escapeCount++;
-										continue;
-									}
-									else
+									escapeCount++;
+									continue;
+								}
+								else
+								if (escape == quote)
+								{
+									idx--;
+									closeQuoteIdx = idx;
+									fieldEnd = closeQuoteIdx;
+									// the quote (escape) we just saw was a the closing quote
+									break;
+								}
+							}
+							else
+							{
+								if (atEndOfText)
+								{
 									if (escape == quote)
 									{
-										idx--;
+										complete = true;
+										last = true;
 										closeQuoteIdx = idx;
 										fieldEnd = closeQuoteIdx;
 										// the quote (escape) we just saw was a the closing quote
-										break;
 									}
+									break;
 								}
-								else
-								{
-									if (atEndOfText)
-									{
-										if (escape == quote)
-										{
-											complete = true;
-											last = true;
-											closeQuoteIdx = idx;
-											fieldEnd = closeQuoteIdx;
-											// the quote (escape) we just saw was a the closing quote
-										}
-										break;
-									}
-									return ReadResult.Incomplete;
-								}
+								return ReadResult.Incomplete;
 							}
+						}
 
-							if (c == quote)
+						if (c == quote)
+						{
+							// immediately after the quote should be a delimiter, eol, or eof, but...
+							// we can simply treat the remainder of the record like a normal unquoted field
+							// we are currently positioned on the quote, the next while loop will consume it
+							closeQuoteIdx = idx;
+							fieldEnd = closeQuoteIdx;
+							break;
+						}
+						if (IsEndOfLine(c))
+						{
+							idx--;
+							var r = ConsumeLineEnd(buffer, ref idx);
+							if (r == ReadResult.Incomplete)
 							{
-								// immediately after the quote should be a delimiter, eol, or eof, but...
-								// we can simply treat the remainder of the record like a normal unquoted field
-								// we are currently positioned on the quote, the next while loop will consume it
-								closeQuoteIdx = idx;
-								fieldEnd = closeQuoteIdx;
-								break;
+								return ReadResult.Incomplete;
 							}
-							if (IsEndOfLine(c))
+							else
 							{
-								idx--;
-								var r = ConsumeLineEnd(buffer, ref idx);
-								if (r == ReadResult.Incomplete)
-								{
-									return ReadResult.Incomplete;
-								}
-								else
-								{
-									// continue on. We are inside a quoted string, so the newline is part of the value.
-								}
+								// continue on. We are inside a quoted string, so the newline is part of the value.
 							}
-						} // we exit this loop when we reach the closing quote.
-					}
-					else
-					{
-						// "unread" the last character and let the next loop handle it.
-						idx--;
-					}
+						}
+					} // we exit this loop when we reach the closing quote.
 				}
 			}
 		}
@@ -815,8 +817,15 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 				// this handles the case where we had a quoted field
 				if (c == quote && closeQuoteIdx >= 0)
 				{
-					this.pendingException = new CsvFormatException(rowNumber, fieldIdx);
-					return ReadResult.False;
+					if (style == CsvStyle.Lax)
+					{
+						fi.quoteState = QuoteState.InvalidQuotes;
+					}
+					else
+					{
+						this.pendingException = new CsvFormatException(rowNumber, fieldIdx);
+						return ReadResult.False;
+					}
 				}
 				else
 				if (IsEndOfLine(c))
@@ -837,30 +846,38 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 					last = true;
 					break;
 				}
-			} 
+			}
 			else
 			{
 				if (closeQuoteIdx >= 0)
 				{
-					// if the field is quoted, we shouldn't be here.
-					// the only valid characters would be a delimiter, a new line, or EOF.
-					this.pendingException = new CsvFormatException(rowNumber, fieldIdx);
-					return ReadResult.False;
+					if (style == CsvStyle.Lax)
+					{
+						// in lax mode, we'll continue reading the remainder of the field
+						// after the closig quote
+						fi.quoteState = QuoteState.InvalidQuotes;
+					}
+					else
+					{
+						// if the field is quoted, we shouldn't be here.
+						// the only valid characters would be a delimiter, a new line, or EOF.
+						this.pendingException = new CsvFormatException(rowNumber, fieldIdx);
+						return ReadResult.False;
+					}
 				}
 			}
 		}
 
 		if (complete || atEndOfText)
 		{
-			if (fieldIdx >= fieldInfos.Length)
+
+			if (atEndOfText && !complete)
 			{
-				// this resize is constrained by the fact that the record has to fit in one row
-				Array.Resize(ref fieldInfos, fieldInfos.Length * 2);
+				fieldEnd = idx;
 			}
 
 			curFieldCount++;
 
-			ref var fi = ref fieldInfos[fieldIdx];
 
 			if (style == CsvStyle.Escaped)
 			{
@@ -883,9 +900,13 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 					}
 					else
 					{
-						var rowNumber = this.rowNumber == 0 && this.state == State.Initialized ? 1 : this.rowNumber;
-						this.pendingException = new CsvFormatException(rowNumber, fieldIdx);
-						return ReadResult.False;
+						fi.quoteState = QuoteState.InvalidQuotes;
+						if (style != CsvStyle.Lax)
+						{
+							var rowNumber = this.rowNumber == 0 && this.state == State.Initialized ? 1 : this.rowNumber;
+							this.pendingException = new CsvFormatException(rowNumber, fieldIdx);
+							return ReadResult.False;
+						}
 					}
 				}
 			}
@@ -1521,6 +1542,12 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 
 		public CharSpan(char[] buffer, int offset, int length)
 		{
+#if DEBUG
+			if (offset < 0 || length < 0)
+			{
+				throw new Exception();
+			}
+#endif
 			Debug.Assert(offset >= 0);
 			Debug.Assert(length >= 0);
 			this.buffer = buffer;
@@ -1585,6 +1612,9 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	CharSpan GetFieldUnsafe(int ordinal)
 	{
+		// "Unsafe" meaning this should only be called
+		// in contexts where ordinal is already validated to be in-range
+
 		ref var fi = ref this.fieldInfos[ordinal];
 		var startIdx = recordStart + (ordinal == 0 ? 0 : this.fieldInfos[ordinal - 1].endIdx + 1);
 		var endIdx = recordStart + fi.endIdx;
@@ -1593,20 +1623,21 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		var buffer = this.buffer;
 		if (fi.quoteState != QuoteState.Unquoted)
 		{
-			// if there are no escapes, we can just "trim" the quotes off
-			if (fi.quoteState != QuoteState.ImplicitQuotes)
+			switch (fi.quoteState)
 			{
-				offset += 1;
-				len -= 2;
-			}
-
-			if (fi.quoteState == QuoteState.Quoted && fi.escapeCount == 0)
-			{
-				// happy path, nothing else to do
-			}
-			else
-			{
-				return PrepareField(offset, len, fi.escapeCount);
+				case QuoteState.InvalidQuotes:
+					return PrepareInvalidField(offset, len);
+				case QuoteState.Quoted:
+					// trim the quotes
+					offset += 1;
+					len -= 2;
+					if (fi.escapeCount > 0)
+					{
+						goto case QuoteState.ImplicitQuotes;
+					}
+					break;
+				case QuoteState.ImplicitQuotes: // escaped
+					return PrepareField(offset, len, fi.escapeCount);
 			}
 		}
 		return new CharSpan(buffer, offset, len);
@@ -1619,11 +1650,10 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		var eLen = len - escapeCount;
 		// if there is room in the buffer before the current record
 		// we'll use that as scratch space to unescape the value
-		var temp = buffer;
-		if (recordStart < eLen)
+		if (scratchStr.Length < len)
 		{
 			// otherwise we'll allocate a buffer
-			temp = new char[eLen];
+			scratchStr = new char[len];
 		}
 
 		int i = 0;
@@ -1651,7 +1681,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 					else
 					{
 						// we should never get here. Bad fields should always be
-						// handled in "read"
+						// handled in "read" and end up in PrepareInvalidField
 						throw new CsvFormatException(rowNumber, -1);
 					}
 				}
@@ -1664,9 +1694,66 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 					continue;
 				}
 			}
-			temp[d++] = c;
+			scratchStr[d++] = c;
 		}
-		return new CharSpan(temp, 0, eLen);
+		return new CharSpan(scratchStr, 0, eLen);
+	}
+
+	char[] scratchStr = Array.Empty<char>();
+
+	CharSpan PrepareInvalidField(int offset, int len)
+	{
+		bool inQuote = false;
+
+		// increase the scratch space if needed.
+		if (scratchStr.Length < len)
+		{
+			scratchStr = new char[len];
+		}
+
+		int i = 0;
+		if (buffer[offset + i] == quote)
+		{
+			i++;
+			inQuote = true;
+		}
+
+
+
+		int d = 0;
+		while (i < len)
+		{
+			var c = buffer[offset + i++];
+			if (inQuote)
+			{
+				if (c == escape)
+				{
+					if (i < len)
+					{
+						c = buffer[offset + i++];
+						if (c != quote && c != escape)
+						{
+							if (quote == escape)
+							{
+								// the escape we just saw was actually the closing quote
+								// the remainder of the field will be added verbatim
+								inQuote = false;
+							}
+						}
+					}
+				}
+				else
+				if (c == quote)
+				{
+					// we've found the broken closing quote
+					// skip it.					
+					inQuote = false;
+					continue;
+				}
+			}
+			scratchStr[d++] = c;
+		}
+		return new CharSpan(scratchStr, 0, d);
 	}
 
 	/// <inheritdoc/>
@@ -1951,6 +2038,14 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	{
 		var len = this.idx - this.recordStart;
 		return this.buffer.AsSpan().Slice(this.recordStart, len);
+	}
+
+	/// <summary>
+	/// Gets a span containing the current record data, including the line ending.
+	/// </summary>
+	public ReadOnlySpan<char> GetRawFieldSpan(int ordinal)
+	{
+		throw new NotImplementedException();
 	}
 
 #endif

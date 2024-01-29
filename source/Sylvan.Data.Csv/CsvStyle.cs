@@ -22,4 +22,9 @@ public enum CsvStyle
 	/// Interprets fields as if they are implicitly quoted. Delimiters and new lines within fields are preceded by an escape character.
 	/// </summary>
 	Escaped = 2,
+
+	/// <summary>
+	/// Parses CSV using lax quote handling where incorrectly quoted fields don't produce an error.
+	/// </summary>
+	Lax = 3,
 }
