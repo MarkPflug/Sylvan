@@ -1951,15 +1951,15 @@ public class CsvDataReaderTests
 
 	[Theory]
 	// these are valid, and parse the same as the non-lax test
-	//[InlineData("a", "a")]
-	//[InlineData("\"\"", "")]
-	//[InlineData("\"\"\"\"", "\"")]
-	//[InlineData("\"\"\"\"\"\"", "\"\"")]
-	//[InlineData("\"a\"", "a")]
-	//[InlineData("\"a\"\"a\"", "a\"a")]
-	//[InlineData("\"a\"\"a\"\"a\"", "a\"a\"a")]
-	//[InlineData("a\"a\"a", "a\"a\"a")]
-	//[InlineData("a\"\"\"a", "a\"\"\"a")]
+	[InlineData("a", "a")]
+	[InlineData("\"\"", "")]
+	[InlineData("\"\"\"\"", "\"")]
+	[InlineData("\"\"\"\"\"\"", "\"\"")]
+	[InlineData("\"a\"", "a")]
+	[InlineData("\"a\"\"a\"", "a\"a")]
+	[InlineData("\"a\"\"a\"\"a\"", "a\"a\"a")]
+	[InlineData("a\"a\"a", "a\"a\"a")]
+	[InlineData("a\"\"\"a", "a\"\"\"a")]
 	// these are invalid, but will still produce a string in lax mode.
 	[InlineData("\"a\"\"\"a\"", "a\"a\"")]
 	[InlineData("\"a\"a", "aa")]
@@ -1968,8 +1968,8 @@ public class CsvDataReaderTests
 	[InlineData("\"\"a\"", "a\"")]
 	//[InlineData("\"\"\"", "\"")]
 	[InlineData("\"\"\"\"\"", "\"\"")]
-
-	public void LaxQuotes(string data, string expected)
+	// test when invalid fields exist at the end of a file.
+	public void LaxQuotesEnd(string data, string expected)
 	{
 		var r = new StringReader("a,b,c\n1,2,3\n" + data);
 		var opts = new CsvDataReaderOptions { CsvStyle = CsvStyle.Lax };
@@ -1999,8 +1999,8 @@ public class CsvDataReaderTests
 	[InlineData("\"\"a\"", "a\"")]
 	[InlineData("\"\"\"", "\"\n4,5,6\n")]
 	[InlineData("\"\"\"\"\"", "\"\"\n4,5,6\n")]
-
-	public void LaxQuotes2(string data, string expected)
+	// test when invalid fields exist in the middle of a file.
+	public void LaxQuotesMid(string data, string expected)
 	{
 		var r = new StringReader("a,b,c\n1,2,3\n" + data + "\n4,5,6\n");
 		var opts = new CsvDataReaderOptions { CsvStyle = CsvStyle.Lax };
