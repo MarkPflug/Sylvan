@@ -1680,8 +1680,8 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 					}
 					else
 					{
-						// we should never get here. Bad fields should always be
-						// handled in "read" and end up in PrepareInvalidField
+						// we should never get here. Invalid fields should always be
+						// handled in ReadField and end up in PrepareInvalidField
 						throw new CsvFormatException(rowNumber, -1);
 					}
 				}
@@ -1701,6 +1701,8 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 
 	char[] scratchStr = Array.Empty<char>();
 
+	// this should only be called in Lax mode, otherwise an exception
+	// would have been thrown in ReadField.
 	CharSpan PrepareInvalidField(int offset, int len)
 	{
 		bool inQuote = false;
@@ -1717,8 +1719,6 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 			i++;
 			inQuote = true;
 		}
-
-
 
 		int d = 0;
 		while (i < len)
