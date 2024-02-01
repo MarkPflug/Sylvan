@@ -2014,6 +2014,21 @@ public class CsvDataReaderTests
 #if NET6_0_OR_GREATER
 
 	[Fact]
+	public void GetRawFieldSpan()
+	{
+		var data = "a,b,c\n1,\"1,b\",\"\"\"quote\"\"\"\n";
+
+		var reader = CsvDataReader.Create(new StringReader(data));
+		reader.Read();
+
+		Assert.Equal("1", reader.GetRawFieldSpan(0));
+		Assert.Equal("\"1,b\"", reader.GetRawFieldSpan(1));
+		Assert.Equal("\"\"\"quote\"\"\"", reader.GetRawFieldSpan(2));
+
+	}
+
+
+	[Fact]
 	public void DateOnlyFormatsCulture()
 	{
 		var opts = new CsvDataReaderOptions { Culture = CultureInfo.GetCultureInfo("en-AU") };

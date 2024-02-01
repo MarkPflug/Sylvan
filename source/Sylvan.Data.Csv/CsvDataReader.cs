@@ -2040,14 +2040,6 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		return this.buffer.AsSpan().Slice(this.recordStart, len);
 	}
 
-	/// <summary>
-	/// Gets a span containing the current record data, including the line ending.
-	/// </summary>
-	public ReadOnlySpan<char> GetRawFieldSpan(int ordinal)
-	{
-		throw new NotImplementedException();
-	}
-
 #endif
 
 	/// <summary>

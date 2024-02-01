@@ -1,5 +1,9 @@
 # Sylvan.Data.Csv Release Notes
 
+_1.3.6_
+- Adds `CsvStyle.Lax` which allows parsing CVS files with invalid fields. In this mode, the parser will not produce exceptions, but will
+ do a "best effort" to parse invalid fields.
+
 _1.3.5_
 - Fixes a bug where fields could be incorrectly read when the final character was escaped when reading with `CsvStyle.Escaped`.
 
