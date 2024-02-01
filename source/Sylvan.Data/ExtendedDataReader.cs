@@ -47,14 +47,14 @@ public interface IDataColumn
 	/// <summary>
 	/// Gets a range of data from the column.
 	/// </summary>
-	int GetData<T>(DbDataReader reader, T[] buffer, long dataOffset, int bufferOffset, int length);
+	int GetData<T>(DbDataReader reader, T[]? buffer, long dataOffset, int bufferOffset, int length);
 }
 
 /// <summary>
 /// Defines a custom data column.
 /// </summary>
-/// <typeparam name="T"></typeparam>
-public class CustomDataColumn<T> : IDataColumn
+/// <typeparam name="T">The data type of the column.</typeparam>
+public sealed class CustomDataColumn<T> : IDataColumn
 {
 	/// <inheritdoc/>
 	public string Name { get; }
@@ -101,14 +101,28 @@ public class CustomDataColumn<T> : IDataColumn
 	}
 
 	/// <inheritdoc/>
-	public int GetData<TData>(DbDataReader reader, TData[] buffer, long dataOffset, int bufferOffset, int length)
+	public int GetData<TData>(DbDataReader reader, TData[]? buffer, long dataOffset, int bufferOffset, int length)
 	{
 		var t = valueSource(reader);
 		if (t is TData[] data)
 		{
-			Array.Copy(data, dataOffset, buffer, bufferOffset, length);
+			var len = 0;
+			if (buffer == null)
+			{
+				// passing a null buffer allows querying the length.
+				len = data.Length;
+			}
+			else
+			{
+				len = Math.Min(data.Length - (int)dataOffset, length);
+				Array.Copy(data, dataOffset, buffer, bufferOffset, len);
+			}
+			return len;
 		}
-		throw new InvalidCastException();
+		else
+		{
+			throw new InvalidCastException();
+		}
 	}
 
 	readonly Func<DbDataReader, T> valueSource;
@@ -146,9 +160,9 @@ sealed class DataReaderColumn : IDataColumn
 
 	public bool AllowNull => allowNull;
 
-	public int GetData<TData>(DbDataReader reader, TData[] buffer, long dataOffset, int bufferOffset, int length)
+	public int GetData<TData>(DbDataReader reader, TData[]? buffer, long dataOffset, int bufferOffset, int length)
 	{
-		throw new NotImplementedException();
+		throw new NotSupportedException();
 	}
 
 	public object GetValue(DbDataReader reader)
@@ -234,7 +248,7 @@ sealed class ExtendedDataReader : DbDataReader, IDbColumnSchemaGenerator
 
 	public override long GetBytes(int ordinal, long dataOffset, byte[]? buffer, int bufferOffset, int length)
 	{
-		if (buffer == null) throw new ArgumentNullException(nameof(buffer));
+		//if (buffer == null) throw new ArgumentNullException(nameof(buffer));
 		return GetColumn(ordinal).GetData<byte>(this, buffer, dataOffset, bufferOffset, length);
 	}
 
@@ -420,5 +434,25 @@ sealed class ExtendedDataReader : DbDataReader, IDbColumnSchemaGenerator
 	public ReadOnlyCollection<DbColumn> GetColumnSchema()
 	{
 		return schema;
+	}
+
+	public override void Close()
+	{
+		this.dr.Close();
+	}
+
+#if ASYNC
+	public override Task CloseAsync()
+	{
+		return dr.CloseAsync();
+	}
+#endif
+
+	protected override void Dispose(bool disposing)
+	{
+		if (disposing)
+		{
+			dr.Dispose();
+		}
 	}
 }

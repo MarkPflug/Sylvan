@@ -326,7 +326,7 @@ public abstract partial class DataReaderAdapter : DbDataReader, IDbColumnSchemaG
 		return new ReadOnlyCollection<DbColumn>(cols);
 	}
 
-	class Col : DbColumn
+	sealed class Col : DbColumn
 	{
 		public Col(int ordinal, string name, Type type)
 		{

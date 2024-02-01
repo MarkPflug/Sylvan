@@ -36,7 +36,7 @@ public static partial class DataExtensions
 	/// </summary>
 	/// <param name="reader">The base data reader.</param>
 	/// <param name="columns">The extra columns to attach.</param>
-	/// <returns>A Db</returns>
+	/// <returns>A DbDataReader.</returns>
 	public static DbDataReader WithColumns(this DbDataReader reader, params IDataColumn[] columns)
 	{
 		return new ExtendedDataReader(reader, columns);
@@ -127,6 +127,15 @@ public static partial class DataExtensions
 		}
 	}
 
+	/// <example>
+	/// var reader = seq.AsDataReader()
+	/// </example>
+	public static DbDataReader AsDataReader<T>(this IAsyncEnumerable<T> seq, CancellationToken cancel = default)
+		where T : class
+	{
+		return new AsyncObjectDataReader<T>(seq, cancel);
+	}
+
 #endif
 
 	/// <example>
@@ -138,18 +147,6 @@ public static partial class DataExtensions
 		return new SyncObjectDataReader<T>(seq);
 	}
 
-#if IAsyncEnumerable
-
-	/// <example>
-	/// var reader = seq.AsDataReader()
-	/// </example>
-	public static DbDataReader AsDataReader<T>(this IAsyncEnumerable<T> seq, CancellationToken cancel = default)
-		where T : class
-	{
-		return new AsyncObjectDataReader<T>(seq, cancel);
-	}
-
-#endif
 	/// <summary>
 	/// Selects a subset of columns for a DbDataReader.
 	/// </summary>
