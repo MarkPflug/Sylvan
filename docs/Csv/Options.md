@@ -83,6 +83,20 @@ __Culture__
 The `CultureInfo` used when parsing primitive values. Defaults to
 `InvariantCulture`.
 
+__Style__
+
+Specifies the parsing mode to be used when reading a CSV file.
+
+*Standard*: This mode uses slightly modified RFC4180 parsing, that allows non-comma delimiters to be used. 
+Valid RFC 4180 files should parse as expected in this mode.
+
+*Escaped*: This mode uses escaping instead of quoting fields. 
+Any field delimiter, record delimiter (newline) or escape character in a field value will be escaped by a preceeding escape character.
+
+*Lax*: This mode uses a more lenient parsing mode that will parse malformed fields and avoid throwing an exception.
+This mode starts by parsing using the `Standard` style, and upon finding a closing quote will parse the remainder of the field
+as if it were unquoted.
+
 __OwnsReader__
 
 Indicates if the `CsvDataReader` owns the TextReader and should dispose it when complete. Defaults to true.
