@@ -193,12 +193,12 @@ partial class CsvDataWriter
 
 		public override byte[] GetValue(DbDataReader reader, int ordinal)
 		{
-			throw new InvalidOperationException();
+			throw new NotSupportedException();
 		}
 
 		public override int WriteValue(WriterContext context, byte[] value, char[] buffer, int offset)
 		{
-			throw new NotImplementedException();
+			throw new NotSupportedException();
 		}
 	}
 
@@ -260,12 +260,12 @@ partial class CsvDataWriter
 
 		public override byte[] GetValue(DbDataReader reader, int ordinal)
 		{
-			throw new InvalidOperationException();
+			throw new NotSupportedException();
 		}
 
 		public override int WriteValue(WriterContext context, byte[] value, char[] buffer, int offset)
 		{
-			throw new NotImplementedException();
+			throw new NotSupportedException();
 		}
 	}
 

@@ -42,6 +42,23 @@ namespace Sylvan.Data
 
 		}
 
+		[Fact]
+		public void TestGetData()
+		{
+			var data = "a\n1";
+			var csv = CsvDataReader.Create(new StringReader(data));
+			var r = csv.WithColumns(new CustomDataColumn<byte[]>("b", r => new byte[] { 1, 2, 3 }));
+
+			Assert.True(r.Read());
+			Assert.Equal(1, r.GetInt32(0));
+
+			Assert.Equal(3, r.GetBytes(1, 0, null, 0, 0));
+			var buf = new byte[3];
+			Assert.Equal(3, r.GetBytes(1, 0, buf, 0, buf.Length));
+			Assert.Equal(new byte[] { 1, 2, 3 }, buf);
+			Assert.False(r.Read());
+		}
+
 		static bool IsNullString(DbDataReader r, int idx)
 		{
 			var s = r.GetString(idx);
