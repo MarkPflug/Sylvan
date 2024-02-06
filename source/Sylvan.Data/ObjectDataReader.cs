@@ -6,6 +6,7 @@ using System.Data.Common;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -298,13 +299,18 @@ abstract class ObjectDataReader<T> : DbDataReader, IDbColumnSchemaGenerator
 			var selector = expr.Compile();
 
 			var baseType = Nullable.GetUnderlyingType(propType);
+
+			var attr = prop.GetCustomAttribute(typeof(DataMemberAttribute)) as DataMemberAttribute;
+
+			var name = attr?.Name ?? prop.Name;
+
 			if (baseType == null)
 			{
-				AddMethod.MakeGenericMethod(new Type[] { propType }).Invoke(this, new object[] { prop.Name, selector });
+				AddMethod.MakeGenericMethod(new Type[] { propType }).Invoke(this, new object[] { name, selector });
 			}
 			else
 			{
-				AddNullableMethod.MakeGenericMethod(new Type[] { baseType }).Invoke(this, new object[] { prop.Name, selector });
+				AddNullableMethod.MakeGenericMethod(new Type[] { baseType }).Invoke(this, new object[] { name, selector });
 			}
 			return this;
 		}

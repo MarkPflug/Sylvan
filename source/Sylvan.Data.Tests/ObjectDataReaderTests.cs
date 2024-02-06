@@ -1,6 +1,9 @@
+using Sylvan.Data.Csv;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -92,4 +95,33 @@ public class ObjectDataReaderTests
 
 #endif
 
+	public class UserRecord
+	{
+		[DataMember(Name = "User Name")]
+		public string Name { get; set; }
+
+		[DataMember(Name = "Date of Birth")]
+		public DateTime DOB { get; set; }
+	}
+
+	[Fact]
+	public void DataMemberName()
+	{
+		UserRecord[] records = new[]
+		{
+			new UserRecord { Name="Jim", DOB = new DateTime(1975, 3, 12) },
+			new UserRecord { Name="Kim", DOB = new DateTime(1971, 7, 4) },
+		};
+
+		using var reader = records.AsDataReader();
+		var sw = new StringWriter();
+		using (var w = CsvDataWriter.Create(sw))
+		{
+			w.Write(reader);
+		}
+		var str = sw.ToString();
+		var sr = new StringReader(str);
+		var header = sr.ReadLine();
+		Assert.Equal("User Name,Date of Birth", header);
+	}
 }

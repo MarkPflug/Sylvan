@@ -3,6 +3,7 @@
 _0.2.13_
 - Data binder now throws an exception is *no* properties get bound in `BindMode.Any`, now at least one must get bound.
 - Data binder now honors `DataMeberAttribute.IsRequired` property. If unbound, binder creation will throw an `UnboundMemberException` exception.
+- `AsDataReader` extension method now uses DataMemberAttribute.Name as the header string if present, otherwise the property name is used.
 
 _0.2.12_
 - `GetRecords<T>` and `GetRecordsAsync<T>` methods now accept optional `DataBinderOptions` parameter to configure binding behavior.
