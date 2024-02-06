@@ -1,5 +1,9 @@
 # Sylvan.Data Release Notes
 
+_0.2.13_
+- Data binder now throws an exception is *no* properties get bound in `BindMode.Any`, now at least one must get bound.
+- Data binder now honors `DataMeberAttribute.IsRequired` property. If unbound, binder creation will throw an `UnboundMemberException` exception.
+
 _0.2.12_
 - `GetRecords<T>` and `GetRecordsAsync<T>` methods now accept optional `DataBinderOptions` parameter to configure binding behavior.
 - DataBinder better handles some scenarios with enum types.
