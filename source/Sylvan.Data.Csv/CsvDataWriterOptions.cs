@@ -4,6 +4,33 @@ using System.Globalization;
 namespace Sylvan.Data.Csv;
 
 /// <summary>
+/// Specifies how strings are quoted
+/// </summary>
+[Flags]
+public enum CsvStringQuoting
+{
+	/// <summary>
+	/// Strings are only quoted when it is required.
+	/// </summary>
+	Default = 0,
+
+	/// <summary>
+	/// Empty strings are always quoted. This distinguishes them from null.
+	/// </summary>
+	AlwaysQuoteEmpty = 1,
+
+	/// <summary>
+	/// Non-empty strings are always quoted. This helps prevent confusion with numbers and dates.
+	/// </summary>
+	AlwaysQuoteNonEmpty = 2,
+
+	/// <summary>
+	/// All strings are always quoted.
+	/// </summary>
+	AlwaysQuote = 3,
+}
+
+/// <summary>
 /// Options for configuring a CsvWriter.
 /// </summary>
 public sealed class CsvDataWriterOptions
@@ -30,6 +57,7 @@ public sealed class CsvDataWriterOptions
 		this.BinaryEncoding = BinaryEncoding.Base64;
 		this.Style = CsvStyle.Standard;
 		this.Delimiter = DefaultDelimiter;
+		this.QuoteStrings = CsvStringQuoting.Default;
 		this.Quote = DefaultQuote;
 		this.Escape = DefaultEscape;
 		this.Comment = DefaultComment;
@@ -121,10 +149,26 @@ public sealed class CsvDataWriterOptions
 	public char Delimiter { get; set; }
 
 	/// <summary>
-	/// Empty strings will be written as empty quotes in the CSV. 
+	/// The rules to use when quoting strings, defaults to <see cref="CsvStringQuoting.Default"/>
+	/// </summary>
+	public CsvStringQuoting QuoteStrings { get; set; }
+
+	/// <summary>
+	/// Empty strings will be written as empty quotes in the CSV.
 	/// This allows distinguishing empty strings from null.
 	/// </summary>
-	public bool QuoteEmptyStrings { get; set; }
+	[Obsolete("Use QuoteStrings instead.")]
+	public bool QuoteEmptyStrings
+	{
+		get => QuoteStrings.HasFlag(CsvStringQuoting.AlwaysQuoteEmpty);
+		set
+		{
+			if (value)
+				QuoteStrings |= CsvStringQuoting.AlwaysQuoteEmpty;
+			else
+				QuoteStrings &= ~CsvStringQuoting.AlwaysQuoteEmpty;
+		}
+	}
 
 	/// <summary>
 	/// The character to use for quoting fields. The default is '"'.
@@ -184,7 +228,7 @@ public sealed class CsvDataWriterOptions
 			Quote >= 128 ||
 			Escape >= 128 ||
 			Comment >= 128 ||
-			(QuoteEmptyStrings && Style == CsvStyle.Escaped)
+			(QuoteStrings != CsvStringQuoting.Default && Style == CsvStyle.Escaped)
 			;
 		if (invalid)
 			throw new CsvConfigurationException();
