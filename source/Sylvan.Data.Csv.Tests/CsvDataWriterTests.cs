@@ -471,12 +471,18 @@ public class CsvDataWriterTests
 	}
 
 	[Theory]
-	[InlineData(true, "Name\n\"\"\n\n")]
-	[InlineData(false, "Name\n\n\n")]
-	public void QuoteEmptyStrings(bool mode, string result)
+	[InlineData(true, true, "\"Name\"\n\"1\"\n\"\"\n\n")]
+	[InlineData(false, true, "\"Name\"\n\"1\"\n\n\n")]
+	[InlineData(true, false, "Name\n1\n\"\"\n\n")]
+	[InlineData(false, false, "Name\n1\n\n\n")]
+	public void QuoteStringsOptions(bool emptyStringsMode, bool nonEmptyStringsMode, string result)
 	{
 		var data = new[]
 			{
+				new
+				{
+					Name = "1"
+				},
 				new
 				{
 					Name = ""
@@ -487,7 +493,7 @@ public class CsvDataWriterTests
 				},
 			};
 		var reader = data.AsDataReader();
-		var opts = new CsvDataWriterOptions { QuoteEmptyStrings = mode, NewLine = "\n" };
+		var opts = new CsvDataWriterOptions { QuoteEmptyStrings = emptyStringsMode, QuoteNonEmptyStrings = nonEmptyStringsMode, NewLine = "\n" };
 		var sw = new StringWriter();
 		var writer = CsvDataWriter.Create(sw, opts);
 		writer.Write(reader);

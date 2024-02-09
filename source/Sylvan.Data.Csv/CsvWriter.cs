@@ -114,7 +114,7 @@ partial class CsvDataWriter
 		{
 			var pos = offset;
 			var needsEscape = context.writer.needsEscape;
-			if (value.Length == 0 && context.writer.quoteEmptyStrings)
+			if ((value.Length == 0 && context.writer.quoteEmptyStrings) || (value.Length > 0 && context.writer.quoteNonEmptyStrings))
 			{
 				return NeedsQuoting;
 			}

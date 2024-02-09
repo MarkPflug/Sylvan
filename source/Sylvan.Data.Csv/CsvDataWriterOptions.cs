@@ -30,6 +30,8 @@ public sealed class CsvDataWriterOptions
 		this.BinaryEncoding = BinaryEncoding.Base64;
 		this.Style = CsvStyle.Standard;
 		this.Delimiter = DefaultDelimiter;
+		this.QuoteEmptyStrings = false;
+		this.QuoteNonEmptyStrings = false;
 		this.Quote = DefaultQuote;
 		this.Escape = DefaultEscape;
 		this.Comment = DefaultComment;
@@ -127,6 +129,13 @@ public sealed class CsvDataWriterOptions
 	public bool QuoteEmptyStrings { get; set; }
 
 	/// <summary>
+	/// All non-empty strings will be quoted regardless of whether it is necessary.
+	/// This can prevent other software from incorrectly treating strings as numbers or dates.
+	/// This setting is independent of <see cref="QuoteEmptyStrings"/>.
+	/// </summary>
+	public bool QuoteNonEmptyStrings { get; set; }
+
+	/// <summary>
 	/// The character to use for quoting fields. The default is '"'.
 	/// </summary>
 	public char Quote { get; set; }
@@ -184,7 +193,7 @@ public sealed class CsvDataWriterOptions
 			Quote >= 128 ||
 			Escape >= 128 ||
 			Comment >= 128 ||
-			(QuoteEmptyStrings && Style == CsvStyle.Escaped)
+			((QuoteEmptyStrings || QuoteNonEmptyStrings) && Style == CsvStyle.Escaped)
 			;
 		if (invalid)
 			throw new CsvConfigurationException();

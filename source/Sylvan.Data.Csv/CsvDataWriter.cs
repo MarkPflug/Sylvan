@@ -448,6 +448,7 @@ public sealed partial class CsvDataWriter
 
 	readonly bool writeHeaders;
 	readonly bool quoteEmptyStrings;
+	readonly bool quoteNonEmptyStrings;
 	readonly char delimiter;
 	readonly char quote;
 	readonly char escape;
@@ -531,6 +532,7 @@ public sealed partial class CsvDataWriter
 #endif
 		this.writeHeaders = options.WriteHeaders;
 		this.quoteEmptyStrings = options.QuoteEmptyStrings;
+		this.quoteNonEmptyStrings = options.QuoteNonEmptyStrings;
 		this.delimiter = options.Delimiter;
 		this.quote = options.Quote;
 		this.escape = options.Escape;
