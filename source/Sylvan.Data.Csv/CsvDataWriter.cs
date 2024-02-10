@@ -447,7 +447,8 @@ public sealed partial class CsvDataWriter
 	readonly CsvWriter csvWriter;
 
 	readonly bool writeHeaders;
-	readonly CsvStringQuoting quoteStrings;
+	readonly bool quoteEmpty;
+	readonly bool quoteNonEmpty;
 	readonly char delimiter;
 	readonly char quote;
 	readonly char escape;
@@ -530,7 +531,8 @@ public sealed partial class CsvDataWriter
 		this.dateOnlyFormat = options.DateOnlyFormat;
 #endif
 		this.writeHeaders = options.WriteHeaders;
-		this.quoteStrings = options.QuoteStrings;
+		this.quoteEmpty = (options.QuoteStrings & CsvStringQuoting.AlwaysQuoteEmpty) != 0;
+		this.quoteNonEmpty = (options.QuoteStrings & CsvStringQuoting.AlwaysQuoteNonEmpty) != 0;
 		this.delimiter = options.Delimiter;
 		this.quote = options.Quote;
 		this.escape = options.Escape;

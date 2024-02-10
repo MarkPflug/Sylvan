@@ -113,15 +113,14 @@ partial class CsvDataWriter
 #endif
 		{
 			var pos = offset;
-			var needsEscape = context.writer.needsEscape;
+			var w = context.writer;
+			var needsEscape = w.needsEscape;
 			if (value.Length == 0)
 			{
-				if (context.writer.quoteStrings.HasFlag(CsvStringQuoting.AlwaysQuoteEmpty))
-					return NeedsQuoting;
-				else
-					return 0;
+				return w.quoteEmpty ? NeedsQuoting : 0;
 			}
-			else if (context.writer.quoteStrings.HasFlag(CsvStringQuoting.AlwaysQuoteNonEmpty))
+			else 
+			if (w.quoteNonEmpty)
 				return NeedsQuoting;
 
 			if (pos + value.Length >= buffer.Length)
