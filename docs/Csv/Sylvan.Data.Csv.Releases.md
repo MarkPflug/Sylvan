@@ -1,5 +1,8 @@
 # Sylvan.Data.Csv Release Notes
 
+_1.3.7_
+- Adds `CsvDataWriterOptions.QuoteStrings` which now allows quoting empty, non-empty, or all strings. This is useful when string data might otherwise be interpreted as a number. This obsoletes QuoteEmptyString option.
+
 _1.3.6_
 - Adds `CsvStyle.Lax` which allows parsing CVS files with invalid fields. In this mode, the parser will not produce exceptions, but will
  do a "best effort" to parse invalid fields.
