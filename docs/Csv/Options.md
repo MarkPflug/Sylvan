@@ -63,7 +63,7 @@ __BufferSize__
 The size of the internal buffer to allocate for parsing records.
 This size is fixed and will not grow. This is the primary constraint on the data reader as all records *must* fit in the buffer or a parse exception will be thrown.
 
-The default buffer size is 64kb, which provides a good balance between memory and performance. A smaller buffer requires more chatty IO operations, and test to be slower.
+The default buffer size is 64kb, which provides a good balance between memory and performance. A smaller buffer requires more chatty IO operations, and tends to be slower.
 
 The fact that the buffer is not allowed to grow can be seen as a security feature which prevents malicious input from consuming unbounded memory. But, it also means that a larger buffer may be needed provided for some valid inputs.
 
