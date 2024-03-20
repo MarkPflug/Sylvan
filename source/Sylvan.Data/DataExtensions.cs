@@ -39,7 +39,18 @@ public static partial class DataExtensions
 	/// <returns>A DbDataReader.</returns>
 	public static DbDataReader WithColumns(this DbDataReader reader, params IDataColumn[] columns)
 	{
-		return new ExtendedDataReader(reader, columns);
+		var cols = new IDataColumn[reader.FieldCount + columns.Length];
+		int i = 0;
+
+		var schema = reader.CanGetColumnSchema() ? reader.GetColumnSchema() : null;
+		for (; i < reader.FieldCount; i++)
+		{
+			var allowNull = schema?[i].AllowDBNull ?? true;
+			cols[i] = new DataReaderColumn(reader, i, allowNull);
+		}
+		Array.Copy(columns, 0, cols, i, columns.Length);
+
+		return new MappedDataReader(reader, cols);
 	}
 
 	/// <summary>
@@ -180,6 +191,18 @@ public static partial class DataExtensions
 	{
 		var ordinals = GetOrdinals(reader, columnNames);
 		return new TransformDataReader(reader, ordinals);
+	}
+
+
+	/// <summary>
+	/// Selects a subset of columns for a DbDataReader.
+	/// </summary>
+	/// <param name="reader">The DbDataReader to select columns from.</param>
+	/// <param name="columns">The column projections.</param>
+	/// <returns>Returns a new DbDataReader containing just the selected columns.</returns>
+	public static DbDataReader Select(this DbDataReader reader, params IDataColumn[] columns)
+	{
+		return new MappedDataReader(reader, columns);
 	}
 
 	static int[] GetOrdinals(DbDataReader reader, string[] names)
