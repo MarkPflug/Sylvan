@@ -167,16 +167,16 @@ sealed class DataReaderColumn : IDataColumn
 
 	public object GetValue(DbDataReader reader)
 	{
-		return reader.GetValue(ordinal);
+		return this.reader.GetValue(ordinal);
 	}
 
 	public TValue GetValue<TValue>(DbDataReader reader)
 	{
-		return reader.GetFieldValue<TValue>(ordinal);
+		return this.reader.GetFieldValue<TValue>(ordinal);
 	}
 
 	public bool IsDbNull(DbDataReader reader)
 	{
-		return reader.IsDBNull(ordinal);
+		return this.reader.IsDBNull(ordinal);
 	}
 }
