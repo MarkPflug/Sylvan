@@ -483,10 +483,12 @@ public sealed partial class CsvDataWriter
 	/// </summary>
 	/// <param name="fileName">The path of the file to write.</param>
 	/// <param name="options">The options used to configure the writer, or null to use the defaults.</param>
-	public static CsvDataWriter Create(string fileName, CsvDataWriterOptions? options = null)
+	/// <param name="encoding">the file encoding at the end</param>
+	public static CsvDataWriter Create(string fileName, CsvDataWriterOptions? options = null, Encoding? encoding = null)
 	{
 		options ??= CsvDataWriterOptions.Default;
-		var writer = new StreamWriter(fileName, false, Encoding.UTF8);
+		encoding ??= Encoding.UTF8;
+		var writer = new StreamWriter(fileName, false, encoding);
 		return new CsvDataWriter(writer, null, options);
 	}
 
