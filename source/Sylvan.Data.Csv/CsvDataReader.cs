@@ -294,7 +294,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		var c = this.buffer[idx];
 		if (c == '\r')
 		{
-			if (c + 1 < this.buffer.Length && this.buffer[c + 1] != '\n')
+			if (idx + 1 < this.buffer.Length && this.buffer[idx + 1] != '\n')
 			{
 				return NewLineMode.MacOS;
 			}
