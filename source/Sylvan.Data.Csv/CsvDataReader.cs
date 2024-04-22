@@ -284,44 +284,29 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 
 	NewLineMode DetectNewLine()
 	{
-
-#if SPAN
-		var idx = this.buffer.AsSpan().IndexOfAny('\r', '\n');
-		if (idx < 0)
-		{
-			return NewLineMode.Standard;
-		}
-		var c = this.buffer[idx];
-		if (c == '\r')
-		{
-			if (c + 1 < this.buffer.Length && this.buffer[c + 1] != '\n')
-			{
-				return NewLineMode.MacOS;
-			}
-		}
-		return NewLineMode.Standard;
-#else
+		// This method should only be called when the delimiter was explicitly set by the user.
+		// In which case we need to detect whether the newline characters are MacOS-style ('\r')
 		for (int i = recordStart; i < bufferEnd; i++)
 		{
 			var c = buffer[i];
-			if(c == '\n')
+			if (c == '\n')
 			{
 				return NewLineMode.Standard;
 			}
 
 			if (c == '\r')
 			{
-				if (i + 1 < buffer.Length && buffer[i + 1] != '\n')
+				if (i + 1 < buffer.Length)
 				{
-					// if the first \r isn't followed by a \n, then
-					// parse the rest of the file expecting only \r
-					return NewLineMode.MacOS;
-					
+					return buffer[i + 1] == '\n'
+						? NewLineMode.Standard
+						: NewLineMode.MacOS;
 				}
-			}			
+			}
 		}
+		// should only get here if the entire buffer had no newlines
+		// or the very last char in the buffer was '\r'.
 		return NewLineMode.Standard;
-#endif
 	}
 
 	/// <summary>
