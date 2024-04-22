@@ -142,7 +142,7 @@ partial class CsvDataReader
 		}
 		if (this.newLineMode == NewLineMode.Unknown)
 		{
-			this.DetectNewLine();
+			this.newLineMode = this.DetectNewLine();
 		}
 
 		this.minSafe = delimiter < '\r' ? '\r' : delimiter;
