@@ -1911,6 +1911,51 @@ public class CsvDataReaderTests
 		Assert.Equal("\\\n", value0);
 	}
 
+	[Fact]
+	public void FieldAccessInvalidState()
+	{
+		var data = "a,b\n1,2\n";
+		var r = CsvDataReader.Create(new StringReader(data));
+
+		Assert.Throws<InvalidOperationException>(() => r.GetString(0));
+		Assert.True(r.Read());
+		Assert.Equal("1", r.GetString(0));
+		Assert.False(r.Read());
+		Assert.Throws<InvalidOperationException>(() => r.GetString(0));
+	}
+
+	[Fact]
+	public void FieldAccessInvalidStateAccessors()
+	{
+		var data = "a,b\n1,2\n";
+		var r = CsvDataReader.Create(new StringReader(data));
+
+		Assert.Throws<InvalidOperationException>(() => r.GetString(0));
+		Assert.Throws<InvalidOperationException>(() => r.GetInt16(0));
+		Assert.Throws<InvalidOperationException>(() => r.GetInt32(0));
+		Assert.Throws<InvalidOperationException>(() => r.GetInt64(0));
+		Assert.Throws<InvalidOperationException>(() => r.GetFloat(0));
+		Assert.Throws<InvalidOperationException>(() => r.GetDouble(0));
+		Assert.Throws<InvalidOperationException>(() => r.GetDateTime(0));
+		Assert.Throws<InvalidOperationException>(() => r.GetDateTimeOffset(0));
+		Assert.Throws<InvalidOperationException>(() => r.GetByte(0));
+		Assert.Throws<InvalidOperationException>(() => r.GetChar(0));
+	}
+
+	[Fact]
+	public void MacOSLineEndDetect()
+	{
+		var data = "a,b\r1,2\r"; // weird line ends
+		var opts = new CsvDataReaderOptions { Delimiter = ',' };
+		var r = CsvDataReader.Create(new StringReader(data), opts);
+		Assert.Equal(2, r.FieldCount);
+		Assert.True(r.Read());
+		Assert.Equal("1", r[0]);
+		Assert.Equal("2", r[1]);
+		Assert.False(r.Read());
+	}
+
+
 	[Theory]
 	// These test cases were copied from the Sep parser library. Thanks, Nietras.
 	[InlineData("a", true, "a")]

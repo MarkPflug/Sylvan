@@ -88,6 +88,14 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		Closed,
 	}
 
+	void ValidateState()
+	{
+		if (this.state != State.Open)
+		{
+			throw new InvalidOperationException();
+		}
+	}
+
 	enum ReadResult
 	{
 		False,
@@ -319,7 +327,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		this.fieldCount = count;
 		for (int i = 0; i < count; i++)
 		{
-			var name = hasHeaders ? GetString(i) : null;
+			var name = hasHeaders ? GetStringRaw(i) : null;
 			var columnSchema = schema?.GetColumn(name, i);
 			columns[i] = new CsvColumn(name, i, columnSchema);
 
@@ -1027,6 +1035,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override bool GetBoolean(int ordinal)
 	{
+		ValidateState();
 		// four cases:
 		// true and false both not null. Any other value raises error.
 		// true not null, false null. True string true, anything else false.
@@ -1088,6 +1097,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override byte GetByte(int ordinal)
 	{
+		ValidateState();
 #if SPAN
 		return byte.Parse(this.GetFieldSpan(ordinal), provider: culture);
 #else
@@ -1098,6 +1108,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override long GetBytes(int ordinal, long dataOffset, byte[]? buffer, int bufferOffset, int length)
 	{
+		ValidateState();
 		if (buffer == null)
 		{
 			return GetBinaryLength(ordinal);
@@ -1264,6 +1275,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override char GetChar(int ordinal)
 	{
+		ValidateState();
 		var s = GetField(ordinal);
 		if (s.length == 1)
 		{
@@ -1275,6 +1287,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override long GetChars(int ordinal, long dataOffset, char[]? buffer, int bufferOffset, int length)
 	{
+		ValidateState();
 		if (buffer == null)
 		{
 			return this.GetCharLength(ordinal);
@@ -1294,18 +1307,18 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// </summary>
 	public TimeSpan GetTimeSpan(int ordinal)
 	{
+		ValidateState();
 		var format = columns[ordinal].Format;
-		var style = TimeSpanStyles.None;
 #if SPAN
 		var span = this.GetFieldSpan(ordinal);
-		if (format != null && TimeSpan.TryParseExact(span, format, culture, style, out var value))
+		if (format != null && TimeSpan.TryParseExact(span, format, culture, TimeSpanStyles.None, out var value))
 		{
 			return value;
 		}
 		return TimeSpan.Parse(span, culture);
 #else
 		var str = this.GetString(ordinal);
-		if (format != null && TimeSpan.TryParseExact(str, format, culture, style, out var value))
+		if (format != null && TimeSpan.TryParseExact(str, format, culture, TimeSpanStyles.None, out var value))
 		{
 			return value;
 		}
@@ -1318,8 +1331,8 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// </summary>
 	public DateTimeOffset GetDateTimeOffset(int ordinal)
 	{
+		ValidateState();
 		var format = columns[ordinal].Format ?? this.dateTimeFormat;
-		var style = DateTimeStyles.RoundtripKind;
 		DateTimeOffset value;
 #if SPAN
 		var span = this.GetFieldSpan(ordinal);
@@ -1327,25 +1340,25 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		if (IsoDate.TryParse(span, out value))
 			return value;
 
-		if (format != null && DateTimeOffset.TryParseExact(span, format, culture, style, out value))
+		if (format != null && DateTimeOffset.TryParseExact(span, format, culture, DateTimeStyles.RoundtripKind, out value))
 		{
 			return value;
 		}
-		return DateTimeOffset.Parse(span, culture, style);
+		return DateTimeOffset.Parse(span, culture, DateTimeStyles.RoundtripKind);
 #else
 		var str = this.GetString(ordinal);
-		if (format != null && DateTimeOffset.TryParseExact(str, format, culture, style, out value))
+		if (format != null && DateTimeOffset.TryParseExact(str, format, culture, DateTimeStyles.RoundtripKind, out value))
 		{
 			return value;
 		}
-		return DateTimeOffset.Parse(str, culture, style);
+		return DateTimeOffset.Parse(str, culture, DateTimeStyles.RoundtripKind);
 #endif
 	}
 
 	/// <inheritdoc/>
 	public override DateTime GetDateTime(int ordinal)
 	{
-		var style = DateTimeStyles.RoundtripKind;
+		ValidateState();
 		DateTime value;
 #if SPAN
 		var span = this.GetFieldSpan(ordinal);
@@ -1353,26 +1366,27 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 			return value;
 
 		var format = columns[ordinal].Format ?? this.dateTimeFormat;
-		if (format != null && DateTime.TryParseExact(span, format, culture, style, out value))
+		if (format != null && DateTime.TryParseExact(span, format, culture, DateTimeStyles.RoundtripKind, out value))
 		{
 			return value;
 		}
-		return DateTime.Parse(span, culture, style);
+		return DateTime.Parse(span, culture, DateTimeStyles.RoundtripKind);
 #else
 		var dateStr = this.GetString(ordinal);
 
 		var format = columns[ordinal].Format ?? this.dateTimeFormat ?? "O";
-		if (format != null && DateTime.TryParseExact(dateStr, format, culture, style, out value))
+		if (format != null && DateTime.TryParseExact(dateStr, format, culture, DateTimeStyles.RoundtripKind, out value))
 		{
 			return value;
 		}
-		return DateTime.Parse(dateStr, culture, style);
+		return DateTime.Parse(dateStr, culture, DateTimeStyles.RoundtripKind);
 #endif
 	}
 
 	/// <inheritdoc/>
 	public override decimal GetDecimal(int ordinal)
 	{
+		ValidateState();
 #if SPAN
 		var field = this.GetField(ordinal);
 		return
@@ -1386,6 +1400,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override double GetDouble(int ordinal)
 	{
+		ValidateState();
 #if SPAN
 		var field = this.GetField(ordinal);
 		return
@@ -1418,6 +1433,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override float GetFloat(int ordinal)
 	{
+		ValidateState();
 #if SPAN
 		var field = this.GetField(ordinal);
 		return
@@ -1431,6 +1447,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override Guid GetGuid(int ordinal)
 	{
+		ValidateState();
 #if SPAN
 		return Guid.Parse(this.GetFieldSpan(ordinal));
 #else
@@ -1441,6 +1458,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override short GetInt16(int ordinal)
 	{
+		ValidateState();
 #if SPAN
 		var field = this.GetField(ordinal);
 		return
@@ -1454,6 +1472,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override int GetInt32(int ordinal)
 	{
+		ValidateState();
 #if SPAN
 		var field = this.GetField(ordinal);
 		return
@@ -1467,6 +1486,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override long GetInt64(int ordinal)
 	{
+		ValidateState();
 #if SPAN
 		var field = this.GetField(ordinal);
 		return
@@ -1503,6 +1523,12 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override string GetString(int ordinal)
 	{
+		ValidateState();
+		return GetStringRaw(ordinal);
+	}
+	
+	string GetStringRaw(int ordinal) 
+	{ 
 		if ((uint)ordinal < (uint)curFieldCount)
 		{
 			var s = GetFieldUnsafe(ordinal);
@@ -1744,6 +1770,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override object GetValue(int ordinal)
 	{
+		ValidateState();
 		var max = Math.Max(this.fieldCount, this.curFieldCount);
 
 		if (ordinal > max)
@@ -1814,6 +1841,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override int GetValues(object[] values)
 	{
+		ValidateState();
 		var count = Math.Min(this.fieldCount, values.Length);
 		for (int i = 0; i < count; i++)
 		{
@@ -1825,6 +1853,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override bool IsDBNull(int ordinal)
 	{
+		ValidateState();
 		if (ordinal < 0) throw new ArgumentOutOfRangeException(nameof(ordinal));
 
 		if ((uint)ordinal < this.fieldCount)
@@ -2012,6 +2041,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <returns>A span containing the characters of the field.</returns>
 	public ReadOnlySpan<char> GetFieldSpan(int ordinal)
 	{
+		ValidateState();
 		var s = GetField(ordinal);
 		return s.ToSpan();
 	}
@@ -2075,6 +2105,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override T GetFieldValue<T>(int ordinal)
 	{
+		ValidateState();
 		var acc = Accessor<T>.Instance;
 		return acc.GetValue(this, ordinal);
 	}
