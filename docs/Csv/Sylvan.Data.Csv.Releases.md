@@ -1,5 +1,10 @@
 # Sylvan.Data.Csv Release Notes
 
+_1.3.8_
+- Fixes an issue with detecting MacOS-style ('\r') line ends in some scenarios.
+- Field accessors now throw `InvalidOperationException` when called at inappropriate times. 
+  This might be a behavior breaking change for code that relied on invalid access patterns.
+
 _1.3.7_
 - Adds `CsvDataWriterOptions.QuoteStrings` which now allows quoting empty, non-empty, or all strings. This is useful when string data might otherwise be interpreted as a number. This obsoletes QuoteEmptyString option.
 
