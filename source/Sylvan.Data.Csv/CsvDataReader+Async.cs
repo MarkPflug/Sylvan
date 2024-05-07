@@ -305,6 +305,7 @@ partial class CsvDataReader
 		cancellationToken.ThrowIfCancellationRequested();
 
 		this.rowNumber++;
+		this.cacheIdx = 0;
 		if (this.state == State.Open)
 		{
 			var success = await this.NextRecordAsync(cancellationToken).ConfigureAwait(false);
