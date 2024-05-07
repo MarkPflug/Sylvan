@@ -126,8 +126,8 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		internal int idx;
 	}
 
-	OrdinalCache[] colNameCache = Array.Empty<OrdinalCache>();
-	int cacheIdx;
+	OrdinalCache[] colCache = Array.Empty<OrdinalCache>();
+	int colCacheIdx;
 
 	// An exception that was created with initializing, and should be thrown on the next call to Read/ReadAsync
 	Exception? pendingException;
@@ -356,7 +356,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 				}
 			}
 		}
-		this.colNameCache = new OrdinalCache[this.fieldCount];
+		this.colCache = new OrdinalCache[this.fieldCount];
 		this.state = hasHeaders ? State.Open : State.Initialized;
 	}
 
@@ -1530,14 +1530,10 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	{
 		if (name == null) throw new ArgumentNullException(nameof(name));
 
-		var cache = this.colNameCache;
-		var idx = cacheIdx;
-
-		if (idx < cache.Length)
+		if (colCacheIdx < colCache.Length)
 		{
-			ref var col = ref cache[idx];
-
-			++cacheIdx;
+			ref var col = ref colCache[colCacheIdx];
+			colCacheIdx++;
 			if (!ReferenceEquals(name, col.name))
 			{
 				col = new OrdinalCache { name = name, idx = LookupOrdinal(name) };
