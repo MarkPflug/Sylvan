@@ -9,10 +9,10 @@ namespace Sylvan.IO;
 public sealed class RandomStream : Stream
 {
 	readonly Random rand;
-	byte[] temp;
+	readonly byte[] temp;
+	readonly long length;
 	int bufferPos;
 	long position;
-	long length;
 
 	/// <summary>
 	/// Constructs a new RandomStream instance.

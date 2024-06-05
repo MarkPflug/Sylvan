@@ -8,7 +8,7 @@ class ProgressStream : Stream
 	readonly Stream inner;
 	readonly Action<double> callback;
 	readonly long progressSize;
-	long length;
+	readonly long length;
 	long progressAccumulator;
 
 	public ProgressStream(Stream inner, Action<double> callback, double factor = 0.01)
