@@ -120,6 +120,15 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	FieldInfo[] fieldInfos;
 	CsvColumn[] columns;
 
+	struct OrdinalCache
+	{
+		internal string name;
+		internal int idx;
+	}
+
+	OrdinalCache[] colCache = Array.Empty<OrdinalCache>();
+	int colCacheIdx;
+
 	// An exception that was created with initializing, and should be thrown on the next call to Read/ReadAsync
 	Exception? pendingException;
 
@@ -347,6 +356,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 				}
 			}
 		}
+		this.colCache = new OrdinalCache[this.fieldCount];
 		this.state = hasHeaders ? State.Open : State.Initialized;
 	}
 
@@ -1506,18 +1516,31 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		return columns[ordinal].ColumnName;
 	}
 
+	[MethodImpl(MethodImplOptions.NoInlining)]
+	int LookupOrdinal(string name)
+	{
+		var columnIndex = this.headerMap.TryGetValue(name, out var idx) ? idx : throw new IndexOutOfRangeException();
+		if (columnIndex == -1)
+			throw new AmbiguousColumnException(name);
+		return idx;
+	}
+
 	/// <inheritdoc/>
 	public override int GetOrdinal(string name)
 	{
-		if (this.headerMap.TryGetValue(name, out var idx))
+		if (name == null) throw new ArgumentNullException(nameof(name));
+
+		if (colCacheIdx < colCache.Length)
 		{
-			if (idx == -1)
+			ref var col = ref colCache[colCacheIdx];
+			colCacheIdx++;
+			if (!ReferenceEquals(name, col.name))
 			{
-				throw new AmbiguousColumnException(name);
+				col = new OrdinalCache { name = name, idx = LookupOrdinal(name) };
 			}
-			return idx;
+			return col.idx;
 		}
-		throw new IndexOutOfRangeException();
+		return LookupOrdinal(name);
 	}
 
 	/// <inheritdoc/>
@@ -1526,9 +1549,9 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		ValidateState();
 		return GetStringRaw(ordinal);
 	}
-	
-	string GetStringRaw(int ordinal) 
-	{ 
+
+	string GetStringRaw(int ordinal)
+	{
 		if ((uint)ordinal < (uint)curFieldCount)
 		{
 			var s = GetFieldUnsafe(ordinal);

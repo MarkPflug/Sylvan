@@ -170,6 +170,7 @@ partial class CsvDataReader
 	public override bool Read()
 	{
 		this.rowNumber++;
+		this.colCacheIdx = 0;
 		if (this.state == State.Open)
 		{
 			var success = this.NextRecord();
