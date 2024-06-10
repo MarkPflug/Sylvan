@@ -193,7 +193,6 @@ public static partial class DataExtensions
 		return new TransformDataReader(reader, ordinals);
 	}
 
-
 	/// <summary>
 	/// Selects a subset of columns for a DbDataReader.
 	/// </summary>
@@ -229,8 +228,6 @@ public static partial class DataExtensions
 	{
 		if (reader == null) throw new ArgumentNullException(nameof(reader));
 		if (predicate == null) throw new ArgumentNullException(nameof(predicate));
-		// TODO: TransformDataReader needs to merge into a new object rather than
-		// nest. nesting will lead to excessive method call overhead.
 		return new TransformDataReader(reader, null, predicate);
 	}
 

@@ -8,7 +8,7 @@ using System.Linq.Expressions;
 namespace Sylvan.Data;
 
 /// <summary>
-/// Defines a method for handling schema violations.
+/// Defines a method for handling data validation.
 /// </summary>
 public delegate bool DataValidationHandler(DataValidationContext context);
 
@@ -80,7 +80,7 @@ public sealed class DataValidationContext
 	}
 }
 
-class ValidatingDataReader : DataReaderAdapter
+sealed class ValidatingDataReader : DataReaderAdapter
 {
 	// limited visibility to internals
 	internal struct Accessor
@@ -150,24 +150,24 @@ class ValidatingDataReader : DataReaderAdapter
 
 	abstract class Ref
 	{
-		public bool IsNull { get; set; }
+		public abstract bool IsNull { get; }
 
 		public abstract object GetValue();
 		public abstract void SetValue(object? value);
 
-		public virtual void Reset()
-		{
-			this.IsNull = true;
-		}
+		public abstract void Reset();
 	}
 
 	// A reusable strongly-typed box to store row values.
 	// This is used to avoid boxing every single value.
 	sealed class ValueRef<T> : Ref
 	{
+		public override bool IsNull => Value is null;
+
 		public T? Value
 		{
-			get; set;
+			get;
+			set;
 		}
 
 		public override object GetValue()
@@ -178,7 +178,6 @@ class ValidatingDataReader : DataReaderAdapter
 		public override void SetValue(object? value)
 		{
 			var isNull = value == null || value == DBNull.Value;
-			this.IsNull = isNull;
 			if (isNull)
 			{
 				this.Value = default;
@@ -191,8 +190,7 @@ class ValidatingDataReader : DataReaderAdapter
 
 		public override void Reset()
 		{
-			this.Value = default;
-			base.Reset();
+			Value = default;
 		}
 	}
 
@@ -297,7 +295,6 @@ class ValidatingDataReader : DataReaderAdapter
 				reader.GetBytes(ordinal, 0, buffer, 0, 1);
 				value.Value = buffer;
 			}
-			value.IsNull = isNull;
 		}
 	}
 
@@ -324,7 +321,6 @@ class ValidatingDataReader : DataReaderAdapter
 				reader.GetChars(ordinal, 0, buffer, 0, 1);
 				value.Value = buffer;
 			}
-			value.IsNull = isNull;
 		}
 	}
 
@@ -357,7 +353,6 @@ class ValidatingDataReader : DataReaderAdapter
 			var isNull = reader.IsDBNull(ordinal);
 
 			value.Value = isNull ? default : accessor(reader, ordinal);
-			value.IsNull = isNull;
 		}
 	}
 
@@ -374,7 +369,7 @@ class ValidatingDataReader : DataReaderAdapter
 	readonly DataValidationHandler validationHandler;
 	readonly bool validateAllRows;
 
-	static bool Fail(DataValidationContext context)
+	static bool Skip(DataValidationContext context)
 	{
 		return false;
 	}
@@ -383,7 +378,7 @@ class ValidatingDataReader : DataReaderAdapter
 		: base(inner)
 	{
 		this.inner = inner;
-		this.validationHandler = errorHandler ?? Fail;
+		this.validationHandler = errorHandler ?? Skip;
 		this.cache = Array.Empty<Ref>();
 		this.accessors = Array.Empty<ValueAccessor>();
 		this.errorMarker = Array.Empty<int>();
