@@ -133,7 +133,7 @@ sealed class ValidatingDataReader : DataReaderAdapter
 			var r = this.reader.cache[ordinal];
 			if (r is ValueRef<T> vr)
 			{
-				vr.Value = value;
+				vr.Value = value!;
 			}
 			else
 			{
@@ -150,7 +150,7 @@ sealed class ValidatingDataReader : DataReaderAdapter
 
 	abstract class Ref
 	{
-		public abstract bool IsNull { get; }
+		public abstract bool HasValue { get; }
 
 		public abstract object GetValue();
 		public abstract void SetValue(object? value);
@@ -162,35 +162,49 @@ sealed class ValidatingDataReader : DataReaderAdapter
 	// This is used to avoid boxing every single value.
 	sealed class ValueRef<T> : Ref
 	{
-		public override bool IsNull => Value is null;
+		T value;
+		bool hasValue;
 
-		public T? Value
+		public ValueRef()
 		{
-			get;
-			set;
+			this.value = default!;
+		}
+
+		public override bool HasValue => hasValue;
+
+		public T Value
+		{
+			get { return value; }
+			set
+			{
+				this.hasValue = value != null;
+				this.value = value;
+			}
 		}
 
 		public override object GetValue()
 		{
-			return ((object?)this.Value) ?? DBNull.Value;
+			return hasValue ? this.Value! : DBNull.Value;
 		}
 
 		public override void SetValue(object? value)
 		{
 			var isNull = value == null || value == DBNull.Value;
+			this.hasValue = !isNull;
 			if (isNull)
 			{
-				this.Value = default;
+				this.value = default!;
 			}
 			else
 			{
-				this.Value = (T)value!;
+				this.value = (T)value!;
 			}
 		}
 
 		public override void Reset()
 		{
-			Value = default;
+			this.hasValue = false;
+			this.value = default!;
 		}
 	}
 
@@ -203,18 +217,41 @@ sealed class ValidatingDataReader : DataReaderAdapter
 
 	abstract class ValueAccessor<T> : ValueAccessor
 	{
-		public override Ref CreateRef()
+		public sealed override Ref CreateRef()
 		{
 			return new ValueRef<T>();
 		}
 
 		public override void Process(DbDataReader reader, int ordinal, Ref value)
 		{
+			value.Reset();
 			var rv = (ValueRef<T>)value;
 			ProcessValue(reader, ordinal, rv);
 		}
 
 		public abstract void ProcessValue(DbDataReader reader, int ordinal, ValueRef<T> value);
+	}
+
+	sealed class RefValueAccessor<T> : ValueAccessor<T> where T : class
+	{
+
+		readonly Func<DbDataReader, int, T> accessor;
+
+		public RefValueAccessor(Func<DbDataReader, int, T> accessor)
+		{
+			this.accessor = accessor;
+		}
+
+		public override void ProcessValue(DbDataReader reader, int ordinal, ValueRef<T> value)
+		{
+			var isNull = reader.IsDBNull(ordinal);
+
+			var v = accessor(reader, ordinal);
+			if (!isNull)
+			{
+				value.Value = v;
+			}
+		}
 	}
 
 	static class Accessors
@@ -225,7 +262,7 @@ sealed class ValidatingDataReader : DataReaderAdapter
 		public static ValueAccessor Int32 = new GenericValueAccessor<int>((r, o) => r.GetInt32(o));
 		public static ValueAccessor Int64 = new GenericValueAccessor<long>((r, o) => r.GetInt64(o));
 		public static ValueAccessor Char = new GenericValueAccessor<char>((r, o) => r.GetChar(o));
-		public static ValueAccessor String = new GenericValueAccessor<string>((r, o) => r.GetString(o));
+		public static ValueAccessor String = new RefValueAccessor<string>((r, o) => r.GetString(o));
 		public static ValueAccessor Single = new GenericValueAccessor<float>((r, o) => r.GetFloat(o));
 		public static ValueAccessor Double = new GenericValueAccessor<double>((r, o) => r.GetDouble(o));
 		public static ValueAccessor Decimal = new GenericValueAccessor<decimal>((r, o) => r.GetDecimal(o));
@@ -238,27 +275,27 @@ sealed class ValidatingDataReader : DataReaderAdapter
 		public static ValueAccessor NullableInt32 = new GenericNullableValueAccessor<int>((r, o) => r.GetInt32(o));
 		public static ValueAccessor NullableInt64 = new GenericNullableValueAccessor<long>((r, o) => r.GetInt64(o));
 		public static ValueAccessor NullableChar = new GenericNullableValueAccessor<char>((r, o) => r.GetChar(o));
-		public static ValueAccessor NullableString = new GenericNullableValueAccessor<string>((r, o) => r.GetString(o));
+		public static ValueAccessor NullableString = new RefValueAccessor<string>((r, o) => r.GetString(o));
 		public static ValueAccessor NullableSingle = new GenericNullableValueAccessor<float>((r, o) => r.GetFloat(o));
 		public static ValueAccessor NullableDouble = new GenericNullableValueAccessor<double>((r, o) => r.GetDouble(o));
 		public static ValueAccessor NullableDecimal = new GenericNullableValueAccessor<decimal>((r, o) => r.GetDecimal(o));
 		public static ValueAccessor NullableDateTime = new GenericNullableValueAccessor<DateTime>((r, o) => r.GetDateTime(o));
 		public static ValueAccessor NullableGuid = new GenericNullableValueAccessor<Guid>((r, o) => r.GetGuid(o));
 
-		public static ValueAccessor Object = new GenericNullableValueAccessor<object>((r, o) => r.GetValue(o));
+		public static ValueAccessor Object = new RefValueAccessor<object>((r, o) => r.GetValue(o));
 
 		public static ValueAccessor GetAccessor(Type type, bool allowNull)
 		{
 			var mi = typeof(DbDataReader).GetMethod("GetFieldValue");
-			
+
 			var gm = mi!.MakeGenericMethod(type);
 
 			var drp = Expression.Parameter(typeof(DbDataReader));
 			var op = Expression.Parameter(typeof(int));
 			var call = Expression.Call(drp, gm, op);
 			var func = Expression.Lambda(call, drp, op).Compile();
-			var t = allowNull 
-				? typeof(GenericNullableValueAccessor<>) 
+			var t = allowNull
+				? typeof(GenericNullableValueAccessor<>)
 				: typeof(GenericValueAccessor<>);
 
 			var gt = t.MakeGenericType(type);
@@ -267,7 +304,7 @@ sealed class ValidatingDataReader : DataReaderAdapter
 
 			var inst = ctor.Invoke(new object[] { func });
 
-			return (ValueAccessor) inst;
+			return (ValueAccessor)inst;
 		}
 	}
 
@@ -286,11 +323,7 @@ sealed class ValidatingDataReader : DataReaderAdapter
 		{
 			var isNull = nullable && reader.IsDBNull(ordinal);
 
-			if (isNull)
-			{
-				value.Value = null;
-			}
-			else
+			if (!isNull)
 			{
 				reader.GetBytes(ordinal, 0, buffer, 0, 1);
 				value.Value = buffer;
@@ -312,11 +345,7 @@ sealed class ValidatingDataReader : DataReaderAdapter
 		public override void ProcessValue(DbDataReader reader, int ordinal, ValueRef<char[]> value)
 		{
 			var isNull = nullable && reader.IsDBNull(ordinal);
-			if (isNull)
-			{
-				value.Value = null;
-			}
-			else
+			if (!isNull)
 			{
 				reader.GetChars(ordinal, 0, buffer, 0, 1);
 				value.Value = buffer;
@@ -324,7 +353,7 @@ sealed class ValidatingDataReader : DataReaderAdapter
 		}
 	}
 
-	sealed class GenericValueAccessor<T> : ValueAccessor<T>
+	sealed class GenericValueAccessor<T> : ValueAccessor<T> where T : struct
 	{
 		readonly Func<DbDataReader, int, T> accessor;
 
@@ -339,7 +368,7 @@ sealed class ValidatingDataReader : DataReaderAdapter
 		}
 	}
 
-	sealed class GenericNullableValueAccessor<T> : ValueAccessor<T>
+	sealed class GenericNullableValueAccessor<T> : ValueAccessor<T> where T : struct
 	{
 		readonly Func<DbDataReader, int, T> accessor;
 
@@ -351,8 +380,10 @@ sealed class ValidatingDataReader : DataReaderAdapter
 		public override void ProcessValue(DbDataReader reader, int ordinal, ValueRef<T> value)
 		{
 			var isNull = reader.IsDBNull(ordinal);
-
-			value.Value = isNull ? default : accessor(reader, ordinal);
+			if (!isNull)
+			{
+				value.Value = accessor(reader, ordinal);
+			}
 		}
 	}
 
@@ -360,7 +391,7 @@ sealed class ValidatingDataReader : DataReaderAdapter
 	Ref[] cache;
 	ValueAccessor[] accessors;
 	// stores the index of last row that encountered an error in that column.
-	int[] errorMarker; 
+	int[] errorMarker;
 	Exception[] exceptions;
 	int counter;
 
@@ -465,7 +496,7 @@ sealed class ValidatingDataReader : DataReaderAdapter
 					return new CharsValueAccessor(allowNull);
 				}
 
-				if(type == typeof(object))
+				if (type == typeof(object))
 				{
 					return Accessors.Object;
 				}
@@ -481,7 +512,6 @@ sealed class ValidatingDataReader : DataReaderAdapter
 		for (int i = 0; i < inner.FieldCount; i++)
 		{
 			var r = cache[i];
-			r.Reset();
 			try
 			{
 				this.accessors[i].Process(this.inner, i, r);
@@ -521,7 +551,13 @@ sealed class ValidatingDataReader : DataReaderAdapter
 	T GetRefValue<T>(int ordinal)
 	{
 		ValidateOrdinal(ordinal);
-		return ((ValueRef<T>)cache[ordinal]).Value!;
+		var raw = cache[ordinal];
+		var r = (ValueRef<T>)raw;
+		if (r.HasValue)
+		{
+			return r.Value;
+		}
+		throw new InvalidCastException();
 	}
 
 	public override bool GetBoolean(int ordinal)
@@ -645,7 +681,7 @@ sealed class ValidatingDataReader : DataReaderAdapter
 	public override bool IsDBNull(int ordinal)
 	{
 		ValidateOrdinal(ordinal);
-		return cache[ordinal].IsNull;
+		return !cache[ordinal].HasValue;
 	}
 
 	public override bool NextResult()

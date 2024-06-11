@@ -479,9 +479,9 @@ public class CsvDataReaderTests
 	}
 
 	[Fact]
-	public void Create()
+	public async Task Create()
 	{
-		Assert.ThrowsAsync<ArgumentNullException>(() => CsvDataReader.CreateAsync((TextReader)null));
+		await Assert.ThrowsAsync<ArgumentNullException>(() => CsvDataReader.CreateAsync((TextReader)null));
 	}
 
 	[Fact]

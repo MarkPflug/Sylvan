@@ -11,13 +11,13 @@ public class SchemaValidatingDataReaderTests
 	// uses preview features, which are marked obsolete.
 #pragma warning disable CS0618
 
-	static object[] defaults = new object[] { -1, Guid.Empty, null };
+	static readonly object[] Defaults = new object[] { -1, Guid.Empty, null };
 
 	static bool Validate(DataValidationContext context)
 	{
 		foreach(var error in context.GetErrors())
 		{
-			context.SetValue(error, defaults[error]);
+			context.SetValue(error, Defaults[error]);
 		}
 		return true;
 	}
@@ -48,7 +48,7 @@ public class SchemaValidatingDataReaderTests
 	[Fact]
 	public void Test2()
 	{
-		var schema = Schema.Parse(":int,:Guid,:DateTime");
+		var schema = Schema.Parse(":int,:Guid,:DateTime?");
 		var opts = new CsvDataReaderOptions { Schema = new CsvSchema(schema) };
 		var data = "A,B,C\na,,nope";
 		var csv = CsvDataReader.Create(new StringReader(data), opts);
@@ -60,6 +60,76 @@ public class SchemaValidatingDataReaderTests
 		Assert.False(r.IsDBNull(1));
 		Assert.Equal(Guid.Empty, r.GetGuid(1));
 		Assert.True(r.IsDBNull(2));
+	}
+
+	[Fact]
+	public void ValidationStringNullability()
+	{
+		var schema = Schema.Parse(":String?,:String");
+		var opts = new CsvDataReaderOptions { Schema = new CsvSchema(schema) };
+		var data = "A,B\na,b\n,b\na,";
+		var csv = CsvDataReader.Create(new StringReader(data), opts);
+
+		static bool Validate(DataValidationContext context)
+		{			
+			return true;
+		}
+
+		var r = csv.ValidateSchema(Validate);
+		Assert.True(r.Read());
+		Assert.False(r.IsDBNull(0));
+		Assert.Equal("a", r.GetString(0));
+		Assert.False(r.IsDBNull(1));
+		Assert.Equal("b", r.GetString(1));
+		Assert.True(r.Read());
+		Assert.True(r.IsDBNull(0));
+		Assert.Throws<InvalidCastException>(() => r.GetString(0));
+		Assert.False(r.IsDBNull(1));
+		Assert.Equal("b", r.GetString(1));
+		Assert.True(r.Read());
+		Assert.False(r.IsDBNull(0));
+		Assert.Equal("a", r.GetString(0));
+		Assert.False(r.IsDBNull(1));
+		Assert.Equal("", r.GetString(1));
+		Assert.False(r.Read());
+	}
+
+	[Fact]
+	public void ValidationStructNullability()
+	{
+		var schema = Schema.Parse(":int?,:int");
+		var opts = new CsvDataReaderOptions { Schema = new CsvSchema(schema) };
+		var data = "A,B\n1,2\n,2\n1,";
+		var csv = CsvDataReader.Create(new StringReader(data), opts);
+
+		static bool Validate(DataValidationContext context)
+		{
+			return false;
+		}
+
+		var r = csv.ValidateSchema(Validate);
+
+		Assert.True(r.Read());
+		Assert.False(r.IsDBNull(0));
+		Assert.Equal(1, r.GetInt32(0));
+		Assert.False(r.IsDBNull(1));
+		Assert.Equal(2, r.GetInt32(1));
+
+
+		Assert.True(r.Read());
+		Assert.True(r.IsDBNull(0));
+		Assert.Throws<InvalidCastException>(() => r.GetInt32(0));
+		Assert.False(r.IsDBNull(1));
+		Assert.Equal(2, r.GetInt32(1));
+
+		// the last row is invalid, so will not be read
+		//Assert.True(r.Read());
+		//Assert.False(r.IsDBNull(0));
+		//Assert.Equal(1, r.GetInt32(0));
+		//Assert.False(r.IsDBNull(1)); // the schema says it can't be null...
+		//Assert.Throws<InvalidCastException>(() => r.GetInt32(0)); // but the underlying value can't be converted
+
+		Assert.False(r.Read());
 	}
 
 	class Validator
