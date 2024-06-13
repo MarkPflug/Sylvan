@@ -159,21 +159,41 @@ sealed class ValidatingDataReader : DataReaderAdapter
 
 		public void SetValue<T>(int ordinal, T? value)
 		{
-			var r = this.reader.cache[ordinal];
-			if (r is ValueRef<T> vr)
+			var reader = this.reader;
+			try
 			{
-				vr.Value = value!;
+				var r = reader.cache[ordinal];
+				if (r is ValueRef<T> vr)
+				{
+					vr.Value = value!;
+				}
+				else
+				{
+					r.SetValue(value);
+				}
+				reader.ClearError(ordinal);
 			}
-			else
+			catch (Exception ex)
 			{
-				r.SetValue(value);
+				reader.SetError(ordinal, ex);
+				throw;
 			}
 		}
 
 		public void SetValue(int ordinal, object? value)
 		{
-			var r = this.reader.cache[ordinal];
-			r.SetValue(value);
+			var reader = this.reader;
+			try
+			{
+				var r = reader.cache[ordinal];
+				r.SetValue(value);
+				reader.ClearError(ordinal);
+			}
+			catch (Exception ex)
+			{
+				reader.SetError(ordinal, ex);
+				throw;
+			}
 		}
 	}
 
@@ -421,7 +441,7 @@ sealed class ValidatingDataReader : DataReaderAdapter
 	ValueAccessor[] accessors;
 	// stores the index of last row that encountered an error in that column.
 	int[] errorMarker;
-	Exception[] exceptions;
+	Exception?[] exceptions;
 	int rowNumber;
 
 	readonly DbDataReader inner;
@@ -548,8 +568,7 @@ sealed class ValidatingDataReader : DataReaderAdapter
 			catch (Exception ex)
 			{
 				errorCount++;
-				this.exceptions[i] = ex;
-				this.errorMarker[i] = rowNumber;
+				SetError(i, ex);
 			}
 		}
 		if (validateAllRows || errorCount > 0)
@@ -562,6 +581,19 @@ sealed class ValidatingDataReader : DataReaderAdapter
 
 		return true;
 	}
+
+	void SetError(int ordinal, Exception ex)
+	{
+		this.exceptions[ordinal] = ex;
+		this.errorMarker[ordinal] = rowNumber;
+	}
+
+	void ClearError(int ordinal)
+	{
+		this.exceptions[ordinal] = null;
+		this.errorMarker[ordinal] = -1;
+	}
+
 
 	public override object this[int ordinal] => GetValue(ordinal);
 

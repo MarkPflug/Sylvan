@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Sylvan.Data;
 
-public class SchemaValidatingDataReaderTests
+public class ValidatingDataReaderTests
 {
 	// uses preview features, which are marked obsolete.
 #pragma warning disable CS0618
@@ -15,7 +15,7 @@ public class SchemaValidatingDataReaderTests
 
 	static bool Validate(DataValidationContext context)
 	{
-		foreach(var error in context.GetErrors())
+		foreach (var error in context.GetErrors())
 		{
 			context.SetValue(error, Defaults[error]);
 		}
@@ -41,10 +41,10 @@ public class SchemaValidatingDataReaderTests
 		Assert.True(r.Read());
 		Assert.Equal(1, r.GetInt32(0));
 		Assert.Equal("Test", r.GetString(1));
-		Assert.Equal(new DateTime(2022,1,1), r.GetDateTime(2));
+		Assert.Equal(new DateTime(2022, 1, 1), r.GetDateTime(2));
 		Assert.False(r.Read());
 	}
-	
+
 	[Fact]
 	public void Test2()
 	{
@@ -71,7 +71,7 @@ public class SchemaValidatingDataReaderTests
 		var csv = CsvDataReader.Create(new StringReader(data), opts);
 
 		static bool Validate(DataValidationContext context)
-		{			
+		{
 			return true;
 		}
 
@@ -156,9 +156,35 @@ public class SchemaValidatingDataReaderTests
 
 		var r = csv.Validate(v.Validate);
 		// process rows
-		while (r.Read());
+		while (r.Read()) ;
 
 		Assert.Equal(3, v.count);
+	}
 
+	[Fact]
+	public void SetValueClearsError()
+	{
+		var schema = Schema.Parse(":int");
+		var opts = new CsvDataReaderOptions { Schema = new CsvSchema(schema) };
+		// one row matches the schema, but we expect 3 calls to validate
+		var data = "A\n\n-1\nX";
+		var csv = CsvDataReader.Create(new StringReader(data), opts);
+
+		static bool Validate(DataValidationContext context)
+		{
+			if (!context.IsValid(0))
+			{
+				context.SetValue(0, -1);
+			}
+			Assert.True(context.IsValid(0));
+			return true;
+		}
+
+		var r = csv.Validate(Validate);
+		// process rows
+		while (r.Read())
+		{
+			Assert.Equal(-1, r.GetInt32(0));
+		}
 	}
 }

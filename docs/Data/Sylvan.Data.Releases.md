@@ -1,5 +1,11 @@
 # Sylvan.Data Release Notes
 
+_0.2.14_
+- DataValidationContext now exposes `RowNumber` and `IsValid(int ordinal)` to assist in custom validations.
+- Calling DataValidationContext.SetValue will clear any error associated with that field.
+- Fixes an issue with data nullability handling in `DbDataReader.Validate/ValidateSchema` methods.
+- The `DbDataReader.Validate/ValidateSchema` methods remain in "preview".
+
 _0.2.13_
 - Data binder now throws an exception if *no* properties get bound in `BindMode.Any`, now at least one must get bound.
 - Data binder now honors `DataMemberAttribute.IsRequired` property. If unbound, binder creation will throw an `UnboundMemberException` exception.
