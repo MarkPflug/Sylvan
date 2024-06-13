@@ -38,6 +38,16 @@ public sealed class DataValidationContext
 	}
 
 	/// <summary>
+	/// Indicates that the field at the given ordinal didn't have a schema validation error.
+	/// </summary>
+	/// <param name="ordinal">A column ordinal</param>
+	/// <returns>True if the column was valid otherwise false.</returns>
+	public bool IsValid(int ordinal)
+	{
+		return accessor.IsValid(ordinal);
+	}
+
+	/// <summary>
 	/// Gets the exception that was thrown when processing the column.
 	/// </summary>
 	/// <param name="ordinal">The column ordinal.</param>
@@ -78,6 +88,18 @@ public sealed class DataValidationContext
 	{
 		return this.accessor.GetValue(ordinal);
 	}
+
+	/// <summary>
+	/// Gets the row number of the underlying DbDataReader.
+	/// This counts the number of times `Read()` has been called.
+	/// </summary>
+	public int RowNumber
+	{
+		get
+		{
+			return this.accessor.RowNumber;
+		}
+	}
 }
 
 sealed class ValidatingDataReader : DataReaderAdapter
@@ -99,15 +121,20 @@ sealed class ValidatingDataReader : DataReaderAdapter
 			var markers = reader.errorMarker;
 			for (int i = 0; i < markers.Length; i++)
 			{
-				if (markers[i] == reader.counter)
+				if (markers[i] == reader.rowNumber)
 					yield return i;
 			}
+		}
+
+		public bool IsValid(int ordinal)
+		{
+			return reader.errorMarker[ordinal] != reader.rowNumber;
 		}
 
 		public Exception? GetException(int ordinal)
 		{
 			return
-				reader.errorMarker[ordinal] == reader.counter
+				reader.errorMarker[ordinal] == reader.rowNumber
 				? reader.exceptions[ordinal]
 				: null;
 		}
@@ -127,6 +154,8 @@ sealed class ValidatingDataReader : DataReaderAdapter
 			var r = this.reader.cache[ordinal];
 			return r.GetValue();
 		}
+
+		public int RowNumber => this.reader.rowNumber;
 
 		public void SetValue<T>(int ordinal, T? value)
 		{
@@ -393,7 +422,7 @@ sealed class ValidatingDataReader : DataReaderAdapter
 	// stores the index of last row that encountered an error in that column.
 	int[] errorMarker;
 	Exception[] exceptions;
-	int counter;
+	int rowNumber;
 
 	readonly DbDataReader inner;
 	readonly DataValidationContext validationContext;
@@ -415,7 +444,7 @@ sealed class ValidatingDataReader : DataReaderAdapter
 		this.errorMarker = Array.Empty<int>();
 		this.exceptions = Array.Empty<Exception>();
 		this.validationContext = new DataValidationContext(new Accessor(this));
-		this.counter = -1;
+		this.rowNumber = -1;
 		this.validateAllRows = validateAllRows;
 		InitializeSchema();
 	}
@@ -507,7 +536,7 @@ sealed class ValidatingDataReader : DataReaderAdapter
 
 	bool ProcessRow()
 	{
-		counter++;
+		rowNumber++;
 		var errorCount = 0;
 		for (int i = 0; i < inner.FieldCount; i++)
 		{
@@ -520,7 +549,7 @@ sealed class ValidatingDataReader : DataReaderAdapter
 			{
 				errorCount++;
 				this.exceptions[i] = ex;
-				this.errorMarker[i] = counter;
+				this.errorMarker[i] = rowNumber;
 			}
 		}
 		if (validateAllRows || errorCount > 0)
@@ -706,6 +735,7 @@ sealed class ValidatingDataReader : DataReaderAdapter
 			}
 			// otherwise move to the next row
 		}
+		this.rowNumber = -1;
 		return false;
 	}
 
