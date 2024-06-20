@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Data.Common;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Sylvan.Data;
 
@@ -12,6 +14,25 @@ sealed class TakeWhileDataReader : DataReaderAdapter
 	{
 		this.predicate = predicate;
 		this.state = 0;
+	}
+
+	public override async Task<bool> ReadAsync(CancellationToken cancellationToken)
+	{
+		if (state == 0)
+		{
+			if (!await Reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+			{
+				this.state = 1;
+				return false;
+			}
+			if (!predicate(this))
+			{
+				this.state = 2;
+				return false;
+			}
+			return true;
+		}
+		return false;
 	}
 
 	public override bool Read()

@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Data.Common;
 using System.Linq.Expressions;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Sylvan.Data;
 
@@ -745,6 +747,16 @@ sealed class ValidatingDataReader : DataReaderAdapter
 		return !cache[ordinal].HasValue;
 	}
 
+	public override async Task<bool> NextResultAsync(CancellationToken cancellationToken)
+	{
+		if (await inner.NextResultAsync(cancellationToken).ConfigureAwait(false))
+		{
+			InitializeSchema();
+			return true;
+		}
+		return false;
+	}
+
 	public override bool NextResult()
 	{
 		if (inner.NextResult())
@@ -752,6 +764,22 @@ sealed class ValidatingDataReader : DataReaderAdapter
 			InitializeSchema();
 			return true;
 		}
+		return false;
+	}
+
+	public override async Task<bool> ReadAsync(CancellationToken cancellationToken)
+	{
+		while (await inner.ReadAsync(cancellationToken).ConfigureAwait(false))
+		{
+			// if the current row has valid data
+			if (ProcessRow())
+			{
+				// return it
+				return true;
+			}
+			// otherwise move to the next row
+		}
+		this.rowNumber = -1;
 		return false;
 	}
 
