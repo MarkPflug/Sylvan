@@ -1,5 +1,8 @@
 # Sylvan.Data Release Notes
 
+_0.2.15_
+- Adds async support to a few DbDataReader implementations that were previously missing it. This lead to incorrect behavior when used asynchronously.
+
 _0.2.14_
 - DataValidationContext now exposes `RowNumber` and `IsValid(int ordinal)` to assist in custom validations.
 - Calling DataValidationContext.SetValue will clear any error associated with that field.
