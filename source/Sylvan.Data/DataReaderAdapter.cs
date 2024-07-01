@@ -31,10 +31,10 @@ public abstract partial class DataReaderAdapter : DbDataReader, IDbColumnSchemaG
 	}
 
 	/// <inheritdoc/>
-	public override object this[int ordinal] => dr[ordinal];
+	public override object this[int ordinal] => this.GetValue(ordinal);
 
 	/// <inheritdoc/>
-	public override object this[string name] => dr[name];
+	public override object this[string name] => this.GetValue(this.GetOrdinal(name));
 
 	/// <inheritdoc/>
 	public override int Depth => dr.Depth;

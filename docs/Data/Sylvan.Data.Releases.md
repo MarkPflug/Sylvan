@@ -1,5 +1,8 @@
 # Sylvan.Data Release Notes
 
+_0.2.16_
+- Fixes the base DataReaderAdapter indexer implementations to defer to GetOrdinal/GetName rather than the wrapper reader implementations.
+
 _0.2.15_
 - Adds async support to a few DbDataReader implementations that were previously missing it. This lead to incorrect behavior when used asynchronously.
 

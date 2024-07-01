@@ -596,11 +596,6 @@ sealed class ValidatingDataReader : DataReaderAdapter
 		this.errorMarker[ordinal] = -1;
 	}
 
-
-	public override object this[int ordinal] => GetValue(ordinal);
-
-	public override object this[string name] => this.GetValue(GetOrdinal(name));
-
 	public override int Depth => 0;
 
 	public override int FieldCount => inner.FieldCount;
