@@ -1,5 +1,8 @@
 # Sylvan.Data.Csv Release Notes
 
+_1.3.9_
+- Improve the performance of CsvDataReader indexers for some access patterns.
+
 _1.3.8_
 - Fixes an issue with detecting MacOS-style ('\r') line ends in some scenarios.
 - Field accessors now throw `InvalidOperationException` when called at inappropriate times. 
