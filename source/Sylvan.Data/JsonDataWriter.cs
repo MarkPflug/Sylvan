@@ -28,9 +28,14 @@ static partial class DataExtensions
 		{
 			count++;
 			WriteRecord(data, names, writer);
+			if (writer.BytesPending > 0x1000)
+			{
+				writer.Flush();
+			}
 		}
 
 		writer.WriteEndArray();
+		writer.Flush();
 		return count;
 	}
 
@@ -52,7 +57,10 @@ static partial class DataExtensions
 			{
 				count++;
 				WriteRecord(data, names, writer);
-				await writer.FlushAsync().ConfigureAwait(false);
+				if (writer.BytesPending > 0x1000)
+				{
+					await writer.FlushAsync().ConfigureAwait(false);
+				}
 			}
 
 			writer.WriteEndArray();
@@ -76,8 +84,6 @@ static partial class DataExtensions
 	const string DateTimeFormat = "yyyy-MM-ddTHH:mm:ss.FFFFFFF";
 	const string DateTimeOffsetFormat = "yyyy-MM-ddTHH:mm:ss.FFFFFFFK";
 
-	// TODO: measure if this is worthwhile, since we could avoid initializing the scratch buffer
-	//[SkipLocalsInit] 
 	static void WriteRecord(DbDataReader data, JsonEncodedText[] names, Utf8JsonWriter writer)
 	{
 		writer.WriteStartObject();
@@ -177,6 +183,13 @@ static partial class DataExtensions
 						{
 							byte[] value = (byte[])data.GetValue(i);
 							writer.WriteBase64StringValue(value);
+							break;
+						}
+
+						if (t == typeof(char[]))
+						{
+							char[] value = (char[])data.GetValue(i);
+							writer.WriteStringValue(value);
 							break;
 						}
 
