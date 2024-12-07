@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
@@ -35,6 +36,17 @@ public sealed class SchemaAnalyzerOptions
 	public bool DetectSeries { get; set; }
 
 	//public IColumnSizeStrategy ColumnSizer { get; set; }
+
+	/// <summary>
+	/// Values to be interpreted as boolean true.
+	/// Default values are "y", "yes", "t", "true".
+	/// </summary>
+	public List<string> TrueStrings { get; set; } = new() { "y", "yes", "t", "true" };
+	/// <summary>
+	/// Values to be interpreted as boolean true.
+	/// Default values are "n", "no", "f", "false".
+	/// </summary>
+	public List<string> FalseStrings { get; set; } = new() { "n", "no", "f", "false" };
 }
 
 //public class ColumnSize
@@ -117,6 +129,9 @@ public sealed partial class SchemaAnalyzer
 	//IColumnSizeStrategy sizer;
 	readonly bool detectSeries;
 
+	readonly IReadOnlyCollection<string>? _trueStrings;
+	readonly IReadOnlyCollection<string>? _falseStrings;
+
 	/// <summary>
 	/// Creates a new SchemaAnalyzer.
 	/// </summary>
@@ -126,6 +141,8 @@ public sealed partial class SchemaAnalyzer
 		this.rowCount = options.AnalyzeRowCount;
 		//this.sizer = options.ColumnSizer;
 		this.detectSeries = options.DetectSeries;
+		this._trueStrings = options.TrueStrings;
+		this._falseStrings = options.FalseStrings;
 	}
 
 	/// <summary>
@@ -144,7 +161,11 @@ public sealed partial class SchemaAnalyzer
 		var colInfos = new ColumnInfo[dataReader.FieldCount];
 		for (int i = 0; i < colInfos.Length; i++)
 		{
-			colInfos[i] = new ColumnInfo(dataReader, i);
+			colInfos[i] = new ColumnInfo(dataReader, i)
+			{
+				TrueStrings = _trueStrings,
+				FalseStrings = _falseStrings
+			};
 		}
 
 		var sw = Stopwatch.StartNew();
@@ -197,7 +218,11 @@ public sealed class ColumnInfo
 				isDateTime = isDate = true;
 				break;
 			case TypeCode.String:
+#if NET6_0_OR_GREATER
+				isBoolean = isInt = isFloat = isDecimal = isDate = isDateTime = isDateOnly = isTimeOnly = isGuid = true;
+#else
 				isBoolean = isInt = isFloat = isDecimal = isDate = isDateTime = isGuid = true;
+#endif
 				break;
 			default:
 				if (type == typeof(byte[]))
@@ -251,7 +276,11 @@ public sealed class ColumnInfo
 	bool isAscii;
 	readonly int ordinal;
 	readonly string? name;
+#if NET6_0_OR_GREATER
+	bool isBoolean, isInt, isFloat, isDate, isDateTime, isDateOnly, isTimeOnly, isGuid;
+#else
 	bool isBoolean, isInt, isFloat, isDate, isDateTime, isGuid;
+#endif
 
 	bool isDecimal;
 	bool dateHasFractionalSeconds;
@@ -276,6 +305,8 @@ public sealed class ColumnInfo
 
 	readonly Dictionary<string, int> valueCount;
 
+
+
 	internal void Analyze(DbDataReader dr, int ordinal)
 	{
 		count++;
@@ -292,6 +323,10 @@ public sealed class ColumnInfo
 		double? floatValue = null;
 		decimal? decimalValue = null;
 		DateTime? dateValue = null;
+#if NET6_0_OR_GREATER
+		DateOnly? dateOnlyValue = null;
+		TimeOnly? timeOnlyValue = null;
+#endif
 		string? stringValue = null;
 		Guid? guidValue;
 
@@ -383,6 +418,31 @@ public sealed class ColumnInfo
 							}
 							if (isDateTime || isDate)
 							{
+#if NET6_0_OR_GREATER
+								bool containsDateSeparators = dateSeparators.Any(sep => stringValue.Contains(sep));
+								bool containsTimeSeparators = timeSeparators.Any(sep => stringValue.Contains(sep));
+								if (containsDateSeparators && !containsTimeSeparators && DateOnly.TryParse(stringValue, out DateOnly dateOnlyResult))
+								{
+									// Ensure the string does not contain time components and follows common date formats
+									dateOnlyValue = dateOnlyResult;
+									isTimeOnly = isDateTime = false;
+								}
+								else if (!containsDateSeparators && containsTimeSeparators && TimeOnly.TryParse(stringValue, out TimeOnly timeOnlyResult))
+								{
+									// Ensure the string does not contain date components
+									timeOnlyValue = timeOnlyResult;
+									isDateOnly = isDateTime = false;
+								}
+								else if (DateTime.TryParse(stringValue, out var d))
+								{
+									dateValue = d;
+									isDateOnly = isTimeOnly = false;
+								}
+								else
+								{
+									isDate = isDateTime = isDateOnly = isTimeOnly = false;
+								}
+#else
 								if (DateTime.TryParse(stringValue, out var d))
 								{
 									dateValue = d;
@@ -391,6 +451,7 @@ public sealed class ColumnInfo
 								{
 									isDate = isDateTime = false;
 								}
+#endif
 							}
 							if (isGuid)
 							{
@@ -547,15 +608,15 @@ public sealed class ColumnInfo
 
 	static readonly Type[] ColTypes = new[]
 	{
-			typeof(bool),
-			typeof(DateTime),
-			typeof(int),
-			typeof(long),
-			typeof(float),
-			typeof(double),
-			typeof(decimal),
-			typeof(string),
-		};
+		typeof(bool),
+		typeof(DateTime),
+		typeof(int),
+		typeof(long),
+		typeof(float),
+		typeof(double),
+		typeof(decimal),
+		typeof(string),
+	};
 
 	internal ColType GetColType()
 	{
@@ -619,7 +680,22 @@ public sealed class ColumnInfo
 		{
 			return new Schema.Column.Builder(name, typeof(bool), isNullable);
 		}
-
+#if NET6_0_OR_GREATER
+		if (this.isDateOnly)
+		{
+			return new Schema.Column.Builder(name, typeof(DateOnly), isNullable)
+			{
+				//NumericScale = scale
+			};
+		}
+		if (this.isTimeOnly)
+		{
+			return new Schema.Column.Builder(name, typeof(TimeOnly), isNullable)
+			{
+				//NumericScale = scale
+			};
+		}
+#endif
 		if (this.isDate || this.isDateTime)
 		{
 			int? scale = isDate ? (int?)null : dateHasFractionalSeconds ? 7 : 0;
@@ -663,20 +739,26 @@ public sealed class ColumnInfo
 		if (len < 6 && valueCount.Count <= 2)
 		{
 			string? t = null, f = null;
-			foreach (var s in TrueStrings)
+			if (TrueStrings != null)
 			{
-				if (valueCount.ContainsKey(s))
+				foreach (var s in TrueStrings)
 				{
-					t = s;
-					break;
+					if (valueCount.ContainsKey(s))
+					{
+						t = s;
+						break;
+					}
 				}
 			}
-			foreach (var s in FalseStrings)
+			if (FalseStrings != null)
 			{
-				if (valueCount.ContainsKey(s))
+				foreach (var s in FalseStrings)
 				{
-					f = s;
-					break;
+					if (valueCount.ContainsKey(s))
+					{
+						f = s;
+						break;
+					}
 				}
 			}
 			if (t != null || f != null)
@@ -703,8 +785,10 @@ public sealed class ColumnInfo
 	}
 
 	// TODO: consider localization?
-	static readonly string[] TrueStrings = new[] { "y", "yes", "t", "true" };
-	static readonly string[] FalseStrings = new[] { "n", "no", "f", "false" };
+	internal IReadOnlyCollection<string>? TrueStrings;
+	internal IReadOnlyCollection<string>? FalseStrings;
+	readonly char[] dateSeparators = new[] { '-', '/', '.' };
+	readonly char[] timeSeparators = new[] { ':', 'T' };
 
 	//static bool IsDecimalHeader(string? name)
 	//{
