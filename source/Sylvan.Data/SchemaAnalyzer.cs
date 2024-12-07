@@ -25,6 +25,7 @@ public sealed class SchemaAnalyzerOptions
 		this.DetectSeries = false;
 		this.TrueStrings = new() { "y", "yes", "t", "true" };
 		this.FalseStrings = new() { "n", "no", "f", "false" };
+		this.AssessIntegerValuesAsTimeSpan = false;
 #if NET6_0_OR_GREATER
 		this.UseTimespanInsteadOfTimeOnly = false;
 #endif
@@ -52,6 +53,10 @@ public sealed class SchemaAnalyzerOptions
 	/// Default values are "n", "no", "f", "false".
 	/// </summary>
 	public List<string> FalseStrings { get; set; }
+	/// <summary>
+	/// Set to true to assess integer values as Timespan types
+	/// </summary>
+	public bool AssessIntegerValuesAsTimeSpan { get; set; }
 
 #if NET6_0_OR_GREATER
 	/// <summary>
@@ -142,6 +147,7 @@ public sealed partial class SchemaAnalyzer
 	readonly bool detectSeries;
 	readonly IReadOnlyCollection<string>? trueStrings;
 	readonly IReadOnlyCollection<string>? falseStrings;
+	private readonly bool assessIntegerValuesAsTimeSpan;
 #if NET6_0_OR_GREATER
 	readonly bool useTimespanInsteadOfTimeOnly;
 #endif
@@ -157,6 +163,7 @@ public sealed partial class SchemaAnalyzer
 		this.detectSeries = options.DetectSeries;
 		this.trueStrings = options.TrueStrings;
 		this.falseStrings = options.FalseStrings;
+		this.assessIntegerValuesAsTimeSpan = options.AssessIntegerValuesAsTimeSpan;
 #if NET6_0_OR_GREATER
 		this.useTimespanInsteadOfTimeOnly = options.UseTimespanInsteadOfTimeOnly;
 #endif
@@ -291,6 +298,7 @@ public sealed class ColumnInfo
 	/// Gets the column name.
 	/// </summary>
 	public string? Name => this.name;
+
 	readonly Type type;
 
 	bool isAscii;
@@ -454,7 +462,7 @@ public sealed class ColumnInfo
 									timeOnlyValue = timeOnlyResult;
 									isDateOnly = isDateTime = isTimeSpan = false;
 								}
-								else if (TimeSpan.TryParse(stringValue, out var timeSpanResult))
+								else if ((!int.TryParse(stringValue, out var _) || AssessIntegerValuesAsTimeSpan) && TimeSpan.TryParse(stringValue, out var timeSpanResult))
 								{
 									timeSpanValue = timeSpanResult;
 									isDateTime = isDateOnly = isTimeOnly = false;
@@ -466,10 +474,10 @@ public sealed class ColumnInfo
 								}
 								else
 								{
-									isDate = isDateTime = isDateOnly = isTimeOnly = false;
+									isDate = isDateTime = isDateOnly = isTimeOnly = isTimeSpan = false;
 								}
 #else
-								if (TimeSpan.TryParse(stringValue, out var timeSpanResult))
+								if ((!int.TryParse(stringValue, out var _) || AssessIntegerValuesAsTimeSpan) && TimeSpan.TryParse(stringValue, out var timeSpanResult))
 								{
 									timeSpanValue = timeSpanResult;
 									isDateTime = false;
@@ -481,7 +489,7 @@ public sealed class ColumnInfo
 								}
 								else
 								{
-									isDate = isDateTime = false;
+									isDate = isDateTime = isTimeSpan = false;
 								}
 #endif
 							}
@@ -827,6 +835,7 @@ public sealed class ColumnInfo
 	internal IReadOnlyCollection<string>? TrueStrings;
 	internal IReadOnlyCollection<string>? FalseStrings;
 	internal bool UseTimespanInsteadOfTimeOnly;
+	internal bool AssessIntegerValuesAsTimeSpan;
 	readonly char[] dateSeparators = new[] { '-', '/', '.' };
 	readonly char[] timeSeparators = new[] { ':', 'T' };
 

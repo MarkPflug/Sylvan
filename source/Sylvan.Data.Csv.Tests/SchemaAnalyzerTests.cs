@@ -65,7 +65,7 @@ public class SchemaAnalyzerTests
 	[Fact]
 	public void Test3a()
 	{
-		var data = "TimeSpan,DateOnly\r\n48:12:23,08:12:23";
+		var data = "TimeSpan,DateOnly,Int\r\n48:12:23,08:12:23,12345678";
 		var csv = CsvDataReader.Create(new StringReader(data));
 
 		var opts = new SchemaAnalyzerOptions() { UseTimespanInsteadOfTimeOnly = true };
@@ -73,9 +73,10 @@ public class SchemaAnalyzerTests
 		var result = a.Analyze(csv);
 
 		var schema = result.GetSchema().GetColumnSchema();
-		Assert.Equal(2, schema.Count);
+		Assert.Equal(3, schema.Count);
 		Assert.Equal(typeof(TimeSpan), schema[0].DataType);
 		Assert.Equal(typeof(TimeSpan), schema[1].DataType);
+		Assert.Equal(typeof(int), schema[2].DataType);
 	}
 #else
 	[Fact]
