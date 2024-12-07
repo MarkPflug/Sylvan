@@ -23,6 +23,11 @@ public sealed class SchemaAnalyzerOptions
 		this.AnalyzeRowCount = 10000;
 		//this.ColumnSizer = ColumnSize.Human;
 		this.DetectSeries = false;
+		this.TrueStrings = new() { "y", "yes", "t", "true" };
+		this.FalseStrings = new() { "n", "no", "f", "false" };
+#if NET6_0_OR_GREATER
+		this.UseTimespanInsteadOfTimeOnly = false;
+#endif
 	}
 
 	/// <summary>
@@ -41,12 +46,19 @@ public sealed class SchemaAnalyzerOptions
 	/// Values to be interpreted as boolean true.
 	/// Default values are "y", "yes", "t", "true".
 	/// </summary>
-	public List<string> TrueStrings { get; set; } = new() { "y", "yes", "t", "true" };
+	public List<string> TrueStrings { get; set; }
 	/// <summary>
 	/// Values to be interpreted as boolean true.
 	/// Default values are "n", "no", "f", "false".
 	/// </summary>
-	public List<string> FalseStrings { get; set; } = new() { "n", "no", "f", "false" };
+	public List<string> FalseStrings { get; set; }
+
+#if NET6_0_OR_GREATER
+	/// <summary>
+	/// Set as true to return a Timespan rather than a TimeOnly type
+	/// </summary>
+	public bool UseTimespanInsteadOfTimeOnly { get; set; }
+#endif
 }
 
 //public class ColumnSize
@@ -128,9 +140,11 @@ public sealed partial class SchemaAnalyzer
 	readonly int rowCount;
 	//IColumnSizeStrategy sizer;
 	readonly bool detectSeries;
-
-	readonly IReadOnlyCollection<string>? _trueStrings;
-	readonly IReadOnlyCollection<string>? _falseStrings;
+	readonly IReadOnlyCollection<string>? trueStrings;
+	readonly IReadOnlyCollection<string>? falseStrings;
+#if NET6_0_OR_GREATER
+	readonly bool useTimespanInsteadOfTimeOnly;
+#endif
 
 	/// <summary>
 	/// Creates a new SchemaAnalyzer.
@@ -141,8 +155,11 @@ public sealed partial class SchemaAnalyzer
 		this.rowCount = options.AnalyzeRowCount;
 		//this.sizer = options.ColumnSizer;
 		this.detectSeries = options.DetectSeries;
-		this._trueStrings = options.TrueStrings;
-		this._falseStrings = options.FalseStrings;
+		this.trueStrings = options.TrueStrings;
+		this.falseStrings = options.FalseStrings;
+#if NET6_0_OR_GREATER
+		this.useTimespanInsteadOfTimeOnly = options.UseTimespanInsteadOfTimeOnly;
+#endif
 	}
 
 	/// <summary>
@@ -163,8 +180,11 @@ public sealed partial class SchemaAnalyzer
 		{
 			colInfos[i] = new ColumnInfo(dataReader, i)
 			{
-				TrueStrings = _trueStrings,
-				FalseStrings = _falseStrings
+				TrueStrings = trueStrings,
+				FalseStrings = falseStrings,
+#if NET6_0_OR_GREATER
+				UseTimespanInsteadOfTimeOnly = useTimespanInsteadOfTimeOnly
+#endif
 			};
 		}
 
@@ -219,9 +239,9 @@ public sealed class ColumnInfo
 				break;
 			case TypeCode.String:
 #if NET6_0_OR_GREATER
-				isBoolean = isInt = isFloat = isDecimal = isDate = isDateTime = isDateOnly = isTimeOnly = isGuid = true;
+				isBoolean = isInt = isFloat = isDecimal = isDate = isDateTime = isDateOnly = isTimeOnly = isTimeSpan = isGuid = true;
 #else
-				isBoolean = isInt = isFloat = isDecimal = isDate = isDateTime = isGuid = true;
+				isBoolean = isInt = isFloat = isDecimal = isDate = isDateTime = isTimeSpan = isGuid = true;
 #endif
 				break;
 			default:
@@ -277,9 +297,9 @@ public sealed class ColumnInfo
 	readonly int ordinal;
 	readonly string? name;
 #if NET6_0_OR_GREATER
-	bool isBoolean, isInt, isFloat, isDate, isDateTime, isDateOnly, isTimeOnly, isGuid;
+	bool isBoolean, isInt, isFloat, isDate, isDateTime, isDateOnly, isTimeOnly, isTimeSpan, isGuid;
 #else
-	bool isBoolean, isInt, isFloat, isDate, isDateTime, isGuid;
+	bool isBoolean, isInt, isFloat, isDate, isDateTime, isTimeSpan, isGuid;
 #endif
 
 	bool isDecimal;
@@ -323,6 +343,7 @@ public sealed class ColumnInfo
 		double? floatValue = null;
 		decimal? decimalValue = null;
 		DateTime? dateValue = null;
+		TimeSpan? timeSpanValue = null;
 #if NET6_0_OR_GREATER
 		DateOnly? dateOnlyValue = null;
 		TimeOnly? timeOnlyValue = null;
@@ -425,27 +446,38 @@ public sealed class ColumnInfo
 								{
 									// Ensure the string does not contain time components and follows common date formats
 									dateOnlyValue = dateOnlyResult;
-									isTimeOnly = isDateTime = false;
+									isTimeOnly = isDateTime = isTimeSpan = false;
 								}
-								else if (!containsDateSeparators && containsTimeSeparators && TimeOnly.TryParse(stringValue, out TimeOnly timeOnlyResult))
+								else if (!UseTimespanInsteadOfTimeOnly && !containsDateSeparators && containsTimeSeparators && TimeOnly.TryParse(stringValue, out TimeOnly timeOnlyResult))
 								{
 									// Ensure the string does not contain date components
 									timeOnlyValue = timeOnlyResult;
-									isDateOnly = isDateTime = false;
+									isDateOnly = isDateTime = isTimeSpan = false;
+								}
+								else if (TimeSpan.TryParse(stringValue, out var timeSpanResult))
+								{
+									timeSpanValue = timeSpanResult;
+									isDateTime = isDateOnly = isTimeOnly = false;
 								}
 								else if (DateTime.TryParse(stringValue, out var d))
 								{
 									dateValue = d;
-									isDateOnly = isTimeOnly = false;
+									isDateOnly = isTimeOnly = isTimeSpan = false;
 								}
 								else
 								{
 									isDate = isDateTime = isDateOnly = isTimeOnly = false;
 								}
 #else
-								if (DateTime.TryParse(stringValue, out var d))
+								if (TimeSpan.TryParse(stringValue, out var timeSpanResult))
+								{
+									timeSpanValue = timeSpanResult;
+									isDateTime = false;
+								}
+								else if (DateTime.TryParse(stringValue, out var d))
 								{
 									dateValue = d;
+									isTimeSpan = false;
 								}
 								else
 								{
@@ -696,6 +728,13 @@ public sealed class ColumnInfo
 			};
 		}
 #endif
+
+		if (this.isTimeSpan )
+		{
+			return new Schema.Column.Builder(name, typeof(TimeSpan), isNullable)
+			{
+			};
+		}
 		if (this.isDate || this.isDateTime)
 		{
 			int? scale = isDate ? (int?)null : dateHasFractionalSeconds ? 7 : 0;
@@ -787,6 +826,7 @@ public sealed class ColumnInfo
 	// TODO: consider localization?
 	internal IReadOnlyCollection<string>? TrueStrings;
 	internal IReadOnlyCollection<string>? FalseStrings;
+	internal bool UseTimespanInsteadOfTimeOnly;
 	readonly char[] dateSeparators = new[] { '-', '/', '.' };
 	readonly char[] timeSeparators = new[] { ':', 'T' };
 

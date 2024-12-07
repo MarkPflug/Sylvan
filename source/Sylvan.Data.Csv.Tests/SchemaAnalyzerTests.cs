@@ -46,7 +46,7 @@ public class SchemaAnalyzerTests
 	[Fact]
 	public void Test3()
 	{
-		var data = "DateTime,DateOnly,TimeOnly,DateTimeIsoFormat\r\n20/12/2024 08:12:23,20/12/2024,08:12:23,2016-12-23T08:57:21.6490000";
+		var data = "TimeSpan,DateTime,DateOnly,TimeOnly,DateTimeIsoFormat\r\n48:12:23,20/12/2024 08:12:23,20/12/2024,08:12:23,2016-12-23T08:57:21.6490000";
 		var csv = CsvDataReader.Create(new StringReader(data));
 
 		var opts = new SchemaAnalyzerOptions();
@@ -54,17 +54,34 @@ public class SchemaAnalyzerTests
 		var result = a.Analyze(csv);
 
 		var schema = result.GetSchema().GetColumnSchema();
-		Assert.Equal(4, schema.Count);
-		Assert.Equal(typeof(DateTime), schema[0].DataType);
-		Assert.Equal(typeof(DateOnly), schema[1].DataType);
-		Assert.Equal(typeof(TimeOnly), schema[2].DataType);
-		Assert.Equal(typeof(DateTime), schema[3].DataType);
+		Assert.Equal(5, schema.Count);
+		Assert.Equal(typeof(TimeSpan), schema[0].DataType);
+		Assert.Equal(typeof(DateTime), schema[1].DataType);
+		Assert.Equal(typeof(DateOnly), schema[2].DataType);
+		Assert.Equal(typeof(TimeOnly), schema[3].DataType);
+		Assert.Equal(typeof(DateTime), schema[4].DataType);
+	}
+
+	[Fact]
+	public void Test3a()
+	{
+		var data = "TimeSpan,DateOnly\r\n48:12:23,08:12:23";
+		var csv = CsvDataReader.Create(new StringReader(data));
+
+		var opts = new SchemaAnalyzerOptions() { UseTimespanInsteadOfTimeOnly = true };
+		var a = new SchemaAnalyzer(opts);
+		var result = a.Analyze(csv);
+
+		var schema = result.GetSchema().GetColumnSchema();
+		Assert.Equal(2, schema.Count);
+		Assert.Equal(typeof(TimeSpan), schema[0].DataType);
+		Assert.Equal(typeof(TimeSpan), schema[1].DataType);
 	}
 #else
 	[Fact]
 	public void Test3()
 	{
-		var data = "DateTime,DateOnly\r\n20/12/2024 08:12:23,20/12/2024";
+		var data = "TimeSpan,DateTime,DateOnly,DateTimeIsoFormat\r\n48:12:23,20/12/2024 08:12:23,20/12/2024,2016-12-23T08:57:21.6490000";
 		var csv = CsvDataReader.Create(new StringReader(data));
 
 		var opts = new SchemaAnalyzerOptions { DetectSeries = true };
@@ -72,16 +89,18 @@ public class SchemaAnalyzerTests
 		var result = a.Analyze(csv);
 
 		var schema = result.GetSchema().GetColumnSchema();
-		Assert.Equal(2, schema.Count);
-		Assert.Equal(typeof(DateTime), schema[0].DataType);
+		Assert.Equal(4, schema.Count);
+		Assert.Equal(typeof(TimeSpan), schema[0].DataType);
 		Assert.Equal(typeof(DateTime), schema[1].DataType);
+		Assert.Equal(typeof(DateTime), schema[2].DataType);
+		Assert.Equal(typeof(DateTime), schema[3].DataType);
 	}
 #endif
 
 	[Fact]
 	public void Test4()
 	{
-		var data = "Id,ColumnYep,ColumnNope\r\n1,Yes,No\r\n2,y,n\r\n2,Y,N";
+		var data = "Id,ColumnYes,ColumnNo\r\n1,Yes,No\r\n2,y,n\r\n2,Y,N";
 		var csv = CsvDataReader.Create(new StringReader(data));
 
 		var a = new SchemaAnalyzer();
