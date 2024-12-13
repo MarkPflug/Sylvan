@@ -42,11 +42,13 @@ public class SchemaAnalyzerTests
 		Assert.Equal(typeof(double), schema[2].DataType);
 	}
 
-#if NET6_0_OR_GREATER
+	/// <summary>
+	/// Default SchemaAnalyzerOptions usage.
+	/// </summary>
 	[Fact]
-	public void Test3()
+	public void Test3_Default() //(Original behaviour before adding assessments for Timespan, DateOnly and TimeOnly types)
 	{
-		var data = "TimeSpan,DateTime,DateOnly,TimeOnly,DateTimeIsoFormat\r\n48:12:23,20/12/2024 08:12:23,20/12/2024,08:12:23,2016-12-23T08:57:21.6490000";
+		var data = "TimeSpan,DateTime,DateOnly,TimeOnly,DateTimeIsoFormat,Int\r\n48:12:23,20/12/2024 08:12:23,20/12/2024,08:12:23,2016-12-23T08:57:21.6490000,12345678";
 		var csv = CsvDataReader.Create(new StringReader(data));
 
 		var opts = new SchemaAnalyzerOptions();
@@ -54,47 +56,92 @@ public class SchemaAnalyzerTests
 		var result = a.Analyze(csv);
 
 		var schema = result.GetSchema().GetColumnSchema();
-		Assert.Equal(5, schema.Count);
-		Assert.Equal(typeof(TimeSpan), schema[0].DataType);
-		Assert.Equal(typeof(DateTime), schema[1].DataType);
-		Assert.Equal(typeof(DateOnly), schema[2].DataType);
-		Assert.Equal(typeof(TimeOnly), schema[3].DataType);
-		Assert.Equal(typeof(DateTime), schema[4].DataType);
+		Assert.Equal(6, schema.Count);
+		Assert.Equal(typeof(string), schema[0].DataType);   // 48:12:23
+		Assert.Equal(typeof(DateTime), schema[1].DataType); // 20/12/2024 08:12:23
+		Assert.Equal(typeof(DateTime), schema[2].DataType); // 20/12/2024
+		Assert.Equal(typeof(DateTime), schema[3].DataType); // 08:12:23
+		Assert.Equal(typeof(DateTime), schema[4].DataType); // 2016-12-23T08:57:21.6490000
+		Assert.Equal(typeof(int), schema[5].DataType);      // 12345678
 	}
 
+	/// <summary>
+	/// SchemaAnalyzerOptions DateTimeAndString. - Same as default behaviour
+	/// </summary>
 	[Fact]
-	public void Test3a()
+	public void Test3a_DateTimeAndString()
 	{
-		var data = "TimeSpan,DateOnly,Int\r\n48:12:23,08:12:23,12345678";
+		var data = "TimeSpan,DateTime,DateOnly,TimeOnly,DateTimeIsoFormat,Int\r\n48:12:23,20/12/2024 08:12:23,20/12/2024,08:12:23,2016-12-23T08:57:21.6490000,12345678";
 		var csv = CsvDataReader.Create(new StringReader(data));
 
-		var opts = new SchemaAnalyzerOptions() { UseTimespanInsteadOfTimeOnly = true };
+		var opts = new SchemaAnalyzerOptions()
+		{
+			DateOnlyTimeOnlyTimespanUsage = DateTimeTimespanDateOnlyTimeOnlyUsageOptions.DateTimeAndString
+		};
 		var a = new SchemaAnalyzer(opts);
 		var result = a.Analyze(csv);
 
 		var schema = result.GetSchema().GetColumnSchema();
-		Assert.Equal(3, schema.Count);
-		Assert.Equal(typeof(TimeSpan), schema[0].DataType);
-		Assert.Equal(typeof(TimeSpan), schema[1].DataType);
-		Assert.Equal(typeof(int), schema[2].DataType);
+		Assert.Equal(6, schema.Count);
+		Assert.Equal(typeof(string), schema[0].DataType);   // 48:12:23
+		Assert.Equal(typeof(DateTime), schema[1].DataType); // 20/12/2024 08:12:23
+		Assert.Equal(typeof(DateTime), schema[2].DataType); // 20/12/2024
+		Assert.Equal(typeof(DateTime), schema[3].DataType); // 08:12:23
+		Assert.Equal(typeof(DateTime), schema[4].DataType); // 2016-12-23T08:57:21.6490000
+		Assert.Equal(typeof(int), schema[5].DataType);      // 12345678
 	}
-#else
+
+	/// <summary>
+	/// SchemaAnalyzerOptions TimespanAndDateTime.
+	/// </summary>
 	[Fact]
-	public void Test3()
+	public void Test3b_TimespanThenDateTime()
 	{
-		var data = "TimeSpan,DateTime,DateOnly,DateTimeIsoFormat\r\n48:12:23,20/12/2024 08:12:23,20/12/2024,2016-12-23T08:57:21.6490000";
+		var data = "TimeSpan,DateTime,DateOnly,TimeOnly,DateTimeIsoFormat,Int\r\n48:12:23,20/12/2024 08:12:23,20/12/2024,08:12:23,2016-12-23T08:57:21.6490000,12345678";
 		var csv = CsvDataReader.Create(new StringReader(data));
 
-		var opts = new SchemaAnalyzerOptions { DetectSeries = true };
+		var opts = new SchemaAnalyzerOptions()
+		{
+			DateOnlyTimeOnlyTimespanUsage = DateTimeTimespanDateOnlyTimeOnlyUsageOptions.TimespanAndDateTime
+		};
 		var a = new SchemaAnalyzer(opts);
 		var result = a.Analyze(csv);
 
 		var schema = result.GetSchema().GetColumnSchema();
-		Assert.Equal(4, schema.Count);
-		Assert.Equal(typeof(TimeSpan), schema[0].DataType);
-		Assert.Equal(typeof(DateTime), schema[1].DataType);
-		Assert.Equal(typeof(DateTime), schema[2].DataType);
-		Assert.Equal(typeof(DateTime), schema[3].DataType);
+		Assert.Equal(6, schema.Count);
+		Assert.Equal(typeof(TimeSpan), schema[0].DataType); // 48:12:23
+		Assert.Equal(typeof(DateTime), schema[1].DataType); // 20/12/2024 08:12:23
+		Assert.Equal(typeof(DateTime), schema[2].DataType); // 20/12/2024
+		Assert.Equal(typeof(TimeSpan), schema[3].DataType); // 08:12:23
+		Assert.Equal(typeof(DateTime), schema[4].DataType); // 2016-12-23T08:57:21.6490000
+		Assert.Equal(typeof(int), schema[5].DataType);      // 12345678
+	}
+
+#if NET6_0_OR_GREATER
+	/// <summary>
+	/// SchemaAnalyzerOptions DateOnlyAndTimeOnlyOverDateTimeAndTimespan.
+	/// </summary>
+	[Fact]
+	public void Test3c_DateOnlyAndTimeOnlyOverDateTimeAndTimespan()
+	{
+		var data = "TimeSpan,DateTime,DateOnly,TimeOnly,DateTimeIsoFormat,Int\r\n48:12:23,20/12/2024 08:12:23,20/12/2024,08:12:23,2016-12-23T08:57:21.6490000,12345678";
+		var csv = CsvDataReader.Create(new StringReader(data));
+
+		var opts = new SchemaAnalyzerOptions()
+		{
+			DateOnlyTimeOnlyTimespanUsage = DateTimeTimespanDateOnlyTimeOnlyUsageOptions.TimeOnlyAndDateOnlyOverTimespanAndDateTime
+		};
+		var a = new SchemaAnalyzer(opts);
+		var result = a.Analyze(csv);
+
+		var schema = result.GetSchema().GetColumnSchema();
+		Assert.Equal(6, schema.Count);
+		Assert.Equal(typeof(TimeSpan), schema[0].DataType); // 48:12:23
+		Assert.Equal(typeof(DateTime), schema[1].DataType); // 20/12/2024 08:12:23
+		Assert.Equal(typeof(DateOnly), schema[2].DataType); // 20/12/2024
+		Assert.Equal(typeof(TimeOnly), schema[3].DataType); // 08:12:23
+		Assert.Equal(typeof(DateTime), schema[4].DataType); // 2016-12-23T08:57:21.6490000
+		Assert.Equal(typeof(int), schema[5].DataType);      // 12345678
 	}
 #endif
 
