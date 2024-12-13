@@ -58,7 +58,7 @@ public sealed class SchemaAnalyzerOptions
 }
 
 /// <summary>
-/// 
+/// Options to preference different data types during the analysis
 /// </summary>
 public enum DateTimeTimespanDateOnlyTimeOnlyUsageOptions
 {
