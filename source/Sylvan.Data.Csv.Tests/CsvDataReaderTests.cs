@@ -166,7 +166,7 @@ public class CsvDataReaderTests
 			Assert.Equal(1, csv.RowNumber);
 			Assert.Equal("1", csv[0]);
 			Assert.Equal("John", csv[1]);
-			Assert.Equal($"Very{Environment.NewLine}Low{Environment.NewLine}", csv[2]);
+			Assert.Equal($"Very\nLow\n", csv[2]);
 			Assert.Equal("2000-11-11", csv[3]);
 			Assert.True(await csv.ReadAsync());
 			Assert.Equal(2, csv.RowNumber);
