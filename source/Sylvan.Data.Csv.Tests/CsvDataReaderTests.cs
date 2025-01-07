@@ -152,7 +152,10 @@ public class CsvDataReaderTests
 	[Fact]
 	public async Task Quoted()
 	{
-		using (var reader = File.OpenText("Data/Quote.csv"))
+		var data =
+			"Id,Name,Value,Date\n1,John,\"Very\nLow\n\",2000-11-11\n2,Jane,\"\"\"High\"\"\",\"1989-03-14\"\n3,Comma,\"Quite, Common\",2020-05-29\n";
+		
+		using (var reader = new StringReader(data))
 		{
 			var csv = await CsvDataReader.CreateAsync(reader);
 			Assert.Equal(4, csv.FieldCount);
@@ -166,7 +169,7 @@ public class CsvDataReaderTests
 			Assert.Equal(1, csv.RowNumber);
 			Assert.Equal("1", csv[0]);
 			Assert.Equal("John", csv[1]);
-			Assert.Equal($"Very{Environment.NewLine}Low{Environment.NewLine}", csv[2]);
+			Assert.Equal($"Very\nLow\n", csv[2]);
 			Assert.Equal("2000-11-11", csv[3]);
 			Assert.True(await csv.ReadAsync());
 			Assert.Equal(2, csv.RowNumber);
