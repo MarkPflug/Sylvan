@@ -3,7 +3,7 @@
   <PropertyGroup>
    <TargetFrameworks>net8.0</TargetFrameworks>
     <OutputType>exe</OutputType>
-    <NoWarn>$(NoWarn);CA1849;CA2007;CA1822</NoWarn>
+    <NoWarn>$(NoWarn);CA1849;CA2007;CA1822;NU1903</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
