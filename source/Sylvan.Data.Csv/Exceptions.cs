@@ -7,8 +7,8 @@ namespace Sylvan.Data.Csv;
 /// </summary>
 public class CsvFormatException : FormatException
 {
-	internal CsvFormatException(int row, int ordinal, string? msg = null, Exception? inner = null)
-		: base(msg, inner)
+	internal CsvFormatException(int row, int ordinal, string message, Exception? inner = null)
+		: base(message, inner)
 	{
 		this.RowNumber = row;
 		this.FieldOrdinal = ordinal;
@@ -43,8 +43,8 @@ public class CsvConfigurationException : ArgumentException
 /// </remarks>
 public sealed class CsvRecordTooLargeException : CsvFormatException
 {
-	internal CsvRecordTooLargeException(int row, int ordinal, string? msg = null, Exception? inner = null)
-		: base(row, ordinal, msg, inner) { }
+	internal CsvRecordTooLargeException(int row, int ordinal)
+		: base(row, ordinal, $"Row {row} was too large. Try increasing the MaxBufferSize setting.") { }
 }
 
 /// <summary>
@@ -52,7 +52,8 @@ public sealed class CsvRecordTooLargeException : CsvFormatException
 /// </summary>
 public sealed class CsvMissingHeadersException : CsvFormatException
 {
-	internal CsvMissingHeadersException() : base(0, 0, null, null) { }
+	internal CsvMissingHeadersException()
+		: base(0, 0, "The CSV file does not have headers, but the HasHeaders option was set to true.") { }
 }
 
 /// <summary>
