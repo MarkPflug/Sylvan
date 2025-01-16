@@ -26,11 +26,57 @@ public class CsvFormatException : FormatException
 }
 
 /// <summary>
+/// An exception thrown when an invalid character is found in a CSV file.
+/// </summary>
+public class CsvInvalidCharacterException : CsvFormatException
+{
+
+	internal static CsvInvalidCharacterException Escape(int row, int ordinal, int recordOffset, char invalid)
+	{
+		return new CsvInvalidCharacterException(row, ordinal, recordOffset, invalid,
+			$"Escape character {invalid} was encountered at the end of the text."
+		);
+	}
+
+	internal static CsvInvalidCharacterException UnescapedQuote(int row, int ordinal, int recordOffset, char invalid)
+	{
+		return new CsvInvalidCharacterException(row, ordinal, recordOffset, invalid, 
+			$"An unescaped quote character '{invalid}' was found inside a quoted field."
+		);
+	}
+
+	internal static CsvInvalidCharacterException NewRecord(int row, int ordinal, int recordOffset, char invalid)
+	{
+		return new CsvInvalidCharacterException(row, ordinal, recordOffset, invalid,
+			$"A delimiter, newline or EOF was expected after a closing quote."
+		);
+	}
+
+
+	/// <summary>
+	/// Gets the character offset into the record where the invalid character was found.
+	/// </summary>
+	public int RecordOffset { get; }
+
+	/// <summary>
+	/// The invalid character encountered.
+	/// </summary>
+	public char InvalidCharacter { get; }
+
+	internal CsvInvalidCharacterException(int row, int ordinal, int recordOffset, char invalidCharacter, string message) : base(row, ordinal, message)
+	{
+		this.RecordOffset = recordOffset;
+		this.InvalidCharacter = invalidCharacter;
+	}
+}
+
+/// <summary>
 /// The exception that is thrown when the configuration options specify invalid options.
 /// </summary>
 public class CsvConfigurationException : ArgumentException
 {
-	internal CsvConfigurationException() { }
+	internal CsvConfigurationException() : base("The CsvDataReaderOptions specifies invalid options.")
+	{ }
 }
 
 /// <summary>
@@ -67,7 +113,7 @@ public sealed class AmbiguousColumnException : ArgumentException
 	/// </summary>
 	public string Name { get; }
 
-	internal AmbiguousColumnException(string name)
+	internal AmbiguousColumnException(string name) : base($"The CSV file contains more than one column named \"{name}\".")
 	{
 		this.Name = name;
 	}

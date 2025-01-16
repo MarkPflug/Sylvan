@@ -92,7 +92,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	{
 		if (this.state != State.Open)
 		{
-			throw new InvalidOperationException();
+			throw new InvalidOperationException("Cannot");
 		}
 	}
 
@@ -129,7 +129,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	OrdinalCache[] colCache = Array.Empty<OrdinalCache>();
 	int colCacheIdx;
 
-	// An exception that was created with initializing, and should be thrown on the next call to Read/ReadAsync
+	// An exception that was created while initializing, and should be thrown on the next call to Read/ReadAsync
 	Exception? pendingException;
 
 	// in multi-result set mode carryRow indicates that a row is already parsed
@@ -666,14 +666,6 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		var idx = this.idx;
 		var buffer = this.buffer;
 
-		void SetUnexpectedCharacterException(string reason)
-		{
-			string preview = new string(buffer.Skip(idx - 1).Take(Math.Min(this.bufferEnd - idx + 1, 50)).ToArray());
-			this.pendingException = new CsvFormatException(rowNumber, fieldIdx,
-				$"Found unexpected character '{c}' in field {fieldIdx} on row {rowNumber}: {preview}"
-				+ Environment.NewLine + reason);
-		}
-
 		// this will remain -1 if it is unquoted. 
 		// Otherwise we use it to determine if the quotes were "clean".
 		var closeQuoteIdx = -1;
@@ -718,7 +710,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 						if (atEndOfText)
 						{
 							// there was nothing to escape
-							SetUnexpectedCharacterException($"Escape character {this.escape} was encountered at the end of the text.");
+							this.pendingException = CsvInvalidCharacterException.Escape(rowNumber, fieldIdx, idx, escape);
 							return ReadResult.False;
 						}
 						return ReadResult.Incomplete;
@@ -834,7 +826,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 					}
 					else
 					{
-						SetUnexpectedCharacterException($"An unescaped quote character ({quote}) was found inside a quoted field.");
+						this.pendingException = CsvInvalidCharacterException.UnescapedQuote(rowNumber, fieldIdx, idx, quote);
 						return ReadResult.False;
 					}
 				}
@@ -872,9 +864,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 					{
 						// if the field is quoted, we shouldn't be here.
 						// the only valid characters would be a delimiter, a new line, or EOF.
-						SetUnexpectedCharacterException($"A delimiter ({this.delimiter}), newline or EOF"
-							+ $" was expected after a closing quote. If the preceding quote is part of the field it"
-							+ $" should be escaped with {this.escape}.");
+						this.pendingException = CsvInvalidCharacterException.NewRecord(rowNumber, fieldIdx, idx, c);						
 						return ReadResult.False;
 					}
 				}
