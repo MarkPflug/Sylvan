@@ -84,14 +84,28 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		// the state when the end of the record set is reached
 		// not necessarily the end of the file when in multi-result set mode.
 		End,
-		// the state when the reader has bee closed/disposed.
+		// the state when the reader has been closed/disposed.
 		Closed,
+		// the reader has previously thrown an exception
+		Error,
 	}
 
-	void ValidateState()
+	void ValidateState(int ordinal)
 	{
 		if (this.state != State.Open)
 		{
+			if (this.state == State.Error)
+			{
+				if (ordinal < this.curFieldCount - 1)
+				{
+					return;// can read the fields up to the one that had the error.
+				}
+				else
+				{
+					// TODO:
+					throw new InvalidOperationException("The current row bla blah TODO");
+				}
+			}
 			throw new InvalidOperationException();
 		}
 	}
@@ -358,6 +372,16 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		}
 		this.colCache = new OrdinalCache[this.fieldCount];
 		this.state = hasHeaders ? State.Open : State.Initialized;
+	}
+
+	void ThrowPendingException()
+	{
+		var ex = this.pendingException;
+		if (ex != null)
+		{
+			this.state = State.Error;
+			throw ex;
+		}
 	}
 
 #if INTRINSICS
@@ -1045,7 +1069,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override bool GetBoolean(int ordinal)
 	{
-		ValidateState();
+		ValidateState(ordinal);
 		// four cases:
 		// true and false both not null. Any other value raises error.
 		// true not null, false null. True string true, anything else false.
@@ -1107,7 +1131,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override byte GetByte(int ordinal)
 	{
-		ValidateState();
+		ValidateState(ordinal);
 #if SPAN
 		return byte.Parse(this.GetFieldSpan(ordinal), provider: culture);
 #else
@@ -1118,7 +1142,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override long GetBytes(int ordinal, long dataOffset, byte[]? buffer, int bufferOffset, int length)
 	{
-		ValidateState();
+		ValidateState(ordinal);
 		if (buffer == null)
 		{
 			return GetBinaryLength(ordinal);
@@ -1285,7 +1309,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override char GetChar(int ordinal)
 	{
-		ValidateState();
+		ValidateState(ordinal);
 		var s = GetField(ordinal);
 		if (s.length == 1)
 		{
@@ -1297,7 +1321,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override long GetChars(int ordinal, long dataOffset, char[]? buffer, int bufferOffset, int length)
 	{
-		ValidateState();
+		ValidateState(ordinal);
 		if (buffer == null)
 		{
 			return this.GetCharLength(ordinal);
@@ -1317,7 +1341,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// </summary>
 	public TimeSpan GetTimeSpan(int ordinal)
 	{
-		ValidateState();
+		ValidateState(ordinal);
 		var format = columns[ordinal].Format;
 #if SPAN
 		var span = this.GetFieldSpan(ordinal);
@@ -1341,7 +1365,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// </summary>
 	public DateTimeOffset GetDateTimeOffset(int ordinal)
 	{
-		ValidateState();
+		ValidateState(ordinal);
 		var format = columns[ordinal].Format ?? this.dateTimeFormat;
 		DateTimeOffset value;
 #if SPAN
@@ -1368,7 +1392,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override DateTime GetDateTime(int ordinal)
 	{
-		ValidateState();
+		ValidateState(ordinal);
 		DateTime value;
 #if SPAN
 		var span = this.GetFieldSpan(ordinal);
@@ -1396,7 +1420,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override decimal GetDecimal(int ordinal)
 	{
-		ValidateState();
+		ValidateState(ordinal);
 #if SPAN
 		var field = this.GetField(ordinal);
 		return
@@ -1410,7 +1434,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override double GetDouble(int ordinal)
 	{
-		ValidateState();
+		ValidateState(ordinal);
 #if SPAN
 		var field = this.GetField(ordinal);
 		return
@@ -1443,7 +1467,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override float GetFloat(int ordinal)
 	{
-		ValidateState();
+		ValidateState(ordinal);
 #if SPAN
 		var field = this.GetField(ordinal);
 		return
@@ -1457,7 +1481,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override Guid GetGuid(int ordinal)
 	{
-		ValidateState();
+		ValidateState(ordinal);
 #if SPAN
 		return Guid.Parse(this.GetFieldSpan(ordinal));
 #else
@@ -1468,7 +1492,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override short GetInt16(int ordinal)
 	{
-		ValidateState();
+		ValidateState(ordinal);
 #if SPAN
 		var field = this.GetField(ordinal);
 		return
@@ -1482,7 +1506,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override int GetInt32(int ordinal)
 	{
-		ValidateState();
+		ValidateState(ordinal);
 #if SPAN
 		var field = this.GetField(ordinal);
 		return
@@ -1496,7 +1520,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override long GetInt64(int ordinal)
 	{
-		ValidateState();
+		ValidateState(ordinal);
 #if SPAN
 		var field = this.GetField(ordinal);
 		return
@@ -1546,7 +1570,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override string GetString(int ordinal)
 	{
-		ValidateState();
+		ValidateState(ordinal);
 		return GetStringRaw(ordinal);
 	}
 
@@ -1793,7 +1817,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override object GetValue(int ordinal)
 	{
-		ValidateState();
+		ValidateState(ordinal);
 		var max = Math.Max(this.fieldCount, this.curFieldCount);
 
 		if (ordinal > max)
@@ -1864,7 +1888,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override int GetValues(object[] values)
 	{
-		ValidateState();
+		// state ValidateState happens inside GetValue in the loop.
 		var count = Math.Min(this.fieldCount, values.Length);
 		for (int i = 0; i < count; i++)
 		{
@@ -1876,7 +1900,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override bool IsDBNull(int ordinal)
 	{
-		ValidateState();
+		ValidateState(ordinal);
 		if (ordinal < 0) throw new ArgumentOutOfRangeException(nameof(ordinal));
 
 		if ((uint)ordinal < this.fieldCount)
@@ -2064,7 +2088,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <returns>A span containing the characters of the field.</returns>
 	public ReadOnlySpan<char> GetFieldSpan(int ordinal)
 	{
-		ValidateState();
+		ValidateState(ordinal);
 		var s = GetField(ordinal);
 		return s.ToSpan();
 	}
@@ -2128,7 +2152,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override T GetFieldValue<T>(int ordinal)
 	{
-		ValidateState();
+		ValidateState(ordinal);
 		var acc = Accessor<T>.Instance;
 		return acc.GetValue(this, ordinal);
 	}

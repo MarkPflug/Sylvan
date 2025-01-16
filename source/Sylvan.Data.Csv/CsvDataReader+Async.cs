@@ -158,11 +158,8 @@ partial class CsvDataReader
 		{
 			if (carryRow || state == State.Open || await NextRecordAsync(cancel).ConfigureAwait(false))
 			{
-				if (pendingException != null)
-				{
-					// if the header row is malformed, the exception is throw from the call to Create
-					throw pendingException;
-				}
+				ThrowPendingException();
+
 				carryRow = false;
 				Initialize();
 				this.state = State.Initialized;
@@ -249,9 +246,9 @@ partial class CsvDataReader
 			}
 			if (result == ReadResult.False)
 			{
-				if(this.state == State.Open && pendingException	!= null)
+				if (this.state == State.Open)
 				{
-					throw pendingException;
+					ThrowPendingException();
 				}
 				return true;
 			}
@@ -304,10 +301,10 @@ partial class CsvDataReader
 	{
 		cancellationToken.ThrowIfCancellationRequested();
 
-		this.rowNumber++;
 		this.colCacheIdx = 0;
 		if (this.state == State.Open)
 		{
+			this.rowNumber++;
 			var success = await this.NextRecordAsync(cancellationToken).ConfigureAwait(false);
 			if (!success || this.resultSetMode == ResultSetMode.MultiResult && this.curFieldCount != this.fieldCount)
 			{
@@ -321,10 +318,8 @@ partial class CsvDataReader
 		}
 		else if (this.state == State.Initialized)
 		{
-			if (pendingException != null)
-			{
-				throw pendingException;
-			}
+			ThrowPendingException();
+			this.rowNumber++;
 			// after initizialization, the first record would already be in the buffer
 			// if hasRows is true.
 			if (hasRows)
@@ -336,6 +331,10 @@ partial class CsvDataReader
 			{
 				this.state = State.End;
 			}
+		}
+		else if (this.state == State.Error)
+		{
+			throw new InvalidOperationException();
 		}
 		this.rowNumber = -1;
 		return false;
