@@ -28,24 +28,27 @@ public class SchemaBuilderTests
 		Assert.Equal(typeof(long), schema[2].DataType);
 	}
 
-	class CustomDbColumn : DbColumn
+	public class CustomDbColumn : DbColumn
 	{
-		public CustomDbColumn(string name, Type dataType)
-		{
-			this.ColumnName = name;
-			this.DataType = dataType;
-			var under = Nullable.GetUnderlyingType(dataType);
-			this.DataType =  under ?? dataType;
-			this.AllowDBNull = under != null;
-		}
+		public new bool? AllowDBNull { get => base.AllowDBNull; set => base.AllowDBNull = value; }
+		public new string ColumnName { get => base.ColumnName; set => base.ColumnName = value; }
 
-		public CustomDbColumn(string name, Type dataType, bool allowNull)
+		public new Type DataType
 		{
-			this.ColumnName = name;
-			this.DataType = dataType;
-			var under = Nullable.GetUnderlyingType(dataType);
-			this.DataType = under ?? dataType;
-			this.AllowDBNull = allowNull;
+			get => base.DataType;
+			set
+			{
+				//it works correctly after uncommenting below code
+				//
+				//var underlying = System.Nullable.GetUnderlyingType(value);
+				//if (underlying != null)
+				//{
+				//	AllowDBNull = true;
+				//	base.DataType = underlying;
+				//	return;
+				//}
+				//base.DataType = value;
+			}
 		}
 	}
 
@@ -61,13 +64,13 @@ public class SchemaBuilderTests
 
 		var columns = new System.Collections.Generic.List<CustomDbColumn>
 		{
-			new CustomDbColumn("Id", typeof(int)),
-			new CustomDbColumn("Name", typeof(string), true),
-			new CustomDbColumn("Date", typeof(DateTime?)),
-			new CustomDbColumn("Amount", typeof(decimal?)),
-			new CustomDbColumn("Duration", typeof(TimeSpan?)),
-			new CustomDbColumn("Value", typeof(double?)),
-			new CustomDbColumn("Count", typeof(int?))
+			new CustomDbColumn() { ColumnName = "Id", DataType = typeof(int) },
+			new CustomDbColumn() { ColumnName = "Name", DataType = typeof(string), AllowDBNull = true },
+			new CustomDbColumn() { ColumnName = "Date", DataType = typeof(DateTime?) },
+			new CustomDbColumn() { ColumnName = "Amount", DataType = typeof(decimal?) },
+			new CustomDbColumn() { ColumnName = "Duration", DataType = typeof(TimeSpan?) },
+			new CustomDbColumn() { ColumnName = "Value", DataType = typeof(double?) },
+			new CustomDbColumn() { ColumnName = "Count", DataType = typeof(int?) }
 		};
 
 		var sb = new Schema.Builder(columns);
