@@ -666,6 +666,14 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		var idx = this.idx;
 		var buffer = this.buffer;
 
+		void SetUnexpectedCharacterException(string reason)
+		{
+			string preview = new string(buffer.Skip(idx - 1).Take(Math.Min(this.bufferEnd - idx + 1, 50)).ToArray());
+			this.pendingException = new CsvFormatException(rowNumber, fieldIdx,
+				$"Found unexpected character '{c}' in field {fieldIdx} on row {rowNumber}: {preview}"
+				+ Environment.NewLine + reason);
+		}
+
 		// this will remain -1 if it is unquoted. 
 		// Otherwise we use it to determine if the quotes were "clean".
 		var closeQuoteIdx = -1;
@@ -710,7 +718,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 						if (atEndOfText)
 						{
 							// there was nothing to escape
-							pendingException = new CsvFormatException(rowNumber, fieldIdx);
+							SetUnexpectedCharacterException($"Escape character {this.escape} was encountered at the end of the text.");
 							return ReadResult.False;
 						}
 						return ReadResult.Incomplete;
@@ -826,7 +834,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 					}
 					else
 					{
-						this.pendingException = new CsvFormatException(rowNumber, fieldIdx);
+						SetUnexpectedCharacterException($"An unescaped quote character ({quote}) was found inside a quoted field.");
 						return ReadResult.False;
 					}
 				}
@@ -864,7 +872,9 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 					{
 						// if the field is quoted, we shouldn't be here.
 						// the only valid characters would be a delimiter, a new line, or EOF.
-						this.pendingException = new CsvFormatException(rowNumber, fieldIdx);
+						SetUnexpectedCharacterException($"A delimiter ({this.delimiter}), newline or EOF"
+							+ $" was expected after a closing quote. If the preceding quote is part of the field it"
+							+ $" should be escaped with {this.escape}.");
 						return ReadResult.False;
 					}
 				}
@@ -907,7 +917,8 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 						if (style != CsvStyle.Lax)
 						{
 							var rowNumber = this.rowNumber == 0 && this.state == State.Initialized ? 1 : this.rowNumber;
-							this.pendingException = new CsvFormatException(rowNumber, fieldIdx);
+							this.pendingException = new CsvFormatException(rowNumber, fieldIdx,
+								"A quoted field at the end of the input ends without a closing quote.");
 							return ReadResult.False;
 						}
 					}
@@ -1716,7 +1727,8 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 					{
 						// we should never get here. Invalid fields should always be
 						// handled in ReadField and end up in PrepareInvalidField
-						throw new CsvFormatException(rowNumber, -1);
+						throw new CsvFormatException(rowNumber, -1,
+							$"An quote escape character ({escape}) was the last character of a quoted field.");
 					}
 				}
 				else
