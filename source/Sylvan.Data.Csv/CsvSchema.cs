@@ -39,10 +39,13 @@ sealed class SchemaColumn : DbColumn
 /// </summary>
 public class CsvSchema : CsvSchemaProvider
 {
+	// TODO: These static readonly fields should have been properties
+	// and lazily initialized on first access. This would be a breaking
+	// change at this point though, so maybe if there is ever a 2.0?
+
 	/// <summary>
 	/// Gets a ICsvSchemaProvider that treats empty strings as null.
 	/// </summary>
-	// TODO: this probably should have been a readonly property.
 	public static readonly ICsvSchemaProvider Nullable = new NullableCsvSchema();
 
 	/// <summary>
@@ -53,9 +56,6 @@ public class CsvSchema : CsvSchemaProvider
 
 	readonly DbColumn[] schema;
 	readonly Dictionary<string, DbColumn?> nameMap;
-
-	const string SeriesOrdinalProperty = "SeriesOrdinal";
-	readonly DbColumn? seriesColumn;
 
 	/// <summary>
 	/// Creates a new CsvSchemaProvider.
@@ -73,22 +73,11 @@ public class CsvSchema : CsvSchemaProvider
 	/// <param name="headerComparer">A StringComparer used to match header names to the provided schema.</param>
 	public CsvSchema(IEnumerable<DbColumn> schema, StringComparer headerComparer)
 	{
-		this.schema = schema.ToArray();
+		this.schema = schema as DbColumn[] ?? schema.ToArray();
+
 		this.nameMap = new Dictionary<string, DbColumn?>(headerComparer);
 		foreach (var col in schema)
 		{
-			int? series = col[SeriesOrdinalProperty] is int i ? i : (int?)null;
-			if (series.HasValue)
-			{
-				if (this.seriesColumn != null)
-				{
-					// Only a single series column is supported.
-					throw new NotSupportedException();
-				}
-				this.seriesColumn = col;
-				continue;
-			}
-
 			if (string.IsNullOrEmpty(col.BaseColumnName) == false)
 			{
 				var key = col.BaseColumnName;
@@ -125,11 +114,6 @@ public class CsvSchema : CsvSchemaProvider
 			// this can still return null when the column name was duplicated
 			// and thus ambiguous
 			return col;
-		}
-
-		if (seriesColumn != null)
-		{
-			return seriesColumn;
 		}
 
 		if (ordinal >= 0 && ordinal < schema.Length)

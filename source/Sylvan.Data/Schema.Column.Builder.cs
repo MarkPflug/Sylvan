@@ -145,9 +145,13 @@ partial class Schema
 			/// </summary>
 			public Builder(DbColumn col)
 			{
+				var dataType = col.DataType ?? typeof(object);
+				var underlyingType = Nullable.GetUnderlyingType(dataType);
+				dataType = underlyingType ?? dataType;
+
 				column = new Column
 				{
-					AllowDBNull = col.AllowDBNull,
+					AllowDBNull = underlyingType != null || col.AllowDBNull == true,
 					BaseCatalogName = col.BaseCatalogName,
 					BaseColumnName = col.BaseColumnName,
 					BaseSchemaName = col.BaseSchemaName,
@@ -156,7 +160,7 @@ partial class Schema
 					ColumnName = col.ColumnName,
 					ColumnOrdinal = col.ColumnOrdinal,
 					ColumnSize = col.ColumnSize,
-					DataType = col.DataType,
+					DataType = dataType,
 					DataTypeName = col.DataTypeName,
 					IsAliased = col.IsAliased,
 					IsAutoIncrement = col.IsAutoIncrement,
