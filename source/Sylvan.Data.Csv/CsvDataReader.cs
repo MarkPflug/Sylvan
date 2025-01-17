@@ -384,6 +384,14 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		}
 	}
 
+	void ThrowRecordTooLarge(int ordinal = 0)
+	{
+		// we know there's at least one more, but it doesn't fit in the buffer
+		this.curFieldCount++; 
+		this.state = State.Error;
+		throw new CsvRecordTooLargeException(this.rowNumber, ordinal);
+	}
+
 #if INTRINSICS
 
 	Vector256<byte> delimiterMaskVector256;
@@ -677,6 +685,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 			this.buffer = newBuffer;
 			return true;
 		}
+
 		return false;
 	}
 

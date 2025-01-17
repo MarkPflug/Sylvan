@@ -218,7 +218,7 @@ partial class CsvDataReader
 				{
 					if (!GrowBuffer())
 					{
-						throw new CsvRecordTooLargeException(this.RowNumber, 0, null, null);
+						ThrowRecordTooLarge();
 					}
 				}
 				await FillBufferAsync(cancel).ConfigureAwait(false);
@@ -258,9 +258,7 @@ partial class CsvDataReader
 			{
 				if (!GrowBuffer())
 				{
-					// if we consumed the entire buffer reading this record, then this is an exceptional situation
-					// we expect a record to be able to fit entirely within the buffer.
-					throw new CsvRecordTooLargeException(this.RowNumber, fieldIdx, null, null);
+					ThrowRecordTooLarge(fieldIdx);
 				}
 			}
 			await FillBufferAsync(cancel).ConfigureAwait(false);
