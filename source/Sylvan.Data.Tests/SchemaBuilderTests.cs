@@ -1,7 +1,9 @@
 ﻿using Sylvan.Data.Csv;
 using System;
+using System.Collections.Generic;
 using System.Data.Common;
 using System.IO;
+using System.Runtime.CompilerServices;
 using Xunit;
 
 namespace Sylvan.Data;
@@ -30,25 +32,22 @@ public class SchemaBuilderTests
 
 	public class CustomDbColumn : DbColumn
 	{
-		public new bool? AllowDBNull { get => base.AllowDBNull; set => base.AllowDBNull = value; }
-		public new string ColumnName { get => base.ColumnName; set => base.ColumnName = value; }
+		public new bool? AllowDBNull
+		{
+			get => base.AllowDBNull;
+			set => base.AllowDBNull = value;
+		}
+
+		public new string ColumnName
+		{
+			get => base.ColumnName;
+			set => base.ColumnName = value;
+		}
 
 		public new Type DataType
 		{
 			get => base.DataType;
-			set
-			{
-				//it works correctly after uncommenting below code
-				//
-				//var underlying = System.Nullable.GetUnderlyingType(value);
-				//if (underlying != null)
-				//{
-				//	AllowDBNull = true;
-				//	base.DataType = underlying;
-				//	return;
-				//}
-				//base.DataType = value;
-			}
+			set => base.DataType = value;
 		}
 	}
 
@@ -62,7 +61,7 @@ public class SchemaBuilderTests
 			2,,,,,,,,,,,,,,,,,
 			""";
 
-		var columns = new System.Collections.Generic.List<CustomDbColumn>
+		var columns = new List<CustomDbColumn>
 		{
 			new CustomDbColumn() { ColumnName = "Id", DataType = typeof(int) },
 			new CustomDbColumn() { ColumnName = "Name", DataType = typeof(string), AllowDBNull = true },
@@ -87,7 +86,8 @@ public class SchemaBuilderTests
 		var val = edr.GetValue(2);
 		Assert.Equal(new DateTime(2022, 11, 13), val);
 		Assert.Equal(123.45m, edr.GetValue(3));
-		Assert.Equal(new TimeSpan(0, 0, 32, 59, 990), edr.GetValue(4));
+		var z = edr.GetValue(4);
+		Assert.Equal(new TimeSpan(0, 0, 32, 59, 990), z);
 		Assert.Equal(11.22, edr.GetValue(5));
 		Assert.Equal(11, edr.GetValue(6));
 
@@ -101,4 +101,5 @@ public class SchemaBuilderTests
 		Assert.Equal(DBNull.Value, edr.GetValue(5));
 		Assert.Equal(DBNull.Value, edr.GetValue(6));
 	}
+
 }
