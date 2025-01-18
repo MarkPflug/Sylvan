@@ -304,38 +304,9 @@ partial class CsvDataReader
 		{
 			this.rowNumber++;
 			var success = await this.NextRecordAsync(cancellationToken).ConfigureAwait(false);
-			if (!success || this.resultSetMode == ResultSetMode.MultiResult && this.curFieldCount != this.fieldCount)
-			{
-				this.curFieldCount = 0;
-				this.idx = recordStart;
-				this.state = State.End;
-				this.rowNumber = -1;
-				return false;
-			}
-			return success;
+			return ReadFinish(success);
 		}
-		else if (this.state == State.Initialized)
-		{
-			ThrowPendingException();
-			this.rowNumber++;
-			// after initizialization, the first record would already be in the buffer
-			// if hasRows is true.
-			if (hasRows)
-			{
-				this.state = State.Open;
-				return true;
-			}
-			else
-			{
-				this.state = State.End;
-			}
-		}
-		else if (this.state == State.Error)
-		{
-			throw new InvalidOperationException();
-		}
-		this.rowNumber = -1;
-		return false;
+		return ReadCommon();
 	}
 
 	/// <inheritdoc/>

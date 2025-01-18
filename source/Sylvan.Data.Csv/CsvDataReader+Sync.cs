@@ -183,10 +183,10 @@ partial class CsvDataReader
 			}
 			return success;
 		}
-		else if (this.state == State.Initialized)
+		if (this.state == State.Initialized)
 		{
-			this.rowNumber++;
 			ThrowPendingException();
+			this.rowNumber++;
 			// after initizialization, the first record would already be in the buffer
 			// if hasRows is true.
 			if (hasRows)
@@ -198,10 +198,10 @@ partial class CsvDataReader
 			{
 				this.state = State.End;
 			}
-		} 
-		else if(this.state == State.Error)
+		}
+		else if (this.state == State.Error)
 		{
-			throw new InvalidOperationException();
+			ThrowErrorState();
 		}
 		this.rowNumber = -1;
 		return false;

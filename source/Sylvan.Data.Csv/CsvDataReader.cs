@@ -102,8 +102,10 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 				}
 				else
 				{
-					// TODO:
-					throw new InvalidOperationException("The current row bla blah TODO");
+					// pendingException is not null when in error state.
+					// if even this supports resume-after-error it will need
+					// to clear the pending exception.
+					throw pendingException!;
 				}
 			}
 			throw new InvalidOperationException();
@@ -384,12 +386,58 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		}
 	}
 
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	bool ReadCommon()
+	{
+		if (this.state == State.Initialized)
+		{
+			ThrowPendingException();
+			this.rowNumber++;
+			// after initizialization, the first record would already be in the buffer
+			// if hasRows is true.
+			if (hasRows)
+			{
+				this.state = State.Open;
+				return true;
+			}
+			else
+			{
+				this.state = State.End;
+			}
+		}
+		else if (this.state == State.Error)
+		{
+			ThrowErrorState();
+		}
+		this.rowNumber = -1;
+		return false;
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	bool ReadFinish(bool success)
+	{
+		if (!success || (this.resultSetMode == ResultSetMode.MultiResult && this.curFieldCount != this.fieldCount))
+		{
+			this.curFieldCount = 0;
+			this.idx = recordStart;
+			this.state = State.End;
+			this.rowNumber = -1;
+			return false;
+		}
+		return success;
+	}
+
 	void ThrowRecordTooLarge(int ordinal = 0)
 	{
 		// we know there's at least one more, but it doesn't fit in the buffer
 		this.curFieldCount++; 
 		this.state = State.Error;
 		throw new CsvRecordTooLargeException(this.rowNumber, ordinal);
+	}
+
+	static void ThrowErrorState()
+	{
+		throw new InvalidOperationException();
 	}
 
 #if INTRINSICS
