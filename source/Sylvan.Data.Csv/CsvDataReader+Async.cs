@@ -158,11 +158,8 @@ partial class CsvDataReader
 		{
 			if (carryRow || state == State.Open || await NextRecordAsync(cancel).ConfigureAwait(false))
 			{
-				if (pendingException != null)
-				{
-					// if the header row is malformed, the exception is throw from the call to Create
-					throw pendingException;
-				}
+				ThrowPendingException();
+
 				carryRow = false;
 				Initialize();
 				this.state = State.Initialized;
@@ -221,7 +218,7 @@ partial class CsvDataReader
 				{
 					if (!GrowBuffer())
 					{
-						throw new CsvRecordTooLargeException(this.RowNumber, 0, null, null);
+						ThrowRecordTooLarge();
 					}
 				}
 				await FillBufferAsync(cancel).ConfigureAwait(false);
@@ -249,9 +246,9 @@ partial class CsvDataReader
 			}
 			if (result == ReadResult.False)
 			{
-				if(this.state == State.Open && pendingException	!= null)
+				if (this.state == State.Open)
 				{
-					throw pendingException;
+					ThrowPendingException();
 				}
 				return true;
 			}
@@ -261,9 +258,7 @@ partial class CsvDataReader
 			{
 				if (!GrowBuffer())
 				{
-					// if we consumed the entire buffer reading this record, then this is an exceptional situation
-					// we expect a record to be able to fit entirely within the buffer.
-					throw new CsvRecordTooLargeException(this.RowNumber, fieldIdx, null, null);
+					ThrowRecordTooLarge(fieldIdx);
 				}
 			}
 			await FillBufferAsync(cancel).ConfigureAwait(false);
@@ -304,41 +299,14 @@ partial class CsvDataReader
 	{
 		cancellationToken.ThrowIfCancellationRequested();
 
-		this.rowNumber++;
 		this.colCacheIdx = 0;
 		if (this.state == State.Open)
 		{
+			this.rowNumber++;
 			var success = await this.NextRecordAsync(cancellationToken).ConfigureAwait(false);
-			if (!success || this.resultSetMode == ResultSetMode.MultiResult && this.curFieldCount != this.fieldCount)
-			{
-				this.curFieldCount = 0;
-				this.idx = recordStart;
-				this.state = State.End;
-				this.rowNumber = -1;
-				return false;
-			}
-			return success;
+			return ReadFinish(success);
 		}
-		else if (this.state == State.Initialized)
-		{
-			if (pendingException != null)
-			{
-				throw pendingException;
-			}
-			// after initizialization, the first record would already be in the buffer
-			// if hasRows is true.
-			if (hasRows)
-			{
-				this.state = State.Open;
-				return true;
-			}
-			else
-			{
-				this.state = State.End;
-			}
-		}
-		this.rowNumber = -1;
-		return false;
+		return ReadCommon();
 	}
 
 	/// <inheritdoc/>

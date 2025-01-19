@@ -2059,6 +2059,112 @@ public class CsvDataReaderTests
 		Assert.Equal(expected, value);
 	}
 
+	[Fact]
+	public void ExceptionInit()
+	{
+		// When the malformed field is on the first row of data
+		// a different code path is used, so we need to test that independently.
+		var data =
+			"""
+			a,b,c
+			4,5,"6
+			""";
+
+		using var csv = CsvDataReader.Create(new StringReader(data));
+
+		var ex = Assert.ThrowsAny<CsvFormatException>(() => csv.Read());
+		Assert.Equal(1, csv.RowNumber);
+
+		// can read the two fields before the corrupt field
+		Assert.Equal("4", csv.GetString(0));
+		Assert.Equal("5", csv.GetString(1));
+		// but can't read the corrupt one or beyond.
+		Assert.ThrowsAny<CsvFormatException>(() => csv.GetString(2));
+		Assert.ThrowsAny<CsvFormatException>(() => csv.GetString(3));
+
+#if NET6_0_OR_GREATER
+		// Can read the raw record up to the beginning of the faulty field.
+		var s = csv.GetRawRecordSpan();
+		Assert.Equal("4,5,", s);
+#endif
+
+		// shouldn't be able to resume reading after an exception
+		Assert.ThrowsAny<InvalidOperationException>(() => csv.Read());
+		Assert.Equal(1, ex.RowNumber);
+	}
+
+	[Fact]
+	public void Exception()
+	{
+		var data =
+			"""
+			a,b,c
+			1,2,3
+			4,5,"6
+			""";
+
+		using var csv = CsvDataReader.Create(new StringReader(data));
+
+		Assert.True(csv.Read());
+		Assert.Equal(1, csv.RowNumber);
+		var ex = Assert.ThrowsAny<CsvFormatException>(() => csv.Read());
+		Assert.Equal(2, ex.RowNumber);
+
+		// can read the two fields before the corrupt field
+		Assert.Equal("4", csv.GetString(0));
+		Assert.Equal("5", csv.GetString(1));
+		// but can't read the corrupt one or beyond.
+		Assert.ThrowsAny<CsvFormatException>(() => csv.GetString(2));
+		Assert.ThrowsAny<CsvFormatException>(() => csv.GetString(3));
+
+#if NET6_0_OR_GREATER
+		// Can read the raw record up to the beginning of the faulty field.
+		var s = csv.GetRawRecordSpan();
+		Assert.Equal("4,5,", s);
+#endif
+
+		// shouldn't be able to resume reading after an exception
+		Assert.ThrowsAny<InvalidOperationException>(() => csv.Read());
+		Assert.Equal(2, ex.RowNumber);
+	}
+
+	[Fact]
+	public void ExceptionBufferSize()
+	{
+		var data =
+			"""
+			a,b,c
+			1,2,3
+			4,5,6
+			""" + new string('6', 0x100);
+
+		var opt = new CsvDataReaderOptions { BufferSize = 0x80, MaxBufferSize = 0x80 };
+		using var csv = CsvDataReader.Create(new StringReader(data), opt);
+
+		Assert.True(csv.Read());
+		Assert.Equal(1, csv.RowNumber);
+		var ex = Assert.ThrowsAny<CsvRecordTooLargeException>(() => csv.Read());
+		Assert.Equal(2, ex.RowNumber);
+
+		// can read the two fields before the corrupt field
+		Assert.Equal("4", csv.GetString(0));
+		Assert.Equal("5", csv.GetString(1));
+		// but can't read the corrupt one or beyond.
+		
+		Assert.ThrowsAny<CsvRecordTooLargeException>(() => csv.GetString(2));
+		Assert.ThrowsAny<CsvRecordTooLargeException>(() => csv.GetString(3));
+
+#if NET6_0_OR_GREATER
+		// Can read the raw record up to the beginning of the faulty field.
+		var s = csv.GetRawRecordSpan();
+		Assert.Equal("4,5,", s);
+#endif
+
+		// shouldn't be able to resume reading after an exception
+		Assert.ThrowsAny<InvalidOperationException>(() => csv.Read());
+		Assert.Equal(2, ex.RowNumber);
+	}
+
 #if NET6_0_OR_GREATER
 
 	[Fact]
