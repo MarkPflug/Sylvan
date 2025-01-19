@@ -8,6 +8,7 @@
 		<Nullable>enable</Nullable>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 		<DefineConstants Condition="$(TargetFramework) != 'netstandard2.0'">$(DefineConstants);IAsyncEnumerable</DefineConstants>
+		<LangVersion>latest</LangVersion>
 	</PropertyGroup>
 
 	<ItemGroup>
