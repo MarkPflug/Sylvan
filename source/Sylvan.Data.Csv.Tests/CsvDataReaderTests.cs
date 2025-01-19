@@ -2079,8 +2079,8 @@ public class CsvDataReaderTests
 		Assert.Equal("4", csv.GetString(0));
 		Assert.Equal("5", csv.GetString(1));
 		// but can't read the corrupt one or beyond.
-		Assert.ThrowsAny<InvalidOperationException>(() => csv.GetString(2));
-		Assert.ThrowsAny<InvalidOperationException>(() => csv.GetString(3));
+		Assert.ThrowsAny<CsvFormatException>(() => csv.GetString(2));
+		Assert.ThrowsAny<CsvFormatException>(() => csv.GetString(3));
 
 #if NET6_0_OR_GREATER
 		// Can read the raw record up to the beginning of the faulty field.
@@ -2114,8 +2114,8 @@ public class CsvDataReaderTests
 		Assert.Equal("4", csv.GetString(0));
 		Assert.Equal("5", csv.GetString(1));
 		// but can't read the corrupt one or beyond.
-		Assert.ThrowsAny<InvalidOperationException>(() => csv.GetString(2));
-		Assert.ThrowsAny<InvalidOperationException>(() => csv.GetString(3));
+		Assert.ThrowsAny<CsvFormatException>(() => csv.GetString(2));
+		Assert.ThrowsAny<CsvFormatException>(() => csv.GetString(3));
 
 #if NET6_0_OR_GREATER
 		// Can read the raw record up to the beginning of the faulty field.
@@ -2143,7 +2143,7 @@ public class CsvDataReaderTests
 
 		Assert.True(csv.Read());
 		Assert.Equal(1, csv.RowNumber);
-		var ex = Assert.ThrowsAny<CsvFormatException>(() => csv.Read());
+		var ex = Assert.ThrowsAny<CsvRecordTooLargeException>(() => csv.Read());
 		Assert.Equal(2, ex.RowNumber);
 
 		// can read the two fields before the corrupt field
@@ -2151,8 +2151,8 @@ public class CsvDataReaderTests
 		Assert.Equal("5", csv.GetString(1));
 		// but can't read the corrupt one or beyond.
 		
-		Assert.ThrowsAny<InvalidOperationException>(() => csv.GetString(2));
-		Assert.ThrowsAny<InvalidOperationException>(() => csv.GetString(3));
+		Assert.ThrowsAny<CsvRecordTooLargeException>(() => csv.GetString(2));
+		Assert.ThrowsAny<CsvRecordTooLargeException>(() => csv.GetString(3));
 
 #if NET6_0_OR_GREATER
 		// Can read the raw record up to the beginning of the faulty field.

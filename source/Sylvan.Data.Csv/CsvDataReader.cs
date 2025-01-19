@@ -388,13 +388,27 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		}
 	}
 
+	void ThrowRecordTooLarge(int ordinal = 0)
+	{
+		// we know there's at least one more, but it doesn't fit in the buffer
+		this.curFieldCount++;
+		this.state = State.Error;
+		this.pendingException =  new CsvRecordTooLargeException(this.rowNumber, ordinal);
+		throw this.pendingException;
+	}
+
+	static void ThrowErrorState()
+	{
+		throw new InvalidOperationException();
+	}
+
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	bool ReadCommon()
 	{
 		if (this.state == State.Initialized)
 		{
-			ThrowPendingException();
 			this.rowNumber++;
+			ThrowPendingException();
 			// after initizialization, the first record would already be in the buffer
 			// if hasRows is true.
 			if (hasRows)
@@ -427,19 +441,6 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 			return false;
 		}
 		return success;
-	}
-
-	void ThrowRecordTooLarge(int ordinal = 0)
-	{
-		// we know there's at least one more, but it doesn't fit in the buffer
-		this.curFieldCount++;
-		this.state = State.Error;
-		throw new CsvRecordTooLargeException(this.rowNumber, ordinal);
-	}
-
-	static void ThrowErrorState()
-	{
-		throw new InvalidOperationException();
 	}
 
 #if INTRINSICS
@@ -1706,6 +1707,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	internal CharSpan GetField(int ordinal)
 	{
+		ValidateState(ordinal);
 		if ((uint)ordinal < (uint)this.curFieldCount)
 		{
 			return GetFieldUnsafe(ordinal);
