@@ -54,6 +54,30 @@ public static partial class DataExtensions
 	}
 
 	/// <summary>
+	/// Creates a DbDataReader by prepending additional columns to an existing DbDataReader.
+	/// </summary>
+	/// <param name="reader">The base data reader.</param>
+	/// <param name="columns">The extra columns to prepend.</param>
+	/// <returns>A DbDataReader with the new columns added at the beginning.</returns>
+	public static DbDataReader WithColumnsFirst(this DbDataReader reader, params IDataColumn[] columns)
+	{
+	   var cols = new IDataColumn[reader.FieldCount + columns.Length];
+	   
+	   // Copy the new columns at the start
+	   Array.Copy(columns, 0, cols, 0, columns.Length);
+	   
+	   var schema = reader.CanGetColumnSchema() ? reader.GetColumnSchema() : null;
+	   // Add existing columns after the new ones
+	   for (int i = 0; i < reader.FieldCount; i++)
+	   {
+	       var allowNull = schema?[i].AllowDBNull ?? true;
+	       cols[i + columns.Length] = new DataReaderColumn(reader, i, allowNull);
+	   }
+	   
+	   return new MappedDataReader(reader, cols);
+	}
+
+	/// <summary>
 	/// Binds the DbDataReader data to produce a sequence of T.
 	/// </summary>
 	/// <typeparam name="T">The type of record to bind to.</typeparam>
