@@ -107,6 +107,18 @@ public static class ObjectDataReader
 		{
 			return builder.Build(data);
 		}
+
+#if IAsyncEnumerable
+
+		/// <summary>
+		/// Builds a DbDataReader over the data that will read the columns defined by the builder.
+		/// </summary>
+		public DbDataReader Build(IAsyncEnumerable<T> data, CancellationToken cancel = default)
+		{
+			return builder.Build(data, cancel);
+		}
+
+#endif
 	}
 }
 
@@ -319,7 +331,17 @@ abstract class ObjectDataReader<T> : DbDataReader, IDbColumnSchemaGenerator
 		{
 			return new SyncObjectDataReader<T>(data, this.columns.ToArray());
 		}
+
+#if IAsyncEnumerable
+
+		internal DbDataReader Build(IAsyncEnumerable<T> data, CancellationToken cancel)
+		{
+			return new AsyncObjectDataReader<T>(data, this.columns.ToArray(), cancel);
+		}
+
+#endif
 	}
+
 
 	internal class ColumnInfo : DbColumn
 	{
