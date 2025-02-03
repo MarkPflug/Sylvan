@@ -48,7 +48,14 @@ public class CsvInvalidCharacterException : CsvFormatException
 	internal static CsvInvalidCharacterException NewRecord(int row, int ordinal, int recordOffset, char invalid)
 	{
 		return new CsvInvalidCharacterException(row, ordinal, recordOffset, invalid,
-			$"A delimiter, newline or EOF was expected after a closing quote."
+			"A delimiter, newline or EOF was expected after a closing quote."
+		);
+	}
+
+	internal static CsvInvalidCharacterException UnclosedQuote(int row, int ordinal, int recordOffset, char invalid)
+	{
+		return new CsvInvalidCharacterException(row, ordinal, recordOffset, invalid,
+			"A quoted field at the end of the input ends without a closing quote."
 		);
 	}
 

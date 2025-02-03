@@ -104,12 +104,19 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 				else
 				{
 					// pendingException is not null when in error state.
-					// if even this supports resume-after-error it will need
+					// if ever this supports resume-after-error it will need
 					// to clear the pending exception.
 					throw pendingException!;
 				}
 			}
-			throw new InvalidOperationException();
+			else
+			{
+				var msg =
+					state != State.End
+					? "Invalid attempt to access fields before Read has been called."
+					: "Invalid attempt to access fields after the end of the record set has been reached.";
+				throw new InvalidOperationException(msg);
+			}
 		}
 	}
 
@@ -399,7 +406,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 
 	static void ThrowErrorState()
 	{
-		throw new InvalidOperationException();
+		throw new InvalidOperationException("A previous call to Read encountered an error and reading cannot continue.");
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -991,8 +998,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 						if (style != CsvStyle.Lax)
 						{
 							var rowNumber = this.rowNumber == 0 && this.state == State.Initialized ? 1 : this.rowNumber;
-							this.pendingException = new CsvFormatException(rowNumber, fieldIdx,
-								"A quoted field at the end of the input ends without a closing quote.");
+							this.pendingException = CsvInvalidCharacterException.UnclosedQuote(rowNumber, fieldIdx, idx, quote);
 							return ReadResult.False;
 						}
 					}
@@ -1205,7 +1211,10 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		{
 			return GetBinaryLength(ordinal);
 		}
-		if (dataOffset > int.MaxValue) throw new ArgumentOutOfRangeException(nameof(dataOffset));
+		if (dataOffset > int.MaxValue)
+		{
+			throw new ArgumentOutOfRangeException(nameof(dataOffset));
+		}
 
 		var col = this.columns[ordinal];
 		var encoding = col.ColumnBinaryEncoding ?? this.binaryEncoding;
@@ -1243,7 +1252,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		// align to the next base64 quad
 		if (rem != 0)
 		{
-			CsvDataReader.FromBase64Chars(iBuf, o + iOff, 4, scratch, 0, out int c);
+			FromBase64Chars(iBuf, o + iOff, 4, scratch, 0, out int c);
 			if (c == rem)
 			{
 				// we already decoded everything available in the previous pass
@@ -1274,7 +1283,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 			if (quadCount > 0)
 			{
 				var charCount = quadCount * 4;
-				CsvDataReader.FromBase64Chars(iBuf, o + iOff, charCount, oBuf, oOff, out int c);
+				FromBase64Chars(iBuf, o + iOff, charCount, oBuf, oOff, out int c);
 				length -= c;
 				iOff += charCount;
 				oOff += c;
@@ -1288,7 +1297,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 
 		if (length > 0)
 		{
-			CsvDataReader.FromBase64Chars(iBuf, o + iOff, 4, scratch, 0, out int c);
+			FromBase64Chars(iBuf, o + iOff, 4, scratch, 0, out int c);
 			c = length < c ? length : c;
 			for (int i = 0; i < c; i++)
 			{
@@ -1332,7 +1341,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 
 	const byte Invalid = 255;
 
-	static readonly byte[] HexMap = new byte[]
+	static readonly byte[] HexMap =
 		{
 			255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
 			255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
@@ -1649,12 +1658,6 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 
 		public CharSpan(char[] buffer, int offset, int length)
 		{
-#if DEBUG
-			if (offset < 0 || length < 0)
-			{
-				throw new Exception();
-			}
-#endif
 			Debug.Assert(offset >= 0);
 			Debug.Assert(length >= 0);
 			this.buffer = buffer;
@@ -1897,7 +1900,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		{
 			BinaryEncoding.Base64 => GetBase64Length(span),
 			BinaryEncoding.Hexadecimal => GetHexLength(span, out _),
-			_ => throw new NotSupportedException(),// TODO: improve error message.
+			_ => throw new NotSupportedException("Unknown BinaryEncoding specified."),
 		};
 	}
 
@@ -2197,7 +2200,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 				{
 					return EnumAccessor<T>.Instance;
 				}
-				throw new NotSupportedException(); // TODO: exception type?
+				throw new NotSupportedException($"CsvDataReader does not support accessing values as type '{typeof(T).FullName}'.");
 			}
 			return acc;
 		}
