@@ -165,7 +165,8 @@ public class CsvDataWriterTests
 		}
 		else
 		{
-			Assert.Throws<CsvRecordTooLargeException>(writeFunc);
+			var ex = Assert.Throws<CsvRecordTooLargeException>(writeFunc);
+			Assert.StartsWith("Row 1 was too large", ex.Message);
 			return;
 		}
 

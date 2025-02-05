@@ -202,7 +202,7 @@ public class CsvDataReaderTests
 	[Fact]
 	public void MissingHeaders()
 	{
-		Assert.Throws<CsvMissingHeadersException>(() => CsvDataReader.Create(new StringReader("")));
+		var ex = Assert.Throws<CsvMissingHeadersException>(() => CsvDataReader.Create(new StringReader("")));
 	}
 
 	[Fact]
@@ -494,7 +494,9 @@ public class CsvDataReaderTests
 		using var tr = File.OpenText("Data/Binary.csv");
 		var csv = CsvDataReader.Create(tr, opts);
 		csv.Read();
-		Assert.Throws<CsvRecordTooLargeException>(() => csv.Read());
+		var ex = Assert.Throws<CsvRecordTooLargeException>(() => csv.Read());
+		Assert.Equal(2, ex.RowNumber);
+		Assert.Equal(1, ex.FieldOrdinal);
 	}
 
 	[Fact]
@@ -871,17 +873,23 @@ public class CsvDataReaderTests
 
 		var csv = CsvDataReader.Create(tr, new CsvDataReaderOptions { Schema = CsvSchema.Nullable });
 
-		var ex = Assert.Throws<CsvFormatException>(() => csv.Read());
+		var ex = Assert.Throws<CsvInvalidCharacterException>(() => csv.Read());
 
 		Assert.Equal(1, ex.RowNumber);
+		Assert.Equal('C', ex.InvalidCharacter);
+		Assert.Equal(5, ex.RecordOffset);
+		Assert.Equal(1, ex.FieldOrdinal);
 	}
 
 	[Fact]
 	public void BadQuoteHeader()
 	{
 		using var tr = new StringReader("Name,\"Va\"lue\nA,\"B\"C\n");
-		var ex = Assert.Throws<CsvFormatException>(() => CsvDataReader.Create(tr, new CsvDataReaderOptions { Schema = CsvSchema.Nullable }));
+		var ex = Assert.Throws<CsvInvalidCharacterException>(() => CsvDataReader.Create(tr, new CsvDataReaderOptions { Schema = CsvSchema.Nullable }));
 		Assert.Equal(0, ex.RowNumber);
+		Assert.Equal(1, ex.FieldOrdinal);
+		Assert.Equal(9, ex.RecordOffset);
+		Assert.Equal('l', ex.InvalidCharacter);
 	}
 
 	[Fact]
@@ -891,7 +899,11 @@ public class CsvDataReaderTests
 		var csv = CsvDataReader.Create(tr, new CsvDataReaderOptions { Schema = CsvSchema.Nullable });
 		Assert.True(csv.Read());
 		Assert.Equal("A\"\"B", csv.GetString(0));
-		Assert.Throws<CsvFormatException>(() => csv.Read());
+		var ex = Assert.Throws<CsvInvalidCharacterException>(() => csv.Read());
+		Assert.Equal(2, ex.RowNumber);
+		Assert.Equal(1, ex.FieldOrdinal);
+		Assert.Equal('m', ex.InvalidCharacter);
+		Assert.Equal(10, ex.RecordOffset);
 	}
 
 	[Fact]
@@ -1097,7 +1109,11 @@ public class CsvDataReaderTests
 		using var reader = new StringReader("Name\r\n\b\r\n\"quoted\"field,");
 		var csv = CsvDataReader.Create(reader);
 		Assert.True(csv.Read());
-		Assert.Throws<CsvFormatException>(() => csv.Read());
+		var ex = Assert.Throws<CsvInvalidCharacterException>(() => csv.Read());
+		Assert.Equal(2, ex.RowNumber);
+		Assert.Equal(0, ex.FieldOrdinal);
+		Assert.Equal('f', ex.InvalidCharacter);
+		Assert.Equal(8, ex.RecordOffset);
 	}
 
 	[Fact]
@@ -1324,7 +1340,9 @@ public class CsvDataReaderTests
 			sw.Write(i);
 		}
 		var data = sw.ToString();
-		Assert.Throws<CsvRecordTooLargeException>(() => CsvDataReader.Create(new StringReader(data), new CsvDataReaderOptions { BufferSize = 0x1000 }));
+		var opts = new CsvDataReaderOptions { BufferSize = 0x1000 };
+		var ex = Assert.Throws<CsvRecordTooLargeException>(() => CsvDataReader.Create(new StringReader(data), opts));
+		Assert.Equal(0, ex.RowNumber);
 	}
 
 
@@ -1346,7 +1364,8 @@ public class CsvDataReaderTests
 		var data = sw.ToString();
 		var csv = CsvDataReader.Create(new StringReader(data), new CsvDataReaderOptions { BufferSize = 0x1000 });
 		csv.Read();
-		Assert.Throws<CsvRecordTooLargeException>(() => csv.Read());
+		var ex = Assert.Throws<CsvRecordTooLargeException>(() => csv.Read());
+		Assert.Equal(2, ex.RowNumber);
 	}
 
 	[Fact]
@@ -1443,7 +1462,7 @@ public class CsvDataReaderTests
 	[Fact]
 	public void EmptyHeader()
 	{
-		Assert.Throws<CsvMissingHeadersException>(() => CsvDataReader.Create(new StringReader("")));
+		var ex = Assert.Throws<CsvMissingHeadersException>(() => CsvDataReader.Create(new StringReader("")));
 	}
 
 	[Fact]
@@ -1457,7 +1476,7 @@ public class CsvDataReaderTests
 	[Fact]
 	public async Task EmptyHeaderAsync()
 	{
-		await Assert.ThrowsAsync<CsvMissingHeadersException>(async () => await CsvDataReader.CreateAsync(new StringReader("")));
+		var ex = await Assert.ThrowsAsync<CsvMissingHeadersException>(async () => await CsvDataReader.CreateAsync(new StringReader("")));
 	}
 
 	[Fact]
@@ -1895,7 +1914,9 @@ public class CsvDataReaderTests
 			HasHeaders = false,
 			Escape = '\\',
 		});
-		Assert.Throws<CsvFormatException>(() => csv.Read());
+		var ex = Assert.Throws<CsvInvalidCharacterException>(() => csv.Read());
+		//Assert.Equal("Found unexpected character '\\' in field 0 on row 0: \\" + Environment.NewLine
+		//	+ "Escape character \\ was encountered at the end of the text.", ex.Message);
 	}
 
 	[Fact]
@@ -1971,13 +1992,13 @@ public class CsvDataReaderTests
 	[InlineData("a\"a\"a", true, "a\"a\"a")]
 	[InlineData("a\"\"\"a", true, "a\"\"\"a")]
 
-	[InlineData("\"a\"\"\"a\"", false, null)]
-	[InlineData("\"a\"a", false, null)]
-	[InlineData("\"a\"a\"a\"", false, null)]
-	[InlineData("\"\"a", false, null)]
-	[InlineData("\"\"a\"", false, null)]
-	[InlineData("\"\"\"", false, null)]
-	[InlineData("\"\"\"\"\"", false, null)]
+	[InlineData("\"a\"\"\"a\"", false, "Found unexpected character 'a' in field 0 on row 1: a\"")]
+	[InlineData("\"a\"a", false, "Found unexpected character 'a' in field 0 on row 1: a")]
+	[InlineData("\"a\"a\"a\"", false, "Found unexpected character 'a' in field 0 on row 1: a\"")]
+	[InlineData("\"\"a", false, "Found unexpected character 'a' in field 0 on row 1: a")]
+	[InlineData("\"\"a\"", false, "Found unexpected character 'a' in field 0 on row 1: a\"")]
+	[InlineData("\"\"\"", false, "A quoted field at the end of the input ends without a closing quote.")]
+	[InlineData("\"\"\"\"\"", false, "A quoted field at the end of the input ends without a closing quote.")]
 
 	public void Quotes(string data, bool valid, string expected)
 	{
@@ -1992,7 +2013,7 @@ public class CsvDataReaderTests
 		}
 		else
 		{
-			var ex = Assert.Throws<CsvFormatException>(() => csv.Read());
+			var ex = Assert.ThrowsAny<CsvFormatException>(() => csv.Read());
 			Assert.Equal(1, ex.RowNumber);
 		}
 	}

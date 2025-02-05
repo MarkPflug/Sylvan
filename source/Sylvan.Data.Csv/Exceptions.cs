@@ -7,8 +7,8 @@ namespace Sylvan.Data.Csv;
 /// </summary>
 public class CsvFormatException : FormatException
 {
-	internal CsvFormatException(int row, int ordinal, string? msg = null, Exception? inner = null)
-		: base(msg, inner)
+	internal CsvFormatException(int row, int ordinal, string message, Exception? inner = null)
+		: base(message, inner)
 	{
 		this.RowNumber = row;
 		this.FieldOrdinal = ordinal;
@@ -26,11 +26,64 @@ public class CsvFormatException : FormatException
 }
 
 /// <summary>
+/// An exception thrown when an invalid character is found in a CSV file.
+/// </summary>
+public class CsvInvalidCharacterException : CsvFormatException
+{
+
+	internal static CsvInvalidCharacterException Escape(int row, int ordinal, int recordOffset, char invalid)
+	{
+		return new CsvInvalidCharacterException(row, ordinal, recordOffset, invalid,
+			$"Escape character {invalid} was encountered at the end of the text."
+		);
+	}
+
+	internal static CsvInvalidCharacterException UnescapedQuote(int row, int ordinal, int recordOffset, char invalid)
+	{
+		return new CsvInvalidCharacterException(row, ordinal, recordOffset, invalid, 
+			$"An unescaped quote character '{invalid}' was found inside a quoted field."
+		);
+	}
+
+	internal static CsvInvalidCharacterException NewRecord(int row, int ordinal, int recordOffset, char invalid)
+	{
+		return new CsvInvalidCharacterException(row, ordinal, recordOffset, invalid,
+			"A delimiter, newline or EOF was expected after a closing quote."
+		);
+	}
+
+	internal static CsvInvalidCharacterException UnclosedQuote(int row, int ordinal, int recordOffset, char invalid)
+	{
+		return new CsvInvalidCharacterException(row, ordinal, recordOffset, invalid,
+			"A quoted field at the end of the input ends without a closing quote."
+		);
+	}
+
+
+	/// <summary>
+	/// Gets the character offset into the record where the invalid character was found.
+	/// </summary>
+	public int RecordOffset { get; }
+
+	/// <summary>
+	/// The invalid character encountered.
+	/// </summary>
+	public char InvalidCharacter { get; }
+
+	internal CsvInvalidCharacterException(int row, int ordinal, int recordOffset, char invalidCharacter, string message) : base(row, ordinal, message)
+	{
+		this.RecordOffset = recordOffset;
+		this.InvalidCharacter = invalidCharacter;
+	}
+}
+
+/// <summary>
 /// The exception that is thrown when the configuration options specify invalid options.
 /// </summary>
 public class CsvConfigurationException : ArgumentException
 {
-	internal CsvConfigurationException() { }
+	internal CsvConfigurationException() : base("The CsvDataReaderOptions specifies invalid options.")
+	{ }
 }
 
 /// <summary>
@@ -43,8 +96,8 @@ public class CsvConfigurationException : ArgumentException
 /// </remarks>
 public sealed class CsvRecordTooLargeException : CsvFormatException
 {
-	internal CsvRecordTooLargeException(int row, int ordinal, string? msg = null, Exception? inner = null)
-		: base(row, ordinal, msg, inner) { }
+	internal CsvRecordTooLargeException(int row, int ordinal)
+		: base(row, ordinal, $"Row {row} was too large. Try increasing the MaxBufferSize setting.") { }
 }
 
 /// <summary>
@@ -52,7 +105,8 @@ public sealed class CsvRecordTooLargeException : CsvFormatException
 /// </summary>
 public sealed class CsvMissingHeadersException : CsvFormatException
 {
-	internal CsvMissingHeadersException() : base(0, 0, null, null) { }
+	internal CsvMissingHeadersException()
+		: base(0, 0, "The CSV file does not have headers, but the HasHeaders option was set to true.") { }
 }
 
 /// <summary>
@@ -66,7 +120,7 @@ public sealed class AmbiguousColumnException : ArgumentException
 	/// </summary>
 	public string Name { get; }
 
-	internal AmbiguousColumnException(string name)
+	internal AmbiguousColumnException(string name) : base($"The CSV file contains more than one column named \"{name}\".")
 	{
 		this.Name = name;
 	}
