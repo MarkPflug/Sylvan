@@ -801,7 +801,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 						if (atEndOfText)
 						{
 							// there was nothing to escape
-							this.pendingException = CsvInvalidCharacterException.Escape(rowNumber, fieldIdx, idx, escape);
+							this.pendingException = CsvInvalidCharacterException.Escape(rowNumber, fieldIdx, idx - 1 - recordStart, escape);
 							return ReadResult.False;
 						}
 						return ReadResult.Incomplete;
@@ -917,7 +917,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 					}
 					else
 					{
-						this.pendingException = CsvInvalidCharacterException.UnescapedQuote(rowNumber, fieldIdx, idx, quote);
+						this.pendingException = CsvInvalidCharacterException.UnescapedQuote(rowNumber, fieldIdx, idx - 1 - recordStart, quote);
 						return ReadResult.False;
 					}
 				}
@@ -955,7 +955,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 					{
 						// if the field is quoted, we shouldn't be here.
 						// the only valid characters would be a delimiter, a new line, or EOF.
-						this.pendingException = CsvInvalidCharacterException.NewRecord(rowNumber, fieldIdx, idx, c);						
+						this.pendingException = CsvInvalidCharacterException.NewRecord(rowNumber, fieldIdx, idx - 1 - recordStart, c);						
 						return ReadResult.False;
 					}
 				}
@@ -998,7 +998,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 						if (style != CsvStyle.Lax)
 						{
 							var rowNumber = this.rowNumber == 0 && this.state == State.Initialized ? 1 : this.rowNumber;
-							this.pendingException = CsvInvalidCharacterException.UnclosedQuote(rowNumber, fieldIdx, idx, quote);
+							this.pendingException = CsvInvalidCharacterException.UnclosedQuote(rowNumber, fieldIdx, idx - 1 - recordStart, quote);
 							return ReadResult.False;
 						}
 					}

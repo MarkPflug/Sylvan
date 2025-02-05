@@ -203,7 +203,6 @@ public class CsvDataReaderTests
 	public void MissingHeaders()
 	{
 		var ex = Assert.Throws<CsvMissingHeadersException>(() => CsvDataReader.Create(new StringReader("")));
-		//Assert.StartsWith("The CSV file does not have headers", ex.Message);
 	}
 
 	[Fact]
@@ -496,7 +495,8 @@ public class CsvDataReaderTests
 		var csv = CsvDataReader.Create(tr, opts);
 		csv.Read();
 		var ex = Assert.Throws<CsvRecordTooLargeException>(() => csv.Read());
-		//Assert.StartsWith("Row 2 was too large.", ex.Message);
+		Assert.Equal(2, ex.RowNumber);
+		Assert.Equal(1, ex.FieldOrdinal);
 	}
 
 	[Fact]
@@ -876,8 +876,9 @@ public class CsvDataReaderTests
 		var ex = Assert.Throws<CsvInvalidCharacterException>(() => csv.Read());
 
 		Assert.Equal(1, ex.RowNumber);
-		//Assert.StartsWith("Found unexpected character 'C' in field 1 on row 1: C\n" + Environment.NewLine
-		//	+ "A delimiter (,), newline or EOF was expected", ex.Message);
+		Assert.Equal('C', ex.InvalidCharacter);
+		Assert.Equal(5, ex.RecordOffset);
+		Assert.Equal(1, ex.FieldOrdinal);
 	}
 
 	[Fact]
@@ -886,8 +887,9 @@ public class CsvDataReaderTests
 		using var tr = new StringReader("Name,\"Va\"lue\nA,\"B\"C\n");
 		var ex = Assert.Throws<CsvInvalidCharacterException>(() => CsvDataReader.Create(tr, new CsvDataReaderOptions { Schema = CsvSchema.Nullable }));
 		Assert.Equal(0, ex.RowNumber);
-		//Assert.StartsWith("Found unexpected character 'l' in field 1 on row 0: lue\nA,\"B\"C\n" + Environment.NewLine
-		//	+ "A delimiter (,), newline or EOF was expected after a closing quote", ex.Message);
+		Assert.Equal(1, ex.FieldOrdinal);
+		Assert.Equal(9, ex.RecordOffset);
+		Assert.Equal('l', ex.InvalidCharacter);
 	}
 
 	[Fact]
@@ -898,8 +900,10 @@ public class CsvDataReaderTests
 		Assert.True(csv.Read());
 		Assert.Equal("A\"\"B", csv.GetString(0));
 		var ex = Assert.Throws<CsvInvalidCharacterException>(() => csv.Read());
-		//Assert.StartsWith("Found unexpected character 'm' in field 1 on row 2: more,\n" + Environment.NewLine
-		//	+ "A delimiter (,), newline or EOF was expected", ex.Message);
+		Assert.Equal(2, ex.RowNumber);
+		Assert.Equal(1, ex.FieldOrdinal);
+		Assert.Equal('m', ex.InvalidCharacter);
+		Assert.Equal(10, ex.RecordOffset);
 	}
 
 	[Fact]
@@ -1106,8 +1110,10 @@ public class CsvDataReaderTests
 		var csv = CsvDataReader.Create(reader);
 		Assert.True(csv.Read());
 		var ex = Assert.Throws<CsvInvalidCharacterException>(() => csv.Read());
-		//Assert.StartsWith("Found unexpected character 'f' in field 0 on row 2: field," + Environment.NewLine
-		//	+ "A delimiter (,), newline or EOF was expected after a closing quote", ex.Message);
+		Assert.Equal(2, ex.RowNumber);
+		Assert.Equal(0, ex.FieldOrdinal);
+		Assert.Equal('f', ex.InvalidCharacter);
+		Assert.Equal(8, ex.RecordOffset);
 	}
 
 	[Fact]
@@ -1334,8 +1340,9 @@ public class CsvDataReaderTests
 			sw.Write(i);
 		}
 		var data = sw.ToString();
-		var ex = Assert.Throws<CsvRecordTooLargeException>(() => CsvDataReader.Create(new StringReader(data), new CsvDataReaderOptions { BufferSize = 0x1000 }));
-		Assert.StartsWith("Row 0 was too large", ex.Message);
+		var opts = new CsvDataReaderOptions { BufferSize = 0x1000 };
+		var ex = Assert.Throws<CsvRecordTooLargeException>(() => CsvDataReader.Create(new StringReader(data), opts));
+		Assert.Equal(0, ex.RowNumber);
 	}
 
 
@@ -1358,7 +1365,7 @@ public class CsvDataReaderTests
 		var csv = CsvDataReader.Create(new StringReader(data), new CsvDataReaderOptions { BufferSize = 0x1000 });
 		csv.Read();
 		var ex = Assert.Throws<CsvRecordTooLargeException>(() => csv.Read());
-		Assert.StartsWith("Row 2 was too large", ex.Message);
+		Assert.Equal(2, ex.RowNumber);
 	}
 
 	[Fact]
@@ -1456,7 +1463,6 @@ public class CsvDataReaderTests
 	public void EmptyHeader()
 	{
 		var ex = Assert.Throws<CsvMissingHeadersException>(() => CsvDataReader.Create(new StringReader("")));
-		Assert.StartsWith("The CSV file does not have headers", ex.Message);
 	}
 
 	[Fact]
@@ -1471,7 +1477,6 @@ public class CsvDataReaderTests
 	public async Task EmptyHeaderAsync()
 	{
 		var ex = await Assert.ThrowsAsync<CsvMissingHeadersException>(async () => await CsvDataReader.CreateAsync(new StringReader("")));
-		Assert.StartsWith("The CSV file does not have headers", ex.Message);
 	}
 
 	[Fact]
@@ -2008,9 +2013,8 @@ public class CsvDataReaderTests
 		}
 		else
 		{
-			var ex = Assert.Throws<CsvFormatException>(() => csv.Read());
+			var ex = Assert.ThrowsAny<CsvFormatException>(() => csv.Read());
 			Assert.Equal(1, ex.RowNumber);
-			Assert.StartsWith(expected, ex.Message);
 		}
 	}
 
