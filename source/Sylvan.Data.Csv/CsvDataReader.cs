@@ -400,7 +400,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		// we know there's at least one more, but it doesn't fit in the buffer
 		this.curFieldCount++;
 		this.state = State.Error;
-		this.pendingException =  new CsvRecordTooLargeException(this.rowNumber, ordinal);
+		this.pendingException = new CsvRecordTooLargeException(this.rowNumber, ordinal);
 		throw this.pendingException;
 	}
 
@@ -955,7 +955,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 					{
 						// if the field is quoted, we shouldn't be here.
 						// the only valid characters would be a delimiter, a new line, or EOF.
-						this.pendingException = CsvInvalidCharacterException.NewRecord(rowNumber, fieldIdx, idx - 1 - recordStart, c);						
+						this.pendingException = CsvInvalidCharacterException.NewRecord(rowNumber, fieldIdx, idx - 1 - recordStart, c);
 						return ReadResult.False;
 					}
 				}
@@ -988,13 +988,13 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 				}
 				else
 				{
-					if (fieldEnd == (closeQuoteIdx - recordStart))
+					if (fieldEnd == (closeQuoteIdx - recordStart) && fieldEnd != this.idx + 1)
 					{
 						fi.quoteState = QuoteState.Quoted;
 					}
 					else
 					{
-						fi.quoteState = QuoteState.InvalidQuotes;
+						fi.quoteState = fieldEnd == this.idx + 1 ? QuoteState.Unquoted : QuoteState.InvalidQuotes;
 						if (style != CsvStyle.Lax)
 						{
 							var rowNumber = this.rowNumber == 0 && this.state == State.Initialized ? 1 : this.rowNumber;

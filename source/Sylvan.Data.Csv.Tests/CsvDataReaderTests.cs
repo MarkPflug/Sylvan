@@ -109,6 +109,25 @@ public class CsvDataReaderTests
 	}
 
 	[Fact]
+	public void BadClosingQuote()
+	{
+		var csv = CsvDataReader.Create(new StringReader("a,\""), new CsvDataReaderOptions {HasHeaders = false });
+		var ex = Assert.Throws<CsvInvalidCharacterException>(() => csv.Read());
+		Assert.Equal('"', ex.InvalidCharacter);
+		Assert.Equal(2, ex.RecordOffset);
+	}
+
+	[Fact]
+	public void BadClosingQuoteLax()
+	{
+		var csv = CsvDataReader.Create(new StringReader("a,\""), new CsvDataReaderOptions { CsvStyle = CsvStyle.Lax, HasHeaders = false });
+		Assert.True(csv.Read());
+
+		Assert.Equal(2, csv.RowFieldCount);
+		Assert.Equal("\"", csv.GetString(1));
+	}
+
+	[Fact]
 	public async Task BinaryValues()
 	{
 		using (var reader = File.OpenText("Data/Binary.csv"))
