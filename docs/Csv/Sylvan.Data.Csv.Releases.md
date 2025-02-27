@@ -1,4 +1,6 @@
 # Sylvan.Data.Csv Release Notes
+_1.4.1_
+- Fixes a bug with handling invalid CSV files where the final record contains only a double quote character right before the end of the file.
 
 _1.4.0_
 - Improve exception messages when CSV parsing encounters invalid data.
