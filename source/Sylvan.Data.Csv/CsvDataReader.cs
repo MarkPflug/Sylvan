@@ -84,15 +84,39 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		// the state when the end of the record set is reached
 		// not necessarily the end of the file when in multi-result set mode.
 		End,
-		// the state when the reader has bee closed/disposed.
+		// the state when the reader has been closed/disposed.
 		Closed,
+		// the reader has previously thrown an exception
+		Error,
 	}
 
-	void ValidateState()
+	void ValidateState(int ordinal)
 	{
 		if (this.state != State.Open)
 		{
-			throw new InvalidOperationException();
+			if (this.state == State.Error)
+			{
+				var errorFieldIdx = this.curFieldCount - 1;
+				if (ordinal < errorFieldIdx)
+				{
+					return;// can read the fields up to the one that had the error.
+				}
+				else
+				{
+					// pendingException is not null when in error state.
+					// if ever this supports resume-after-error it will need
+					// to clear the pending exception.
+					throw pendingException!;
+				}
+			}
+			else
+			{
+				var msg =
+					state != State.End
+					? "Invalid attempt to access fields before Read has been called."
+					: "Invalid attempt to access fields after the end of the record set has been reached.";
+				throw new InvalidOperationException(msg);
+			}
 		}
 	}
 
@@ -129,7 +153,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	OrdinalCache[] colCache = Array.Empty<OrdinalCache>();
 	int colCacheIdx;
 
-	// An exception that was created with initializing, and should be thrown on the next call to Read/ReadAsync
+	// An exception that was created while initializing, and should be thrown on the next call to Read/ReadAsync
 	Exception? pendingException;
 
 	// in multi-result set mode carryRow indicates that a row is already parsed
@@ -358,6 +382,72 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		}
 		this.colCache = new OrdinalCache[this.fieldCount];
 		this.state = hasHeaders ? State.Open : State.Initialized;
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	void ThrowPendingException()
+	{
+		var ex = this.pendingException;
+		if (ex != null)
+		{
+			this.state = State.Error;
+			throw ex;
+		}
+	}
+
+	void ThrowRecordTooLarge(int ordinal = 0)
+	{
+		// we know there's at least one more, but it doesn't fit in the buffer
+		this.curFieldCount++;
+		this.state = State.Error;
+		this.pendingException = new CsvRecordTooLargeException(this.rowNumber, ordinal);
+		throw this.pendingException;
+	}
+
+	static void ThrowErrorState()
+	{
+		throw new InvalidOperationException("A previous call to Read encountered an error and reading cannot continue.");
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	bool ReadCommon()
+	{
+		if (this.state == State.Initialized)
+		{
+			this.rowNumber++;
+			ThrowPendingException();
+			// after initizialization, the first record would already be in the buffer
+			// if hasRows is true.
+			if (hasRows)
+			{
+				this.state = State.Open;
+				return true;
+			}
+			else
+			{
+				this.state = State.End;
+			}
+		}
+		else if (this.state == State.Error)
+		{
+			ThrowErrorState();
+		}
+		this.rowNumber = -1;
+		return false;
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	bool ReadFinish(bool success)
+	{
+		if (!success || (this.resultSetMode == ResultSetMode.MultiResult && this.curFieldCount != this.fieldCount))
+		{
+			this.curFieldCount = 0;
+			this.idx = recordStart;
+			this.state = State.End;
+			this.rowNumber = -1;
+			return false;
+		}
+		return success;
 	}
 
 #if INTRINSICS
@@ -653,6 +743,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 			this.buffer = newBuffer;
 			return true;
 		}
+
 		return false;
 	}
 
@@ -710,7 +801,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 						if (atEndOfText)
 						{
 							// there was nothing to escape
-							pendingException = new CsvFormatException(rowNumber, fieldIdx);
+							this.pendingException = CsvInvalidCharacterException.Escape(rowNumber, fieldIdx, idx - 1 - recordStart, escape);
 							return ReadResult.False;
 						}
 						return ReadResult.Incomplete;
@@ -826,7 +917,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 					}
 					else
 					{
-						this.pendingException = new CsvFormatException(rowNumber, fieldIdx);
+						this.pendingException = CsvInvalidCharacterException.UnescapedQuote(rowNumber, fieldIdx, idx - 1 - recordStart, quote);
 						return ReadResult.False;
 					}
 				}
@@ -864,7 +955,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 					{
 						// if the field is quoted, we shouldn't be here.
 						// the only valid characters would be a delimiter, a new line, or EOF.
-						this.pendingException = new CsvFormatException(rowNumber, fieldIdx);
+						this.pendingException = CsvInvalidCharacterException.NewRecord(rowNumber, fieldIdx, idx - 1 - recordStart, c);
 						return ReadResult.False;
 					}
 				}
@@ -897,17 +988,17 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 				}
 				else
 				{
-					if (fieldEnd == (closeQuoteIdx - recordStart))
+					if (fieldEnd == (closeQuoteIdx - recordStart) && fieldEnd != this.idx + 1)
 					{
 						fi.quoteState = QuoteState.Quoted;
 					}
 					else
 					{
-						fi.quoteState = QuoteState.InvalidQuotes;
+						fi.quoteState = fieldEnd == this.idx + 1 ? QuoteState.Unquoted : QuoteState.InvalidQuotes;
 						if (style != CsvStyle.Lax)
 						{
 							var rowNumber = this.rowNumber == 0 && this.state == State.Initialized ? 1 : this.rowNumber;
-							this.pendingException = new CsvFormatException(rowNumber, fieldIdx);
+							this.pendingException = CsvInvalidCharacterException.UnclosedQuote(rowNumber, fieldIdx, idx - 1 - recordStart, quote);
 							return ReadResult.False;
 						}
 					}
@@ -1045,7 +1136,6 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override bool GetBoolean(int ordinal)
 	{
-		ValidateState();
 		// four cases:
 		// true and false both not null. Any other value raises error.
 		// true not null, false null. True string true, anything else false.
@@ -1107,7 +1197,6 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override byte GetByte(int ordinal)
 	{
-		ValidateState();
 #if SPAN
 		return byte.Parse(this.GetFieldSpan(ordinal), provider: culture);
 #else
@@ -1118,12 +1207,14 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override long GetBytes(int ordinal, long dataOffset, byte[]? buffer, int bufferOffset, int length)
 	{
-		ValidateState();
 		if (buffer == null)
 		{
 			return GetBinaryLength(ordinal);
 		}
-		if (dataOffset > int.MaxValue) throw new ArgumentOutOfRangeException(nameof(dataOffset));
+		if (dataOffset > int.MaxValue)
+		{
+			throw new ArgumentOutOfRangeException(nameof(dataOffset));
+		}
 
 		var col = this.columns[ordinal];
 		var encoding = col.ColumnBinaryEncoding ?? this.binaryEncoding;
@@ -1161,7 +1252,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		// align to the next base64 quad
 		if (rem != 0)
 		{
-			CsvDataReader.FromBase64Chars(iBuf, o + iOff, 4, scratch, 0, out int c);
+			FromBase64Chars(iBuf, o + iOff, 4, scratch, 0, out int c);
 			if (c == rem)
 			{
 				// we already decoded everything available in the previous pass
@@ -1192,7 +1283,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 			if (quadCount > 0)
 			{
 				var charCount = quadCount * 4;
-				CsvDataReader.FromBase64Chars(iBuf, o + iOff, charCount, oBuf, oOff, out int c);
+				FromBase64Chars(iBuf, o + iOff, charCount, oBuf, oOff, out int c);
 				length -= c;
 				iOff += charCount;
 				oOff += c;
@@ -1206,7 +1297,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 
 		if (length > 0)
 		{
-			CsvDataReader.FromBase64Chars(iBuf, o + iOff, 4, scratch, 0, out int c);
+			FromBase64Chars(iBuf, o + iOff, 4, scratch, 0, out int c);
 			c = length < c ? length : c;
 			for (int i = 0; i < c; i++)
 			{
@@ -1250,7 +1341,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 
 	const byte Invalid = 255;
 
-	static readonly byte[] HexMap = new byte[]
+	static readonly byte[] HexMap =
 		{
 			255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
 			255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
@@ -1285,7 +1376,6 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override char GetChar(int ordinal)
 	{
-		ValidateState();
 		var s = GetField(ordinal);
 		if (s.length == 1)
 		{
@@ -1297,7 +1387,6 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override long GetChars(int ordinal, long dataOffset, char[]? buffer, int bufferOffset, int length)
 	{
-		ValidateState();
 		if (buffer == null)
 		{
 			return this.GetCharLength(ordinal);
@@ -1317,7 +1406,6 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// </summary>
 	public TimeSpan GetTimeSpan(int ordinal)
 	{
-		ValidateState();
 		var format = columns[ordinal].Format;
 #if SPAN
 		var span = this.GetFieldSpan(ordinal);
@@ -1341,7 +1429,6 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// </summary>
 	public DateTimeOffset GetDateTimeOffset(int ordinal)
 	{
-		ValidateState();
 		var format = columns[ordinal].Format ?? this.dateTimeFormat;
 		DateTimeOffset value;
 #if SPAN
@@ -1368,7 +1455,6 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override DateTime GetDateTime(int ordinal)
 	{
-		ValidateState();
 		DateTime value;
 #if SPAN
 		var span = this.GetFieldSpan(ordinal);
@@ -1396,7 +1482,6 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override decimal GetDecimal(int ordinal)
 	{
-		ValidateState();
 #if SPAN
 		var field = this.GetField(ordinal);
 		return
@@ -1410,7 +1495,6 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override double GetDouble(int ordinal)
 	{
-		ValidateState();
 #if SPAN
 		var field = this.GetField(ordinal);
 		return
@@ -1443,7 +1527,6 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override float GetFloat(int ordinal)
 	{
-		ValidateState();
 #if SPAN
 		var field = this.GetField(ordinal);
 		return
@@ -1457,7 +1540,6 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override Guid GetGuid(int ordinal)
 	{
-		ValidateState();
 #if SPAN
 		return Guid.Parse(this.GetFieldSpan(ordinal));
 #else
@@ -1468,7 +1550,6 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override short GetInt16(int ordinal)
 	{
-		ValidateState();
 #if SPAN
 		var field = this.GetField(ordinal);
 		return
@@ -1482,7 +1563,6 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override int GetInt32(int ordinal)
 	{
-		ValidateState();
 #if SPAN
 		var field = this.GetField(ordinal);
 		return
@@ -1496,7 +1576,6 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override long GetInt64(int ordinal)
 	{
-		ValidateState();
 #if SPAN
 		var field = this.GetField(ordinal);
 		return
@@ -1546,7 +1625,10 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override string GetString(int ordinal)
 	{
-		ValidateState();
+		if (state != State.Open)
+		{
+			ValidateState(ordinal);
+		}
 		return GetStringRaw(ordinal);
 	}
 
@@ -1576,12 +1658,6 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 
 		public CharSpan(char[] buffer, int offset, int length)
 		{
-#if DEBUG
-			if (offset < 0 || length < 0)
-			{
-				throw new Exception();
-			}
-#endif
 			Debug.Assert(offset >= 0);
 			Debug.Assert(length >= 0);
 			this.buffer = buffer;
@@ -1635,6 +1711,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	internal CharSpan GetField(int ordinal)
 	{
+		ValidateState(ordinal);
 		if ((uint)ordinal < (uint)this.curFieldCount)
 		{
 			return GetFieldUnsafe(ordinal);
@@ -1716,7 +1793,8 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 					{
 						// we should never get here. Invalid fields should always be
 						// handled in ReadField and end up in PrepareInvalidField
-						throw new CsvFormatException(rowNumber, -1);
+						throw new CsvFormatException(rowNumber, -1,
+							$"An quote escape character ({escape}) was the last character of a quoted field.");
 					}
 				}
 				else
@@ -1793,7 +1871,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override object GetValue(int ordinal)
 	{
-		ValidateState();
+		ValidateState(ordinal);
 		var max = Math.Max(this.fieldCount, this.curFieldCount);
 
 		if (ordinal > max)
@@ -1822,7 +1900,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		{
 			BinaryEncoding.Base64 => GetBase64Length(span),
 			BinaryEncoding.Hexadecimal => GetHexLength(span, out _),
-			_ => throw new NotSupportedException(),// TODO: improve error message.
+			_ => throw new NotSupportedException("Unknown BinaryEncoding specified."),
 		};
 	}
 
@@ -1864,7 +1942,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override int GetValues(object[] values)
 	{
-		ValidateState();
+		// state ValidateState happens inside GetValue in the loop.
 		var count = Math.Min(this.fieldCount, values.Length);
 		for (int i = 0; i < count; i++)
 		{
@@ -1876,7 +1954,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override bool IsDBNull(int ordinal)
 	{
-		ValidateState();
+		ValidateState(ordinal);
 		if (ordinal < 0) throw new ArgumentOutOfRangeException(nameof(ordinal));
 
 		if ((uint)ordinal < this.fieldCount)
@@ -2064,7 +2142,10 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <returns>A span containing the characters of the field.</returns>
 	public ReadOnlySpan<char> GetFieldSpan(int ordinal)
 	{
-		ValidateState();
+		if (this.state != State.Open)
+		{
+			ValidateState(ordinal);
+		}
 		var s = GetField(ordinal);
 		return s.ToSpan();
 	}
@@ -2119,7 +2200,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 				{
 					return EnumAccessor<T>.Instance;
 				}
-				throw new NotSupportedException(); // TODO: exception type?
+				throw new NotSupportedException($"CsvDataReader does not support accessing values as type '{typeof(T).FullName}'.");
 			}
 			return acc;
 		}
@@ -2128,7 +2209,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override T GetFieldValue<T>(int ordinal)
 	{
-		ValidateState();
+		ValidateState(ordinal);
 		var acc = Accessor<T>.Instance;
 		return acc.GetValue(this, ordinal);
 	}
