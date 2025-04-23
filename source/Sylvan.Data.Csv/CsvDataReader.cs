@@ -907,7 +907,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 			{
 				if (c == delimiter)
 				{
-					fieldEnd = idx - 1 - recordStart;
+					fieldEnd = idx - 1;
 					complete = true;
 					break;
 				}
@@ -939,7 +939,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 					{
 						continue;
 					}
-					fieldEnd = temp - recordStart;
+					fieldEnd = temp;
 					complete = true;
 					last = true;
 					break;
@@ -992,7 +992,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 				else
 				{
 					var finalQuoteIsFirstCharacter = fieldEnd == this.idx + 1;
-					if (fieldEnd == (closeQuoteIdx - recordStart) && !finalQuoteIsFirstCharacter)
+					if (fieldEnd == closeQuoteIdx && !finalQuoteIsFirstCharacter)
 					{
 						fi.quoteState = QuoteState.Quoted;
 					}
@@ -1010,7 +1010,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 			}
 
 			fi.escapeCount = escapeCount;
-			fi.endIdx = complete ? fieldEnd : (idx - recordStart);
+			fi.endIdx = (complete ? fieldEnd : idx) - recordStart;
 			this.idx = idx;
 
 			if (complete)
