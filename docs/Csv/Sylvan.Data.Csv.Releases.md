@@ -1,4 +1,8 @@
 # Sylvan.Data.Csv Release Notes
+_1.4.2_
+- Fixes a bug with quoted field handling.
+- Improves performance of quoted field handling.
+
 _1.4.1_
 - Fixes a bug with handling invalid CSV files where the final record contains only a double quote character right before the end of the file.
 
