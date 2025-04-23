@@ -170,6 +170,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	readonly char escape;
 	readonly char comment;
 	char minSafe;
+	char minSafeQuote;
 	NewLineMode newLineMode;
 	readonly bool ownsReader;
 	readonly CultureInfo culture;
@@ -830,64 +831,68 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 					while (idx < bufferEnd)
 					{
 						c = buffer[idx++];
-						if (c == escape)
+						if (c <= minSafeQuote)
 						{
-							if (idx < bufferEnd)
+							if (c == escape)
 							{
-								c = buffer[idx++]; // the escaped char
-								if (c == escape || c == quote)
+								if (idx < bufferEnd)
 								{
-									escapeCount++;
-									continue;
-								}
-								else
-								if (escape == quote)
-								{
-									idx--;
-									closeQuoteIdx = idx;
-									fieldEnd = closeQuoteIdx;
-									// the quote (escape) we just saw was a the closing quote
-									break;
-								}
-							}
-							else
-							{
-								if (atEndOfText)
-								{
+									c = buffer[idx++]; // the escaped char
+									if (c == escape || c == quote)
+									{
+										escapeCount++;
+										continue;
+									}
+									else
 									if (escape == quote)
 									{
-										complete = true;
-										last = true;
+										idx--;
 										closeQuoteIdx = idx;
 										fieldEnd = closeQuoteIdx;
 										// the quote (escape) we just saw was a the closing quote
+										break;
 									}
-									break;
 								}
-								return ReadResult.Incomplete;
+								else
+								{
+									if (atEndOfText)
+									{
+										if (escape == quote)
+										{
+											complete = true;
+											last = true;
+											closeQuoteIdx = idx;
+											fieldEnd = closeQuoteIdx;
+											// the quote (escape) we just saw was a the closing quote
+										}
+										break;
+									}
+									return ReadResult.Incomplete;
+								}
 							}
-						}
 
-						if (c == quote)
-						{
-							// immediately after the quote should be a delimiter, eol, or eof, but...
-							// we can simply treat the remainder of the record like a normal unquoted field
-							// we are currently positioned on the quote, the next while loop will consume it
-							closeQuoteIdx = idx;
-							fieldEnd = closeQuoteIdx;
-							break;
-						}
-						if (IsEndOfLine(c))
-						{
-							idx--;
-							var r = ConsumeLineEnd(buffer, ref idx);
-							if (r == ReadResult.Incomplete)
+							if (c == quote)
 							{
-								return ReadResult.Incomplete;
+								// immediately after the quote should be a delimiter, eol, or eof, but...
+								// we can simply treat the remainder of the record like a normal unquoted field
+								// we are currently positioned on the quote, the next while loop will consume it
+								closeQuoteIdx = idx;
+								fieldEnd = closeQuoteIdx;
+								break;
 							}
-							else
+
+							if (IsEndOfLine(c))
 							{
-								// continue on. We are inside a quoted string, so the newline is part of the value.
+								idx--;
+								var r = ConsumeLineEnd(buffer, ref idx);
+								if (r == ReadResult.Incomplete)
+								{
+									return ReadResult.Incomplete;
+								}
+								else
+								{
+									// continue on. We are inside a quoted string, so the newline is part of the value.
+								}
 							}
 						}
 					} // we exit this loop when we reach the closing quote.
@@ -902,7 +907,6 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 			{
 				if (c == delimiter)
 				{
-					this.idx = idx;
 					fieldEnd = idx - 1 - recordStart;
 					complete = true;
 					break;
@@ -964,7 +968,6 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 
 		if (complete || atEndOfText)
 		{
-
 			if (atEndOfText && !complete)
 			{
 				fieldEnd = idx;
@@ -988,13 +991,14 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 				}
 				else
 				{
-					if (fieldEnd == (closeQuoteIdx - recordStart) && fieldEnd != this.idx + 1)
+					var finalQuoteIsFirstCharacter = fieldEnd == this.idx + 1;
+					if (fieldEnd == (closeQuoteIdx - recordStart) && !finalQuoteIsFirstCharacter)
 					{
 						fi.quoteState = QuoteState.Quoted;
 					}
 					else
 					{
-						fi.quoteState = fieldEnd == this.idx + 1 ? QuoteState.Unquoted : QuoteState.InvalidQuotes;
+						fi.quoteState = finalQuoteIsFirstCharacter ? QuoteState.Unquoted : QuoteState.InvalidQuotes;
 						if (style != CsvStyle.Lax)
 						{
 							var rowNumber = this.rowNumber == 0 && this.state == State.Initialized ? 1 : this.rowNumber;
