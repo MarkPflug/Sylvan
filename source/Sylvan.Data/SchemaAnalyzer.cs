@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
@@ -22,6 +23,9 @@ public sealed class SchemaAnalyzerOptions
 		this.AnalyzeRowCount = 10000;
 		//this.ColumnSizer = ColumnSize.Human;
 		this.DetectSeries = false;
+		this.TrueStrings = new() { "y", "yes", "t", "true" };
+		this.FalseStrings = new() { "n", "no", "f", "false" };
+		DateOnlyTimeOnlyTimespanUsage = DateTimeTimespanDateOnlyTimeOnlyUsageOptions.DateTimeAndString;
 	}
 
 	/// <summary>
@@ -35,6 +39,49 @@ public sealed class SchemaAnalyzerOptions
 	public bool DetectSeries { get; set; }
 
 	//public IColumnSizeStrategy ColumnSizer { get; set; }
+
+	/// <summary>
+	/// Values to be interpreted as boolean true.
+	/// Default values are "y", "yes", "t", "true".
+	/// </summary>
+	public List<string> TrueStrings { get; set; }
+	/// <summary>
+	/// Values to be interpreted as boolean true.
+	/// Default values are "n", "no", "f", "false".
+	/// </summary>
+	public List<string> FalseStrings { get; set; }
+
+	/// <summary>
+	/// Set the preference order for usage of DateTime, Timespan, DateOnly and/or TimeOnly
+	/// </summary>
+	public DateTimeTimespanDateOnlyTimeOnlyUsageOptions DateOnlyTimeOnlyTimespanUsage { get; set; }
+}
+
+/// <summary>
+/// Options to preference different data types during the analysis
+/// </summary>
+public enum DateTimeTimespanDateOnlyTimeOnlyUsageOptions
+{
+	/// <summary>
+	/// This is the original behaviour
+	/// Assesses time only values greater than 24 hours as string, time values less than 24 hours as DateTime and dates/date times as DateTime.
+	/// i.e. 48:12:23 assessed as string, 12:00:00 assessed as DateTime, 01-01-2020 or 01-01-2020 12:00:00 or 2016-12-23T08:57:21.649 assessed as DateTime.
+	/// </summary>
+	DateTimeAndString,
+
+	/// <summary>
+	/// Assesses time only values as Timespan and dates/date times as DateTime
+	/// i.e. 12:00:00 or 48:12:23 assessed as Timespan, 01-01-2020 or 01-01-2020 12:00:00 or 2016-12-23T08:57:21.649 assessed as DateTime.
+	/// </summary>
+	TimespanAndDateTime,
+
+#if NET6_0_OR_GREATER
+	/// <summary>
+	/// Assess TimeOnly or DateOnly types rather than DateTime.
+	/// i.e. 12:00:00 assessed as TimeOnly, 01-01-2020 assessed as DateOnly, 48:12:23 assessed as Timespan, 01-01-2020 12:00:00 or 2016-12-23T08:57:21.649 assessed as DateTime.
+	/// </summary>
+	TimeOnlyAndDateOnlyOverTimespanAndDateTime
+#endif
 }
 
 //public class ColumnSize
@@ -116,6 +163,9 @@ public sealed partial class SchemaAnalyzer
 	readonly int rowCount;
 	//IColumnSizeStrategy sizer;
 	readonly bool detectSeries;
+	readonly IReadOnlyCollection<string>? trueStrings;
+	readonly IReadOnlyCollection<string>? falseStrings;
+	readonly DateTimeTimespanDateOnlyTimeOnlyUsageOptions dateOnlyTimeOnlyTimespanUsage;
 
 	/// <summary>
 	/// Creates a new SchemaAnalyzer.
@@ -126,6 +176,9 @@ public sealed partial class SchemaAnalyzer
 		this.rowCount = options.AnalyzeRowCount;
 		//this.sizer = options.ColumnSizer;
 		this.detectSeries = options.DetectSeries;
+		this.trueStrings = options.TrueStrings;
+		this.falseStrings = options.FalseStrings;
+		this.dateOnlyTimeOnlyTimespanUsage = options.DateOnlyTimeOnlyTimespanUsage;
 	}
 
 	/// <summary>
@@ -144,10 +197,16 @@ public sealed partial class SchemaAnalyzer
 		var colInfos = new ColumnInfo[dataReader.FieldCount];
 		for (int i = 0; i < colInfos.Length; i++)
 		{
-			colInfos[i] = new ColumnInfo(dataReader, i);
+			colInfos[i] = new ColumnInfo(dataReader, i)
+			{
+				TrueStrings = trueStrings,
+				FalseStrings = falseStrings,
+				DateTimeDateOnlyTimeOnlyTimespanUsage = dateOnlyTimeOnlyTimespanUsage
+			};
 		}
 
-		var sw = Stopwatch.StartNew();
+		// Commented out the StopWatch as it looks like it may have been used for performance testing and hadn't been removed.
+		//var sw = Stopwatch.StartNew();
 		int c = 0;
 		while (await dataReader.ReadAsync().ConfigureAwait(false) && c++ < rowCount)
 		{
@@ -156,7 +215,7 @@ public sealed partial class SchemaAnalyzer
 				colInfos[i].Analyze(dataReader, i);
 			}
 		}
-		sw.Stop();
+		//sw.Stop();
 
 		return new AnalysisResult(detectSeries, colInfos);
 	}
@@ -197,7 +256,10 @@ public sealed class ColumnInfo
 				isDateTime = isDate = true;
 				break;
 			case TypeCode.String:
-				isBoolean = isInt = isFloat = isDecimal = isDate = isDateTime = isGuid = true;
+				isBoolean = isInt = isFloat = isDecimal = isDate = isDateTime = isTimeSpan = isGuid = true;
+#if NET6_0_OR_GREATER
+				isDateOnly = isTimeOnly = true;
+#endif
 				break;
 			default:
 				if (type == typeof(byte[]))
@@ -246,12 +308,16 @@ public sealed class ColumnInfo
 	/// Gets the column name.
 	/// </summary>
 	public string? Name => this.name;
+
 	readonly Type type;
 
 	bool isAscii;
 	readonly int ordinal;
 	readonly string? name;
-	bool isBoolean, isInt, isFloat, isDate, isDateTime, isGuid;
+	bool isBoolean, isInt, isFloat, isDate, isDateTime, isTimeSpan, isGuid;
+#if NET6_0_OR_GREATER
+	bool isDateOnly, isTimeOnly;
+#endif
 
 	bool isDecimal;
 	bool dateHasFractionalSeconds;
@@ -276,8 +342,13 @@ public sealed class ColumnInfo
 
 	readonly Dictionary<string, int> valueCount;
 
+	DateTime? dateValue;
+	TimeSpan? timeSpanValue;
+
 	internal void Analyze(DbDataReader dr, int ordinal)
 	{
+		dateValue = null;
+		timeSpanValue = null;
 		count++;
 		var isNull = dr.IsDBNull(ordinal);
 		if (isNull)
@@ -291,7 +362,11 @@ public sealed class ColumnInfo
 		long? intValue = null;
 		double? floatValue = null;
 		decimal? decimalValue = null;
-		DateTime? dateValue = null;
+
+#if NET6_0_OR_GREATER
+		DateOnly? dateOnlyValue = null;
+		TimeOnly? timeOnlyValue = null;
+#endif
 		string? stringValue = null;
 		Guid? guidValue;
 
@@ -383,13 +458,38 @@ public sealed class ColumnInfo
 							}
 							if (isDateTime || isDate)
 							{
-								if (DateTime.TryParse(stringValue, out var d))
+								switch (DateTimeDateOnlyTimeOnlyTimespanUsage)
 								{
-									dateValue = d;
-								}
-								else
-								{
-									isDate = isDateTime = false;
+									case DateTimeTimespanDateOnlyTimeOnlyUsageOptions.DateTimeAndString:
+										AssessDateTime(stringValue);
+										break;
+									case DateTimeTimespanDateOnlyTimeOnlyUsageOptions.TimespanAndDateTime:
+										AssessDateTimeAndTimeSpan(stringValue);
+										break;
+#if NET6_0_OR_GREATER
+									case DateTimeTimespanDateOnlyTimeOnlyUsageOptions.TimeOnlyAndDateOnlyOverTimespanAndDateTime:
+										bool containsDateSeparators = dateSeparators.Any(sep => stringValue.Contains(sep));
+										bool containsTimeSeparators = timeSeparators.Any(sep => stringValue.Contains(sep));
+										if (containsDateSeparators && !containsTimeSeparators && DateOnly.TryParse(stringValue, out DateOnly dateOnlyResult))
+										{
+											// Ensure the string does not contain time components and follows common date formats
+											dateOnlyValue = dateOnlyResult;
+											isTimeOnly = isDateTime = isTimeSpan = false;
+										}
+										else if (!containsDateSeparators && containsTimeSeparators && TimeOnly.TryParse(stringValue, out TimeOnly timeOnlyResult))
+										{
+											// Ensure the string does not contain date components
+											timeOnlyValue = timeOnlyResult;
+											isDateOnly = isDateTime = isTimeSpan = false;
+										}
+										else
+										{
+											AssessDateTimeAndTimeSpan(stringValue);
+										}
+										break;
+#endif
+									default:
+										throw new NotSupportedException("DateTimeTimespanDateOnlyTimeOnlyUsageOption not supported.");
 								}
 							}
 							if (isGuid)
@@ -508,6 +608,41 @@ public sealed class ColumnInfo
 		}
 	}
 
+	void AssessDateTimeAndTimeSpan(in string stringValue)
+	{
+		if ((!int.TryParse(stringValue, out var _)) && TimeSpan.TryParse(stringValue, out var timeSpanResult1))
+		{
+			timeSpanValue = timeSpanResult1;
+			isDateTime = false;
+#if NET6_0_OR_GREATER
+			isDateOnly = isTimeOnly = false;
+#endif
+		}
+		else
+		{
+			AssessDateTime(stringValue);
+		}
+	}
+
+	void AssessDateTime(in string stringValue)
+	{
+		if (DateTime.TryParse(stringValue, out var d1))
+		{
+			dateValue = d1;
+			isTimeSpan = false;
+#if NET6_0_OR_GREATER
+			isDateOnly = isTimeOnly = false;
+#endif
+		}
+		else
+		{
+			isDate = isDateTime = isTimeSpan = false;
+#if NET6_0_OR_GREATER
+			isDateOnly = isTimeOnly = false;
+#endif
+		}
+	}
+
 	static int GetScale(decimal d)
 	{
 		return new DecimalScale(d).Scale;
@@ -547,15 +682,15 @@ public sealed class ColumnInfo
 
 	static readonly Type[] ColTypes = new[]
 	{
-			typeof(bool),
-			typeof(DateTime),
-			typeof(int),
-			typeof(long),
-			typeof(float),
-			typeof(double),
-			typeof(decimal),
-			typeof(string),
-		};
+		typeof(bool),
+		typeof(DateTime),
+		typeof(int),
+		typeof(long),
+		typeof(float),
+		typeof(double),
+		typeof(decimal),
+		typeof(string),
+	};
 
 	internal ColType GetColType()
 	{
@@ -619,7 +754,23 @@ public sealed class ColumnInfo
 		{
 			return new Schema.Column.Builder(name, typeof(bool), isNullable);
 		}
+#if NET6_0_OR_GREATER
+		if (this.isDateOnly)
+		{
+			return new Schema.Column.Builder(name, typeof(DateOnly), isNullable);
+		}
+		if (this.isTimeOnly)
+		{
+			return new Schema.Column.Builder(name, typeof(TimeOnly), isNullable);
+		}
+#endif
 
+		if (this.isTimeSpan)
+		{
+			return new Schema.Column.Builder(name, typeof(TimeSpan), isNullable)
+			{
+			};
+		}
 		if (this.isDate || this.isDateTime)
 		{
 			int? scale = isDate ? (int?)null : dateHasFractionalSeconds ? 7 : 0;
@@ -663,20 +814,26 @@ public sealed class ColumnInfo
 		if (len < 6 && valueCount.Count <= 2)
 		{
 			string? t = null, f = null;
-			foreach (var s in TrueStrings)
+			if (TrueStrings != null)
 			{
-				if (valueCount.ContainsKey(s))
+				foreach (var s in TrueStrings)
 				{
-					t = s;
-					break;
+					if (valueCount.ContainsKey(s))
+					{
+						t = s;
+						break;
+					}
 				}
 			}
-			foreach (var s in FalseStrings)
+			if (FalseStrings != null)
 			{
-				if (valueCount.ContainsKey(s))
+				foreach (var s in FalseStrings)
 				{
-					f = s;
-					break;
+					if (valueCount.ContainsKey(s))
+					{
+						f = s;
+						break;
+					}
 				}
 			}
 			if (t != null || f != null)
@@ -703,8 +860,11 @@ public sealed class ColumnInfo
 	}
 
 	// TODO: consider localization?
-	static readonly string[] TrueStrings = new[] { "y", "yes", "t", "true" };
-	static readonly string[] FalseStrings = new[] { "n", "no", "f", "false" };
+	internal IReadOnlyCollection<string>? TrueStrings;
+	internal IReadOnlyCollection<string>? FalseStrings;
+	internal DateTimeTimespanDateOnlyTimeOnlyUsageOptions DateTimeDateOnlyTimeOnlyTimespanUsage;
+	readonly char[] dateSeparators = new[] { '-', '/', '.' };
+	readonly char[] timeSeparators = new[] { ':', 'T' };
 
 	//static bool IsDecimalHeader(string? name)
 	//{
