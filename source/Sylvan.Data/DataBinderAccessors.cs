@@ -306,8 +306,13 @@ partial class DataBinder
 				return typeof(Guid);
 			case DbType.DateTime:
 			case DbType.DateTime2:
-			case DbType.Date:
 				return typeof(DateTime);
+			case DbType.Date:
+#if NET6_0_OR_GREATER
+				return typeof(DateOnly);
+#else
+				return typeof(DateTime);
+#endif
 			case DbType.DateTimeOffset:
 				return typeof(DateTimeOffset);
 		}
