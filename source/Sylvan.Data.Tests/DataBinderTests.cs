@@ -1,12 +1,17 @@
 ﻿using Sylvan.Data.Csv;
 using System;
 using System.Collections.ObjectModel;
-using System.Data;
 using System.Data.Common;
 using System.IO;
 using System.Linq;
 using System.Runtime.Serialization;
 using Xunit;
+
+#if NET6_0_OR_GREATER
+using DateType = System.DateOnly;
+#else
+using DateType = System.DateTime;
+#endif
 
 namespace Sylvan.Data
 {
@@ -332,7 +337,7 @@ namespace Sylvan.Data
 		{
 			public string State { get; set; }
 			public string County { get; set; }
-			public Series<DateTime, int> Values { get; set; }
+			public Series<DateType, int> Values { get; set; }
 		}
 
 		[Fact]
@@ -404,7 +409,7 @@ namespace Sylvan.Data
 
 		sealed class ManualBinder : IDataBinder<SeriesDateRecord>
 		{
-			readonly DataSeriesAccessor<DateTime, int> series0;
+			readonly DataSeriesAccessor<DateType, int> series0;
 			readonly int idIdx;
 			readonly int nameIdx;
 
@@ -415,15 +420,15 @@ namespace Sylvan.Data
 				var seriesCols =
 					schema
 					.Where(c => DateTime.TryParse(c.ColumnName, out _))
-					.Select(c => new DataSeriesColumn<DateTime>(c.ColumnName, DateTime.Parse(c.ColumnName), c.ColumnOrdinal.Value));
-				this.series0 = new DataSeriesAccessor<DateTime, int>(seriesCols);
+					.Select(c => new DataSeriesColumn<DateType>(c.ColumnName, DateType.Parse(c.ColumnName), c.ColumnOrdinal.Value));
+				this.series0 = new DataSeriesAccessor<DateType, int>(seriesCols);
 			}
 
 			public void Bind(DbDataReader record, SeriesDateRecord item)
 			{
 				item.Id = record.GetInt32(idIdx);
 				item.Name = record.GetString(nameIdx);
-				item.Values = new Series<DateTime, int>(this.series0, record);
+				item.Values = new Series<DateType, int>(this.series0, record);
 			}
 
 			public void Bind(DbDataReader record, object item)
@@ -600,7 +605,7 @@ namespace Sylvan.Data
 	{
 		public int Id { get; set; }
 		public string Name { get; set; }
-		public Series<DateTime, int> Values { get; set; }
+		public Series<DateType, int> Values { get; set; }
 	}
 
 	class Record
