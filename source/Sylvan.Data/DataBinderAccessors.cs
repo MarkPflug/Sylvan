@@ -27,6 +27,8 @@ partial class DataBinder
 		return name;
 	}
 
+	private static readonly bool MapDateToDateTime;
+
 	//internal static readonly Type IDataRecordType = typeof(IDataRecord);
 	internal static readonly Type DbDataRecordType = typeof(DbDataRecord);
 
@@ -52,6 +54,8 @@ partial class DataBinder
 #endif
 	static DataBinder()
 	{
+		AppContext.TryGetSwitch("Sylvan.Data.MapDateToDateTime", out MapDateToDateTime);
+
 		//IDataRecordType = typeof(IDataRecord);
 		DbDataRecordType = typeof(DbDataReader);
 		IsDbNullMethod = DbDataRecordType.GetMethod("IsDBNull")!;
@@ -309,7 +313,7 @@ partial class DataBinder
 				return typeof(DateTime);
 			case DbType.Date:
 #if NET6_0_OR_GREATER
-				return typeof(DateOnly);
+				return MapDateToDateTime ? typeof(DateTime) : typeof(DateOnly);
 #else
 				return typeof(DateTime);
 #endif
