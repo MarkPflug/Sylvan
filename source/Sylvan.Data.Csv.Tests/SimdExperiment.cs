@@ -9,7 +9,18 @@ namespace Sylvan.Data.Csv;
 
 public unsafe class SimdExperiment
 {
-	[Fact]
+	private sealed class SkipIfSse2UnsupportedFactAttribute : FactAttribute
+	{
+		public SkipIfSse2UnsupportedFactAttribute()
+		{
+			if (!Sse2.IsSupported)
+			{
+				Skip = "SSE2 is not supported";
+			}
+		}
+	}
+
+	[SkipIfSse2UnsupportedFact]
 	public void Test1()
 	{
 		var mask = VectorForChar('\n');
