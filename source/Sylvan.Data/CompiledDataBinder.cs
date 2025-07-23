@@ -12,9 +12,7 @@ using System.Runtime.Serialization;
 
 namespace Sylvan.Data;
 
-sealed class CompiledDataBinder<T>
-	: IDataBinder<T>, IDataSeriesBinder
-	where T : class
+sealed class CompiledDataBinder : IDataSeriesBinder, IDataBinder
 {
 	object? IDataSeriesBinder.GetSeriesAccessor(string seriesName)
 	{
@@ -25,7 +23,7 @@ sealed class CompiledDataBinder<T>
 		return null;
 	}
 
-	readonly Action<DbDataReader, BinderContext, T> recordBinderFunction;
+	readonly Action<DbDataReader, BinderContext, object> recordBinderFunction;
 	readonly object[] state;
 	readonly CultureInfo cultureInfo;
 	readonly BinderContext context;
@@ -34,9 +32,10 @@ sealed class CompiledDataBinder<T>
 
 	internal CompiledDataBinder(
 		DataBinderOptions opts,
-		ReadOnlyCollection<DbColumn> physicalSchema
+		ReadOnlyCollection<DbColumn> physicalSchema,
+		Type recordType
 	)
-		: this(opts, physicalSchema, physicalSchema)
+		: this(opts, physicalSchema, physicalSchema, recordType)
 	{
 	}
 
@@ -67,7 +66,8 @@ sealed class CompiledDataBinder<T>
 	internal CompiledDataBinder(
 		DataBinderOptions opts,
 		ReadOnlyCollection<DbColumn> physicalSchema,
-		ReadOnlyCollection<DbColumn> logicalSchema
+		ReadOnlyCollection<DbColumn> logicalSchema,
+		Type recordType
 	)
 	{
 		// A couple notable optimizations:
@@ -79,11 +79,7 @@ sealed class CompiledDataBinder<T>
 		// stores contextual state used by the binder.
 		var state = new List<object>();
 
-		var physicalColumns = new HashSet<DbColumn>();
-		foreach (var col in physicalSchema)
-		{
-			physicalColumns.Add(col);
-		}
+		var physicalColumns = new HashSet<DbColumn>(physicalSchema);
 
 		this.cultureInfo = opts.Culture ?? CultureInfo.InvariantCulture;
 
@@ -134,11 +130,10 @@ sealed class CompiledDataBinder<T>
 		var drType = typeof(DbDataReader);
 		var isDbNullMethod = drType.GetMethod("IsDBNull")!;
 
-		var recordType = typeof(T);
-
 		var recordParam = Expression.Parameter(drType);
 		var contextParam = Expression.Parameter(typeof(BinderContext));
-		var itemParam = Expression.Parameter(recordType);
+		var objectParam = Expression.Parameter(typeof(object));
+		var itemParam = Expression.Convert(objectParam, recordType);
 		var idxVar = Expression.Parameter(typeof(int));
 		//var localsMap = new Dictionary<Type, ParameterExpression>();
 		var stateVar = Expression.Variable(typeof(object[]));
@@ -495,7 +490,7 @@ sealed class CompiledDataBinder<T>
 		body = Expression.TryCatch(body, catchExpr);
 		body = Expression.Block(locals, body);
 
-		var lf = Expression.Lambda<Action<DbDataReader, BinderContext, T>>(body, recordParam, contextParam, itemParam);
+		var lf = Expression.Lambda<Action<DbDataReader, BinderContext, object>>(body, recordParam, contextParam, objectParam);
 		this.recordBinderFunction = lf.Compile();
 		this.context = new BinderContext(this.cultureInfo, this.state);
 	}
@@ -785,20 +780,8 @@ sealed class CompiledDataBinder<T>
 		return result!;
 	}
 
-	void IDataBinder<T>.Bind(DbDataReader record, T item)
-	{
-		recordBinderFunction(record, this.context, item);
-	}
-
 	void IDataBinder.Bind(DbDataReader record, object item)
 	{
-		if (item is T t)
-		{
-			((IDataBinder<T>)this).Bind(record, t);
-		}
-		else
-		{
-			throw new ArgumentException();
-		}
+		recordBinderFunction(record, this.context, item);
 	}
 }

@@ -226,3 +226,6 @@ reports/
 # foxpro
 *.dbf
 *.fpt
+
+# Rider files
+.idea/

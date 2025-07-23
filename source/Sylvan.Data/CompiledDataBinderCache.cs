@@ -1,7 +1,20 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Data.Common;
 
 namespace Sylvan.Data;
+
+sealed class CompiledBinderCache
+{
+	static ConcurrentDictionary<SchemaKey, CompiledDataBinder> SchemaCache = new();
+
+	internal static CompiledDataBinder GetBinder(DbDataReader reader, DataBinderOptions opts, Type recordType)
+	{
+		var s = ((IDbColumnSchemaGenerator)reader).GetColumnSchema();
+		var key = new SchemaKey(s);
+		return SchemaCache.GetOrAdd(key, (key) => new CompiledDataBinder(opts, s, recordType));
+	}
+}
 
 sealed class CompiledBinderCache<T>
 	where T : class
