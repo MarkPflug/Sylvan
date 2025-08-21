@@ -12,13 +12,31 @@ namespace Sylvan.Data;
 static partial class DataExtensions
 {
 	/// <summary>
-	/// Write a data set to a UTF-8 encoded JSON stream;
+	/// Writes a data set to a UTF-8 encoded JSON stream.
 	/// </summary>
 	/// <returns>The number of records written.</returns>
 	public static long WriteJson(this DbDataReader data, Stream stream)
 	{
 		using var writer = new Utf8JsonWriter(stream);
+		return WriteJson(data, writer);
+	}
 
+	/// <summary>
+	/// Asynchronously writes a data set to a UTF-8 encoded JSON stream.
+	/// </summary>
+	/// <returns>The number of records written.</returns>
+	public static Task<long> WriteJsonAsync(this DbDataReader data, Stream stream)
+	{
+		using var writer = new Utf8JsonWriter(stream);
+		return WriteJsonAsync(data, writer);
+	}
+
+	/// <summary>
+	/// Writes a data set to a Utf8JsonWriter.
+	/// </summary>
+	/// <returns>The number of records written.</returns>
+	public static long WriteJson(this DbDataReader data, Utf8JsonWriter writer)
+	{
 		writer.WriteStartArray();
 		long count = 0;
 
@@ -28,45 +46,30 @@ static partial class DataExtensions
 		{
 			count++;
 			WriteRecord(data, names, writer);
-			if (writer.BytesPending > 0x1000)
-			{
-				writer.Flush();
-			}
 		}
 
 		writer.WriteEndArray();
-		writer.Flush();
 		return count;
 	}
-
 	/// <summary>
-	/// Write a data set to a UTF-8 encoded JSON stream;
+	/// Asynchronously writes a data set to a Utf8JsonWriter.
 	/// </summary>
 	/// <returns>The number of records written.</returns>
-	public static async Task<long> WriteJsonAsync(this DbDataReader data, Stream stream)
+	public static async Task<long> WriteJsonAsync(this DbDataReader data, Utf8JsonWriter writer)
 	{
-		var writer = new Utf8JsonWriter(stream);
-		await using (writer.ConfigureAwait(false))
+		writer.WriteStartArray();
+		long count = 0;
+
+		var names = GetNames(data);
+
+		while (await data.ReadAsync().ConfigureAwait(false))
 		{
-			writer.WriteStartArray();
-			long count = 0;
-
-			var names = GetNames(data);
-
-			while (await data.ReadAsync().ConfigureAwait(false))
-			{
-				count++;
-				WriteRecord(data, names, writer);
-				if (writer.BytesPending > 0x1000)
-				{
-					await writer.FlushAsync().ConfigureAwait(false);
-				}
-			}
-
-			writer.WriteEndArray();
-			await writer.FlushAsync().ConfigureAwait(false);
-			return count;
+			count++;
+			WriteRecord(data, names, writer);
 		}
+
+		writer.WriteEndArray();
+		return count;
 	}
 
 	static JsonEncodedText[] GetNames(DbDataReader data)

@@ -147,6 +147,7 @@ partial class CsvDataReader
 
 		this.minSafe = delimiter < '\r' ? '\r' : delimiter;
 		this.minSafe = minSafe > quote ? minSafe : quote;
+		this.minSafeQuote = minSafe > escape ? minSafe : escape;
 
 #if INTRINSICS
 		InitIntrinsics();

@@ -2205,6 +2205,15 @@ public class CsvDataReaderTests
 		Assert.Equal(2, ex.RowNumber);
 	}
 
+	[Fact]
+	public void GH278()
+	{
+		var data = "\"A\",\"BBBB\"\n1,\"0123456789\"\n";
+		using TextReader textReader = new StringReader(data);
+		using var reader = CsvDataReader.Create(textReader);
+		reader.Read();
+	}
+
 #if NET6_0_OR_GREATER
 
 	[Fact]
