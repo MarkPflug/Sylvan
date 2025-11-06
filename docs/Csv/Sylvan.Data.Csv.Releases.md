@@ -1,4 +1,10 @@
 # Sylvan.Data.Csv Release Notes
+
+_1.4.3_
+- Fixes an issue where calling `CsvDataReader.NextResult()` in `SingleResult` mode (the default)
+   would cause the entire remainder of the CSV data to be consumed. Instead, `SingleResult` mode should
+  return `false`, since there is no more data to be read.
+
 _1.4.2_
 - Fixes a bug with quoted field handling.
 - Improves performance of quoted field handling.
