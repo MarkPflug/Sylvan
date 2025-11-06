@@ -181,8 +181,17 @@ partial class CsvDataReader
 	/// <inheritdoc/>
 	public override bool NextResult()
 	{
-		while (Read()) ;
-		return InitializeReader();
+		switch (resultSetMode)
+		{
+			case ResultSetMode.SingleResult:
+				return false;
+			case ResultSetMode.MultiResult:
+				// consume the remaining rows in the current result set
+				while (Read()) ;
+				// then initialize the next result set.
+				return InitializeReader();
+		}
+		throw new NotSupportedException($"Unknown ResultSetMode.");
 	}
 
 	/// <inheritdoc/>

@@ -9,7 +9,7 @@ namespace Sylvan.Data.Csv;
 partial class CsvDataReader
 {
 	/// <summary>
-	/// Creates a new CsvDataReader asynchronously.                                                                                          
+	/// Creates a new CsvDataReader asynchronously.
 	/// </summary>
 	/// <param name="filename">The name of a file containing CSV data.</param>
 	/// <param name="options">The options to configure the reader, or null to use the default options.</param>
@@ -20,7 +20,7 @@ partial class CsvDataReader
 	}
 
 	/// <summary>
-	/// Creates a new CsvDataReader asynchronously.                                                                                          
+	/// Creates a new CsvDataReader asynchronously.
 	/// </summary>
 	/// <param name="filename">The name of a file containing CSV data.</param>
 	/// <param name="options">The options to configure the reader, or null to use the default options.</param>
@@ -313,8 +313,15 @@ partial class CsvDataReader
 	/// <inheritdoc/>
 	public override async Task<bool> NextResultAsync(CancellationToken cancellationToken)
 	{
-		while (await ReadAsync(cancellationToken).ConfigureAwait(false)) ;
-		return await InitializeReaderAsync(cancellationToken).ConfigureAwait(false);
+		switch (resultSetMode)
+		{
+			case ResultSetMode.SingleResult:
+				return false;
+			case ResultSetMode.MultiResult:
+				while (await ReadAsync(cancellationToken).ConfigureAwait(false)) ;
+				return await InitializeReaderAsync(cancellationToken).ConfigureAwait(false);
+		}
+		throw new NotSupportedException($"Unknown ResultSetMode.");
 	}
 
 #if NETSTANDARD2_1

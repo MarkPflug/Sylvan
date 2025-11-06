@@ -1716,12 +1716,9 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	internal CharSpan GetField(int ordinal)
 	{
 		ValidateState(ordinal);
-		if ((uint)ordinal < (uint)this.curFieldCount)
-		{
-			return GetFieldUnsafe(ordinal);
-		}
-
-		return CharSpan.Empty;
+		return (uint)ordinal < (uint)this.curFieldCount
+			? GetFieldUnsafe(ordinal)
+			: CharSpan.Empty;
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
