@@ -184,6 +184,7 @@ partial class CsvDataReader
 		switch (resultSetMode)
 		{
 			case ResultSetMode.SingleResult:
+				this.state = State.End;
 				return false;
 			case ResultSetMode.MultiResult:
 				// consume the remaining rows in the current result set

@@ -244,7 +244,7 @@ namespace Sylvan.Data
 
 		public static async Task ProcessAsync(this DbDataReader reader)
 		{
-			while (await reader.ReadAsync())
+			while (await reader.ReadAsync().ConfigureAwait(false))
 			{
 				reader.ProcessRecord();
 			}

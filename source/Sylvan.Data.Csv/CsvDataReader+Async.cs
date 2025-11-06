@@ -316,6 +316,7 @@ partial class CsvDataReader
 		switch (resultSetMode)
 		{
 			case ResultSetMode.SingleResult:
+				this.state = State.End;
 				return false;
 			case ResultSetMode.MultiResult:
 				while (await ReadAsync(cancellationToken).ConfigureAwait(false)) ;

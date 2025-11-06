@@ -84,7 +84,7 @@ public class CsvDataReaderTests
 		using (var reader = File.OpenText("Data/Binary.csv"))
 		{
 			var csv = await CsvDataReader.CreateAsync(reader);
-			csv.Read();
+			await csv.ReadAsync();
 			var id = csv.GetInt32(0);
 			byte[] buffer = new byte[16];
 			var len = csv.GetBytes(1, 0, buffer, 0, 2);
@@ -93,7 +93,7 @@ public class CsvDataReaderTests
 			Assert.Equal(BinaryValue1.Length, len);
 			var expected = Encoding.ASCII.GetBytes(BinaryValue1);
 			Assert.Equal(expected, buffer.Take((int)len));
-			csv.Read();
+			await csv.ReadAsync();
 
 			var p = 0;
 			len = 0;
@@ -101,7 +101,7 @@ public class CsvDataReaderTests
 			while ((len = csv.GetBytes(1, p, buffer, 0, buffer.Length)) != 0)
 			{
 				p += (int)len;
-				sw.Write(Encoding.ASCII.GetString(buffer, 0, (int)len));
+				await sw.WriteAsync(Encoding.ASCII.GetString(buffer, 0, (int)len));
 			}
 			var str = sw.ToString();
 			Assert.Equal(BinaryValue2, str);
@@ -136,12 +136,12 @@ public class CsvDataReaderTests
 			schema.Add(1, typeof(byte[]));
 			var opts = new CsvDataReaderOptions() { Schema = schema };
 			var csv = await CsvDataReader.CreateAsync(reader, opts);
-			csv.Read();
+			await csv.ReadAsync();
 			var vals = new object[2];
 			csv.GetValues(vals);
 			var expected = Encoding.ASCII.GetBytes(BinaryValue1);
 			Assert.Equal(expected, (byte[])vals[1]);
-			csv.Read();
+			await csv.ReadAsync();
 			csv.GetValues(vals);
 			expected = Encoding.ASCII.GetBytes(BinaryValue2);
 			Assert.Equal(expected, (byte[])vals[1]);
@@ -161,9 +161,9 @@ public class CsvDataReaderTests
 			Assert.Equal(1, csv.RowNumber);
 			Assert.Equal("1", csv[0]);
 			Assert.Equal("John", csv[1]);
-			Assert.False(csv.IsDBNull(2));
+			Assert.False(await csv.IsDBNullAsync(2));
 			Assert.Equal("Low", csv[2]);
-			Assert.False(csv.IsDBNull(3));
+			Assert.False(await csv.IsDBNullAsync(3));
 			Assert.Equal("", csv[3]);
 		}
 	}
@@ -531,7 +531,7 @@ public class CsvDataReaderTests
 	public async Task NextResultAsync()
 	{
 		using var tr = File.OpenText("Data/Binary.csv");
-		var csv = CsvDataReader.Create(tr);
+		var csv = await CsvDataReader.CreateAsync(tr);
 		Assert.False(await csv.NextResultAsync());
 		Assert.False(await csv.ReadAsync());
 	}
@@ -1495,7 +1495,7 @@ public class CsvDataReaderTests
 	[Fact]
 	public async Task EmptyHeaderAsync()
 	{
-		var ex = await Assert.ThrowsAsync<CsvMissingHeadersException>(async () => await CsvDataReader.CreateAsync(new StringReader("")));
+		var ex = await Assert.ThrowsAsync<CsvMissingHeadersException>(async () => await CsvDataReader.CreateAsync(new StringReader("")).ConfigureAwait(false));
 	}
 
 	[Fact]
@@ -1537,7 +1537,7 @@ public class CsvDataReaderTests
 
 		var opts = new CsvDataReaderOptions { HasHeaders = false };
 		var csv = await CsvDataReader.CreateAsync(reader, opts);
-		while (csv.Read())
+		while (await csv.ReadAsync())
 		{
 
 		}
