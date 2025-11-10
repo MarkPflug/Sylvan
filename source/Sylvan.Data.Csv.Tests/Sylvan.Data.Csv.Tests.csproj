@@ -4,6 +4,7 @@
     <TargetFrameworks>net8.0;net48</TargetFrameworks>
     <RootNamespace>Sylvan.Data.Csv</RootNamespace>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+	  <NoWarn>NU1510</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
