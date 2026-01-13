@@ -543,6 +543,7 @@ public sealed class ColumnInfo
 		Double = 32,
 		Decimal = 64,
 		String = 128,
+		Guid = 256,
 	}
 
 	static readonly Type[] ColTypes = new[]
@@ -555,6 +556,7 @@ public sealed class ColumnInfo
 			typeof(double),
 			typeof(decimal),
 			typeof(string),
+			typeof(Guid),
 		};
 
 	internal ColType GetColType()
@@ -588,6 +590,11 @@ public sealed class ColumnInfo
 		if (this.isFloat)
 		{
 			return ColType.Double | ColType.Decimal;
+		}
+
+		if (this.isGuid)
+		{
+			return ColType.Guid;
 		}
 
 		return ColType.String;
@@ -656,6 +663,11 @@ public sealed class ColumnInfo
 
 			// never bother with float, even if it appears it would suffice.
 			return new Schema.Column.Builder(name, typeof(double), isNullable);
+		}
+
+		if (isGuid)
+		{
+			return new Schema.Column.Builder(name, typeof(Guid), isNullable);
 		}
 
 		var len = stringLenMax;
