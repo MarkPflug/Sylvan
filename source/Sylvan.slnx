@@ -1,0 +1,44 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/Build/">
+    <File Path="../.editorconfig" />
+    <File Path="../.github/workflows/dotnet.yml" />
+    <File Path="../.gitignore" />
+    <File Path="../benchmark.cmd" />
+    <File Path="../build/Coverage.proj" />
+    <File Path="../coverage.cmd" />
+    <File Path="../Directory.Build.props" />
+    <File Path="../Directory.Build.targets" />
+    <File Path="../license.txt" />
+  </Folder>
+  <Folder Name="/Docs/">
+    <File Path="../readme.md" />
+  </Folder>
+  <Folder Name="/Docs/Common/">
+    <File Path="../docs/Common/Sylvan.Common.md" />
+  </Folder>
+  <Folder Name="/Docs/Csv/">
+    <File Path="../docs/Csv/Examples.md" />
+    <File Path="../docs/Csv/Options.md" />
+    <File Path="../docs/Csv/Schema.md" />
+    <File Path="../docs/Csv/Sylvan.Data.Csv.md" />
+    <File Path="../docs/Csv/Sylvan.Data.Csv.Releases.md" />
+  </Folder>
+  <Folder Name="/Docs/Data/">
+    <File Path="../docs/Data/Sylvan.Data.md" />
+    <File Path="../docs/Data/Sylvan.Data.Releases.md" />
+  </Folder>
+  <Folder Name="/Tests/">
+    <Project Path="Sylvan.Benchmarks/Sylvan.Benchmarks.csproj" />
+    <Project Path="Sylvan.Common.Tests/Sylvan.Common.Tests.csproj" />
+    <Project Path="Sylvan.Data.Csv.Tests/Sylvan.Data.Csv.Tests.csproj" />
+    <Project Path="Sylvan.Data.Tests/Sylvan.Data.Tests.csproj" />
+  </Folder>
+  <Project Path="Sylvan.Common/Sylvan.Common.csproj" />
+  <Project Path="Sylvan.Data.Csv/Sylvan.Data.Csv.csproj" />
+  <Project Path="Sylvan.Data/Sylvan.Data.csproj" />
+</Solution>
