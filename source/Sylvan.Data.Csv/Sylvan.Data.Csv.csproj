@@ -15,6 +15,8 @@
 
 	<ItemGroup>
 		<Compile Include="../Sylvan.Data/SchemaTable.cs" />
-		<Compile Condition="$(TargetFramework) != 'netstandard2.0'" Include="../Sylvan.Common/IsoDate.cs" Link="IsoDate.cs" />
+		<PackageReference
+			Condition="$(TargetFramework) != 'netstandard2.0'"
+			Include="Sylvan.IsoDate" Version="0.1.1"/>
 	</ItemGroup>
 </Project>

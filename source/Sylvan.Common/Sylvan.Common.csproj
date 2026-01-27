@@ -25,5 +25,7 @@
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
+
+		<PackageReference Include="Sylvan.IsoDate" Version="0.1.1"/>
 	</ItemGroup>
 </Project>
