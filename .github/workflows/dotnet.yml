@@ -16,13 +16,13 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: 9.0.100
+        dotnet-version: 10.0.102
     - name: Restore dependencies
       run: dotnet restore source
     - name: Build
-      run: dotnet build source --no-restore
+      run: dotnet build source
     - name: Test
-      run: dotnet test source -f net8.0 --no-build --verbosity normal
+      run: dotnet test source -f net10.0 --no-build --verbosity normal
     #- name: Coverage
     #  run: dotnet --% test source/Sylvan.Data.Csv.Tests/ -c Release -f net6.0 /p:CollectCoverage=true /p:CoverletOutputFormat=lcov /p:Include=\"[Sylvan.Data.Csv]*\"
     #- name: Publish coverage
