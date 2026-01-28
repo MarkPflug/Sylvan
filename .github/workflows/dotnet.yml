@@ -20,9 +20,10 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore source
     - name: Build
-      run: dotnet build source
+      run: dotnet build source --no-restore
     - name: Test
-      run: dotnet test source -f net10.0 --no-build --verbosity normal
+      run: dotnet test source -f net8.0 --no-build --verbosity normal
+
     #- name: Coverage
     #  run: dotnet --% test source/Sylvan.Data.Csv.Tests/ -c Release -f net6.0 /p:CollectCoverage=true /p:CoverletOutputFormat=lcov /p:Include=\"[Sylvan.Data.Csv]*\"
     #- name: Publish coverage
