@@ -8,7 +8,7 @@ namespace Sylvan.Data.Csv;
 public abstract class CsvSchemaProvider : ICsvSchemaProvider
 {
 	/// <inheritdoc/>
-	public abstract DbColumn? GetColumn(string? name, int ordinal);
+	public abstract DbColumn? GetColumn(string name, int ordinal);
 
 	/// <inheritdoc/>
 	public virtual int GetFieldCount(CsvDataReader reader)
@@ -25,10 +25,10 @@ public interface ICsvSchemaProvider
 	/// <summary>
 	/// Gets the schema for a column with the given name and/or ordinal.
 	/// </summary>
-	/// <param name="name">The name of the column, or null if the data contains no headers.</param>
+	/// <param name="name">The name of the column, or the raw value if the data contains no headers.</param>
 	/// <param name="ordinal">The zero-based ordinal of the column.</param>
 	/// <returns>A DbColumn for the given column, or null to use the default.</returns>
-	DbColumn? GetColumn(string? name, int ordinal);
+	DbColumn? GetColumn(string name, int ordinal);
 
 	/// <summary>
 	/// Gets the number of fields in the schema.
