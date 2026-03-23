@@ -57,11 +57,6 @@ partial class CsvDataReader
 		}
 		return csv;
 	}
-	
-	bool InitializeReader()
-	{
-		return this.InitializeReaderAsync().GetAwaiter().GetResult();
-	}
 
 	bool NextRecord()
 	{

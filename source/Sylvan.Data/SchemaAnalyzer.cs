@@ -131,14 +131,7 @@ public sealed partial class SchemaAnalyzer
 	/// <summary>
 	/// Analyzes a data set.
 	/// </summary>
-	public AnalysisResult Analyze(DbDataReader dataReader)
-	{
-		return AnalyzeAsync(dataReader).GetAwaiter().GetResult();
-	}
-
-	/// <summary>
-	/// Analyzes a data set.
-	/// </summary>
+	[Zomp.SyncMethodGenerator.CreateSyncVersion]
 	public async Task<AnalysisResult> AnalyzeAsync(DbDataReader dataReader)
 	{
 		var colInfos = new ColumnInfo[dataReader.FieldCount];
