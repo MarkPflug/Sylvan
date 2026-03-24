@@ -361,9 +361,9 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		this.fieldCount = count;
 		for (int i = 0; i < count; i++)
 		{
-			var rawString = this.GetStringRaw(i);
+			var rawString = GetStringRaw(i);
+			var columnSchema = schema?.GetColumn(rawString, i);
 			var name = hasHeaders ? rawString : null;
-			var columnSchema = schema?.GetColumn(hasHeaders ? name! : rawString, i);
 			columns[i] = new CsvColumn(name, i, columnSchema);
 
 			name = columns[i].ColumnName;
