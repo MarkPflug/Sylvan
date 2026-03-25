@@ -94,7 +94,7 @@ public static partial class DataExtensions
 		return new TakeWhileDataReader(reader, predicate);
 	}
 
-#if IAsyncEnumerable
+#if !NETSTANDARD2_0
 
 	/// <summary>
 	/// Binds the DbDataReader data to produce a sequence of T.

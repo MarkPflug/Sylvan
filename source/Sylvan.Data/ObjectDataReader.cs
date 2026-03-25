@@ -26,7 +26,7 @@ public static class ObjectDataReader
 		return new SyncObjectDataReader<T>(data);
 	}
 
-#if IAsyncEnumerable
+#if !NETSTANDARD2_0
 
 	/// <summary>
 	/// Creates a DbDataReader over a sequence of objects.
@@ -108,7 +108,7 @@ public static class ObjectDataReader
 			return builder.Build(data);
 		}
 
-#if IAsyncEnumerable
+#if !NETSTANDARD2_0
 
 		/// <summary>
 		/// Builds a DbDataReader over the data that will read the columns defined by the builder.
@@ -151,7 +151,7 @@ sealed class SyncObjectDataReader<T> : ObjectDataReader<T>
 	public override T Current => this.enumerator.Current;
 }
 
-#if IAsyncEnumerable
+#if !NETSTANDARD2_0
 
 sealed class AsyncObjectDataReader<T> : ObjectDataReader<T>
 {
@@ -332,7 +332,7 @@ abstract class ObjectDataReader<T> : DbDataReader, IDbColumnSchemaGenerator
 			return new SyncObjectDataReader<T>(data, this.columns.ToArray());
 		}
 
-#if IAsyncEnumerable
+#if !NETSTANDARD2_0
 
 		internal DbDataReader Build(IAsyncEnumerable<T> data, CancellationToken cancel)
 		{

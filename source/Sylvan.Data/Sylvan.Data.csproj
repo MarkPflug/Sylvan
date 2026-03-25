@@ -7,7 +7,6 @@
 		<PackageTags>data;datareader;ADO.NET</PackageTags>
 		<Nullable>enable</Nullable>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<DefineConstants Condition="$(TargetFramework) != 'netstandard2.0'">$(DefineConstants);IAsyncEnumerable</DefineConstants>
 	</PropertyGroup>
 
 	<ItemGroup>
