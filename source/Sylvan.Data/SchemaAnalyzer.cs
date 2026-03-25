@@ -133,7 +133,24 @@ public sealed partial class SchemaAnalyzer
 	/// </summary>
 	public AnalysisResult Analyze(DbDataReader dataReader)
 	{
-		return AnalyzeAsync(dataReader).GetAwaiter().GetResult();
+		var colInfos = new ColumnInfo[dataReader.FieldCount];
+		for (int i = 0; i < colInfos.Length; i++)
+		{
+			colInfos[i] = new ColumnInfo(dataReader, i);
+		}
+
+		var sw = Stopwatch.StartNew();
+		int c = 0;
+		while (dataReader.Read()&& c++ < rowCount)
+		{
+			for (int i = 0; i < dataReader.FieldCount; i++)
+			{
+				colInfos[i].Analyze(dataReader, i);
+			}
+		}
+		sw.Stop();
+
+		return new AnalysisResult(detectSeries, colInfos);
 	}
 
 	/// <summary>
