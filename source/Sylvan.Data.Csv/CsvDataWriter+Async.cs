@@ -105,7 +105,7 @@ partial class CsvDataWriter
 		}
 		else
 		{
-#if SPAN
+#if !NETSTANDARD2_0
 			await writer.WriteAsync(buffer.AsMemory(0, recordStart), cancel).ConfigureAwait(false);
 #else
 			await writer.WriteAsync(buffer, 0, recordStart).ConfigureAwait(false);
@@ -166,7 +166,7 @@ partial class CsvDataWriter
 		buffer[pos++] = delimiter;
 	}
 
-#if ASYNC_DISPOSE
+#if !NETSTANDARD2_0
 	ValueTask IAsyncDisposable.DisposeAsync()
 	{
 		GC.SuppressFinalize(this);

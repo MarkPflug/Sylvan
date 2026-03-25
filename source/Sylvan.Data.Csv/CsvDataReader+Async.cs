@@ -149,7 +149,7 @@ partial class CsvDataReader
 		this.minSafe = minSafe > quote ? minSafe : quote;
 		this.minSafeQuote = minSafe > escape ? minSafe : escape;
 
-#if INTRINSICS
+#if NETCOREAPP3_0_OR_GREATER
 		InitIntrinsics();
 #endif
 
@@ -230,7 +230,7 @@ partial class CsvDataReader
 		int fieldIdx = 0;
 		while (true)
 		{
-#if INTRINSICS
+#if NETCOREAPP3_0_OR_GREATER
 
 			if (ReadRecordFast(ref fieldIdx))
 			{
@@ -281,7 +281,7 @@ partial class CsvDataReader
 		recordStart = 0;
 
 		var count = buffer.Length - bufferEnd;
-#if SPAN
+#if !NETSTANDARD2_0
 		var memory = new Memory<char>(buffer, bufferEnd, count);
 		var c = await reader.ReadAsync(memory, cancel).ConfigureAwait(false);
 #else

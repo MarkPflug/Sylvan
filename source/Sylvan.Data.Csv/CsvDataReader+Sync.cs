@@ -96,7 +96,7 @@ partial class CsvDataReader
 		this.minSafe = minSafe > quote ? minSafe : quote;
 		this.minSafeQuote = minSafe > escape ? minSafe : escape;
 
-#if INTRINSICS
+#if NETCOREAPP3_0_OR_GREATER
 		InitIntrinsics();
 #endif
 
@@ -179,7 +179,7 @@ partial class CsvDataReader
 		{
 
 
-#if INTRINSICS
+#if NETCOREAPP3_0_OR_GREATER
 
 			if (ReadRecordFast(ref fieldIdx))
 			{

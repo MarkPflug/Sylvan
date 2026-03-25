@@ -39,7 +39,7 @@ sealed class DynamicAccessor : FieldAccessor<object>
 	public override object GetValue(CsvDataReader reader, int ordinal)
 	{
 		//TODO: culture
-#if SPAN
+#if !NETSTANDARD2_0
 		var str = reader.GetFieldSpan(ordinal);
 #else
 		var str = reader.GetString(ordinal);

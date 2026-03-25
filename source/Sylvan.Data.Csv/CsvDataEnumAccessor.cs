@@ -4,7 +4,7 @@ using System.Reflection;
 
 namespace Sylvan.Data.Csv;
 
-#if SPAN
+#if !NETSTANDARD2_0
 delegate bool TryParse<T>(ReadOnlySpan<char> str, bool ignoreCase, out T value);
 #else
 delegate bool TryParse<T>(string str, bool ignoreCase, out T value);
@@ -13,7 +13,7 @@ delegate bool TryParse<T>(string str, bool ignoreCase, out T value);
 static class EnumParse
 {
 
-#if SPAN
+#if !NETSTANDARD2_0
 	static readonly Type ParamType = typeof(ReadOnlySpan<char>);
 #else
 	static readonly Type ParamType = typeof(string);
@@ -69,7 +69,7 @@ sealed class EnumAccessor<T> : IFieldAccessor<T>
 		{
 			throw new NotSupportedException();
 		}
-#if SPAN
+#if !NETSTANDARD2_0
 		var span = reader.GetFieldSpan(ordinal);
 #else
 		var span = reader.GetString(ordinal);
@@ -92,7 +92,7 @@ sealed class EnumAccessor : IFieldAccessor
 
 	public object GetValueAsObject(CsvDataReader reader, int ordinal)
 	{
-#if ENUM_SPAN_PARSE
+#if NET6_0_OR_GREATER
 		var span = reader.GetFieldSpan(ordinal);
 #else
 		var span = reader.GetString(ordinal);

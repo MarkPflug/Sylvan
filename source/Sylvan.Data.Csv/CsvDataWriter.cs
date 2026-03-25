@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Data.Common;
@@ -14,7 +14,7 @@ namespace Sylvan.Data.Csv;
 /// </summary>
 public sealed partial class CsvDataWriter
 	: IDisposable
-#if ASYNC_DISPOSE
+#if !NETSTANDARD2_0
 	, IAsyncDisposable
 #endif
 {
@@ -95,7 +95,7 @@ public sealed partial class CsvDataWriter
 		}
 		if (type == typeof(byte))
 		{
-#if SPAN
+#if !NETSTANDARD2_0
 			return IsFastNumeric
 				? ByteFastFieldWriter.Instance
 				: ByteFieldWriter.Instance;
@@ -106,7 +106,7 @@ public sealed partial class CsvDataWriter
 
 		if (type == typeof(short))
 		{
-#if SPAN
+#if !NETSTANDARD2_0
 			return IsFastNumeric
 				? Int16FastFieldWriter.Instance
 				: Int16FieldWriter.Instance;
@@ -117,7 +117,7 @@ public sealed partial class CsvDataWriter
 
 		if (type == typeof(int))
 		{
-#if SPAN
+#if !NETSTANDARD2_0
 			return IsFastNumeric
 				? Int32FastFieldWriter.Instance
 				: Int32FieldWriter.Instance;
@@ -128,7 +128,7 @@ public sealed partial class CsvDataWriter
 
 		if (type == typeof(long))
 		{
-#if SPAN
+#if !NETSTANDARD2_0
 			return IsFastNumeric
 				? Int64FastFieldWriter.Instance
 				: Int64FieldWriter.Instance;
@@ -138,7 +138,7 @@ public sealed partial class CsvDataWriter
 		}
 		if (type == typeof(float))
 		{
-#if SPAN
+#if !NETSTANDARD2_0
 			return IsFastNumeric
 				? SingleFastFieldWriter.Instance
 				: SingleFieldWriter.Instance;
@@ -149,7 +149,7 @@ public sealed partial class CsvDataWriter
 
 		if (type == typeof(double))
 		{
-#if SPAN
+#if !NETSTANDARD2_0
 			return IsFastNumeric
 				? DoubleFastFieldWriter.Instance
 				: DoubleFieldWriter.Instance;
@@ -159,7 +159,7 @@ public sealed partial class CsvDataWriter
 		}
 		if (type == typeof(decimal))
 		{
-#if SPAN
+#if !NETSTANDARD2_0
 			return IsFastNumeric
 				? DecimalFastFieldWriter.Instance
 				: DecimalFieldWriter.Instance;
@@ -175,7 +175,7 @@ public sealed partial class CsvDataWriter
 
 		if (type == typeof(DateTime))
 		{
-#if SPAN
+#if !NETSTANDARD2_0
 			if (IsFastDateTime)
 			{
 				return DateTimeIsoFastFieldWriter.Instance;
@@ -193,7 +193,7 @@ public sealed partial class CsvDataWriter
 
 		if (type == typeof(DateTimeOffset))
 		{
-#if SPAN
+#if !NETSTANDARD2_0
 			if (IsFastDateTimeOffset)
 			{
 				return DateTimeOffsetIsoFastFieldWriter.Instance;
@@ -211,7 +211,7 @@ public sealed partial class CsvDataWriter
 
 		if (type == typeof(Guid))
 		{
-#if SPAN
+#if !NETSTANDARD2_0
 			return IsFastConfig
 				? GuidFastFieldWriter.Instance
 				: GuidFieldWriter.Instance;
@@ -241,7 +241,7 @@ public sealed partial class CsvDataWriter
 
 		if (type == typeof(TimeSpan))
 		{
-#if SPAN
+#if !NETSTANDARD2_0
 			return IsFastTimeSpan
 				? TimeSpanFastFieldWriter.Instance
 				: TimeSpanFieldWriter.Instance;
@@ -283,7 +283,7 @@ public sealed partial class CsvDataWriter
 
 #endif
 
-#if SPAN
+#if !NETSTANDARD2_0
 		if (type.IsEnum)
 		{
 			if (!EnumMap.TryGetValue(type, out FieldWriter? writer))
@@ -310,7 +310,7 @@ public sealed partial class CsvDataWriter
 		return this.ObjectWriter;
 	}
 
-#if SPAN
+#if !NETSTANDARD2_0
 
 	static readonly ConcurrentDictionary<Type, FieldWriter> EnumMap = new();
 

@@ -13,7 +13,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-#if INTRINSICS
+#if NETCOREAPP3_0_OR_GREATER
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
 #endif
@@ -452,7 +452,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		return success;
 	}
 
-#if INTRINSICS
+#if NETCOREAPP3_0_OR_GREATER
 
 	Vector256<byte> delimiterMaskVector256;
 	Vector256<byte> lineEndMaskVector256;
@@ -1149,7 +1149,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		var col = this.columns[ordinal];
 		var trueString = col.TrueString ?? this.trueString;
 		var falseString = col.FalseString ?? this.falseString;
-#if SPAN
+#if !NETSTANDARD2_0
 		var span = this.GetFieldSpan(ordinal);
 		if (trueString != null && span.Equals(trueString.AsSpan(), StringComparison.OrdinalIgnoreCase))
 		{
@@ -1202,7 +1202,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override byte GetByte(int ordinal)
 	{
-#if SPAN
+#if !NETSTANDARD2_0
 		return byte.Parse(this.GetFieldSpan(ordinal), provider: culture);
 #else
 		return byte.Parse(this.GetString(ordinal), culture);
@@ -1366,7 +1366,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 
 	static void FromBase64Chars(char[] chars, int charsOffset, int charsLen, byte[] bytes, int bytesOffset, out int bytesWritten)
 	{
-#if SPAN
+#if !NETSTANDARD2_0
 		if (!Convert.TryFromBase64Chars(chars.AsSpan().Slice(charsOffset, charsLen), bytes.AsSpan(bytesOffset), out bytesWritten))
 		{
 			throw new FormatException();
@@ -1412,7 +1412,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	public TimeSpan GetTimeSpan(int ordinal)
 	{
 		var format = columns[ordinal].Format;
-#if SPAN
+#if !NETSTANDARD2_0
 		var span = this.GetFieldSpan(ordinal);
 		if (format != null && TimeSpan.TryParseExact(span, format, culture, TimeSpanStyles.None, out var value))
 		{
@@ -1436,7 +1436,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	{
 		var format = columns[ordinal].Format ?? this.dateTimeFormat;
 		DateTimeOffset value;
-#if SPAN
+#if !NETSTANDARD2_0
 		var span = this.GetFieldSpan(ordinal);
 
 		if (IsoDate.TryParse(span, out value))
@@ -1461,7 +1461,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	public override DateTime GetDateTime(int ordinal)
 	{
 		DateTime value;
-#if SPAN
+#if !NETSTANDARD2_0
 		var span = this.GetFieldSpan(ordinal);
 		if (IsoDate.TryParse(span, out value))
 			return value;
@@ -1487,7 +1487,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override decimal GetDecimal(int ordinal)
 	{
-#if SPAN
+#if !NETSTANDARD2_0
 		var field = this.GetField(ordinal);
 		return
 			field.TryParseSingleCharInt()
@@ -1500,7 +1500,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override double GetDouble(int ordinal)
 	{
-#if SPAN
+#if !NETSTANDARD2_0
 		var field = this.GetField(ordinal);
 		return
 			field.TryParseSingleCharInt()
@@ -1532,7 +1532,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override float GetFloat(int ordinal)
 	{
-#if SPAN
+#if !NETSTANDARD2_0
 		var field = this.GetField(ordinal);
 		return
 			field.TryParseSingleCharInt()
@@ -1545,7 +1545,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override Guid GetGuid(int ordinal)
 	{
-#if SPAN
+#if !NETSTANDARD2_0
 		return Guid.Parse(this.GetFieldSpan(ordinal));
 #else
 		return Guid.Parse(this.GetString(ordinal));
@@ -1555,7 +1555,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override short GetInt16(int ordinal)
 	{
-#if SPAN
+#if !NETSTANDARD2_0
 		var field = this.GetField(ordinal);
 		return
 			field.TryParseSingleCharInt()
@@ -1568,7 +1568,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override int GetInt32(int ordinal)
 	{
-#if SPAN
+#if !NETSTANDARD2_0
 		var field = this.GetField(ordinal);
 		return
 			field.TryParseSingleCharInt()
@@ -1581,7 +1581,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	/// <inheritdoc/>
 	public override long GetInt64(int ordinal)
 	{
-#if SPAN
+#if !NETSTANDARD2_0
 		var field = this.GetField(ordinal);
 		return
 			field.TryParseSingleCharInt()
@@ -1694,7 +1694,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 			return null;
 		}
 
-#if SPAN
+#if !NETSTANDARD2_0
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		internal Span<char> ToSpan()
@@ -2134,7 +2134,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		}
 	}
 
-#if SPAN
+#if !NETSTANDARD2_0
 
 	/// <summary>
 	/// Gets a span containing the characters of a field.

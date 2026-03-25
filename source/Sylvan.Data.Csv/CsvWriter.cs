@@ -22,7 +22,7 @@ partial class CsvDataWriter
 		internal static readonly CsvWriter Escaped = new EscapedCsvWriter();
 		internal static readonly CsvWriter Quoted = new QuotedCsvWriter();
 
-#if SPAN
+#if !NETSTANDARD2_0
 		public virtual int Write(WriterContext context, ReadOnlySpan<char> value, char[] buffer, int offset)
 #else
 		public virtual int Write(WriterContext context, string value, char[] buffer, int offset)
@@ -31,7 +31,7 @@ partial class CsvDataWriter
 			return WriteEscaped(context, value, buffer, offset);
 		}
 
-#if SPAN
+#if !NETSTANDARD2_0
 		public abstract int WriteEscaped(WriterContext context, ReadOnlySpan<char> value, char[] buffer, int offset);
 #else
 		public abstract int WriteEscaped(WriterContext context, string value, char[] buffer, int offset);
@@ -41,7 +41,7 @@ partial class CsvDataWriter
 
 	sealed class EscapedCsvWriter : CsvWriter
 	{
-#if SPAN
+#if !NETSTANDARD2_0
 		public override int WriteEscaped(WriterContext context, ReadOnlySpan<char> value, char[] buffer, int offset)
 #else
 		public override int WriteEscaped(WriterContext context, string value, char[] buffer, int offset)
@@ -93,7 +93,7 @@ partial class CsvDataWriter
 
 	sealed class QuotedCsvWriter : CsvWriter
 	{
-#if SPAN
+#if !NETSTANDARD2_0
 		public override int Write(WriterContext context, ReadOnlySpan<char> value, char[] buffer, int offset)
 #else
 		public override int Write(WriterContext context, string value, char[] buffer, int offset)
@@ -106,7 +106,7 @@ partial class CsvDataWriter
 			}
 			return r;
 		}
-#if SPAN
+#if !NETSTANDARD2_0
 		static int WriteValueOptimistic(WriterContext context, ReadOnlySpan<char> value, char[] buffer, int offset)
 #else
 		static int WriteValueOptimistic(WriterContext context, string value, char[] buffer, int offset)
@@ -142,7 +142,7 @@ partial class CsvDataWriter
 			return value.Length;
 		}
 
-#if SPAN
+#if !NETSTANDARD2_0
 		public override int WriteEscaped(WriterContext context, ReadOnlySpan<char> value, char[] buffer, int offset)
 #else
 		public override int WriteEscaped(WriterContext context, string value, char[] buffer, int offset)

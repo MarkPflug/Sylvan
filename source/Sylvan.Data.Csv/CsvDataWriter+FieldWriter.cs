@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Globalization;
@@ -306,7 +306,7 @@ partial class CsvDataWriter
 		{
 			var writer = context.writer;
 			var culture = writer.culture;
-#if SPAN
+#if !NETSTANDARD2_0
 
 			Span<char> str = stackalloc char[4];
 			if (!value.TryFormat(str, out int len, default, culture))
@@ -343,7 +343,7 @@ partial class CsvDataWriter
 		{
 			var writer = context.writer;
 			var culture = writer.culture;
-#if SPAN
+#if !NETSTANDARD2_0
 
 			Span<char> str = stackalloc char[6];
 			if (!value.TryFormat(str, out int len, default, culture))
@@ -380,7 +380,7 @@ partial class CsvDataWriter
 		{
 			var writer = context.writer;
 			var culture = writer.culture;
-#if SPAN
+#if !NETSTANDARD2_0
 
 			Span<char> str = stackalloc char[12];
 			if (!value.TryFormat(str, out int len, default, culture))
@@ -417,7 +417,7 @@ partial class CsvDataWriter
 		{
 			var writer = context.writer;
 			var culture = writer.culture;
-#if SPAN
+#if !NETSTANDARD2_0
 
 			Span<char> str = stackalloc char[20];
 			if (!value.TryFormat(str, out int len, default, culture))
@@ -447,7 +447,7 @@ partial class CsvDataWriter
 		{
 			var writer = context.writer;
 			var culture = writer.culture;
-#if SPAN
+#if !NETSTANDARD2_0
 
 			Span<char> str = stackalloc char[14];
 			if (!value.TryFormat(str, out int len, default, culture))
@@ -477,7 +477,7 @@ partial class CsvDataWriter
 		{
 			var writer = context.writer;
 			var culture = writer.culture;
-#if SPAN
+#if !NETSTANDARD2_0
 
 			Span<char> str = stackalloc char[16];
 			if (!value.TryFormat(str, out int len, default, culture))
@@ -507,7 +507,7 @@ partial class CsvDataWriter
 		{
 			var writer = context.writer;
 			var culture = writer.culture;
-#if SPAN
+#if !NETSTANDARD2_0
 
 			Span<char> str = stackalloc char[32];
 			if (!value.TryFormat(str, out int len, default, culture))
@@ -537,7 +537,7 @@ partial class CsvDataWriter
 		{
 			var writer = context.writer;
 			var culture = writer.culture;
-#if SPAN
+#if !NETSTANDARD2_0
 
 			Span<char> str = stackalloc char[36];
 			if (!value.TryFormat(str, out int len, default))
@@ -569,7 +569,7 @@ partial class CsvDataWriter
 			var culture = writer.culture;
 			// dateTimeFormat can be null here on ns2.0 (net4.8)
 			var fmt = writer.dateTimeFormat ?? "O";
-#if SPAN
+#if !NETSTANDARD2_0
 			// this buffer might not be sufficiently large.
 			Span<char> str = stackalloc char[IsoDate.MaxDateLength];
 			if (value.TryFormat(str, out int len, fmt, culture))
@@ -607,7 +607,7 @@ partial class CsvDataWriter
 
 			// dateTimeFormat can be null here on ns2.0 (net4.8)
 			var fmt = writer.dateTimeOffsetFormat ?? "O";
-#if SPAN
+#if !NETSTANDARD2_0
 			// this buffer might not be sufficiently large.
 			Span<char> str = stackalloc char[IsoDate.MaxDateLength];
 			if (value.TryFormat(str, out int len, fmt, culture))
@@ -642,7 +642,7 @@ partial class CsvDataWriter
 			var writer = context.writer;
 			var culture = writer.culture;
 			var fmt = writer.timeSpanFormat ?? "c";
-#if SPAN
+#if !NETSTANDARD2_0
 			// this buffer might not be sufficiently large.
 			Span<char> str = stackalloc char[IsoDate.MaxDateLength];
 			if (value.TryFormat(str, out int len, fmt, culture))
@@ -665,7 +665,7 @@ partial class CsvDataWriter
 	}
 
 
-#if SPAN
+#if !NETSTANDARD2_0
 
 sealed class DateTimeIsoFieldWriter : FieldWriter<DateTime>
 	{
