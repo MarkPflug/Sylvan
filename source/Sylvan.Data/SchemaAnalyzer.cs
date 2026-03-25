@@ -131,7 +131,31 @@ public sealed partial class SchemaAnalyzer
 	/// <summary>
 	/// Analyzes a data set.
 	/// </summary>
-	[Zomp.SyncMethodGenerator.CreateSyncVersion]
+	public AnalysisResult Analyze(DbDataReader dataReader)
+	{
+		var colInfos = new ColumnInfo[dataReader.FieldCount];
+		for (int i = 0; i < colInfos.Length; i++)
+		{
+			colInfos[i] = new ColumnInfo(dataReader, i);
+		}
+
+		var sw = Stopwatch.StartNew();
+		int c = 0;
+		while (dataReader.Read()&& c++ < rowCount)
+		{
+			for (int i = 0; i < dataReader.FieldCount; i++)
+			{
+				colInfos[i].Analyze(dataReader, i);
+			}
+		}
+		sw.Stop();
+
+		return new AnalysisResult(detectSeries, colInfos);
+	}
+
+	/// <summary>
+	/// Analyzes a data set.
+	/// </summary>
 	public async Task<AnalysisResult> AnalyzeAsync(DbDataReader dataReader)
 	{
 		var colInfos = new ColumnInfo[dataReader.FieldCount];

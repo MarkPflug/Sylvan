@@ -111,7 +111,6 @@ partial class CsvDataReader
 		return false;
 	}
 
-	[Zomp.SyncMethodGenerator.CreateSyncVersion]
 	async Task<bool> InitializeReaderAsync(CancellationToken cancel = default)
 	{
 		await FillBufferAsync(cancel).ConfigureAwait(false);

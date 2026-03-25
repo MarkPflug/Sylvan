@@ -57,6 +57,91 @@ partial class CsvDataReader
 		}
 		return csv;
 	}
+	
+	bool InitializeReader()
+	{
+		FillBuffer();
+
+		bool skip = resultSetMode == ResultSetMode.MultiResult;
+		while (skip)
+		{
+			skip = false;
+			if (bufferEnd == 0) break;
+			for (int i = idx; i < bufferEnd; i++)
+			{
+				var c = buffer[i];
+				if (IsEndOfLine(c))
+				{
+					if (ShouldSkip(buffer, idx, i - idx))
+					{
+						skip = true;
+						idx = i + 1;
+					}
+					break;
+				}
+			}
+		}
+
+		if (autoDetectDelimiter)
+		{
+			var c = DetectDelimiter();
+			this.delimiter = c;
+		}
+		if (this.newLineMode == NewLineMode.Unknown)
+		{
+			this.newLineMode = this.DetectNewLine();
+		}
+
+		this.minSafe = delimiter < '\r' ? '\r' : delimiter;
+		this.minSafe = minSafe > quote ? minSafe : quote;
+		this.minSafeQuote = minSafe > escape ? minSafe : escape;
+
+#if INTRINSICS
+		InitIntrinsics();
+#endif
+
+		// if the user specified that there are headers
+		// read them, and use them to determine fieldCount.
+		if (hasHeaders)
+		{
+			if (carryRow || state == State.Open || NextRecord())
+			{
+				ThrowPendingException();
+
+				carryRow = false;
+				Initialize();
+				this.state = State.Initialized;
+				this.rowNumber++;
+				var hasNext = NextRecord();
+				if (resultSetMode == ResultSetMode.SingleResult)
+				{
+					this.hasRows = hasNext;
+				}
+				else
+				{
+					this.hasRows = hasNext && this.fieldCount == this.curFieldCount;
+					this.state = State.Initialized;
+					this.carryRow = this.hasRows == false && this.fieldCount > 0;
+				}
+			}
+			else
+			{
+				return false;
+			}
+		}
+		else
+		{
+			// read the first row of data to determine fieldCount (if there were no headers)
+			// and support calling HasRows before Read is first called.
+			this.hasRows = carryRow || NextRecord();
+			this.carryRow = false;
+			Initialize();
+			return fieldCount != 0;
+		}
+		this.rowNumber = 0;
+
+		return true;
+	}
 
 	bool NextRecord()
 	{
