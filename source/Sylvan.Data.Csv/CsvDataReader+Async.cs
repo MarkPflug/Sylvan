@@ -324,21 +324,4 @@ partial class CsvDataReader
 		}
 		throw new NotSupportedException($"Unknown ResultSetMode.");
 	}
-
-#if NETSTANDARD2_1
-
-	/// <inheritdoc/>
-	public override Task CloseAsync()
-	{
-		if (this.state != State.Closed)
-		{
-			if (ownsReader)
-				this.reader.Dispose();
-			this.state = State.Closed;
-		}
-		return Task.CompletedTask;
-	}
-
-#endif
-
 }
