@@ -361,8 +361,9 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 		this.fieldCount = count;
 		for (int i = 0; i < count; i++)
 		{
-			var name = hasHeaders ? GetStringRaw(i) : null;
-			var columnSchema = schema?.GetColumn(name, i);
+			var rawString = GetStringRaw(i);
+			var columnSchema = schema?.GetColumn(rawString, i);
+			var name = hasHeaders ? rawString : null;
 			columns[i] = new CsvColumn(name, i, columnSchema);
 
 			name = columns[i].ColumnName;
@@ -1752,7 +1753,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 					return PrepareField(offset, len, fi.escapeCount);
 			}
 		}
-		return new CharSpan(buffer, offset, len);
+		return len > 0 ? new CharSpan(buffer, offset, len) : CharSpan.Empty;
 	}
 
 	CharSpan PrepareField(int offset, int len, int escapeCount)

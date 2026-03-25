@@ -1179,6 +1179,31 @@ public class CsvDataReaderTests
 	}
 
 	[Fact]
+	public void MRS3()
+	{
+		using var reader = new StringReader("A,1\nB,2,3");
+		var schema = new MultiSchemaProvider();
+		var csv = CsvDataReader.Create(reader, new CsvDataReaderOptions { HasHeaders = false, ResultSetMode = ResultSetMode.MultiResult, Schema = schema });
+		Assert.Equal("", csv.GetName(0));
+		Assert.Equal("", csv.GetName(1));
+		Assert.True(csv.Read());
+		Assert.Equal("A", csv.GetString(0));
+		Assert.Equal("1", csv.GetString(1));
+		Assert.False(csv.Read());
+		Assert.True(csv.NextResult());
+		Assert.True(csv.Read());
+		Assert.Equal("", csv.GetName(0));
+		Assert.Equal("", csv.GetName(1));
+		Assert.Equal("", csv.GetName(2));
+		Assert.Equal("B", csv.GetString(0));
+		Assert.Equal("2", csv.GetString(1));
+		Assert.Equal("3", csv.GetString(2));
+		Assert.False(csv.Read());
+		Assert.False(csv.NextResult());
+		Assert.Equivalent(((string, int)[])[("A", 0), ("1", 1), ("B", 0), ("2", 1), ("3", 2)], schema.Columns);
+	}
+
+	[Fact]
 	public void CommentTest()
 	{
 		using var reader = new StringReader("#comment\na,b,c\n1,2,3\n4,5,6");
@@ -2334,6 +2359,17 @@ public class CsvDataReaderTests
 	}
 
 #endif
+}
+
+class MultiSchemaProvider : CsvSchemaProvider
+{
+	public List<(string, int)> Columns { get; } = [];
+
+	public override DbColumn GetColumn(string name, int ordinal)
+	{
+		Columns.Add((name, ordinal));
+		return null;
+	}
 }
 
 static class Extension
