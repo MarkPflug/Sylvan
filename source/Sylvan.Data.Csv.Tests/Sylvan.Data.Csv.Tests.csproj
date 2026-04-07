@@ -4,7 +4,7 @@
     <TargetFrameworks>net8.0;net48</TargetFrameworks>
     <RootNamespace>Sylvan.Data.Csv</RootNamespace>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-	  <NoWarn>NU1510</NoWarn>
+	<NoWarn>NU1510;xUnit1051;xUnit3003</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -12,12 +12,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="5.0.0" />
-    <PackageReference Include="System.Buffers" Version="4.4.0" />
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="6.0.0" />
+    <PackageReference Include="System.Buffers" Version="4.6.1" />
     <PackageReference Include="System.Data.SqlClient" Version="4.8.6" />
     <PackageReference Include="System.IO.Compression" Version="4.3.0" />
     <PackageReference Include="System.Net.Http" Version="4.3.4" />
-    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="5.0.0" />
+    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />
     
     <ProjectReference Include="..\Sylvan.Common\Sylvan.Common.csproj" />
     <ProjectReference Include="..\Sylvan.Data\Sylvan.Data.csproj" />
