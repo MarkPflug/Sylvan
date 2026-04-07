@@ -1,5 +1,8 @@
 # Sylvan.Data Release Notes
 
+_0.2.17_
+- Fixes a sync-over-async case in the `SchemaAnalyzer.AnalyzeAsync` method.
+
 _0.2.16_
 - Fixes the base DataReaderAdapter indexer implementations to defer to GetOrdinal/GetName rather than the wrapper reader implementations.
 

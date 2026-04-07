@@ -1,5 +1,10 @@
 # Sylvan.Data.Csv Release Notes
 
+_1.4.4_
+- CsvDataReader will pass the current cell values to the provided `ICsvSchemaProvider.GetColumn` when multi-result set mode is enabled.
+  This allows schema determination in scenarios where it wasn't previously possible.
+- Replaces an instance of "sync over async" with a proper sync implementation.
+
 _1.4.3_
 - Fixes an issue where calling `CsvDataReader.NextResult()` in `SingleResult` mode (the default)
    would cause the entire remainder of the CSV data to be consumed. Instead, `SingleResult` mode should
