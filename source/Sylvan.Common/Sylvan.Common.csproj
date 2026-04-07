@@ -9,6 +9,12 @@
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 		<DefineConstants>PublicCasingStyle;$(DefineConstants)</DefineConstants>
+		<!-- 
+		there was a warning about nuget version mismatch that seems to be triggered because
+		the test projects use a newer version of System.Memory and System.Buffers. I don't
+		think there is any requirement that we force consumers to update though.
+		-->
+		<NoWarn>NU1605</NoWarn>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(TargetFramework)' != 'netstandard2.0'">
@@ -26,6 +32,10 @@
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 
-		<PackageReference Include="Sylvan.IsoDate" Version="0.1.2"/>
+		<PackageReference 
+			Include="Sylvan.IsoDate" 
+			Version="0.1.2"
+			PrivateAssets="all"
+		/>
 	</ItemGroup>
 </Project>

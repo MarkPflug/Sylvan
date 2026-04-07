@@ -1,53 +1,56 @@
 <Project>
-  <PropertyGroup>
-    <OutputPath>$(MSBuildThisFileDirectory)bin\$(Configuration)</OutputPath>
-    <PackageOutputPath>$(MSBuildThisFileDirectory)packages\</PackageOutputPath>
-    <Owner>Mark Pflug</Owner>
-    <Authors>$(Owner)</Authors>
-    <PackageIconUrl>https://markpflug.github.io/Sylvan.png</PackageIconUrl>
-    <PackageIcon>Sylvan.png</PackageIcon>
-    <Copyright>© 2026 $(Owner)</Copyright>
-    <PackageLicenseFile>license.txt</PackageLicenseFile>
-    <LangVersion>13.0</LangVersion>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <WarningsNotAsErrors>CS1030;CA1835;$(WarningsNotAsErrors)</WarningsNotAsErrors>
+	<PropertyGroup>
+		<OutputPath>$(MSBuildThisFileDirectory)bin\$(Configuration)</OutputPath>
+		<PackageOutputPath>$(MSBuildThisFileDirectory)packages\</PackageOutputPath>
+		<Owner>Mark Pflug</Owner>
+		<Authors>$(Owner)</Authors>
+		<PackageIconUrl>https://markpflug.github.io/Sylvan.png</PackageIconUrl>
+		<PackageIcon>Sylvan.png</PackageIcon>
+		<Copyright>© 2026 $(Owner)</Copyright>
+		<PackageLicenseFile>license.txt</PackageLicenseFile>
+		<LangVersion>13.0</LangVersion>
+		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+		<WarningsNotAsErrors>CS1030;CA1835;$(WarningsNotAsErrors)</WarningsNotAsErrors>
 
-    <DisableImplicitNamespaceImports>true</DisableImplicitNamespaceImports>
-    <PackageProjectUrl>https://github.com/MarkPflug/Sylvan</PackageProjectUrl>
+		<DisableImplicitNamespaceImports>true</DisableImplicitNamespaceImports>
+		<PackageProjectUrl>https://github.com/MarkPflug/Sylvan</PackageProjectUrl>
 
-    <ContinuousIntegrationBuild Condition="$(Configuration) == 'Release'">true</ContinuousIntegrationBuild>
-    <EmbedAllSources>true</EmbedAllSources>
-    <EmbedUntrackedSources>true</EmbedUntrackedSources>
-    <PublishRepositoryUrl>true</PublishRepositoryUrl>
-    <IncludeSymbols>true</IncludeSymbols>
-    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+		<ContinuousIntegrationBuild Condition="$(Configuration) == 'Release'">true</ContinuousIntegrationBuild>
+		<EmbedAllSources>true</EmbedAllSources>
+		<EmbedUntrackedSources>true</EmbedUntrackedSources>
+		<PublishRepositoryUrl>true</PublishRepositoryUrl>
+		<IncludeSymbols>true</IncludeSymbols>
+		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
 
-	<ProjectReadmeFile>$(MSBuildProjectDirectory)/PackageReadme.md</ProjectReadmeFile>
-	<PackageReadmeFile
-		Condition="Exists($(ProjectReadmeFile))">readme.md</PackageReadmeFile>
-    
-    
-    <IsTestProject Condition="$(MSBuildProjectName.EndsWith('.Tests')) == 'true'">true</IsTestProject>
-  </PropertyGroup>
-  <ItemGroup>
-    <None Include="$(MSBuildThisFileDirectory)license.txt" Pack="true" PackagePath="">
-      <Visible>false</Visible>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)Sylvan.png" Pack="true" PackagePath="">
-      <Visible>false</Visible>
-    </None>
+		<ProjectReadmeFile>$(MSBuildProjectDirectory)/PackageReadme.md</ProjectReadmeFile>
+		<PackageReadmeFile
+			Condition="Exists($(ProjectReadmeFile))">readme.md</PackageReadmeFile>
 
-	<None
-		Condition="Exists($(ProjectReadmeFile))"
-		Include="$(ProjectReadmeFile)"
-		Pack="true"
-		PackagePath="readme.md">
-	</None>
-  </ItemGroup>
+		<!-- This suppresses a warning about System.IO.Hashing, which we don't use. -->
+		<SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings>
+
+		<IsTestProject Condition="$(MSBuildProjectName.EndsWith('.Tests')) == 'true'">true</IsTestProject>
+	</PropertyGroup>
+	
+	<ItemGroup>
+		<None Include="$(MSBuildThisFileDirectory)license.txt" Pack="true" PackagePath="">
+			<Visible>false</Visible>
+		</None>
+		<None Include="$(MSBuildThisFileDirectory)Sylvan.png" Pack="true" PackagePath="">
+			<Visible>false</Visible>
+		</None>
+
+		<None
+			Condition="Exists($(ProjectReadmeFile))"
+			Include="$(ProjectReadmeFile)"
+			Pack="true"
+			PackagePath="readme.md">
+		</None>
+	</ItemGroup>
 
 	<PropertyGroup Condition="$(IsTestProject) == true">
-		<NoWarn>xunit2013;CA2007;CA1849</NoWarn>
+		<NoWarn>xunit2013;CA2007;CA1849;xUnit1051</NoWarn>
 	</PropertyGroup>
-    
+
 
 </Project>
