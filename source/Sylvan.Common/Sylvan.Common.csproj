@@ -9,6 +9,7 @@
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 		<DefineConstants>PublicCasingStyle;$(DefineConstants)</DefineConstants>
+		<NoWarn>NU1605</NoWarn>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(TargetFramework)' != 'netstandard2.0'">

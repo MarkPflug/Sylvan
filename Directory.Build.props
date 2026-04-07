@@ -26,6 +26,8 @@
 		<PackageReadmeFile
 			Condition="Exists($(ProjectReadmeFile))">readme.md</PackageReadmeFile>
 
+		<!-- This suppresses a warning about System.IO.Hashing, which we don't use. -->
+		<SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings>
 
 		<IsTestProject Condition="$(MSBuildProjectName.EndsWith('.Tests')) == 'true'">true</IsTestProject>
 	</PropertyGroup>
