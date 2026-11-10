@@ -142,7 +142,6 @@ public static partial class DataExtensions
 	/// var reader = seq.AsDataReader()
 	/// </example>
 	public static DbDataReader AsDataReader<T>(this IAsyncEnumerable<T> seq, CancellationToken cancel = default)
-		where T : class
 	{
 		return new AsyncObjectDataReader<T>(seq, cancel);
 	}
@@ -153,7 +152,6 @@ public static partial class DataExtensions
 	/// var reader = seq.AsDataReader()
 	/// </example>
 	public static DbDataReader AsDataReader<T>(this IEnumerable<T> seq)
-		where T : class
 	{
 		return new SyncObjectDataReader<T>(seq);
 	}
