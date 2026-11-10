@@ -1,12 +1,17 @@
 ﻿using Sylvan.Data.Csv;
 using System;
 using System.Collections.ObjectModel;
-using System.Data;
 using System.Data.Common;
 using System.IO;
 using System.Linq;
 using System.Runtime.Serialization;
 using Xunit;
+
+#if NET6_0_OR_GREATER
+using DateType = System.DateOnly;
+#else
+using DateType = System.DateTime;
+#endif
 
 namespace Sylvan.Data
 {
@@ -18,7 +23,7 @@ namespace Sylvan.Data
 				new Schema.Builder()
 				.Add<int>("Id")
 				.Add<string>("Name")
-				.Add<DateTime?>("Date")
+				.Add<DateType?>("Date")
 				.Build();
 			return schema.GetColumnSchema();
 		}
@@ -100,7 +105,7 @@ namespace Sylvan.Data
 			{
 				Assert.Equal(1, record.Id);
 				Assert.Equal("Test", record.Name);
-				Assert.Equal(new DateTime(2020, 8, 12), record.Date);
+				Assert.Equal(new DateType(2020, 8, 12), record.Date);
 			}
 		}
 
@@ -332,7 +337,7 @@ namespace Sylvan.Data
 		{
 			public string State { get; set; }
 			public string County { get; set; }
-			public Series<DateTime, int> Values { get; set; }
+			public Series<DateType, int> Values { get; set; }
 		}
 
 		[Fact]
@@ -404,7 +409,7 @@ namespace Sylvan.Data
 
 		sealed class ManualBinder : IDataBinder<SeriesDateRecord>
 		{
-			readonly DataSeriesAccessor<DateTime, int> series0;
+			readonly DataSeriesAccessor<DateType, int> series0;
 			readonly int idIdx;
 			readonly int nameIdx;
 
@@ -414,16 +419,16 @@ namespace Sylvan.Data
 				nameIdx = schema.Single(c => c.ColumnName == "Name").ColumnOrdinal.Value;
 				var seriesCols =
 					schema
-					.Where(c => DateTime.TryParse(c.ColumnName, out _))
-					.Select(c => new DataSeriesColumn<DateTime>(c.ColumnName, DateTime.Parse(c.ColumnName), c.ColumnOrdinal.Value));
-				this.series0 = new DataSeriesAccessor<DateTime, int>(seriesCols);
+					.Where(c => DateType.TryParse(c.ColumnName, out _))
+					.Select(c => new DataSeriesColumn<DateType>(c.ColumnName, DateType.Parse(c.ColumnName), c.ColumnOrdinal.Value));
+				this.series0 = new DataSeriesAccessor<DateType, int>(seriesCols);
 			}
 
 			public void Bind(DbDataReader record, SeriesDateRecord item)
 			{
 				item.Id = record.GetInt32(idIdx);
 				item.Name = record.GetString(nameIdx);
-				item.Values = new Series<DateTime, int>(this.series0, record);
+				item.Values = new Series<DateType, int>(this.series0, record);
 			}
 
 			public void Bind(DbDataReader record, object item)
@@ -480,7 +485,7 @@ namespace Sylvan.Data
 				new Schema.Builder()
 				.Add<int>()
 				.Add<string>()
-				.Add<DateTime>()
+				.Add<DateType>()
 				.Build();
 
 			var data = CsvDataReader.Create(new StringReader(dataStr), new CsvDataReaderOptions { Schema = new CsvSchema(schema) });
@@ -501,7 +506,7 @@ namespace Sylvan.Data
 				.Add<int>("Id")
 				.Add<string>("Blorp")
 				.Add<string>("Name")
-				.Add<DateTime>("Date")
+				.Add<DateType>("Date")
 				.Add<string>("Blorp")
 				.Build();
 
@@ -524,7 +529,7 @@ namespace Sylvan.Data
 				new Schema.Builder()
 				.Add<int>("Id")
 				.Add<string>("Name")
-				.Add<DateTime>("Date")
+				.Add<DateType>("Date")
 				.Add<string>("Name")
 				.Build();
 
@@ -571,7 +576,7 @@ namespace Sylvan.Data
 	{
 		public int Id { get; private set; }
 		public string Name { get; private set; }
-		public DateTime? Date { get; private set; }
+		public DateType? Date { get; private set; }
 	}
 
 	class NumericNullRecord
@@ -600,7 +605,7 @@ namespace Sylvan.Data
 	{
 		public int Id { get; set; }
 		public string Name { get; set; }
-		public Series<DateTime, int> Values { get; set; }
+		public Series<DateType, int> Values { get; set; }
 	}
 
 	class Record
@@ -637,7 +642,7 @@ namespace Sylvan.Data
 	{
 		public int Id { get; set; }
 		public string Name { get; set; }
-		public DateTime Date { get; set; }
+		public DateType Date { get; set; }
 	}
 
 #if NET6_0_OR_GREATER
