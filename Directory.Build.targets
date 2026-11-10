@@ -17,12 +17,12 @@
   <ItemGroup>
     <PackageReference 
 			Include="Microsoft.Build.Tasks.Git" 
-			Version="10.0.201" 
+			Version="10.0.403"
 			PrivateAssets="All"
 		/>
     <PackageReference 
 			Include="Microsoft.SourceLink.GitHub" 
-			Version="10.0.201" 
+			Version="10.0.403"
 			PrivateAssets="All"
 		/>  
   </ItemGroup>
