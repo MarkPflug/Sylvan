@@ -1890,6 +1890,31 @@ public class CsvDataReaderTests
 	}
 
 	[Fact]
+	public void DynamicSchemaUsesReaderCulture()
+	{
+		var currentCulture = CultureInfo.CurrentCulture;
+		try
+		{
+			// "." is the group separator in de-DE, so parsing with the current culture reads 12.4 as 124
+			CultureInfo.CurrentCulture = new CultureInfo("de-DE");
+
+			var reader = CsvDataReader.Create(new StringReader("a,b\n12.4,1.5e3\n"), new CsvDataReaderOptions { Schema = CsvSchema.Dynamic });
+			Assert.True(reader.Read());
+			Assert.Equal(12.4m, reader.GetValue(0));
+			Assert.Equal(1500d, reader.GetValue(1));
+
+			var opts = new CsvDataReaderOptions { Schema = CsvSchema.Dynamic, Culture = new CultureInfo("de-DE"), Delimiter = ';' };
+			reader = CsvDataReader.Create(new StringReader("a\n12,4\n"), opts);
+			Assert.True(reader.Read());
+			Assert.Equal(12.4m, reader.GetValue(0));
+		}
+		finally
+		{
+			CultureInfo.CurrentCulture = currentCulture;
+		}
+	}
+
+	[Fact]
 	public void ColumnMapping()
 	{
 		var data = "a,b,c\n1,test,2022-1-1,test\n2,blah,2022-02-01\n";

@@ -174,6 +174,7 @@ public sealed partial class CsvDataReader : DbDataReader, IDbColumnSchemaGenerat
 	NewLineMode newLineMode;
 	readonly bool ownsReader;
 	readonly CultureInfo culture;
+	internal CultureInfo Culture => culture;
 	readonly string? dateTimeFormat;
 	readonly string? trueString, falseString;
 	readonly BinaryEncoding binaryEncoding;
