@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 
 namespace Sylvan.Data.Csv;
@@ -38,30 +39,30 @@ sealed class DynamicAccessor : FieldAccessor<object>
 
 	public override object GetValue(CsvDataReader reader, int ordinal)
 	{
-		//TODO: culture
+		var culture = reader.Culture;
 #if SPAN
 		var str = reader.GetFieldSpan(ordinal);
 #else
 		var str = reader.GetString(ordinal);
 #endif
 
-		if (int.TryParse(str, out int intVal))
+		if (int.TryParse(str, NumberStyles.Integer, culture, out int intVal))
 		{
 			return intVal;
 		}
-		if (decimal.TryParse(str, out decimal decVal))
+		if (decimal.TryParse(str, NumberStyles.Number, culture, out decimal decVal))
 		{
 			return decVal;
 		}
-		if (double.TryParse(str, out double doubleVal))
+		if (double.TryParse(str, NumberStyles.Float | NumberStyles.AllowThousands, culture, out double doubleVal))
 		{
 			return doubleVal;
 		}
-		if (DateTime.TryParse(str, out DateTime dateTimeVal))
+		if (DateTime.TryParse(str, culture, DateTimeStyles.None, out DateTime dateTimeVal))
 		{
 			return dateTimeVal;
 		}
-		if (TimeSpan.TryParse(str, out TimeSpan timeSpanVal))
+		if (TimeSpan.TryParse(str, culture, out TimeSpan timeSpanVal))
 		{
 			return timeSpanVal;
 		}
